@@ -1,4 +1,4 @@
-// Scene.h 
+// D3D12Backend.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -26,28 +26,45 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include "Device.h"
+
+#ifdef WIN32
+
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+
+
+// Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
+#include <wrl.h>
+using namespace Microsoft::WRL;
+
+// DirectX 12 specific headers.
+#include <d3d12.h>
+#include <dxgi1_6.h>
+#include <d3dcompiler.h>
 
 namespace poco {
 
-    class Scene {
+    class D3D12Backend : public DeviceBackend {
     public:
-        Scene();
-        ~Scene();
-    };
 
-    class Camera {
-    public:
-        Camera(const ScenePointer& scene) {}
-        ~Camera() {}
+        D3D12Backend();
+        virtual ~D3D12Backend();
 
-    };
+        static const uint8_t CHAIN_NUM_FRAMES = 3;
 
-    class Geometry {
-    public:
-        Geometry(const ScenePointer& scene) {}
-        ~Geometry() {}
+        // DirectX 12 Objects
+        ComPtr<ID3D12Device2> g_Device;
+        ComPtr<ID3D12CommandQueue> g_CommandQueue;
 
+        ComPtr<ID3D12GraphicsCommandList> g_CommandList;
+        ComPtr<ID3D12CommandAllocator> g_CommandAllocators[CHAIN_NUM_FRAMES];
+        ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+
+        ComPtr<IDXGISwapChain4> g_SwapChain;
+        ComPtr<ID3D12Resource> g_BackBuffers[CHAIN_NUM_FRAMES];
     };
 
 }
+
+#endif WIN32

@@ -1,4 +1,4 @@
-// Scene.h 
+// Api.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,30 +24,45 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Api.h"
 
-#include "Forward.h"
+#include "Device.h"
 
-namespace poco {
+using namespace poco;
 
-    class Scene {
-    public:
-        Scene();
-        ~Scene();
-    };
+std::unique_ptr<api> api::_instance;
 
-    class Camera {
-    public:
-        Camera(const ScenePointer& scene) {}
-        ~Camera() {}
 
-    };
-
-    class Geometry {
-    public:
-        Geometry(const ScenePointer& scene) {}
-        ~Geometry() {}
-
-    };
-
+std::ostream& api::log(const char* file, int line, const char* functionName) {
+    return std::clog << file << " - " << line << " - " << functionName << " : ";
 }
+
+api::~api() {
+    pocoLog() << "poco api is destoyed, bye!\n";
+}
+
+bool api::create(const ApiInit& init) {
+    if (_instance) {
+        pocoLog() << "poco::api::instance already exist, do not create a new instance and exit returning fail\n";
+        return false;
+    }
+    if (!_instance) {
+        _instance.reset(new api());
+        _instance->_init = init;
+    }
+
+    return true;
+}
+
+void api::destroy() {
+    if (_instance) {
+        _instance.reset();
+    }
+}
+
+DevicePointer api::createDevice(const DeviceInit& init) {
+    DevicePointer device(new Device());
+
+    return device;
+}
+

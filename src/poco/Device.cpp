@@ -28,10 +28,12 @@
 
 #include "Swapchain.h"
 
+#include "D3D12Backend.h"
+
 using namespace poco;
 
 Device::Device() {
-
+    _backend.reset(new D3D12Backend());
 }
 
 Device::~Device() {

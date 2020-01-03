@@ -1,4 +1,4 @@
-// Scene.h 
+// Api.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -26,28 +26,39 @@
 //
 #pragma once
 
+// Supposed to be included from poco.h, so this one is not needed
 #include "Forward.h"
+#include <iostream>
+
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif
 
 namespace poco {
-
-    class Scene {
-    public:
-        Scene();
-        ~Scene();
+    // Desc struct creating the api
+    struct ApiInit {
+#ifdef WIN32
+        HINSTANCE hInstance;
+#endif
     };
 
-    class Camera {
+    // Singleton Api
+    class api {
     public:
-        Camera(const ScenePointer& scene) {}
-        ~Camera() {}
+        ~api();
+        static bool create(const ApiInit& init);
+        static void destroy();
+        static std::ostream& log(const char* file, int line, const char* functionName);
+
+        // Factory
+        static DevicePointer createDevice(const DeviceInit& init);
+
+    private: 
+        static std::unique_ptr<api> _instance;
+        ApiInit _init;
 
     };
-
-    class Geometry {
-    public:
-        Geometry(const ScenePointer& scene) {}
-        ~Geometry() {}
-
-    };
-
 }
+
+

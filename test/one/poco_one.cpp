@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
     // Next, a renderer built on this device
     auto renderer = std::make_shared<poco::Renderer>(gpuDevice);
 
-    // Then the gpuDevice creates a swapchain associated with a destination window
+ 
     poco::SwapchainInit swapchainInit {  };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 

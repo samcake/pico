@@ -26,6 +26,7 @@
 //
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 namespace poco {
@@ -51,4 +52,5 @@ namespace poco {
     using ViewportPointer = std::shared_ptr<Viewport>;
 
 }
+#define pocoLog() ::poco::api::log(__FILE__, __LINE__, __FUNCTION__)
 

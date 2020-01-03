@@ -28,12 +28,16 @@
 
 #include "Forward.h"
 
-#include "poco.h"
-
 namespace poco {
 
     struct DeviceInit {
 
+    };
+
+    // Device concrete backend implementation
+    class DeviceBackend {
+    public:
+        virtual ~DeviceBackend() {}
     };
 
     class Device {
@@ -45,6 +49,10 @@ namespace poco {
 
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
+
+
+    private:
+        std::unique_ptr<DeviceBackend> _backend;
 
     };
 }

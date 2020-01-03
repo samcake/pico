@@ -1,4 +1,4 @@
-// Scene.h 
+// D3D12Backend.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,30 +24,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "D3D12Backend.h"
 
-#include "Forward.h"
+using namespace poco;
 
-namespace poco {
+D3D12Backend::D3D12Backend() {
 
-    class Scene {
-    public:
-        Scene();
-        ~Scene();
-    };
+}
 
-    class Camera {
-    public:
-        Camera(const ScenePointer& scene) {}
-        ~Camera() {}
-
-    };
-
-    class Geometry {
-    public:
-        Geometry(const ScenePointer& scene) {}
-        ~Geometry() {}
-
-    };
+D3D12Backend::~D3D12Backend() {
 
 }

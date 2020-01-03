@@ -27,40 +27,5 @@
 #pragma once
 
 #include "Forward.h"
+#include "Api.h"
 
-#include <iostream>
-
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif
-
-namespace poco {
-    // Desc struct creating the api
-    struct ApiInit {
-#ifdef WIN32
-        HINSTANCE hInstance;
-#endif
-    };
-
-    // Singleton Api
-    class api {
-    public:
-        ~api();
-        static bool create(const ApiInit& init);
-        static void destroy();
-        static std::ostream& log(const char* file, int line, const char* functionName);
-
-        // Factory
-        static DevicePointer createDevice(const DeviceInit& init);
-
-    private: 
-        static std::unique_ptr<api> _instance;
-        ApiInit _init;
-
-    };
-
-}
-
-#define pocoLog() ::poco::api::log(__FILE__, __LINE__, __FUNCTION__)
