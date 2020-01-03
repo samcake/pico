@@ -41,6 +41,10 @@ namespace poco {
     using DevicePointer = std::shared_ptr<Device>;
     struct DeviceInit;
 
+    class Window;
+    using WindowPointer = std::shared_ptr<Window>;
+    struct WindowInit;
+
     class Swapchain;
     using SwapchainPointer = std::shared_ptr<Swapchain>;
     struct SwapchainInit;

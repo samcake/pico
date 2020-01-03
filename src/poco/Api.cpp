@@ -27,6 +27,7 @@
 #include "Api.h"
 
 #include "Device.h"
+#include "Window.h"
 
 using namespace poco;
 
@@ -66,3 +67,9 @@ DevicePointer api::createDevice(const DeviceInit& init) {
     return device;
 }
 
+
+WindowPointer api::createWindow(const WindowInit& init) {
+    WindowPointer window(new Window());
+
+    return window;
+}

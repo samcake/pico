@@ -28,6 +28,7 @@
 #include <poco/poco.h>
 #include <poco/Scene.h>
 #include <poco/Device.h>
+#include <poco/Window.h>
 #include <poco/Swapchain.h>
 #include <poco/Renderer.h>
 #include <poco/Viewport.h>
@@ -52,10 +53,10 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    result = poco::api::create(poco_init);
+  /*  result = poco::api::create(poco_init);
     if (!result) {
         std::clog << "Poco api failed to create on second attempt, yes?" << std::endl;
-    }
+    }*/
 
     // Content creation
 
@@ -75,18 +76,40 @@ int main(int argc, char *argv[])
     // Next, a renderer built on this device
     auto renderer = std::make_shared<poco::Renderer>(gpuDevice);
 
- 
-    poco::SwapchainInit swapchainInit {  };
+
+    // Presentation creation
+
+    // We need a window where to present, let s use the poco::Window for convenience
+    // This could be any window, we just need the os handle to create the swapchain next.
+    poco::WindowInit windowInit {};
+    auto window =poco::api::createWindow(windowInit);
+    
+
+    poco::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
     auto viewport = std::make_shared<poco::Viewport>(camera, renderer, swapchain);
 
 
+
+
+    // Render Loop 
+    bool keepOnGoing = true;
+    while (keepOnGoing) {
+        keepOnGoing = window->messagePump();
+
+    }
+
+
+
+
+
+
     poco::api::destroy();
     std::clog << "Poco api destroyed" << std::endl;
 
-    return 0;
+     return 0;
 }
 
 /*

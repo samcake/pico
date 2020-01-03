@@ -53,6 +53,7 @@ namespace poco {
 
         // Factory
         static DevicePointer createDevice(const DeviceInit& init);
+        static WindowPointer createWindow(const WindowInit& init);
 
     private: 
         static std::unique_ptr<api> _instance;

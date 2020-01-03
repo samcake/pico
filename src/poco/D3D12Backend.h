@@ -27,6 +27,7 @@
 #pragma once
 
 #include "Device.h"
+#include "Swapchain.h"
 
 #ifdef WIN32
 
@@ -44,7 +45,7 @@ using namespace Microsoft::WRL;
 #include <d3dcompiler.h>
 
 namespace poco {
-
+    
     class D3D12Backend : public DeviceBackend {
     public:
 
@@ -59,10 +60,25 @@ namespace poco {
 
         ComPtr<ID3D12GraphicsCommandList> g_CommandList;
         ComPtr<ID3D12CommandAllocator> g_CommandAllocators[CHAIN_NUM_FRAMES];
-        ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+
+
+
+        SwapchainPointer createSwapchain(const SwapchainInit& init) override;
+    };
+
+
+    class D3D12SwapchainBackend : public Swapchain {
+    public:
+        D3D12SwapchainBackend();
+        virtual ~D3D12SwapchainBackend();
+
 
         ComPtr<IDXGISwapChain4> g_SwapChain;
-        ComPtr<ID3D12Resource> g_BackBuffers[CHAIN_NUM_FRAMES];
+        ComPtr<ID3D12Resource> g_BackBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
+
+        ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+        UINT g_RTVDescriptorSize;
+        UINT g_CurrentBackBufferIndex;
     };
 
 }

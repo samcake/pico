@@ -41,8 +41,6 @@ Device::~Device() {
 }
 
 SwapchainPointer Device::createSwapchain(const SwapchainInit& init) {
-    SwapchainPointer swapchain(new Swapchain());
-
-    return swapchain;
+    return _backend->createSwapchain(init);
 }
 

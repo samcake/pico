@@ -1,4 +1,4 @@
-// Swapchain.h 
+// Window.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -28,33 +28,33 @@
 
 #include "Forward.h"
 
-#include "Device.h"
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif 
-
 namespace poco {
 
-    struct SwapchainInit {
-        uint32_t width;
-        uint32_t height;
+    struct WindowInit {
 
-        
-#ifdef WIN32
-        HWND hWnd;
-#endif
     };
 
-    class Swapchain {
-    protected:
-        // Swapchain is created from the device
-        friend class Device;
-        Swapchain();
-
+    // Window concrete backend implementation
+    class WindowBackend {
     public:
-        ~Swapchain();
+        virtual ~WindowBackend() {}
 
+        virtual bool messagePump() = 0;
+        virtual void* nativeWindow() = 0;
+    };
+
+    class Window {
+    public:
+        Window();
+        ~Window();
+
+        bool messagePump();
+
+        void* nativeWindow() {
+            return _backend->nativeWindow();
+        }
+
+    protected:
+        std::unique_ptr<WindowBackend> _backend;
     };
 }

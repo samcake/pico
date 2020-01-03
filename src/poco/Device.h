@@ -38,6 +38,8 @@ namespace poco {
     class DeviceBackend {
     public:
         virtual ~DeviceBackend() {}
+
+        virtual SwapchainPointer createSwapchain(const SwapchainInit& init) = 0;
     };
 
     class Device {
