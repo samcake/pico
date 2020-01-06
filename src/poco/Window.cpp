@@ -36,13 +36,13 @@ using namespace poco;
 #define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
 
-class WIN32WindowBackend : public WindowBackend, std::enable_shared_from_this<WIN32WindowBackend> {
+class WIN32WindowBackend : public WindowBackend {
 public:
     HWND _sysWindow{ nullptr };
-    uint32_t _width{ 640 };
-    uint32_t _height{ 480 };
+    uint32_t _width{ 0 };
+    uint32_t _height{ 0 };
 
-    using SysWindowMap = std::map<HWND, std::weak_ptr<WIN32WindowBackend>>;
+    using SysWindowMap = std::map<HWND, WIN32WindowBackend*>;
     static SysWindowMap _sysWindowMap;
 
     static HMODULE getThisModuleHandle() {
@@ -89,7 +89,19 @@ public:
             destroyCallback(window);
             PostQuitMessage(0);
             return 0;
+        default:
+            // Any other event, try to find the destination window and pass it on
+            auto windowMapIt = _sysWindowMap.find(window);
+            if (windowMapIt != _sysWindowMap.end()) {
+                auto window = (*windowMapIt).second;
+                if (window) {
+                    return window->eventCallback(msg, wparam, lparam);
+                }
+            }
+            break;
         }
+
+        // If nothing catched default 
         return DefWindowProcA(window, msg, wparam, lparam);
     }
 
@@ -101,17 +113,42 @@ public:
         std::cout << "destroying that window" << std::endl;
     }
 
-    WIN32WindowBackend(const std::string& name = "", int32_t width = -1, int32_t height = -1) {
+    LRESULT eventCallback(UINT msg, WPARAM wparam, LPARAM lparam) {
+        switch (msg) {
+        // These 2 events will never be caught here
+        // case WM_CREATE:
+        // case WM_DESTROY:
+
+        // Pass on events to standard handler
+        case WM_PAINT:
+            _ownerWindow->onPaint();
+           return 0;
+
+        }
+
+        // If nothing catched default 
+        return DefWindowProcA(_sysWindow, msg, wparam, lparam);
+    }
+
+    static WIN32WindowBackend* create(Window* owner, const std::string& name = "", int32_t width = -1, int32_t height = -1) {
         initWinClass();
-
-        _width = (width == -1 ? _width : width);
-        _height = (height == -1 ? _height : height);
-
-        _sysWindow = CreateWindowA(WINDOW_CLASS.c_str(), name.c_str(),
+        width = (width == -1 ? 640 : width);
+        height = (height == -1 ? 480 : height);
+        auto sysWindow = CreateWindowA(WINDOW_CLASS.c_str(), name.c_str(),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
-            _width, _height, NULL, NULL, NULL, NULL);
+            width, height, NULL, NULL, NULL, NULL);
 
-        _sysWindowMap[_sysWindow] = weak_from_this();
+        auto window = new WIN32WindowBackend(owner, sysWindow, name, width, height);
+
+        _sysWindowMap[sysWindow] = window;
+    
+        return window;
+    }
+
+    WIN32WindowBackend(Window* owner, HWND sysWindow, const std::string& name = "", int32_t width = -1, int32_t height = -1) :
+        WindowBackend(owner),
+        _sysWindow(sysWindow), 
+        _width(width), _height(height) {
     }
 
     ~WIN32WindowBackend() {
@@ -127,6 +164,7 @@ public:
                 running = false;
                 break;
             }
+
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
@@ -150,9 +188,10 @@ std::string WIN32WindowBackend::WINDOW_CLASS;
 
 #endif
 
-Window::Window() :
+Window::Window(WindowHandler* handler) :
+    _handler(handler),
 #ifdef WIN32
-    _backend(new WIN32WindowBackend())
+    _backend(WIN32WindowBackend::create(this))
 #else
     _backend()
 #endif
@@ -167,4 +206,9 @@ Window::~Window() {
 
 bool Window::messagePump() {
     return _backend->messagePump();
+}
+
+
+void Window::onPaint() {
+    _handler->onPaint();
 }

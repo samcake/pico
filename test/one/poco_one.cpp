@@ -25,19 +25,31 @@
 // SOFTWARE.
 //
 
+#include <functional>
+#include <chrono>
+
 #include <poco/poco.h>
 #include <poco/Scene.h>
 #include <poco/Device.h>
+#include <poco/Batch.h>
 #include <poco/Window.h>
 #include <poco/Swapchain.h>
 #include <poco/Renderer.h>
 #include <poco/Viewport.h>
 
 
-//#define WIN32_LEAN_AND_MEAN
-//#include <Windows.h>
-//#include <Shlwapi.h>
+class MyWindowHandler : public poco::WindowHandler {
+public:
+    std::function<void()> _onPaintDelegate;
 
+    MyWindowHandler() {
+    }
+
+    void onPaint() override { 
+        if (_onPaintDelegate) _onPaintDelegate();
+    }
+
+};
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -73,6 +85,10 @@ int main(int argc, char *argv[])
     poco::DeviceInit deviceInit {};
     auto gpuDevice = poco::api::createDevice(deviceInit);
 
+    // We need a Batch too, where to express the device commands
+    poco::BatchInit batchInit {};
+    auto batch = gpuDevice->createBatch(batchInit);
+
     // Next, a renderer built on this device
     auto renderer = std::make_shared<poco::Renderer>(gpuDevice);
 
@@ -81,9 +97,9 @@ int main(int argc, char *argv[])
 
     // We need a window where to present, let s use the poco::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
-    poco::WindowInit windowInit {};
+    auto windowHandler = new MyWindowHandler();
+    poco::WindowInit windowInit { windowHandler };
     auto window =poco::api::createWindow(windowInit);
-    
 
     poco::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
@@ -91,8 +107,34 @@ int main(int argc, char *argv[])
     // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
     auto viewport = std::make_shared<poco::Viewport>(camera, renderer, swapchain);
 
+    //Now that we have created all the elements, 
+    // We configure the windowHandler onPaint delegate of the window to do real rendering!
+    windowHandler->_onPaintDelegate = ([viewport]() {
+        // Measuring framerate
+        static uint64_t frameCounter = 0;
+        static double elapsedSeconds = 0.0;
+        static std::chrono::high_resolution_clock clock;
+        static auto t0 = clock.now();
+
+        frameCounter++;
+        auto t1 = clock.now();
+        auto deltaTime = t1 - t0;
+        t0 = t1;
+
+        elapsedSeconds += deltaTime.count() * 1e-9;
+        if (elapsedSeconds > 1.0) {
+            char buffer[500];
+            auto fps = frameCounter / elapsedSeconds;
+            sprintf_s(buffer, 500, "FPS: %f\n", fps);
+            OutputDebugString(buffer);
+            frameCounter = 0;
+            elapsedSeconds = 0.0;
+        }
 
 
+        // Render!
+        viewport->render();
+    });
 
     // Render Loop 
     bool keepOnGoing = true;
@@ -100,11 +142,6 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
 
     }
-
-
-
-
-
 
     poco::api::destroy();
     std::clog << "Poco api destroyed" << std::endl;

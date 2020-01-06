@@ -27,12 +27,24 @@
 #include "D3D12Backend.h"
 #include "Api.h"
 
+#include <chrono>
+
 #ifdef WIN32
 //d3d12.lib dxgi.lib dxguid.lib D3DCompiler.lib Shlwapi.lib
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "Shlwapi.lib")
+
+// The min/max macros conflict with like-named member functions.
+// Only use std::min and std::max defined in <algorithm>.
+#if defined(min)
+#undef min
+#endif
+
+#if defined(max)
+#undef max
+#endif
 
 using namespace poco;
 
@@ -47,6 +59,42 @@ inline void ThrowIfFailed(HRESULT hr)
         throw std::exception();
     }
 }*/
+
+const D3D12_RESOURCE_STATES D3D12BatchBackend::ResourceStates[] = {
+    D3D12_RESOURCE_STATE_COMMON,
+    D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+    D3D12_RESOURCE_STATE_INDEX_BUFFER,
+    D3D12_RESOURCE_STATE_RENDER_TARGET,
+    D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+    D3D12_RESOURCE_STATE_DEPTH_WRITE,
+    D3D12_RESOURCE_STATE_DEPTH_READ,
+    D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+    D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+    D3D12_RESOURCE_STATE_STREAM_OUT,
+    D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT,
+    D3D12_RESOURCE_STATE_COPY_DEST,
+    D3D12_RESOURCE_STATE_COPY_SOURCE,
+    D3D12_RESOURCE_STATE_RESOLVE_DEST,
+    D3D12_RESOURCE_STATE_RESOLVE_SOURCE,
+    D3D12_RESOURCE_STATE_GENERIC_READ,
+    D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+    D3D12_RESOURCE_STATE_SHADING_RATE_SOURCE,
+    D3D12_RESOURCE_STATE_PRESENT,
+    D3D12_RESOURCE_STATE_PREDICATION,
+    D3D12_RESOURCE_STATE_VIDEO_DECODE_READ,
+    D3D12_RESOURCE_STATE_VIDEO_DECODE_WRITE,
+    D3D12_RESOURCE_STATE_VIDEO_PROCESS_READ,
+    D3D12_RESOURCE_STATE_VIDEO_PROCESS_WRITE,
+    D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ,
+    D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE
+};
+
+const D3D12_RESOURCE_BARRIER_FLAGS D3D12BatchBackend::ResourceBarrieFlags[] = {
+    D3D12_RESOURCE_BARRIER_FLAG_NONE,
+    D3D12_RESOURCE_BARRIER_FLAG_BEGIN_ONLY,
+    D3D12_RESOURCE_BARRIER_FLAG_END_ONLY,
+};
+
 
 ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
 {
@@ -150,21 +198,6 @@ ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D1
     ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
 
     return d3d12CommandQueue;
-}
-
-
-
-D3D12Backend::D3D12Backend() {
-    ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
-
-    g_Device = CreateDevice(dxgiAdapter4);
-
-    g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-}
-
-D3D12Backend::~D3D12Backend() {
-
 }
 
 // D3D12SwapchainBackend
@@ -283,14 +316,13 @@ D3D12SwapchainBackend::~D3D12SwapchainBackend() {
 
 }
 
-
 SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     auto sw = new D3D12SwapchainBackend();
-    
-    sw->g_SwapChain = CreateSwapChain(init.hWnd, g_CommandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
-    
 
-    sw->g_CurrentBackBufferIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
+    sw->g_SwapChain = CreateSwapChain(init.hWnd, g_CommandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
+
+
+    sw->_currentIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
 
     sw->g_RTVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
     sw->g_RTVDescriptorSize = g_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -314,5 +346,196 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     return SwapchainPointer(sw);
 }
 
+
+
+ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> device,
+    D3D12_COMMAND_LIST_TYPE type)
+{
+    ComPtr<ID3D12CommandAllocator> commandAllocator;
+    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+
+    return commandAllocator;
+}
+
+ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device,
+    ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
+{
+    ComPtr<ID3D12GraphicsCommandList> commandList;
+    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+
+    ThrowIfFailed(commandList->Close());
+
+    return commandList;
+}
+
+ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device)
+{
+    ComPtr<ID3D12Fence> fence;
+
+    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+
+    return fence;
+}
+
+HANDLE CreateEventHandle()
+{
+    HANDLE fenceEvent;
+
+    fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
+   // assert(fenceEvent && "Failed to create fence event.");
+
+    return fenceEvent;
+}
+
+uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
+    uint64_t& fenceValue)
+{
+    uint64_t fenceValueForSignal = ++fenceValue;
+    ThrowIfFailed(commandQueue->Signal(fence.Get(), fenceValueForSignal));
+
+    return fenceValueForSignal;
+}
+
+void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fenceEvent,
+    std::chrono::milliseconds duration = std::chrono::milliseconds::max())
+{
+    if (fence->GetCompletedValue() < fenceValue)
+    {
+        ThrowIfFailed(fence->SetEventOnCompletion(fenceValue, fenceEvent));
+        ::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));
+    }
+}
+
+void Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
+    uint64_t& fenceValue, HANDLE fenceEvent)
+{
+    uint64_t fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
+    WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
+}
+
+
+BatchPointer D3D12Backend::createBatch(const BatchInit& init) {
+
+    auto batch = new D3D12BatchBackend();
+
+    for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
+    {
+        batch->g_CommandAllocators[i] = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    }
+    batch->g_CommandList = CreateCommandList(g_Device,
+        batch->g_CommandAllocators[batch->g_CurrentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+    return BatchPointer(batch);
+}
+D3D12BatchBackend::D3D12BatchBackend() :
+    Batch()
+{
+}
+
+D3D12BatchBackend::~D3D12BatchBackend() {
+}
+
+void D3D12BatchBackend::begin(uint8_t currentIndex) {
+    g_CurrentBackBufferIndex = currentIndex;
+    auto commandAllocator = g_CommandAllocators[currentIndex];
+
+    commandAllocator->Reset();
+    g_CommandList->Reset(commandAllocator.Get(), nullptr);
+}
+
+void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index) {
+
+    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
+
+    auto backBuffer = sw->g_BackBuffers[index];
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    barrier.Transition.pResource = backBuffer.Get();
+    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    g_CommandList->ResourceBarrier(1, &barrier);
+
+    FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->g_RTVDescriptorSize * index};
+
+    g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+}
+
+void D3D12BatchBackend::resourceBarrierTransition(
+    BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {
+
+    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
+    auto backBuffer = sw->g_BackBuffers[currentIndex];
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.Transition.pResource = backBuffer.Get();
+    barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
+    barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
+    barrier.Transition.Subresource = (subresource == -1 ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : subresource);
+
+    g_CommandList->ResourceBarrier(1, &barrier);
+}
+
+
+void D3D12BatchBackend::end() {
+    ThrowIfFailed(g_CommandList->Close());
+}
+
+
+
+
+
+
+
+
+
+D3D12Backend::D3D12Backend() {
+    ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
+
+    g_Device = CreateDevice(dxgiAdapter4);
+
+    g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+    g_Fence = CreateFence(g_Device);
+    g_FenceEvent = CreateEventHandle();
+}
+
+D3D12Backend::~D3D12Backend() {
+
+}
+
+void D3D12Backend::executeBatch(const BatchPointer& batch) {
+    auto bat = static_cast<D3D12BatchBackend*>(batch.get());
+
+
+    ID3D12CommandList* const commandLists[] = {
+        bat->g_CommandList.Get()
+    };
+    g_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+
+}
+
+void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
+    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
+
+    // UINT syncInterval = g_VSync ? 1 : 0;
+    UINT syncInterval = 1;
+    // UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    UINT presentFlags = 0;
+    ThrowIfFailed(sw->g_SwapChain->Present(syncInterval, presentFlags));
+
+    g_FrameFenceValues[sw->currentIndex()] = Signal(g_CommandQueue, g_Fence, g_FenceValue);
+
+    sw->_currentIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
+
+    WaitForFenceValue(g_Fence, g_FrameFenceValues[sw->_currentIndex], g_FenceEvent);
+}
 
 #endif

@@ -30,12 +30,24 @@
 
 namespace poco {
 
+    // Renderer concrete backend implementation
+    class RendererBackend {
+    public:
+        virtual ~RendererBackend() {}
+    };
+
     class Renderer {
     public:
         Renderer(const DevicePointer& device);
         ~Renderer();
 
+        void render(const CameraPointer& camera, SwapchainPointer& swapchain);
+
     protected:
         DevicePointer _device;
+        BatchPointer _batch;
+
+    private:
+        std::unique_ptr<RendererBackend> _backend;
     };
 }

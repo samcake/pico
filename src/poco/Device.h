@@ -40,6 +40,11 @@ namespace poco {
         virtual ~DeviceBackend() {}
 
         virtual SwapchainPointer createSwapchain(const SwapchainInit& init) = 0;
+
+        virtual BatchPointer createBatch(const BatchInit& init) = 0;
+
+        virtual void executeBatch(const BatchPointer& batch) = 0;
+        virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
     };
 
     class Device {
@@ -51,7 +56,11 @@ namespace poco {
 
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
+        BatchPointer createBatch(const BatchInit& init);
 
+        // CommandQueue work
+        void executeBatch(const BatchPointer& batch);
+        void presentSwapchain(const SwapchainPointer& swapchain);
 
     private:
         std::unique_ptr<DeviceBackend> _backend;

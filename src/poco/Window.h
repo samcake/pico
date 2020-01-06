@@ -30,12 +30,13 @@
 
 namespace poco {
 
-    struct WindowInit {
-
-    };
 
     // Window concrete backend implementation
     class WindowBackend {
+    protected:
+        Window* _ownerWindow;
+        WindowBackend(Window* owner) : _ownerWindow(owner) {}
+
     public:
         virtual ~WindowBackend() {}
 
@@ -43,9 +44,22 @@ namespace poco {
         virtual void* nativeWindow() = 0;
     };
 
+    class WindowHandler {
+        public:
+            WindowHandler() {}
+        virtual ~WindowHandler() {}
+
+        virtual void onPaint() {}
+
+    };
+
+    struct WindowInit {
+        WindowHandler* handler {nullptr};
+    };
+
     class Window {
     public:
-        Window();
+        Window(WindowHandler* handler);
         ~Window();
 
         bool messagePump();
@@ -54,7 +68,11 @@ namespace poco {
             return _backend->nativeWindow();
         }
 
+        void onPaint();
+
+
     protected:
+        std::unique_ptr<WindowHandler> _handler;
         std::unique_ptr<WindowBackend> _backend;
     };
 }

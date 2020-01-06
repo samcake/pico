@@ -56,5 +56,7 @@ namespace poco {
     public:
         ~Swapchain();
 
+        uint8_t _currentIndex;
+        uint8_t currentIndex() const;
     };
 }

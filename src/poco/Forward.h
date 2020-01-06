@@ -49,6 +49,10 @@ namespace poco {
     using SwapchainPointer = std::shared_ptr<Swapchain>;
     struct SwapchainInit;
 
+    class Batch;
+    using BatchPointer = std::shared_ptr<Batch>;
+    struct BatchInit;
+
     class Renderer;
     using RendererPointer = std::shared_ptr<Renderer>;
 

@@ -28,6 +28,7 @@
 
 #include "Device.h"
 #include "Swapchain.h"
+#include "Batch.h"
 
 #ifdef WIN32
 
@@ -58,12 +59,19 @@ namespace poco {
         ComPtr<ID3D12Device2> g_Device;
         ComPtr<ID3D12CommandQueue> g_CommandQueue;
 
-        ComPtr<ID3D12GraphicsCommandList> g_CommandList;
-        ComPtr<ID3D12CommandAllocator> g_CommandAllocators[CHAIN_NUM_FRAMES];
-
+        // Synchronization objects
+        ComPtr<ID3D12Fence> g_Fence;
+        uint64_t g_FenceValue = 0;
+        uint64_t g_FrameFenceValues[D3D12Backend::CHAIN_NUM_FRAMES] = {};
+        HANDLE g_FenceEvent;
 
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
+        BatchPointer createBatch(const BatchInit& init) override;
+
+
+        void executeBatch(const BatchPointer& batch) override;
+        void presentSwapchain(const SwapchainPointer& swapchain) override;
     };
 
 
@@ -78,7 +86,30 @@ namespace poco {
 
         ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
         UINT g_RTVDescriptorSize;
-        UINT g_CurrentBackBufferIndex;
+    };
+
+    class D3D12BatchBackend : public Batch {
+    public:
+        D3D12BatchBackend();
+        virtual ~D3D12BatchBackend();
+
+        void begin(uint8_t currentIndex) override;
+        void clear(const SwapchainPointer& swapchain, uint8_t index) override;
+        void resourceBarrierTransition(
+            BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
+
+        void end() override;
+
+        ComPtr<ID3D12GraphicsCommandList> g_CommandList;
+        ComPtr<ID3D12CommandAllocator> g_CommandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
+
+        UINT g_CurrentBackBufferIndex { 0 };
+
+
+
+        static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(Batch::ResourceState::COUNT)];
+        static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(Batch::BarrierFlag::COUNT)];
     };
 
 }

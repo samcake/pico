@@ -43,3 +43,7 @@ Viewport::Viewport(const CameraPointer& camera, const RendererPointer& renderer,
 Viewport::~Viewport() {
 
 }
+
+void Viewport::render() {
+    _renderer->render(_camera, _swapchain);
+}

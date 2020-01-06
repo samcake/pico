@@ -35,6 +35,8 @@ namespace poco {
         Viewport(const CameraPointer& camera, const RendererPointer& renderer, const SwapchainPointer& swapchain);
         ~Viewport();
 
+        void render();
+
     protected:
         CameraPointer _camera;
         RendererPointer _renderer;

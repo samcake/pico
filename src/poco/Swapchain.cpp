@@ -28,10 +28,15 @@
 
 using namespace poco;
 
-Swapchain::Swapchain() {
+Swapchain::Swapchain() : _currentIndex(0) {
 
 }
 
 Swapchain::~Swapchain() {
 
+}
+
+
+uint8_t Swapchain::currentIndex() const {
+    return _currentIndex;
 }
