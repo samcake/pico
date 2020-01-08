@@ -94,7 +94,7 @@ namespace poco {
         virtual ~D3D12BatchBackend();
 
         void begin(uint8_t currentIndex) override;
-        void clear(const SwapchainPointer& swapchain, uint8_t index) override;
+        void clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) override;
         void resourceBarrierTransition(
             BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;

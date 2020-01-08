@@ -30,6 +30,8 @@
 
 #include "Device.h"
 
+#include "mas.h"
+
 namespace poco {
 
     struct BatchInit {
@@ -46,7 +48,7 @@ namespace poco {
 
 
         virtual void begin(uint8_t currentIndex);
-        virtual void clear(const SwapchainPointer& swapchain, uint8_t index);
+        virtual void clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index);
 
 
         enum class ResourceState {

@@ -38,7 +38,7 @@ Batch::~Batch() {
 
 void Batch::begin(uint8_t currentIndex) {}
 
-void Batch::clear(const SwapchainPointer& swapchain, uint8_t index) {}
+void Batch::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {}
 
 void Batch::resourceBarrierTransition(
     BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,

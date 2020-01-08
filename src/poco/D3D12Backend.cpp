@@ -443,7 +443,7 @@ void D3D12BatchBackend::begin(uint8_t currentIndex) {
     g_CommandList->Reset(commandAllocator.Get(), nullptr);
 }
 
-void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index) {
+void D3D12BatchBackend::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {
 
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
@@ -462,7 +462,7 @@ void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index) 
     FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
     D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->g_RTVDescriptorSize * index};
 
-    g_CommandList->ClearRenderTargetView(rtv, clearColor, 0, nullptr);
+    g_CommandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
 }
 
 void D3D12BatchBackend::resourceBarrierTransition(
