@@ -1,4 +1,4 @@
-// Renderer.h 
+// Resource.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,34 +24,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Resource.h"
 
-#include "Forward.h"
-#include <functional>
+using namespace poco;
 
-namespace poco {
+Resource::Resource() {
 
-    // Renderer concrete backend implementation
-    class RendererBackend {
-    public:
-        virtual ~RendererBackend() {}
-    };
+}
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, SwapchainPointer& swapchain, DevicePointer& device, BatchPointer& batch)>;
+Resource::~Resource() {
 
-    class Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
+}
 
-        void render(const CameraPointer& camera, SwapchainPointer& swapchain);
+Buffer::Buffer() {
 
-    protected:
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
+}
 
-    private:
-        std::unique_ptr<RendererBackend> _backend;
-    };
+Buffer::~Buffer() {
+
 }

@@ -1,4 +1,4 @@
-// Renderer.h 
+// Pipeline.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -27,31 +27,19 @@
 #pragma once
 
 #include "Forward.h"
-#include <functional>
 
 namespace poco {
 
-    // Renderer concrete backend implementation
-    class RendererBackend {
-    public:
-        virtual ~RendererBackend() {}
+    struct PipelineStateInit {
     };
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, SwapchainPointer& swapchain, DevicePointer& device, BatchPointer& batch)>;
-
-    class Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
-
-        void render(const CameraPointer& camera, SwapchainPointer& swapchain);
-
+    class PipelineState {
     protected:
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
+        // PipelineState is created from the device
+        friend class Device;
+        PipelineState();
 
-    private:
-        std::unique_ptr<RendererBackend> _backend;
+    public:
+        virtual ~PipelineState();
     };
 }

@@ -32,8 +32,9 @@
 
 using namespace poco;
 
-Renderer::Renderer(const DevicePointer& device) :
-    _device(device)
+Renderer::Renderer(const DevicePointer& device, RenderCallback callback) :
+    _device(device),
+    _callback(callback)
 {
     poco::BatchInit batchInit{};
     _batch= _device->createBatch(batchInit);
@@ -45,34 +46,38 @@ Renderer::~Renderer() {
 }
 
 void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) {
-    auto currentIndex = swapchain->currentIndex();
+    if (_callback) {
+        _callback(camera, swapchain, _device, _batch);
+    } else {
+        auto currentIndex = swapchain->currentIndex();
 
-    _batch->begin(currentIndex);
+        _batch->begin(currentIndex);
 
-    _batch->resourceBarrierTransition(
-        poco::Batch::BarrierFlag::NONE,
-        poco::Batch::ResourceState::PRESENT,
-        poco::Batch::ResourceState::RENDER_TARGET,
-        swapchain, currentIndex, -1);
+        _batch->resourceBarrierTransition(
+            poco::Batch::BarrierFlag::NONE,
+            poco::Batch::ResourceState::PRESENT,
+            poco::Batch::ResourceState::RENDER_TARGET,
+            swapchain, currentIndex, -1);
 
-    static float time = 0.0f;
-    time += 1.0f/60.0f;
-    float intPart;
-    time = modf(time, &intPart);
-    poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
+        static float time = 0.0f;
+        time += 1.0f/60.0f;
+        float intPart;
+        time = modf(time, &intPart);
+        poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
 
-    _batch->clear(clearColor, swapchain, currentIndex);
+        _batch->clear(clearColor, swapchain, currentIndex);
 
-    _batch->resourceBarrierTransition(
-        poco::Batch::BarrierFlag::NONE,
-        poco::Batch::ResourceState::RENDER_TARGET,
-        poco::Batch::ResourceState::PRESENT,
-        swapchain, currentIndex, -1);
+        _batch->resourceBarrierTransition(
+            poco::Batch::BarrierFlag::NONE,
+            poco::Batch::ResourceState::RENDER_TARGET,
+            poco::Batch::ResourceState::PRESENT,
+            swapchain, currentIndex, -1);
 
-    _batch->end();
+        _batch->end();
 
-    _device->executeBatch(_batch);
+        _device->executeBatch(_batch);
 
-    _device->presentSwapchain(swapchain);
-
+        _device->presentSwapchain(swapchain);
+    }
 }
+

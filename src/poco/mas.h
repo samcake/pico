@@ -32,10 +32,15 @@ namespace poco {
         float x, y;
         float* data() { return &x; }
         const float* data() const { return &x; }
-
+        
         vec2() : x(0.0f), y(0.0f) {}
         vec2(float _x) : x(_x), y(_x) {}
         vec2(float _x, float _y) : x(_x), y(_y) {}
+        vec2& operator=(const vec2& a) { x = a.x; y = a.y; return *this; }
+
+        vec2 operator+(const vec2& a) const { return vec2(x + a.x, y + a.y); }
+        vec2 operator-(const vec2& a) const { return vec2(x - a.x, y - a.y); }
+        vec2 operator*(float s) const { return vec2(x * s, y * s); }
     };
     struct vec3 {
         float x, y, z;
@@ -45,6 +50,11 @@ namespace poco {
         vec3() : x(0.0f), y(0.0f), z(0.0f) {}
         vec3(float _x) : x(_x), y(_x), z(_x) {}
         vec3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+        vec3& operator=(const vec3& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        vec3 operator+(const vec3& a) const { return vec3(x + a.x, y + a.y, z + a.z); }
+        vec3 operator-(const vec3& a) const { return vec3(x - a.x, y - a.y, z - a.z); }
+        vec3 operator*(float s) const { return vec3(x * s, y * s, z * s); }
     };
     struct vec4 {
         float x, y, z, w;
@@ -55,6 +65,11 @@ namespace poco {
         vec4(float _x) : x(_x), y(_x), z(_x), w(_x) {}
         vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
         vec4(const vec3& xyz, float _w) : x(xyz.x), y(xyz.y), z(xyz.z), w(_w) {}
+        vec4& operator=(const vec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        vec4 operator+(const vec4& a) const { return vec4(x + a.x, y + a.y, z + a.z, w + a.w); }
+        vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }
+        vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
     };
 
     // Abs
@@ -122,8 +137,8 @@ namespace poco {
     // Color tools
     inline vec3 colorRGBfromHSV(const vec3& hsv) {
         const vec4 k( 1.0f, 2.0f / 3.0f, 1.0f / 3.0f, 3.0f);
-        vec3 f = frac(vec3(hsv.x + k.x, hsv.x + k.y, hsv.x + k.z));
-        vec3 p = abs(vec3(f.x * 6.0f - k.w, f.y * 6.0f - k.w, f.z * 6.0f - k.w));
+        vec3 f = frac(vec3(hsv.x + k.x, hsv.x + k.y, hsv.x + k.z)) * 6.0f;
+        vec3 p = abs(vec3(f.x - k.w, f.y - k.w, f.z - k.w));
         return scale(mix(vec3(k.x), clamp(vec3(p.x - k.x, p.y - k.x, p.z - k.z), vec3(0.0), vec3(1.0)), vec3(hsv.y)), hsv.z);
 
     }

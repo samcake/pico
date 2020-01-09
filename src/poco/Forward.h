@@ -31,27 +31,37 @@
 
 namespace poco {
 
-    class Scene;
-    using ScenePointer = std::shared_ptr<Scene>;
- 
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
+    class Window;
+    using WindowPointer = std::shared_ptr<Window>;
+    struct WindowInit;
+
+    // GPU types
+    class Swapchain;
+    using SwapchainPointer = std::shared_ptr<Swapchain>;
+    struct SwapchainInit;
 
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
     struct DeviceInit;
 
-    class Window;
-    using WindowPointer = std::shared_ptr<Window>;
-    struct WindowInit;
-
-    class Swapchain;
-    using SwapchainPointer = std::shared_ptr<Swapchain>;
-    struct SwapchainInit;
-
     class Batch;
     using BatchPointer = std::shared_ptr<Batch>;
     struct BatchInit;
+
+    class Buffer;
+    using BufferPointer = std::shared_ptr<Buffer>;
+    struct BufferInit;
+
+    class PipelineState;
+    using PipelineStatePointer = std::shared_ptr<PipelineState>;
+    struct PipelineStateInit;
+
+    // Render types
+    class Scene;
+    using ScenePointer = std::shared_ptr<Scene>;
+
+    class Camera;
+    using CameraPointer = std::shared_ptr<Camera>;
 
     class Renderer;
     using RendererPointer = std::shared_ptr<Renderer>;

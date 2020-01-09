@@ -29,6 +29,8 @@
 #include "Device.h"
 #include "Swapchain.h"
 #include "Batch.h"
+#include "Resource.h"
+#include "Pipeline.h"
 
 #ifdef WIN32
 
@@ -65,10 +67,10 @@ namespace poco {
         uint64_t g_FrameFenceValues[D3D12Backend::CHAIN_NUM_FRAMES] = {};
         HANDLE g_FenceEvent;
 
-
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         BatchPointer createBatch(const BatchInit& init) override;
-
+        BufferPointer createBuffer(const BufferInit& init) override;
+        PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
@@ -110,6 +112,31 @@ namespace poco {
 
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(Batch::ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(Batch::BarrierFlag::COUNT)];
+    };
+
+
+    class D3D12BufferBackend : public Buffer {
+    public:
+        D3D12BufferBackend();
+        virtual ~D3D12BufferBackend();
+
+        ComPtr<ID3D12Resource> m_Buffer;
+        D3D12_VERTEX_BUFFER_VIEW m_VertexBufferView;
+        D3D12_INDEX_BUFFER_VIEW m_IndexBufferView;
+
+    //    ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+    //    UINT g_RTVDescriptorSize;
+    };
+
+
+    class D3D12PipelineStateBackend : public PipelineState {
+    public:
+        D3D12PipelineStateBackend();
+        virtual ~D3D12PipelineStateBackend();
+
+      
+        //    ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+        //    UINT g_RTVDescriptorSize;
     };
 
 }

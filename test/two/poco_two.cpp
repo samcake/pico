@@ -1,4 +1,4 @@
-// poco_one.cpp 
+// poco_two.cpp 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -31,6 +31,8 @@
 #include <poco/poco.h>
 #include <poco/Scene.h>
 #include <poco/Device.h>
+#include <poco/Resource.h>
+#include <poco/Pipeline.h>
 #include <poco/Batch.h>
 #include <poco/Window.h>
 #include <poco/Swapchain.h>
@@ -65,11 +67,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-  /*  result = poco::api::create(poco_init);
-    if (!result) {
-        std::clog << "Poco api failed to create on second attempt, yes?" << std::endl;
-    }*/
-
     // Content creation
 
     // let's create a scene
@@ -77,7 +74,6 @@ int main(int argc, char *argv[])
 
     // A Camera added to the scene
     auto camera = std::make_shared<poco::Camera>(scene);
-
 
     // Renderer creation
 
@@ -89,8 +85,86 @@ int main(int argc, char *argv[])
     poco::BatchInit batchInit {};
     auto batch = gpuDevice->createBatch(batchInit);
 
+
+    // Let's allocate buffer
+    poco::BufferInit bufferInit {};
+    auto buffer = gpuDevice->createBuffer(bufferInit);
+
+    // And a Pipeline
+
+
+    // And now a render callback where we describe the rendering sequence
+    poco::RenderCallback renderCallback = [&](const poco::CameraPointer& camera, poco::SwapchainPointer& swapchain, poco::DevicePointer& device, poco::BatchPointer& batch) {
+        auto currentIndex = swapchain->currentIndex();
+
+        batch->begin(currentIndex);
+
+        batch->resourceBarrierTransition(
+            poco::Batch::BarrierFlag::NONE,
+            poco::Batch::ResourceState::PRESENT,
+            poco::Batch::ResourceState::RENDER_TARGET,
+            swapchain, currentIndex, -1);
+
+        static float time = 0.0f;
+        time += 1.0f / 60.0f;
+        float intPart;
+        time = modf(time, &intPart);
+       // poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
+        poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.5f, 0.5f, 1.f)), 1.f);
+
+/*
+        auto backBuffer = m_pWindow->GetCurrentBackBuffer();
+        auto rtv = m_pWindow->GetCurrentRenderTargetView();
+        auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
+
+        // Clear the render targets.
+        {
+            TransitionResource(commandList, backBuffer,
+                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+            FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
+
+            ClearRTV(commandList, rtv, clearColor);
+            ClearDepth(commandList, dsv);
+        }
+
+        commandList->SetPipelineState(m_PipelineState.Get());
+        commandList->SetGraphicsRootSignature(m_RootSignature.Get());
+
+        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
+        commandList->IASetIndexBuffer(&m_IndexBufferView);
+
+        commandList->RSSetViewports(1, &m_Viewport);
+        commandList->RSSetScissorRects(1, &m_ScissorRect);
+
+        commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+
+        // Update the MVP matrix
+        XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+        mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+        commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+
+        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+*/
+        batch->clear(clearColor, swapchain, currentIndex);
+
+        batch->resourceBarrierTransition(
+            poco::Batch::BarrierFlag::NONE,
+            poco::Batch::ResourceState::RENDER_TARGET,
+            poco::Batch::ResourceState::PRESENT,
+            swapchain, currentIndex, -1);
+
+        batch->end();
+
+        device->executeBatch(batch);
+
+        device->presentSwapchain(swapchain);
+    };
+
+
     // Next, a renderer built on this device
-    auto renderer = std::make_shared<poco::Renderer>(gpuDevice, nullptr);
+    auto renderer = std::make_shared<poco::Renderer>(gpuDevice, renderCallback);
 
 
     // Presentation creation
@@ -140,7 +214,6 @@ int main(int argc, char *argv[])
     bool keepOnGoing = true;
     while (keepOnGoing) {
         keepOnGoing = window->messagePump();
-
     }
 
     poco::api::destroy();
@@ -148,9 +221,3 @@ int main(int argc, char *argv[])
 
      return 0;
 }
-
-/*
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
-{ 
-    return 0;
-}*/

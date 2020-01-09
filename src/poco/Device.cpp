@@ -43,12 +43,23 @@ Device::~Device() {
 SwapchainPointer Device::createSwapchain(const SwapchainInit& init) {
     return _backend->createSwapchain(init);
 }
+
+BufferPointer Device::createBuffer(const BufferInit& init) {
+    return _backend->createBuffer(init);
+}
+
+PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) {
+    return _backend->createPipelineState(init);
+}
+
 BatchPointer Device::createBatch(const BatchInit& init) {
     return _backend->createBatch(init);
 }
+
 void Device::executeBatch(const BatchPointer& batch) {
     _backend->executeBatch(batch);
 }
+
 void Device::presentSwapchain(const SwapchainPointer& swapchain) {
     _backend->presentSwapchain(swapchain);
 }

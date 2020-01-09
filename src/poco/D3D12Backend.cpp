@@ -139,8 +139,23 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
     return dxgiAdapter4;
 }
 
+void EnableDebugLayer()
+{
+#if defined(_DEBUG)
+    // Always enable the debug layer before doing anything DX12 related
+    // so all possible errors generated while creating DX12 objects
+    // are caught by the debug layer.
+    ComPtr<ID3D12Debug> debugInterface;
+    ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
+    debugInterface->EnableDebugLayer();
+#endif
+}
+
 ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 {
+
+    EnableDebugLayer();
+
     ComPtr<ID3D12Device2> d3d12Device2;
     ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
 
@@ -447,18 +462,6 @@ void D3D12BatchBackend::clear(const vec4& color, const SwapchainPointer& swapcha
 
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
-    auto backBuffer = sw->g_BackBuffers[index];
-
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = backBuffer.Get();
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-    g_CommandList->ResourceBarrier(1, &barrier);
-
     FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
     D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->g_RTVDescriptorSize * index};
 
@@ -536,6 +539,36 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     sw->_currentIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
 
     WaitForFenceValue(g_Fence, g_FrameFenceValues[sw->_currentIndex], g_FenceEvent);
+}
+
+
+
+D3D12BufferBackend::D3D12BufferBackend() {
+
+}
+
+D3D12BufferBackend::~D3D12BufferBackend() {
+
+}
+
+BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
+    auto buffer = new D3D12BufferBackend();
+
+    return BufferPointer(buffer);
+}
+
+D3D12PipelineStateBackend::D3D12PipelineStateBackend() {
+
+}
+
+D3D12PipelineStateBackend::~D3D12PipelineStateBackend() {
+
+}
+
+PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& init) {
+    auto pso = new D3D12PipelineStateBackend();
+
+    return PipelineStatePointer(pso);
 }
 
 #endif

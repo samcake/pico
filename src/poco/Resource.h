@@ -1,4 +1,4 @@
-// Renderer.h 
+// Resource.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -27,31 +27,28 @@
 #pragma once
 
 #include "Forward.h"
-#include <functional>
 
 namespace poco {
 
-    // Renderer concrete backend implementation
-    class RendererBackend {
+    class Resource {
     public:
-        virtual ~RendererBackend() {}
+        virtual ~Resource();
+    protected:
+        Resource();
+
     };
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, SwapchainPointer& swapchain, DevicePointer& device, BatchPointer& batch)>;
 
-    class Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
+    struct BufferInit {
+    };
 
-        void render(const CameraPointer& camera, SwapchainPointer& swapchain);
-
+    class Buffer : public Resource {
     protected:
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
+        // Buffer is created from the device
+        friend class Device;
+        Buffer();
 
-    private:
-        std::unique_ptr<RendererBackend> _backend;
+    public:
+        virtual ~Buffer();
     };
 }

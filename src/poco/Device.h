@@ -43,6 +43,10 @@ namespace poco {
 
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
 
+        virtual BufferPointer createBuffer(const BufferInit& init) = 0;
+
+        virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
+
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
     };
@@ -57,6 +61,9 @@ namespace poco {
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
         BatchPointer createBatch(const BatchInit& init);
+
+        BufferPointer createBuffer(const BufferInit& init);
+        PipelineStatePointer createPipelineState(const PipelineStateInit& init);
 
         // CommandQueue work
         void executeBatch(const BatchPointer& batch);
