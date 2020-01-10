@@ -541,34 +541,4 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     WaitForFenceValue(g_Fence, g_FrameFenceValues[sw->_currentIndex], g_FenceEvent);
 }
 
-
-
-D3D12BufferBackend::D3D12BufferBackend() {
-
-}
-
-D3D12BufferBackend::~D3D12BufferBackend() {
-
-}
-
-BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
-    auto buffer = new D3D12BufferBackend();
-
-    return BufferPointer(buffer);
-}
-
-D3D12PipelineStateBackend::D3D12PipelineStateBackend() {
-
-}
-
-D3D12PipelineStateBackend::~D3D12PipelineStateBackend() {
-
-}
-
-PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& init) {
-    auto pso = new D3D12PipelineStateBackend();
-
-    return PipelineStatePointer(pso);
-}
-
 #endif

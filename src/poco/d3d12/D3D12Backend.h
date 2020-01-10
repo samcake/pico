@@ -26,11 +26,12 @@
 //
 #pragma once
 
-#include "Device.h"
-#include "Swapchain.h"
-#include "Batch.h"
-#include "Resource.h"
-#include "Pipeline.h"
+#include "../gpu/Device.h"
+#include "../gpu/Swapchain.h"
+#include "../gpu/Batch.h"
+#include "../gpu/Resource.h"
+#include "../gpu/Pipeline.h"
+#include "../gpu/Shader.h"
 
 #ifdef WIN32
 
@@ -70,6 +71,7 @@ namespace poco {
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         BatchPointer createBatch(const BatchInit& init) override;
         BufferPointer createBuffer(const BufferInit& init) override;
+        ShaderPointer createShader(const ShaderInit& init) override;
         PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
 
         void executeBatch(const BatchPointer& batch) override;
@@ -128,6 +130,15 @@ namespace poco {
     //    UINT g_RTVDescriptorSize;
     };
 
+    class D3D12ShaderBackend : public Shader {
+    public:
+        D3D12ShaderBackend();
+        virtual ~D3D12ShaderBackend();
+
+
+        //    ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
+        //    UINT g_RTVDescriptorSize;
+    };
 
     class D3D12PipelineStateBackend : public PipelineState {
     public:

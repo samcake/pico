@@ -1,4 +1,4 @@
-// Api.cpp
+// D3D12Backend_Shader.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,52 +24,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Api.h"
-
-#include "gpu/Device.h"
-#include "Window.h"
+#include "D3D12Backend.h"
 
 using namespace poco;
 
-std::unique_ptr<api> api::_instance;
+#ifdef WIN32
 
+D3D12PipelineStateBackend::D3D12PipelineStateBackend() {
 
-std::ostream& api::log(const char* file, int line, const char* functionName) {
-    return std::clog << file << " - " << line << " - " << functionName << " : ";
 }
 
-api::~api() {
-    pocoLog() << "poco api is destoyed, bye!\n";
+D3D12PipelineStateBackend::~D3D12PipelineStateBackend() {
+
 }
 
-bool api::create(const ApiInit& init) {
-    if (_instance) {
-        pocoLog() << "poco::api::instance already exist, do not create a new instance and exit returning fail\n";
-        return false;
-    }
-    if (!_instance) {
-        _instance.reset(new api());
-        _instance->_init = init;
-    }
+PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& init) {
+    auto pso = new D3D12PipelineStateBackend();
 
-    return true;
+    return PipelineStatePointer(pso);
 }
 
-void api::destroy() {
-    if (_instance) {
-        _instance.reset();
-    }
+D3D12ShaderBackend::D3D12ShaderBackend() {
+
 }
 
-DevicePointer api::createDevice(const DeviceInit& init) {
-    DevicePointer device(new Device());
+D3D12ShaderBackend::~D3D12ShaderBackend() {
 
-    return device;
 }
 
+ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
+    auto shader = new D3D12ShaderBackend();
 
-WindowPointer api::createWindow(const WindowInit& init) {
-    WindowPointer window(new Window((init.handler ? init.handler : new WindowHandler())));
-
-    return window;
+    return ShaderPointer(shader);
 }
+
+#endif

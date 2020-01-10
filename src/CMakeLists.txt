@@ -15,10 +15,14 @@ include_directories("poco/")
 
 file(GLOB POCO_HEADERS
     "poco/*.h"
+    "poco/gpu/*.h"
+    "poco/d3d12/*.h"
 )
 
 file(GLOB POCO_SOURCES
     "poco/*.cpp"
+    "poco/gpu/*.cpp"
+    "poco/d3d12/*.cpp"
 )
 
 add_library (poco
@@ -31,5 +35,7 @@ target_link_libraries(poco
     ${GRAPHICS_LIBRARIES}
 )
 
+source_group(poco\\gpu REGULAR_EXPRESSION poco/gpu/*)
+source_group(poco\\d3d12 REGULAR_EXPRESSION poco/d3d12/*)
 source_group(poco REGULAR_EXPRESSION poco/*)
 

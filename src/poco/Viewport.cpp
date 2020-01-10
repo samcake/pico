@@ -28,7 +28,7 @@
 
 #include "Scene.h"
 #include "Renderer.h"
-#include "Swapchain.h"
+#include "gpu/Swapchain.h"
 
 using namespace poco;
 

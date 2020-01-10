@@ -1,4 +1,4 @@
-// Api.cpp
+// Swapchain.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,52 +24,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Api.h"
+#pragma once
 
-#include "gpu/Device.h"
-#include "Window.h"
+#include "../Forward.h"
 
-using namespace poco;
+#include "Device.h"
 
-std::unique_ptr<api> api::_instance;
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif 
 
+namespace poco {
 
-std::ostream& api::log(const char* file, int line, const char* functionName) {
-    return std::clog << file << " - " << line << " - " << functionName << " : ";
-}
+    struct SwapchainInit {
+        uint32_t width;
+        uint32_t height;
 
-api::~api() {
-    pocoLog() << "poco api is destoyed, bye!\n";
-}
+        
+#ifdef WIN32
+        HWND hWnd;
+#endif
+    };
 
-bool api::create(const ApiInit& init) {
-    if (_instance) {
-        pocoLog() << "poco::api::instance already exist, do not create a new instance and exit returning fail\n";
-        return false;
-    }
-    if (!_instance) {
-        _instance.reset(new api());
-        _instance->_init = init;
-    }
+    class Swapchain {
+    protected:
+        // Swapchain is created from the device
+        friend class Device;
+        Swapchain();
 
-    return true;
-}
+    public:
+        ~Swapchain();
 
-void api::destroy() {
-    if (_instance) {
-        _instance.reset();
-    }
-}
-
-DevicePointer api::createDevice(const DeviceInit& init) {
-    DevicePointer device(new Device());
-
-    return device;
-}
-
-
-WindowPointer api::createWindow(const WindowInit& init) {
-    WindowPointer window(new Window((init.handler ? init.handler : new WindowHandler())));
-
-    return window;
+        uint8_t _currentIndex;
+        uint8_t currentIndex() const;
+    };
 }

@@ -1,4 +1,4 @@
-// Swapchain.h 
+// Device.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,39 +24,46 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
-
-#include "Forward.h"
-
 #include "Device.h"
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif 
+#include "Swapchain.h"
 
-namespace poco {
+#include "../d3d12/D3D12Backend.h"
 
-    struct SwapchainInit {
-        uint32_t width;
-        uint32_t height;
+using namespace poco;
 
-        
-#ifdef WIN32
-        HWND hWnd;
-#endif
-    };
+Device::Device() {
+    _backend.reset(new D3D12Backend());
+}
 
-    class Swapchain {
-    protected:
-        // Swapchain is created from the device
-        friend class Device;
-        Swapchain();
+Device::~Device() {
 
-    public:
-        ~Swapchain();
+}
 
-        uint8_t _currentIndex;
-        uint8_t currentIndex() const;
-    };
+SwapchainPointer Device::createSwapchain(const SwapchainInit& init) {
+    return _backend->createSwapchain(init);
+}
+
+BufferPointer Device::createBuffer(const BufferInit& init) {
+    return _backend->createBuffer(init);
+}
+
+ShaderPointer Device::createShader(const ShaderInit& init) {
+    return _backend->createShader(init);
+}
+
+PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) {
+    return _backend->createPipelineState(init);
+}
+
+BatchPointer Device::createBatch(const BatchInit& init) {
+    return _backend->createBatch(init);
+}
+
+void Device::executeBatch(const BatchPointer& batch) {
+    _backend->executeBatch(batch);
+}
+
+void Device::presentSwapchain(const SwapchainPointer& swapchain) {
+    _backend->presentSwapchain(swapchain);
 }

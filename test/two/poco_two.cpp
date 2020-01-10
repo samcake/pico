@@ -29,15 +29,20 @@
 #include <chrono>
 
 #include <poco/poco.h>
-#include <poco/Scene.h>
-#include <poco/Device.h>
-#include <poco/Resource.h>
-#include <poco/Pipeline.h>
-#include <poco/Batch.h>
+
 #include <poco/Window.h>
-#include <poco/Swapchain.h>
+
+#include <poco/gpu/Device.h>
+#include <poco/gpu/Resource.h>
+#include <poco/gpu/Pipeline.h>
+#include <poco/gpu/Batch.h>
+#include <poco/gpu/Swapchain.h>
+
+#include <poco/Scene.h>
 #include <poco/Renderer.h>
 #include <poco/Viewport.h>
+
+#include <poco/mas.h>
 
 
 class MyWindowHandler : public poco::WindowHandler {

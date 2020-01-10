@@ -26,11 +26,11 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include "../Forward.h"
 
 #include "Device.h"
 
-#include "mas.h"
+#include "../mas.h"
 
 namespace poco {
 

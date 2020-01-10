@@ -52,6 +52,10 @@ namespace poco {
     using BufferPointer = std::shared_ptr<Buffer>;
     struct BufferInit;
 
+    class Shader;
+    using ShaderPointer = std::shared_ptr<Shader>;
+    struct ShaderInit;
+
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
     struct PipelineStateInit;

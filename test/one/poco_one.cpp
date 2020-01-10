@@ -29,11 +29,11 @@
 #include <chrono>
 
 #include <poco/poco.h>
-#include <poco/Scene.h>
-#include <poco/Device.h>
-#include <poco/Batch.h>
+#include <poco/gpu/Device.h>
+#include <poco/gpu/Batch.h>
+#include <poco/gpu/Swapchain.h>
 #include <poco/Window.h>
-#include <poco/Swapchain.h>
+#include <poco/Scene.h>
 #include <poco/Renderer.h>
 #include <poco/Viewport.h>
 

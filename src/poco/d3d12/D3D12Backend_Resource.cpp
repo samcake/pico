@@ -1,4 +1,4 @@
-// Pipeline.h 
+// D3D12Backend_Resource.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,22 +24,24 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "D3D12Backend.h"
 
-#include "Forward.h"
+using namespace poco;
 
-namespace poco {
+#ifdef WIN32
 
-    struct PipelineStateInit {
-    };
+D3D12BufferBackend::D3D12BufferBackend() {
 
-    class PipelineState {
-    protected:
-        // PipelineState is created from the device
-        friend class Device;
-        PipelineState();
-
-    public:
-        virtual ~PipelineState();
-    };
 }
+
+D3D12BufferBackend::~D3D12BufferBackend() {
+
+}
+
+BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
+    auto buffer = new D3D12BufferBackend();
+
+    return BufferPointer(buffer);
+}
+
+#endif

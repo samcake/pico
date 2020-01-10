@@ -1,4 +1,4 @@
-// Resource.h 
+// Shader.h 
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -30,25 +30,16 @@
 
 namespace poco {
 
-    class Resource {
-    public:
-        virtual ~Resource();
-    protected:
-        Resource();
-
+    struct ShaderInit {
     };
 
-
-    struct BufferInit {
-    };
-
-    class Buffer : public Resource {
+    class Shader {
     protected:
-        // Buffer is created from the device
+        // Shader is created from the device
         friend class Device;
-        Buffer();
+        Shader();
 
     public:
-        virtual ~Buffer();
+        virtual ~Shader();
     };
 }
