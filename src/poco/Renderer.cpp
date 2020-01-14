@@ -54,9 +54,9 @@ void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) 
         _batch->begin(currentIndex);
 
         _batch->resourceBarrierTransition(
-            poco::Batch::BarrierFlag::NONE,
-            poco::Batch::ResourceState::PRESENT,
-            poco::Batch::ResourceState::RENDER_TARGET,
+            poco::ResourceBarrierFlag::NONE,
+            poco::ResourceState::PRESENT,
+            poco::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
         static float time = 0.0f;
@@ -68,9 +68,9 @@ void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) 
         _batch->clear(clearColor, swapchain, currentIndex);
 
         _batch->resourceBarrierTransition(
-            poco::Batch::BarrierFlag::NONE,
-            poco::Batch::ResourceState::RENDER_TARGET,
-            poco::Batch::ResourceState::PRESENT,
+            poco::ResourceBarrierFlag::NONE,
+            poco::ResourceState::RENDER_TARGET,
+            poco::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
         _batch->end();

@@ -26,11 +26,32 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include "../Forward.h"
+
+#include <string>
 
 namespace poco {
 
+
+    enum class ShaderType {
+        PROGRAM = 0,
+        VERTEX,
+        PIXEL,
+
+        COUNT,
+    };
+
     struct ShaderInit {
+        ShaderType type;
+
+        std::string entryPoint;
+
+        std::string url;
+    };
+
+    struct ProgramInit {
+        ShaderPointer vertexShader;
+        ShaderPointer pixelShader;
     };
 
     class Shader {
@@ -38,8 +59,16 @@ namespace poco {
         // Shader is created from the device
         friend class Device;
         Shader();
-
     public:
+
         virtual ~Shader();
+
+
+        ShaderPointer getVertexShader() const { return _programDesc.vertexShader; }
+        ShaderPointer getPixelShader() const { return _programDesc.pixelShader; }
+
+    protected:
+        ShaderInit _shaderDesc;
+        ProgramInit _programDesc;
     };
 }

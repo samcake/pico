@@ -28,6 +28,8 @@
 
 #include "../Forward.h"
 
+#include "Batch.h"
+
 namespace poco {
 
     class Resource {
@@ -40,6 +42,9 @@ namespace poco {
 
 
     struct BufferInit {
+        ResourceState usage;
+        uint64_t bufferSize;
+        bool hostVisible;
     };
 
     class Buffer : public Resource {
@@ -50,5 +55,9 @@ namespace poco {
 
     public:
         virtual ~Buffer();
+
+        BufferInit _init;
+        void* _cpuMappedAddress = nullptr;
+        uint64_t _bufferSize;
     };
 }

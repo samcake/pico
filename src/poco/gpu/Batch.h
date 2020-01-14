@@ -37,6 +37,45 @@ namespace poco {
     struct BatchInit {
     };
 
+
+    enum class ResourceState {
+        COMMON = 0,
+        VERTEX_AND_CONSTANT_BUFFER,
+        INDEX_BUFFER,
+        RENDER_TARGET,
+        UNORDERED_ACCESS,
+        DEPTH_WRITE,
+        DEPTH_READ,
+        NON_PIXEL_SHADER_RESOURCE,
+        PIXEL_SHADER_RESOURCE,
+        STREAM_OUT,
+        INDIRECT_ARGUMENT,
+        COPY_DEST,
+        COPY_SOURCE,
+        RESOLVE_DEST,
+        RESOLVE_SOURCE,
+        _GENERIC_READ,
+        RAYTRACING_ACCELERATION_STRUCTURE,
+        SHADING_RATE_SOURCE,
+        PRESENT,
+        PREDICATION,
+        VIDEO_DECODE_READ,
+        VIDEO_DECODE_WRITE,
+        VIDEO_PROCESS_READ,
+        VIDEO_PROCESS_WRITE,
+        VIDEO_ENCODE_READ,
+        VIDEO_ENCODE_WRITE,
+
+        COUNT,
+    };
+    enum class ResourceBarrierFlag {
+        NONE = 0,
+        BEGIN_ONLY,
+        END_ONLY,
+
+        COUNT,
+    };
+
     class Batch {
     protected:
         // Batch is created from the device
@@ -48,51 +87,28 @@ namespace poco {
 
 
         virtual void begin(uint8_t currentIndex);
+        virtual void end();
+
+        virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);
+        virtual void endPass();
+
         virtual void clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index);
 
-
-        enum class ResourceState {
-            COMMON = 0,
-            VERTEX_AND_CONSTANT_BUFFER,
-            INDEX_BUFFER,
-            RENDER_TARGET,
-            UNORDERED_ACCESS,
-            DEPTH_WRITE,
-            DEPTH_READ,
-            NON_PIXEL_SHADER_RESOURCE,
-            PIXEL_SHADER_RESOURCE,
-            STREAM_OUT,
-            INDIRECT_ARGUMENT,
-            COPY_DEST,
-            COPY_SOURCE,
-            RESOLVE_DEST,
-            RESOLVE_SOURCE,
-            _GENERIC_READ,
-            RAYTRACING_ACCELERATION_STRUCTURE,
-            SHADING_RATE_SOURCE,
-            PRESENT,
-            PREDICATION,
-            VIDEO_DECODE_READ,
-            VIDEO_DECODE_WRITE,
-            VIDEO_PROCESS_READ,
-            VIDEO_PROCESS_WRITE,
-            VIDEO_ENCODE_READ,
-            VIDEO_ENCODE_WRITE,
-        
-            COUNT,
-        };
-        enum class BarrierFlag {
-            NONE = 0,
-            BEGIN_ONLY,
-            END_ONLY,
-
-            COUNT,
-        };
         virtual void resourceBarrierTransition(
-            BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource);
 
-        virtual void end();
+        virtual void setViewport(vec4& viewport);
+        virtual void setScissor(vec4& scissor);
+
+        virtual void setPipeline(PipelineStatePointer pipeline);
+
+        virtual void bindIndexBuffer(BufferPointer& buffer);
+        virtual void bindVertexBuffers(uint32_t num, BufferPointer* buffers);
+
+        virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
+
+
 
     };
 }

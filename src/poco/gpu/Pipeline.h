@@ -31,6 +31,7 @@
 namespace poco {
 
     struct PipelineStateInit {
+        ShaderPointer program;
     };
 
     class PipelineState {
@@ -41,5 +42,7 @@ namespace poco {
 
     public:
         virtual ~PipelineState();
+
+        ShaderPointer _program;
     };
 }

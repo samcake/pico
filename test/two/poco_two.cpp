@@ -34,6 +34,7 @@
 
 #include <poco/gpu/Device.h>
 #include <poco/gpu/Resource.h>
+#include <poco/gpu/Shader.h>
 #include <poco/gpu/Pipeline.h>
 #include <poco/gpu/Batch.h>
 #include <poco/gpu/Swapchain.h>
@@ -43,6 +44,8 @@
 #include <poco/Viewport.h>
 
 #include <poco/mas.h>
+
+#include <vector>
 
 
 class MyWindowHandler : public poco::WindowHandler {
@@ -57,6 +60,27 @@ public:
     }
 
 };
+//--------------------------------------------------------------------------------------
+
+poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device) {
+
+    poco::ShaderInit vertexShaderInit{ poco::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
+    poco::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+
+
+    poco::ShaderInit pixelShaderInit{ poco::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
+    poco::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+
+    poco::ProgramInit programInit { vertexShader, pixelShader };
+    poco::ShaderPointer programShader = device->createProgram(programInit);
+
+
+
+    poco::PipelineStateInit pipelineInit { programShader };
+    poco::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
+
+    return pipeline;
+}
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -92,22 +116,54 @@ int main(int argc, char *argv[])
 
 
     // Let's allocate buffer
-    poco::BufferInit bufferInit {};
-    auto buffer = gpuDevice->createBuffer(bufferInit);
+    // quad
+    std::vector<float> vertexData = {
+        -0.25f,  0.25f, 0.0f, 1.0f,
+        -0.25f, -0.25f, 0.0f, 1.0f,
+        0.25f, -0.25f, 0.0f, 1.0f,
+        0.25f,  0.25f, 0.0f, 1.0f,
+    };
+
+    vertexData[4 * 0 + 0] += 0.5f;
+    vertexData[4 * 1 + 0] += 0.5f;
+    vertexData[4 * 2 + 0] += 0.5f;
+    vertexData[4 * 3 + 0] += 0.5f;
+
+    poco::BufferInit vertexBufferInit{};
+    vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+    vertexBufferInit.hostVisible = true;
+    vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
+   // vertexBufferInit.vertexStride = sizeof(float) * 4;
+    auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
+    memcpy(vertexBuffer->_cpuMappedAddress, vertexData.data(), vertexBufferInit.bufferSize);
+
+    std::vector<uint32_t> indexData = {
+        0, 2, 1,
+        0, 2, 3
+    };
+    poco::BufferInit indexBufferInit{};
+    indexBufferInit.usage = poco::ResourceState::INDEX_BUFFER;
+    indexBufferInit.hostVisible = true;
+    indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
+    auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
+    memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), vertexBufferInit.bufferSize);
 
     // And a Pipeline
+    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice);
 
 
     // And now a render callback where we describe the rendering sequence
     poco::RenderCallback renderCallback = [&](const poco::CameraPointer& camera, poco::SwapchainPointer& swapchain, poco::DevicePointer& device, poco::BatchPointer& batch) {
+        poco::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
+
         auto currentIndex = swapchain->currentIndex();
 
         batch->begin(currentIndex);
 
         batch->resourceBarrierTransition(
-            poco::Batch::BarrierFlag::NONE,
-            poco::Batch::ResourceState::PRESENT,
-            poco::Batch::ResourceState::RENDER_TARGET,
+            poco::ResourceBarrierFlag::NONE,
+            poco::ResourceState::PRESENT,
+            poco::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
         static float time = 0.0f;
@@ -116,6 +172,9 @@ int main(int argc, char *argv[])
         time = modf(time, &intPart);
        // poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.5f, 0.5f, 1.f)), 1.f);
+        batch->clear(clearColor, swapchain, currentIndex);
+
+        batch->beginPass(swapchain, currentIndex);
 
 /*
         auto backBuffer = m_pWindow->GetCurrentBackBuffer();
@@ -132,32 +191,41 @@ int main(int argc, char *argv[])
             ClearRTV(commandList, rtv, clearColor);
             ClearDepth(commandList, dsv);
         }
+*/
+        batch->setPipeline(pipeline);
+       // commandList->SetPipelineState(m_PipelineState.Get());
+       // commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
-        commandList->SetPipelineState(m_PipelineState.Get());
-        commandList->SetGraphicsRootSignature(m_RootSignature.Get());
-
+        batch->bindIndexBuffer(indexBuffer);
+        batch->bindVertexBuffers(1, &vertexBuffer);
+/*
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
         commandList->IASetIndexBuffer(&m_IndexBufferView);
-
-        commandList->RSSetViewports(1, &m_Viewport);
+*/
+        
+        batch->setViewport(viewportRect);
+        batch->setScissor(viewportRect);
+/*        commandList->RSSetViewports(1, &m_Viewport);
         commandList->RSSetScissorRects(1, &m_ScissorRect);
-
-        commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
+*/
+      //commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
         // Update the MVP matrix
-        XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+      /*  XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
         mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
         commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-
-        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
 */
-        batch->clear(clearColor, swapchain, currentIndex);
+
+        batch->drawIndexed(6, 0);
+/*        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
+*/
+        batch->endPass();
 
         batch->resourceBarrierTransition(
-            poco::Batch::BarrierFlag::NONE,
-            poco::Batch::ResourceState::RENDER_TARGET,
-            poco::Batch::ResourceState::PRESENT,
+            poco::ResourceBarrierFlag::NONE,
+            poco::ResourceState::RENDER_TARGET,
+            poco::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
         batch->end();

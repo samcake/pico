@@ -37,12 +37,25 @@ Batch::~Batch() {
 }
 
 void Batch::begin(uint8_t currentIndex) {}
+void Batch::end() {}
+
+void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}
+void Batch::endPass() {}
 
 void Batch::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {}
 
 void Batch::resourceBarrierTransition(
-    BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {}
 
-void Batch::end() {}
+void Batch::setViewport(vec4& viewport) {}
+void Batch::setScissor(vec4& scissor) {}
+
+void Batch::setPipeline(PipelineStatePointer pipeline) {}
+
+void Batch::bindIndexBuffer(BufferPointer& buffer) {}
+void Batch::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {}
+
+void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
+
 

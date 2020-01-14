@@ -45,8 +45,10 @@ namespace poco {
 
         virtual BufferPointer createBuffer(const BufferInit& init) = 0;
 
-        virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
+        virtual ShaderPointer createProgram(const ProgramInit& init) = 0;
+
+        virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
 
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
@@ -66,6 +68,8 @@ namespace poco {
         BufferPointer createBuffer(const BufferInit& init);
 
         ShaderPointer createShader(const ShaderInit& init);
+        ShaderPointer createProgram(const ProgramInit& init);
+
         PipelineStatePointer createPipelineState(const PipelineStateInit& init);
 
         // CommandQueue work

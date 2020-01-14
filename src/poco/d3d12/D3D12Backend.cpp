@@ -334,26 +334,26 @@ D3D12SwapchainBackend::~D3D12SwapchainBackend() {
 SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     auto sw = new D3D12SwapchainBackend();
 
-    sw->g_SwapChain = CreateSwapChain(init.hWnd, g_CommandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
+    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
 
 
-    sw->_currentIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
+    sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
-    sw->g_RTVDescriptorHeap = CreateDescriptorHeap(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
-    sw->g_RTVDescriptorSize = g_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    sw->_rtvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
+    sw->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    auto rtvDescriptorSize = g_Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    auto rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
     {
         ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(sw->g_SwapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+        ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-        g_Device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+        _device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
 
-        sw->g_BackBuffers[i] = backBuffer;
+        sw->_backBuffers[i] = backBuffer;
 
         rtvHandle.ptr += (rtvDescriptorSize);
     }
@@ -435,10 +435,10 @@ BatchPointer D3D12Backend::createBatch(const BatchInit& init) {
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
     {
-        batch->g_CommandAllocators[i] = CreateCommandAllocator(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+        batch->_commandAllocators[i] = CreateCommandAllocator(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
     }
-    batch->g_CommandList = CreateCommandList(g_Device,
-        batch->g_CommandAllocators[batch->g_CurrentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
+    batch->_commandList = CreateCommandList(_device,
+        batch->_commandAllocators[batch->_currentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
 
     return BatchPointer(batch);
 }
@@ -451,11 +451,26 @@ D3D12BatchBackend::~D3D12BatchBackend() {
 }
 
 void D3D12BatchBackend::begin(uint8_t currentIndex) {
-    g_CurrentBackBufferIndex = currentIndex;
-    auto commandAllocator = g_CommandAllocators[currentIndex];
+    _currentBackBufferIndex = currentIndex;
+    auto commandAllocator = _commandAllocators[currentIndex];
 
     commandAllocator->Reset();
-    g_CommandList->Reset(commandAllocator.Get(), nullptr);
+    _commandList->Reset(commandAllocator.Get(), nullptr);
+}
+
+void D3D12BatchBackend::end() {
+    ThrowIfFailed(_commandList->Close());
+}
+
+void D3D12BatchBackend::beginPass(const SwapchainPointer& swapchain, uint8_t index) {
+    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
+
+    _commandList->OMSetRenderTargets(1, &rtv, TRUE, nullptr);
+}
+
+void D3D12BatchBackend::endPass() {
+
 }
 
 void D3D12BatchBackend::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {
@@ -463,17 +478,17 @@ void D3D12BatchBackend::clear(const vec4& color, const SwapchainPointer& swapcha
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
     FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->g_RTVDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->g_RTVDescriptorSize * index};
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index};
 
-    g_CommandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
+    _commandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
 }
 
 void D3D12BatchBackend::resourceBarrierTransition(
-    BarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {
 
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
-    auto backBuffer = sw->g_BackBuffers[currentIndex];
+    auto backBuffer = sw->_backBuffers[currentIndex];
 
     D3D12_RESOURCE_BARRIER barrier;
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -483,12 +498,54 @@ void D3D12BatchBackend::resourceBarrierTransition(
     barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
     barrier.Transition.Subresource = (subresource == -1 ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : subresource);
 
-    g_CommandList->ResourceBarrier(1, &barrier);
+    _commandList->ResourceBarrier(1, &barrier);
 }
 
 
-void D3D12BatchBackend::end() {
-    ThrowIfFailed(g_CommandList->Close());
+void D3D12BatchBackend::setViewport(vec4& viewport) {
+    D3D12_VIEWPORT dxViewport;
+    dxViewport.TopLeftX = viewport.x;
+    dxViewport.TopLeftY = viewport.y;
+    dxViewport.Width = viewport.z;
+    dxViewport.Height = viewport.w;
+    dxViewport.MaxDepth = 1.0f;
+    dxViewport.MinDepth = 0.0f;
+
+    _commandList->RSSetViewports(1, &dxViewport);
+}
+
+void D3D12BatchBackend::setScissor(vec4& scissor) {
+    D3D12_RECT dxRect;
+    dxRect.left = scissor.x;
+    dxRect.top = scissor.y;
+    dxRect.right = scissor.x + scissor.z;
+    dxRect.bottom = scissor.y + scissor.w;
+
+    _commandList->RSSetScissorRects(1, &dxRect);
+}
+
+void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
+    auto dxPso = static_cast<D3D12PipelineStateBackend*>(pipeline.get())->_pipelineState;
+    _commandList->SetPipelineState(dxPso.Get());
+
+    auto dxGRS = static_cast<D3D12PipelineStateBackend*>(pipeline.get())->_rootSignature;
+    _commandList->SetGraphicsRootSignature(dxGRS.Get());
+
+    _commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+}
+
+void D3D12BatchBackend::bindIndexBuffer(BufferPointer& buffer) {
+    auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());
+    _commandList->IASetIndexBuffer(&dbBuffer->_indexBufferView);
+}
+
+void D3D12BatchBackend::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {
+    auto dbBuffer = static_cast<D3D12BufferBackend*>(buffers[0].get());
+    _commandList->IASetVertexBuffers(0, 1, &dbBuffer->_vertexBufferView);
+}
+
+void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {
+    _commandList->DrawIndexedInstanced(numPrimitives, 1, startIndex, 0, 0);
 }
 
 
@@ -502,12 +559,12 @@ void D3D12BatchBackend::end() {
 D3D12Backend::D3D12Backend() {
     ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
 
-    g_Device = CreateDevice(dxgiAdapter4);
+    _device = CreateDevice(dxgiAdapter4);
 
-    g_CommandQueue = CreateCommandQueue(g_Device, D3D12_COMMAND_LIST_TYPE_DIRECT);
+    _commandQueue = CreateCommandQueue(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-    g_Fence = CreateFence(g_Device);
-    g_FenceEvent = CreateEventHandle();
+    _fence = CreateFence(_device);
+    _fenceEvent = CreateEventHandle();
 }
 
 D3D12Backend::~D3D12Backend() {
@@ -519,9 +576,9 @@ void D3D12Backend::executeBatch(const BatchPointer& batch) {
 
 
     ID3D12CommandList* const commandLists[] = {
-        bat->g_CommandList.Get()
+        bat->_commandList.Get()
     };
-    g_CommandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+    _commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
 
 }
 
@@ -532,13 +589,13 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     UINT syncInterval = 1;
     // UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
     UINT presentFlags = 0;
-    ThrowIfFailed(sw->g_SwapChain->Present(syncInterval, presentFlags));
+    ThrowIfFailed(sw->_swapchain->Present(syncInterval, presentFlags));
 
-    g_FrameFenceValues[sw->currentIndex()] = Signal(g_CommandQueue, g_Fence, g_FenceValue);
+    _frameFenceValues[sw->currentIndex()] = Signal(_commandQueue, _fence, _fenceValue);
 
-    sw->_currentIndex = sw->g_SwapChain->GetCurrentBackBufferIndex();
+    sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
-    WaitForFenceValue(g_Fence, g_FrameFenceValues[sw->_currentIndex], g_FenceEvent);
+    WaitForFenceValue(_fence, _frameFenceValues[sw->_currentIndex], _fenceEvent);
 }
 
 #endif

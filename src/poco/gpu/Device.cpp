@@ -51,6 +51,9 @@ BufferPointer Device::createBuffer(const BufferInit& init) {
 ShaderPointer Device::createShader(const ShaderInit& init) {
     return _backend->createShader(init);
 }
+ShaderPointer Device::createProgram(const ProgramInit& init) {
+    return _backend->createProgram(init);
+}
 
 PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) {
     return _backend->createPipelineState(init);
