@@ -33,9 +33,9 @@
 #include <poco/gpu/Batch.h>
 #include <poco/gpu/Swapchain.h>
 #include <poco/Window.h>
-#include <poco/Scene.h>
-#include <poco/Renderer.h>
-#include <poco/Viewport.h>
+#include <poco/render/Scene.h>
+#include <poco/render/Renderer.h>
+#include <poco/render/Viewport.h>
 
 
 class MyWindowHandler : public poco::WindowHandler {
@@ -148,9 +148,3 @@ int main(int argc, char *argv[])
 
      return 0;
 }
-
-/*
-int CALLBACK wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
-{ 
-    return 0;
-}*/

@@ -39,11 +39,9 @@
 #include <poco/gpu/Batch.h>
 #include <poco/gpu/Swapchain.h>
 
-#include <poco/Scene.h>
-#include <poco/Renderer.h>
-#include <poco/Viewport.h>
-
-#include <poco/mas.h>
+#include <poco/render/Scene.h>
+#include <poco/render/Renderer.h>
+#include <poco/render/Viewport.h>
 
 #include <vector>
 
@@ -176,50 +174,16 @@ int main(int argc, char *argv[])
 
         batch->beginPass(swapchain, currentIndex);
 
-/*
-        auto backBuffer = m_pWindow->GetCurrentBackBuffer();
-        auto rtv = m_pWindow->GetCurrentRenderTargetView();
-        auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
-
-        // Clear the render targets.
-        {
-            TransitionResource(commandList, backBuffer,
-                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-            FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-
-            ClearRTV(commandList, rtv, clearColor);
-            ClearDepth(commandList, dsv);
-        }
-*/
         batch->setPipeline(pipeline);
-       // commandList->SetPipelineState(m_PipelineState.Get());
-       // commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
         batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);
-/*
-        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
-        commandList->IASetIndexBuffer(&m_IndexBufferView);
-*/
-        
+
         batch->setViewport(viewportRect);
         batch->setScissor(viewportRect);
-/*        commandList->RSSetViewports(1, &m_Viewport);
-        commandList->RSSetScissorRects(1, &m_ScissorRect);
-*/
-      //commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
-
-        // Update the MVP matrix
-      /*  XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-        mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-        commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-*/
 
         batch->drawIndexed(6, 0);
-/*        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
-*/
+
         batch->endPass();
 
         batch->resourceBarrierTransition(
