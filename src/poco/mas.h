@@ -72,6 +72,21 @@ namespace poco {
         vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
     };
 
+    struct ucvec4 {
+        uint8_t x, y, z, w;
+        uint8_t* data() { return &x; }
+        const uint8_t* data() const { return &x; }
+
+        ucvec4() : x(0), y(0), z(0), w(0) {}
+        ucvec4(uint8_t _x) : x(_x), y(_x), z(_x), w(_x) {}
+        ucvec4(uint8_t _x, uint8_t _y, uint8_t _z, uint8_t _w) : x(_x), y(_y), z(_z), w(_w) {}
+        ucvec4& operator=(const ucvec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        ucvec4 operator+(const ucvec4& a) const { return ucvec4(x + a.x, y + a.y, z + a.z, w + a.w); }
+        ucvec4 operator-(const ucvec4& a) const { return ucvec4(x - a.x, y - a.y, z - a.z, w - a.w); }
+        ucvec4 operator*(uint8_t s) const { return ucvec4(x * s, y * s, z * s, w * s); }
+    };
+
     // Abs
     inline float abs(float v) { return (v > 0.0f ? v : -v); }
     inline vec2 abs(const vec2& v) {
