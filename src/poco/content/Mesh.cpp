@@ -1,4 +1,4 @@
-// Resource.h 
+// Mesh.cpp
 //
 // Sam Gateau - 2020/1/1
 // 
@@ -24,43 +24,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Mesh.h"
 
-#include "../Forward.h"
+using namespace poco;
 
-#include "Batch.h"
+Mesh::Mesh() {
 
-namespace poco {
-
-    class Resource {
-    public:
-        virtual ~Resource();
-    protected:
-        Resource();
-
-    };
-
-
-    struct BufferInit {
-        ResourceState usage;
-        uint64_t bufferSize;
-        bool hostVisible;
-
-        // VertexBuffer
-        uint32_t vertexStride { 0 };
-    };
-
-    class Buffer : public Resource {
-    protected:
-        // Buffer is created from the device
-        friend class Device;
-        Buffer();
-
-    public:
-        virtual ~Buffer();
-
-        BufferInit _init;
-        void* _cpuMappedAddress = nullptr;
-        uint64_t _bufferSize;
-    };
 }
+
+Mesh::~Mesh() {
+
+}
+

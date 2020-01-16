@@ -106,6 +106,7 @@ namespace poco {
         virtual void bindIndexBuffer(BufferPointer& buffer);
         virtual void bindVertexBuffers(uint32_t num, BufferPointer* buffers);
 
+        virtual void draw(uint32_t numPrimitives, uint32_t startIndex);
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
 

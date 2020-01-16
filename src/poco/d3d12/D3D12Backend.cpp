@@ -95,6 +95,20 @@ const D3D12_RESOURCE_BARRIER_FLAGS D3D12BatchBackend::ResourceBarrieFlags[] = {
     D3D12_RESOURCE_BARRIER_FLAG_END_ONLY,
 };
 
+const D3D12_PRIMITIVE_TOPOLOGY_TYPE D3D12BatchBackend::PrimitiveTopologyTypes[] = {
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT,
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE,
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+    D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+};
+
+const D3D12_PRIMITIVE_TOPOLOGY D3D12BatchBackend::PrimitiveTopologies[] = {
+    D3D_PRIMITIVE_TOPOLOGY_POINTLIST,
+    D3D_PRIMITIVE_TOPOLOGY_LINELIST,
+    D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+    D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
+};
+
 
 ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
 {
@@ -525,13 +539,15 @@ void D3D12BatchBackend::setScissor(vec4& scissor) {
 }
 
 void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
-    auto dxPso = static_cast<D3D12PipelineStateBackend*>(pipeline.get())->_pipelineState;
+    auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
+
+    auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
-    auto dxGRS = static_cast<D3D12PipelineStateBackend*>(pipeline.get())->_rootSignature;
+    auto dxGRS = dpso->_rootSignature;
     _commandList->SetGraphicsRootSignature(dxGRS.Get());
 
-    _commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
 }
 
 void D3D12BatchBackend::bindIndexBuffer(BufferPointer& buffer) {
@@ -543,6 +559,11 @@ void D3D12BatchBackend::bindVertexBuffers(uint32_t num, BufferPointer* buffers) 
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffers[0].get());
     _commandList->IASetVertexBuffers(0, 1, &dbBuffer->_vertexBufferView);
 }
+
+void D3D12BatchBackend::draw(uint32_t numPrimitives, uint32_t startIndex) {
+    _commandList->DrawInstanced(numPrimitives, 1, startIndex, 0);
+}
+
 
 void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {
     _commandList->DrawIndexedInstanced(numPrimitives, 1, startIndex, 0, 0);

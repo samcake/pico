@@ -56,6 +56,7 @@ void Batch::setPipeline(PipelineStatePointer pipeline) {}
 void Batch::bindIndexBuffer(BufferPointer& buffer) {}
 void Batch::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {}
 
+void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
 

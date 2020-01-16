@@ -115,7 +115,7 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     case ResourceState::VERTEX_AND_CONSTANT_BUFFER: {
         bufferBackend->_vertexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_vertexBufferView.SizeInBytes = (UINT)bufferSize;
-        bufferBackend->_vertexBufferView.StrideInBytes = sizeof( float[4] );
+        bufferBackend->_vertexBufferView.StrideInBytes = init.vertexStride;
         // Format is filled out by tr_create_vertex_buffer
     }
     break;

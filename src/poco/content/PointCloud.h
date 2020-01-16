@@ -31,13 +31,12 @@
 
 #include <string>
 
+#include "Mesh.h"
+
 namespace poco {
 
-    class PointCloud;
-    using PointCloudPointer = std::shared_ptr<PointCloud>;
-
     struct PointCloudInit {
-
+        MeshPointer mesh;
     };
 
     class PointCloud {
@@ -45,7 +44,7 @@ namespace poco {
         PointCloud(const PointCloudInit& init);
         ~PointCloud();
 
-        
+        MeshPointer _mesh;
 
 
         static PointCloudPointer createFromPLY(const std::string& filename);

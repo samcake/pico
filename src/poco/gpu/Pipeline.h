@@ -30,8 +30,19 @@
 
 namespace poco {
 
+    enum class PrimitiveTopology {
+        POINT,
+        LINE,
+        TRIANGLE,
+        TRIANGLE_STRIP,
+
+        COUNT,
+    };
+
     struct PipelineStateInit {
         ShaderPointer program;
+
+        PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
     };
 
     class PipelineState {

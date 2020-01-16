@@ -128,29 +128,16 @@ int main(int argc, char *argv[])
     auto pointCloud = createPointCloud("./20191211-brain.ply");
 
 
-    // Let's allocate buffer
-    // quad
-    std::vector<float> vertexData = {
-        -0.25f,  0.25f, 0.0f, 1.0f,
-        -0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f,  0.25f, 0.0f, 1.0f,
-    };
-
-    vertexData[4 * 0 + 0] += 0.5f;
-    vertexData[4 * 1 + 0] += 0.5f;
-    vertexData[4 * 2 + 0] += 0.5f;
-    vertexData[4 * 3 + 0] += 0.5f;
-
+    // Let's allocate buffer to hold the point cloud mesh
     poco::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
-   // vertexBufferInit.vertexStride = sizeof(float) * 4;
+    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.size();
+    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor->getBuffer(0)->_byteStride;
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
-    memcpy(vertexBuffer->_cpuMappedAddress, vertexData.data(), vertexBufferInit.bufferSize);
+    memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
-    std::vector<uint32_t> indexData = {
+  /*  std::vector<uint32_t> indexData = {
         0, 2, 1,
         0, 2, 3
     };
@@ -160,7 +147,7 @@ int main(int argc, char *argv[])
     indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
     memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), vertexBufferInit.bufferSize);
-
+*/
     // And a Pipeline
     poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice);
 
@@ -209,7 +196,7 @@ int main(int argc, char *argv[])
        // commandList->SetPipelineState(m_PipelineState.Get());
        // commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
-        batch->bindIndexBuffer(indexBuffer);
+      //  batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);
 /*
         commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -230,7 +217,7 @@ int main(int argc, char *argv[])
         commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 */
 
-        batch->drawIndexed(6, 0);
+        batch->draw(100, 0);
 /*        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
 */
         batch->endPass();

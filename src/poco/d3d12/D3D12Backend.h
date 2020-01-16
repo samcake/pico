@@ -121,6 +121,7 @@ namespace poco {
         void bindIndexBuffer(BufferPointer& buffer) override;
         void bindVertexBuffers(uint32_t num, BufferPointer* buffers) override;
 
+        void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
 
         ComPtr<ID3D12GraphicsCommandList> _commandList;
@@ -132,6 +133,9 @@ namespace poco {
 
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
+
+        static const D3D12_PRIMITIVE_TOPOLOGY_TYPE  PrimitiveTopologyTypes[uint32_t(PrimitiveTopology::COUNT)];
+        static const D3D12_PRIMITIVE_TOPOLOGY  PrimitiveTopologies[uint32_t(PrimitiveTopology::COUNT)];
     };
 
 
@@ -173,8 +177,8 @@ namespace poco {
 
         ComPtr<ID3D12RootSignature> _rootSignature;
         ComPtr<ID3D12PipelineState> _pipelineState;
-        //    ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
-        //    UINT g_RTVDescriptorSize;
+        D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
+
     };
 
 }

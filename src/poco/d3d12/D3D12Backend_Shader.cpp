@@ -158,8 +158,9 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& 
             // Define the vertex input layout.
             D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
             {
-                { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }//,
-             //   { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+                { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                { "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
             };
 
             // Describe and create the graphics pipeline state object (PSO).
@@ -199,7 +200,7 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& 
             psoDesc.DepthStencilState.DepthEnable = FALSE;
             psoDesc.DepthStencilState.StencilEnable = FALSE;
             psoDesc.SampleMask = UINT_MAX;
-            psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int) init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
@@ -212,6 +213,7 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& 
         pso->_pipelineState = pipelineState;
         pso->_rootSignature = rootSignature;
 
+        pso->_primitive_topology = D3D12BatchBackend::PrimitiveTopologies[(int)init.primitiveTopology];
     }
 
     return PipelineStatePointer(pso);

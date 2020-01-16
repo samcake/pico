@@ -33,7 +33,9 @@
 
 using namespace poco;
 
-PointCloud::PointCloud(const PointCloudInit& init) {
+PointCloud::PointCloud(const PointCloudInit& init) : 
+    _mesh(init.mesh)
+{
 
 }
 
@@ -206,12 +208,16 @@ PointCloudPointer PointCloud::createFromPLY(const std::string& filename) {
     };
     size_t verticesByteSize = elements[0].first.count * sizeof(Vertex);
 
-    std::vector< Vertex > vertices;
-    vertices.resize(elements[0].first.count);
+
+  //  std::vector< Vertex > vertices;
+  //  vertices.resize(elements[0].first.count);
+
+    AttribBufferPointer vertices;
+
 
     switch (format.name) {
     case Format::binary_little_endian: {
-        memcpy((uint8_t*) vertices.data(), contentBegin, verticesByteSize);
+        vertices = std::make_shared<AttribBuffer>((void*)contentBegin, verticesByteSize);
     } break;
     case Format::binary_big_endian:
     case Format::ascii:
@@ -220,7 +226,23 @@ PointCloudPointer PointCloud::createFromPLY(const std::string& filename) {
     break;
     }
 
-    return nullptr;
+    auto vertexFormat = new StreamAccessorInstanced<3, 1>();
+
+    vertexFormat->attribs[0] = { AttribFormat::VEC3, 0, 0 };
+    vertexFormat->attribs[1] = { AttribFormat::VEC3, 0, 12 };
+    vertexFormat->attribs[2] = { AttribFormat::CVEC4, 0, 24 };
+
+    vertexFormat->bufferViews[0] = {0, 28, 0, 0xFFFFFFFF};
+
+    auto mesh = std::make_shared<Mesh>();
+
+    mesh->_vertexBuffers._accessor = vertexFormat;
+    mesh->_vertexBuffers._buffers.push_back(vertices);
+
+
+    PointCloudInit pcinit{ mesh };
+    return std::make_shared<PointCloud>(pcinit);
+
 }
 
 

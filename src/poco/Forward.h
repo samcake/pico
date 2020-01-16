@@ -74,6 +74,13 @@ namespace poco {
     class Viewport;
     using ViewportPointer = std::shared_ptr<Viewport>;
 
+    // Content types
+    class Mesh;
+    using MeshPointer = std::shared_ptr<Mesh>;
+
+    class PointCloud;
+    using PointCloudPointer = std::shared_ptr<PointCloud>;
+
 }
 #define pocoLog() ::poco::api::log(__FILE__, __LINE__, __FUNCTION__)
 
