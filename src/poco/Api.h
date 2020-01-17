@@ -51,6 +51,8 @@ namespace poco {
         static void destroy();
         static std::ostream& log(const char* file, int line, const char* functionName);
 
+        static void assert(bool test, const char* file, int line, const char* functionName);
+
         // Factory
         static DevicePointer createDevice(const DeviceInit& init);
         static WindowPointer createWindow(const WindowInit& init);

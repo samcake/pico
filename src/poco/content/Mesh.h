@@ -27,72 +27,20 @@
 #pragma once
 
 #include "../Forward.h"
+#include "../Api.h"
 
 #include "../mas.h"
+
+#include "../gpu/gpu.h"
 
 #include <vector>
 
 namespace poco {
 
-    enum class AttribFormat : uint8_t {
-        UINT32,
-        VEC3,
-        CVEC4,
-
-        COUNT,
-    };
-
-    enum class Topology : uint8_t {
-        POINT,
-        LINE,
-        TRIANGLE,
-        TRIANGLE_STRIP,
-
-        COUNT,
-    };
-
-    struct AttribAccessor {
-        AttribFormat _format{ AttribFormat::UINT32 };
-        uint8_t _bufferIndex{ 0 };
-        uint16_t _streamOffset{ 0 };
-    };
-
-    struct AttribBufferView {
-        uint8_t _bufferIndex{ 0 };
-        uint16_t _byteStride{ 0 };
-        uint32_t _byteOffset{ 0 };
-        uint32_t _byteLength{ 0xFFFFFFFF };
-    };
-
-    class StreamAccessor {
-    public:
-        virtual ~StreamAccessor() {};
- 
-        virtual uint8_t getNumAttribs() const = 0;
-        virtual uint8_t getNumBuffers() const = 0;
-
-        virtual const AttribAccessor* getAttrib(uint8_t a) const = 0;
-        virtual const AttribBufferView* getBuffer(uint8_t b) const = 0;
-    };
-
-    template <int A, int B> class StreamAccessorInstanced : public StreamAccessor {
-    public:
-        StreamAccessorInstanced() {}
-        virtual ~StreamAccessorInstanced() {}
-
-        uint8_t getNumAttribs() const override { return A; }
-        uint8_t getNumBuffers() const override { return B; }
-        const AttribAccessor* getAttrib(uint8_t a) const override { return attribs + a; }
-        const AttribBufferView* getBuffer(uint8_t b) const override { return bufferViews + b; }
-
-        AttribAccessor attribs[A];
-        AttribBufferView bufferViews[B];
-    };
-
-    using IndexStreamAccessor = StreamAccessorInstanced<1, 1>;
-
     struct AttribBuffer {
         std::vector<uint8_t> _data;
+
+        uint32_t getSize() const { return _data.size(); }
 
         AttribBuffer() {}
         AttribBuffer(void* data, size_t size) : _data(size, 0) { memcpy(_data.data(), data, size); }
@@ -101,8 +49,18 @@ namespace poco {
     using AttribBufferPointers = std::vector<AttribBufferPointer>;
 
     struct StreamView {
-        StreamAccessor* _accessor;
+        StreamLayout _accessor;
         AttribBufferPointers _buffers;
+
+        uint32_t getNumlements() const {
+            auto buffer0Size = _buffers[0]->_data.size();
+            auto buffer0ByteLength = _accessor.evalBufferViewByteLength(0, buffer0Size);
+            
+            auto elementStride = _accessor.evalBufferViewByteStride(0);
+
+            auto numElements = buffer0ByteLength / elementStride;
+            return numElements;
+        }
     };
     
     class Mesh {
@@ -111,8 +69,9 @@ namespace poco {
         ~Mesh();
 
         StreamView _vertexBuffers;
+        uint32_t getNumVertices() const { return _vertexBuffers.getNumlements(); }
 
-        StreamView _indexBuffer { new IndexStreamAccessor(), { AttribBufferPointer() } };
+        StreamView _indexBuffer { StreamLayout::build( Attribs<1>(), AttribBufferViews<1>() ), { AttribBufferPointer() } };
 
         Topology _topology { Topology::POINT };
     };

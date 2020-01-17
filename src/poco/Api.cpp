@@ -38,6 +38,12 @@ std::ostream& api::log(const char* file, int line, const char* functionName) {
     return std::clog << file << " - " << line << " - " << functionName << " : ";
 }
 
+void api::assert(bool test, const char* file, int line, const char* functionName) {
+    if (!test) {
+        api::log(file, line, functionName);
+    }
+}
+
 api::~api() {
     pocoLog() << "poco api is destoyed, bye!\n";
 }

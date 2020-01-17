@@ -27,21 +27,13 @@
 #pragma once
 
 #include "../Forward.h"
+#include "gpu.h"
 
 namespace poco {
 
-    enum class PrimitiveTopology {
-        POINT,
-        LINE,
-        TRIANGLE,
-        TRIANGLE_STRIP,
-
-        COUNT,
-    };
-
     struct PipelineStateInit {
         ShaderPointer program;
-
+        StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
     };
 

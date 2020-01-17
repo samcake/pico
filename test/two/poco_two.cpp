@@ -38,6 +38,8 @@
 #include <poco/gpu/Pipeline.h>
 #include <poco/gpu/Batch.h>
 #include <poco/gpu/Swapchain.h>
+#include <poco/gpu/gpu.h>
+
 
 #include <poco/render/Scene.h>
 #include <poco/render/Renderer.h>
@@ -60,7 +62,7 @@ public:
 };
 //--------------------------------------------------------------------------------------
 
-poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device) {
+poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device, poco::StreamLayout streamLayout ) {
 
     poco::ShaderInit vertexShaderInit{ poco::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
     poco::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
@@ -74,7 +76,7 @@ poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device
 
 
 
-    poco::PipelineStateInit pipelineInit { programShader };
+    poco::PipelineStateInit pipelineInit { programShader,  streamLayout, poco::PrimitiveTopology::TRIANGLE };
     poco::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
     return pipeline;
@@ -131,7 +133,7 @@ int main(int argc, char *argv[])
     vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
-   // vertexBufferInit.vertexStride = sizeof(float) * 4;
+    vertexBufferInit.vertexStride = sizeof(float) * 4;
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
     memcpy(vertexBuffer->_cpuMappedAddress, vertexData.data(), vertexBufferInit.bufferSize);
 
@@ -146,8 +148,14 @@ int main(int argc, char *argv[])
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
     memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), vertexBufferInit.bufferSize);
 
+
+    // Declare the vertex format
+    poco::Attribs<1> attribs {{{ poco::AttribSemantic::A, poco::AttribFormat::VEC4, 0 }}};
+    poco::AttribBufferViews<1> bufferViews;
+    auto vertexLayout = poco::StreamLayout::build(attribs, bufferViews);
+
     // And a Pipeline
-    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice);
+    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
 
 
     // And now a render callback where we describe the rendering sequence

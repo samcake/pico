@@ -83,4 +83,5 @@ namespace poco {
 
 }
 #define pocoLog() ::poco::api::log(__FILE__, __LINE__, __FUNCTION__)
+#define pocoAssert(t) ::poco::api::assert((t), __FILE__, __LINE__, __FUNCTION__)
 

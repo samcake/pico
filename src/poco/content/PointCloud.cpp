@@ -226,13 +226,10 @@ PointCloudPointer PointCloud::createFromPLY(const std::string& filename) {
     break;
     }
 
-    auto vertexFormat = new StreamAccessorInstanced<3, 1>();
-
-    vertexFormat->attribs[0] = { AttribFormat::VEC3, 0, 0 };
-    vertexFormat->attribs[1] = { AttribFormat::VEC3, 0, 12 };
-    vertexFormat->attribs[2] = { AttribFormat::CVEC4, 0, 24 };
-
-    vertexFormat->bufferViews[0] = {0, 28, 0, 0xFFFFFFFF};
+    // Declare the vertex format
+    poco::Attribs<3> attribs {{{ AttribSemantic::A, AttribFormat::VEC3, 0 }, { AttribSemantic::B, AttribFormat::VEC3, 0 }, {AttribSemantic::C, AttribFormat::CVEC4, 0 }}};
+    poco::AttribBufferViews<1> bufferViews {{0}};
+    auto vertexFormat = StreamLayout::build(attribs, bufferViews);
 
     auto mesh = std::make_shared<Mesh>();
 

@@ -29,6 +29,8 @@
 #include <sstream>
 #include "Api.h"
 
+#include <vector>
+
 using namespace poco;
 
 #ifdef WIN32
@@ -156,16 +158,34 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit& 
         
         {
             // Define the vertex input layout.
-            D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+            const std::string SemanticToName[int(AttribSemantic::COUNT)] = { "POSITION", "NORMAL", "COLOR" };
+            const DXGI_FORMAT AttribFormatToFormat[int(AttribFormat::COUNT)] = { DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM};
+
+            std::vector< D3D12_INPUT_ELEMENT_DESC > inputElementDescs(init.streamLayout.numAttribs());
+            auto inputElement = inputElementDescs.data();
+            for (int a = 0; a < init.streamLayout.numAttribs(); a++) {
+                auto attrib = init.streamLayout.getAttrib(a);
+                inputElement->SemanticName = SemanticToName[(int)attrib->_semantic].c_str();
+                inputElement->SemanticIndex = 0;
+                inputElement->Format = AttribFormatToFormat[(int)attrib->_format];
+                inputElement->InputSlot = attrib->_bufferIndex;
+                inputElement->AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT;
+                inputElement->InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+                inputElement->InstanceDataStepRate = 0;
+
+                inputElement++;
+            }
+          /*  D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
             {
                 { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-                { "NORMAL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                { "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
                 { "COLOR", 0, DXGI_FORMAT_R8G8B8A8_UNORM, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-            };
+            };*/
 
             // Describe and create the graphics pipeline state object (PSO).
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-            psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
+            psoDesc.InputLayout = { inputElementDescs.data(), (uint32_t) inputElementDescs.size() };
             psoDesc.pRootSignature = rootSignature.Get();
             psoDesc.VS = { reinterpret_cast<UINT8*>(vertexShaderBlob.Get()->GetBufferPointer()), vertexShaderBlob.Get()->GetBufferSize() };
             psoDesc.PS = { reinterpret_cast<UINT8*>(pixelShaderBlob.Get()->GetBufferPointer()), pixelShaderBlob.Get()->GetBufferSize() };

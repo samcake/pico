@@ -63,7 +63,7 @@ public:
 };
 //--------------------------------------------------------------------------------------
 
-poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device) {
+poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device, poco::StreamLayout vertexLayout) {
 
     poco::ShaderInit vertexShaderInit{ poco::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
     poco::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
@@ -72,12 +72,12 @@ poco::PipelineStatePointer createPipelineState(const poco::DevicePointer& device
     poco::ShaderInit pixelShaderInit{ poco::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
     poco::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
-    poco::ProgramInit programInit { vertexShader, pixelShader };
+    poco::ProgramInit programInit{ vertexShader, pixelShader };
     poco::ShaderPointer programShader = device->createProgram(programInit);
 
 
 
-    poco::PipelineStateInit pipelineInit { programShader };
+    poco::PipelineStateInit pipelineInit{ programShader,  vertexLayout, poco::PrimitiveTopology::POINT };
     poco::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
     return pipeline;
@@ -113,6 +113,8 @@ int main(int argc, char *argv[])
     // A Camera added to the scene
     auto camera = std::make_shared<poco::Camera>(scene);
 
+    poco::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
+
     // Renderer creation
 
     // First a device, aka the gpu api used by poco
@@ -132,10 +134,13 @@ int main(int argc, char *argv[])
     poco::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.size();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor->getBuffer(0)->_byteStride;
+    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
+    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor.evalBufferViewByteStride(0);
+
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
     memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+
+    auto numVertices = pointCloud->_mesh->getNumVertices();
 
   /*  std::vector<uint32_t> indexData = {
         0, 2, 1,
@@ -148,13 +153,18 @@ int main(int argc, char *argv[])
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
     memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), vertexBufferInit.bufferSize);
 */
+
+
     // And a Pipeline
-    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice);
+    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice, pointCloud->_mesh->_vertexBuffers._accessor);
 
 
     // And now a render callback where we describe the rendering sequence
     poco::RenderCallback renderCallback = [&](const poco::CameraPointer& camera, poco::SwapchainPointer& swapchain, poco::DevicePointer& device, poco::BatchPointer& batch) {
-        poco::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
+        static float time = 0.0f;
+        time += 1.0f / 60.0f;
+        float intPart;
+        time = modf(time, &intPart);
 
         auto currentIndex = swapchain->currentIndex();
 
@@ -166,12 +176,7 @@ int main(int argc, char *argv[])
             poco::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-        static float time = 0.0f;
-        time += 1.0f / 60.0f;
-        float intPart;
-        time = modf(time, &intPart);
-       // poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
-        poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.5f, 0.5f, 1.f)), 1.f);
+        poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.1f, 0.1f, 0.3f)), 1.f);
         batch->clear(clearColor, swapchain, currentIndex);
 
         batch->beginPass(swapchain, currentIndex);
@@ -193,23 +198,11 @@ int main(int argc, char *argv[])
         }
 */
         batch->setPipeline(pipeline);
-       // commandList->SetPipelineState(m_PipelineState.Get());
-       // commandList->SetGraphicsRootSignature(m_RootSignature.Get());
 
-      //  batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);
-/*
-        commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-        commandList->IASetVertexBuffers(0, 1, &m_VertexBufferView);
-        commandList->IASetIndexBuffer(&m_IndexBufferView);
-*/
-        
+
         batch->setViewport(viewportRect);
         batch->setScissor(viewportRect);
-/*        commandList->RSSetViewports(1, &m_Viewport);
-        commandList->RSSetScissorRects(1, &m_ScissorRect);
-*/
-      //commandList->OMSetRenderTargets(1, &rtv, FALSE, &dsv);
 
         // Update the MVP matrix
       /*  XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
@@ -217,9 +210,8 @@ int main(int argc, char *argv[])
         commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 */
 
-        batch->draw(100, 0);
-/*        commandList->DrawIndexedInstanced(_countof(g_Indicies), 1, 0, 0, 0);
-*/
+        batch->draw(numVertices, 0);
+
         batch->endPass();
 
         batch->resourceBarrierTransition(
@@ -248,7 +240,8 @@ int main(int argc, char *argv[])
     poco::WindowInit windowInit { windowHandler };
     auto window =poco::api::createWindow(windowInit);
 
-    poco::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    
+    poco::SwapchainInit swapchainInit { viewportRect.z, viewportRect.w, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
