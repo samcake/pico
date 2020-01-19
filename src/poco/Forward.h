@@ -57,6 +57,14 @@ namespace poco {
     struct ShaderInit;
     struct ProgramInit;
 
+    class DescriptorSetLayout;
+    using DescriptorSetLayoutPointer = std::shared_ptr<DescriptorSetLayout>;
+    struct DescriptorSetLayoutInit;
+
+    class DescriptorSet;
+    using DescriptorSetPointer = std::shared_ptr<DescriptorSet>;
+    struct DescriptorSetInit;
+
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
     struct PipelineStateInit;

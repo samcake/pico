@@ -32,6 +32,7 @@
 #include "../gpu/Resource.h"
 #include "../gpu/Pipeline.h"
 #include "../gpu/Shader.h"
+#include "../gpu/Descriptor.h"
 
 #ifdef WIN32
 
@@ -62,6 +63,11 @@ namespace poco {
         ComPtr<ID3D12Device2> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
 
+        // Functions points for functions that need to be loaded
+        PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER           fnD3D12CreateRootSignatureDeserializer = nullptr;
+        PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE           fnD3D12SerializeVersionedRootSignature = nullptr;
+        PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER fnD3D12CreateVersionedRootSignatureDeserializer = nullptr;
+
         // Synchronization objects
         ComPtr<ID3D12Fence> _fence;
         uint64_t _fenceValue = 0;
@@ -76,6 +82,9 @@ namespace poco {
         ShaderPointer createProgram(const ProgramInit& init) override;
 
         PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
+   
+        DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) override;
+        DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) override;
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
@@ -136,6 +145,7 @@ namespace poco {
 
         static const D3D12_PRIMITIVE_TOPOLOGY_TYPE  PrimitiveTopologyTypes[uint32_t(PrimitiveTopology::COUNT)];
         static const D3D12_PRIMITIVE_TOPOLOGY  PrimitiveTopologies[uint32_t(PrimitiveTopology::COUNT)];
+
     };
 
 
@@ -179,6 +189,30 @@ namespace poco {
         ComPtr<ID3D12PipelineState> _pipelineState;
         D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
 
+    };
+
+    class D3D12DescriptorSetLayoutBackend : public DescriptorSetLayout {
+    public:
+        friend class D3D12Backend;
+        D3D12DescriptorSetLayoutBackend();
+        virtual ~D3D12DescriptorSetLayoutBackend();
+
+        std::vector< uint32_t > _dxParamIndices;
+
+        ComPtr<ID3D12RootSignature> _rootSignature;
+        uint32_t cbvsrvuav_count = 0;
+        uint32_t sampler_count = 0;
+    };
+
+    class D3D12DescriptorSetBackend : public DescriptorSet {
+    public:
+        friend class D3D12Backend;
+        D3D12DescriptorSetBackend();
+        virtual ~D3D12DescriptorSetBackend();
+
+        ID3D12DescriptorHeap* _cbvsrvuav_heap;
+        ID3D12DescriptorHeap* _sampler_heap; 
+        std::vector< uint32_t > _dxHeapOffsets;
     };
 
 }

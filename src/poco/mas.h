@@ -100,17 +100,18 @@ namespace poco {
     }
 
     // Frac
+    inline float frac(float v) {
+        float intRem;  
+        return modff(v, &intRem);
+    }
     inline vec2 frac(const vec2& v) {
-        float intRem;
-        return vec2(modf(v.x, &intRem), modf(v.y, &intRem));
+        return vec2(frac(v.x), frac(v.y));
     }
     inline vec3 frac(const vec3& v) {
-        float intRem;
-        return vec3(modf(v.x, &intRem), modf(v.y, &intRem), modf(v.z, &intRem));
+        return vec3(frac(v.x), frac(v.y), frac(v.z));
     }
     inline vec4 frac(const vec4& v) {
-        float intRem;
-        return vec4(modf(v.x, &intRem), modf(v.y, &intRem), modf(v.z, &intRem), modf(v.w, &intRem));
+        return vec4(frac(v.x), frac(v.y), frac(v.z), frac(v.w));
     }
 
     // Scale

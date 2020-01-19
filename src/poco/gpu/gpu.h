@@ -197,5 +197,23 @@ namespace poco {
             return StreamLayout(new Instanced<A, B>(attribs, bufferViews));
         }
     };
+
+
+    enum class ShaderType : uint8_t {
+        PROGRAM = 0,
+        VERTEX,
+        PIXEL,
+
+        COUNT,
+    };
+
+    enum class ShaderStage : uint16_t {
+        VERTEX = 0x0001,
+        PIXEL = 0x0100,
+        ALL_GRAPHICS = 0x0101,
+
+        COUNT = 3,
+    };
+
 }
 

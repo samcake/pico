@@ -59,6 +59,13 @@ PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) 
     return _backend->createPipelineState(init);
 }
 
+DescriptorSetLayoutPointer Device::createDescriptorSetLayout(const DescriptorSetLayoutInit& init) {
+    return _backend->createDescriptorSetLayout(init);
+}
+DescriptorSetPointer Device::createDescriptorSet(const DescriptorSetInit& init) {
+    return _backend->createDescriptorSet(init);
+}
+
 BatchPointer Device::createBatch(const BatchInit& init) {
     return _backend->createBatch(init);
 }

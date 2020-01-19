@@ -50,6 +50,10 @@ namespace poco {
 
         virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
 
+        
+        virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
+        virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
+
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
     };
@@ -71,6 +75,9 @@ namespace poco {
         ShaderPointer createProgram(const ProgramInit& init);
 
         PipelineStatePointer createPipelineState(const PipelineStateInit& init);
+
+        DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init);
+        DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);
 
         // CommandQueue work
         void executeBatch(const BatchPointer& batch);

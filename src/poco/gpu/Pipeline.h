@@ -35,6 +35,7 @@ namespace poco {
         ShaderPointer program;
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
+        DescriptorSetLayoutPointer descriptorSetLayout;
     };
 
     class PipelineState {

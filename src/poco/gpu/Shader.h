@@ -29,17 +29,9 @@
 #include "../Forward.h"
 
 #include <string>
+#include "gpu.h"
 
 namespace poco {
-
-
-    enum class ShaderType {
-        PROGRAM = 0,
-        VERTEX,
-        PIXEL,
-
-        COUNT,
-    };
 
     struct ShaderInit {
         ShaderType type;

@@ -61,8 +61,7 @@ void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) 
 
         static float time = 0.0f;
         time += 1.0f/60.0f;
-        float intPart;
-        time = modf(time, &intPart);
+        time = poco::frac(time);
         poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
 
         _batch->clear(clearColor, swapchain, currentIndex);

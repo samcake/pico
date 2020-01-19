@@ -229,173 +229,8 @@ ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D1
     return d3d12CommandQueue;
 }
 
-// D3D12SwapchainBackend
-
-bool CheckTearingSupport()
-{
-    BOOL allowTearing = FALSE;
-
-    // Rather than create the DXGI 1.5 factory interface directly, we create the
-    // DXGI 1.4 interface and query for the 1.5 interface. This is to enable the 
-    // graphics debugging tools which will not support the 1.5 factory interface 
-    // until a future update.
-    ComPtr<IDXGIFactory4> factory4;
-    if (SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&factory4))))
-    {
-        ComPtr<IDXGIFactory5> factory5;
-        if (SUCCEEDED(factory4.As(&factory5)))
-        {
-            if (FAILED(factory5->CheckFeatureSupport(
-                DXGI_FEATURE_PRESENT_ALLOW_TEARING,
-                &allowTearing, sizeof(allowTearing))))
-            {
-                allowTearing = FALSE;
-            }
-        }
-    }
-
-    return allowTearing == TRUE;
-}
-
-ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
-    ComPtr<ID3D12CommandQueue> commandQueue,
-    uint32_t width, uint32_t height, uint32_t bufferCount)
-{
-    ComPtr<IDXGISwapChain4> dxgiSwapChain4;
-    ComPtr<IDXGIFactory4> dxgiFactory4;
-    UINT createFactoryFlags = 0;
-#if defined(_DEBUG)
-    createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
-
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.Width = width;
-    swapChainDesc.Height = height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.Stereo = FALSE;
-    swapChainDesc.SampleDesc = { 1, 0 };
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = bufferCount;
-    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-    // It is recommended to always allow tearing if tearing support is available.
-    swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
-
-    ComPtr<IDXGISwapChain1> swapChain1;
-    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
-        commandQueue.Get(),
-        hWnd,
-        &swapChainDesc,
-        nullptr,
-        nullptr,
-        &swapChain1));
-
-    // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
-    // will be handled manually.
-    ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
-
-    ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
-
-    return dxgiSwapChain4;
-}
-
-ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
-    D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t numDescriptors)
-{
-    ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-
-    D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-    desc.NumDescriptors = numDescriptors;
-    desc.Type = type;
-
-    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
-
-    return descriptorHeap;
-}
-/*
-void UpdateRenderTargetViews(ComPtr<ID3D12Device2> device,
-    ComPtr<IDXGISwapChain4> swapChain, ComPtr<ID3D12DescriptorHeap> descriptorHeap)
-{
-    auto rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(descriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-    for (int i = 0; i < g_NumFrames; ++i)
-    {
-        ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-        device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
-        g_BackBuffers[i] = backBuffer;
-
-        rtvHandle.Offset(rtvDescriptorSize);
-    }
-}
-*/
-
-D3D12SwapchainBackend::D3D12SwapchainBackend() : Swapchain() {
-
-}
-
-D3D12SwapchainBackend::~D3D12SwapchainBackend() {
-
-}
-
-SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
-    auto sw = new D3D12SwapchainBackend();
-
-    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
 
 
-    sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
-
-    sw->_rtvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
-    sw->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    auto rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-
-    for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
-    {
-        ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
-
-        _device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
-
-        sw->_backBuffers[i] = backBuffer;
-
-        rtvHandle.ptr += (rtvDescriptorSize);
-    }
-
-    return SwapchainPointer(sw);
-}
-
-
-
-ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> device,
-    D3D12_COMMAND_LIST_TYPE type)
-{
-    ComPtr<ID3D12CommandAllocator> commandAllocator;
-    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
-
-    return commandAllocator;
-}
-
-ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device,
-    ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
-{
-    ComPtr<ID3D12GraphicsCommandList> commandList;
-    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
-
-    ThrowIfFailed(commandList->Close());
-
-    return commandList;
-}
 
 ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device)
 {
@@ -411,7 +246,7 @@ HANDLE CreateEventHandle()
     HANDLE fenceEvent;
 
     fenceEvent = ::CreateEvent(NULL, FALSE, FALSE, NULL);
-   // assert(fenceEvent && "Failed to create fence event.");
+    // assert(fenceEvent && "Failed to create fence event.");
 
     return fenceEvent;
 }
@@ -443,144 +278,34 @@ void Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
 }
 
 
-BatchPointer D3D12Backend::createBatch(const BatchInit& init) {
-
-    auto batch = new D3D12BatchBackend();
-
-    for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
-    {
-        batch->_commandAllocators[i] = CreateCommandAllocator(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
-    }
-    batch->_commandList = CreateCommandList(_device,
-        batch->_commandAllocators[batch->_currentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-    return BatchPointer(batch);
-}
-D3D12BatchBackend::D3D12BatchBackend() :
-    Batch()
-{
-}
-
-D3D12BatchBackend::~D3D12BatchBackend() {
-}
-
-void D3D12BatchBackend::begin(uint8_t currentIndex) {
-    _currentBackBufferIndex = currentIndex;
-    auto commandAllocator = _commandAllocators[currentIndex];
-
-    commandAllocator->Reset();
-    _commandList->Reset(commandAllocator.Get(), nullptr);
-}
-
-void D3D12BatchBackend::end() {
-    ThrowIfFailed(_commandList->Close());
-}
-
-void D3D12BatchBackend::beginPass(const SwapchainPointer& swapchain, uint8_t index) {
-    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
-
-    _commandList->OMSetRenderTargets(1, &rtv, TRUE, nullptr);
-}
-
-void D3D12BatchBackend::endPass() {
-
-}
-
-void D3D12BatchBackend::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {
-
-    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
-
-    FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv { sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index};
-
-    _commandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
-}
-
-void D3D12BatchBackend::resourceBarrierTransition(
-    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
-    const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {
-
-    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
-    auto backBuffer = sw->_backBuffers[currentIndex];
-
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
-    barrier.Transition.pResource = backBuffer.Get();
-    barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
-    barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
-    barrier.Transition.Subresource = (subresource == -1 ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : subresource);
-
-    _commandList->ResourceBarrier(1, &barrier);
-}
-
-
-void D3D12BatchBackend::setViewport(vec4& viewport) {
-    D3D12_VIEWPORT dxViewport;
-    dxViewport.TopLeftX = viewport.x;
-    dxViewport.TopLeftY = viewport.y;
-    dxViewport.Width = viewport.z;
-    dxViewport.Height = viewport.w;
-    dxViewport.MaxDepth = 1.0f;
-    dxViewport.MinDepth = 0.0f;
-
-    _commandList->RSSetViewports(1, &dxViewport);
-}
-
-void D3D12BatchBackend::setScissor(vec4& scissor) {
-    D3D12_RECT dxRect;
-    dxRect.left = scissor.x;
-    dxRect.top = scissor.y;
-    dxRect.right = scissor.x + scissor.z;
-    dxRect.bottom = scissor.y + scissor.w;
-
-    _commandList->RSSetScissorRects(1, &dxRect);
-}
-
-void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
-    auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
-
-    auto dxPso = dpso->_pipelineState;
-    _commandList->SetPipelineState(dxPso.Get());
-
-    auto dxGRS = dpso->_rootSignature;
-    _commandList->SetGraphicsRootSignature(dxGRS.Get());
-
-    _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
-}
-
-void D3D12BatchBackend::bindIndexBuffer(BufferPointer& buffer) {
-    auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());
-    _commandList->IASetIndexBuffer(&dbBuffer->_indexBufferView);
-}
-
-void D3D12BatchBackend::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {
-    auto dbBuffer = static_cast<D3D12BufferBackend*>(buffers[0].get());
-    _commandList->IASetVertexBuffers(0, 1, &dbBuffer->_vertexBufferView);
-}
-
-void D3D12BatchBackend::draw(uint32_t numPrimitives, uint32_t startIndex) {
-    _commandList->DrawInstanced(numPrimitives, 1, startIndex, 0);
-}
-
-
-void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {
-    _commandList->DrawIndexedInstanced(numPrimitives, 1, startIndex, 0, 0);
-}
-
-
-
-
-
-
-
-
-
 D3D12Backend::D3D12Backend() {
     ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
 
     _device = CreateDevice(dxgiAdapter4);
+
+
+    // Load functions
+    {
+        HMODULE module = ::GetModuleHandle(TEXT("d3d12.dll"));
+        fnD3D12CreateRootSignatureDeserializer
+            = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(module,
+                "D3D12SerializeVersionedRootSignature");
+
+        fnD3D12SerializeVersionedRootSignature
+            = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(module,
+                "D3D12SerializeVersionedRootSignature");
+
+        fnD3D12CreateVersionedRootSignatureDeserializer
+            = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(module,
+                "D3D12CreateVersionedRootSignatureDeserializer");
+    }
+
+    if ((fnD3D12CreateRootSignatureDeserializer == NULL) ||
+        (fnD3D12SerializeVersionedRootSignature == NULL) ||
+        (fnD3D12CreateVersionedRootSignatureDeserializer == NULL))
+    {
+   //     target_feature_level = D3D_FEATURE_LEVEL_12_0;
+    }
 
     _commandQueue = CreateCommandQueue(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
