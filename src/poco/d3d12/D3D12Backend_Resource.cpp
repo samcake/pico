@@ -33,9 +33,11 @@ using namespace poco;
 D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) {
     uint64_t bufferSize = init.bufferSize;
     // Align the buffer size to multiples of 256
- /*   if (p_buffer->usage & tr_buffer_usage_uniform_cbv) {
-        p_buffer->size = tr_round_up((uint32_t)(init.bufferSize), 256);
-    }*/
+   if (init.usage == ResourceUsage::UNIFORM_BUFFER) {
+        auto numBlocks = ((uint32_t) init.bufferSize) / 256;
+
+        bufferSize = (numBlocks + 1) * 256;
+    }
 
     D3D12_RESOURCE_DIMENSION res_dim = D3D12_RESOURCE_DIMENSION_BUFFER;
     D3D12_HEAP_PROPERTIES heapProp;
@@ -71,19 +73,23 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
 
     D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_COPY_DEST;
     switch (init.usage) {
-    case ResourceState::VERTEX_AND_CONSTANT_BUFFER: {
+    case ResourceUsage::VERTEX_BUFFER: {
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     }
     break;
-    case ResourceState::INDEX_BUFFER: {
+    case ResourceUsage::INDEX_BUFFER: {
         res_states = D3D12_RESOURCE_STATE_INDEX_BUFFER;
     }
     break;
-    case ResourceState::UNORDERED_ACCESS: {
+    case ResourceUsage::UNIFORM_BUFFER: {
+        res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    }
+    break;
+  /*  case ResourceUsage::UNORDERED_ACCESS: {
         res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
     break;
-    }
+    */}
 
     if (init.hostVisible) {
         // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
@@ -112,7 +118,7 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     }
 
     switch (init.usage) {
-    case ResourceState::VERTEX_AND_CONSTANT_BUFFER: {
+    case ResourceUsage::VERTEX_BUFFER: {
         bufferBackend->_vertexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_vertexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_vertexBufferView.StrideInBytes = init.vertexStride;
@@ -120,7 +126,13 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     }
     break;
 
-    case ResourceState::INDEX_BUFFER: {
+    case ResourceUsage::UNIFORM_BUFFER: {
+        bufferBackend->_uniformBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
+        bufferBackend->_uniformBufferView.SizeInBytes = (UINT)bufferSize;
+    }
+    break;
+
+    case ResourceUsage::INDEX_BUFFER: {
         bufferBackend->_indexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_indexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_indexBufferView.Format = DXGI_FORMAT_R32_UINT;

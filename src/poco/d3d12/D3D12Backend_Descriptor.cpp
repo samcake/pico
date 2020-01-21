@@ -75,7 +75,10 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
 
 
     // Allocate the param indices (one per descriptor)
+    descriptorLayout->_init = init;
     descriptorLayout->_dxParamIndices.resize(numDescriptors);
+    descriptorLayout->sampler_count = sampler_count;
+    descriptorLayout->cbvsrvuav_count = cbvsrvuav_count;
 
     // Allocate everything with an upper bound of descriptor counts
     uint32_t range_count = 0;
@@ -254,7 +257,6 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
     uint32_t cbvsrvuav_count = layout->cbvsrvuav_count;
     uint32_t sampler_count = layout->sampler_count;
 
-
     if (cbvsrvuav_count > 0) {
         D3D12_DESCRIPTOR_HEAP_DESC desc;
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -306,9 +308,175 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
         }
     }
 
+    descriptorSet->cbvsrvuav_count = cbvsrvuav_count;
+    descriptorSet->sampler_count = sampler_count;
+    descriptorSet->_dxGPUHandles.resize(numDescriptors);
+    descriptorSet->_dxRootParameterIndices.resize(numDescriptors, -1);
+
+
     return DescriptorSetPointer(descriptorSet);
 }
 
 
+void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) {
+    auto dxDescriptorSet = static_cast<D3D12DescriptorSetBackend*> (descriptorSet.get());
+
+    // Not really efficient, just write less frequently ;)
+/*
+    uint32_t write_count = 0;
+    for (uint32_t i = 0; i < p_descriptor_set->descriptor_count; ++i) {
+        tr_descriptor* descriptor = &(p_descriptor_set->descriptors[i]);
+        if ((NULL != descriptor->samplers) || (NULL != descriptor->textures) || (NULL != descriptor->uniform_buffers)) {
+            ++write_count;
+        }
+    }
+*/
+
+    
+    uint32_t write_count = objects.size();
+   // Bail if there's nothing to write
+    if (0 == write_count) {
+        return;
+    }
+
+    auto dxDescriptorSetLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (dxDescriptorSet->_init._layout.get());
+    pocoAssert(objects.size() == dxDescriptorSet->_dxHeapOffsets.size());
+
+    for (uint32_t i = 0; i < dxDescriptorSet->_dxHeapOffsets.size(); ++i) {
+        //tr_descriptor* descriptor = &(p_descriptor_set->descriptors[i]);
+        auto& descriptorLayout = dxDescriptorSetLayout->_init._layouts[i];
+        auto& descriptorObject = objects[i];
+
+  /*      if ((NULL == descriptor->samplers) && (NULL == descriptor->textures) && (NULL == descriptor->uniform_buffers)) {
+            continue;
+        }
+*/
+
+        switch (descriptorLayout._type) {
+        case DescriptorType::SAMPLER : {
+           /* assert(NULL != descriptor->samplers);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_sampler_heap->GetCPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            for (uint32_t i = 0; i < descriptor->count; ++i) {
+                assert(NULL != descriptor->samplers[i]);
+
+                D3D12_SAMPLER_DESC* sampler_desc = &(descriptor->samplers[i]->dx_sampler_desc);
+                p_renderer->dx_device->CreateSampler(sampler_desc, handle);
+                handle.ptr += handle_inc_size;
+            }*/
+        }
+                                       break;
+
+        case DescriptorType::UNIFORM_BUFFER: {
+            pocoAssert(descriptorObject._uniformBuffers.size() >= descriptorLayout._count);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+
+            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
+            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+
+            for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
+                pocoAssert((descriptorObject._uniformBuffers[j].get()));
+                auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._uniformBuffers[j].get());
+
+                ID3D12Resource* resource = dxUbo->_buffer.Get();
+                D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
+                _device->CreateConstantBufferView(view_desc, cpuHandle);
+                cpuHandle.ptr += handle_inc_size;
+            }
+        }
+                                                  break;
+/*
+        case tr_descriptor_type_storage_buffer_srv:
+        case tr_descriptor_type_uniform_texel_buffer_srv: {
+            assert(NULL != descriptor->buffers);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            for (uint32_t i = 0; i < descriptor->count; ++i) {
+                assert(NULL != descriptor->buffers[i]);
+
+                ID3D12Resource* resource = descriptor->buffers[i]->dx_resource;
+                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(descriptor->buffers[i]->dx_srv_view_desc);
+                p_renderer->dx_device->CreateShaderResourceView(resource, view_desc, handle);
+                handle.ptr += handle_inc_size;
+            }
+        }
+                                                        break;
+
+        case tr_descriptor_type_storage_buffer_uav:
+        case tr_descriptor_type_storage_texel_buffer_uav: {
+            assert(NULL != descriptor->buffers);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            for (uint32_t i = 0; i < descriptor->count; ++i) {
+                assert(NULL != descriptor->buffers[i]);
+
+                ID3D12Resource* resource = descriptor->buffers[i]->dx_resource;
+                D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(descriptor->buffers[i]->dx_uav_view_desc);
+                if (descriptor->buffers[i]->counter_buffer != NULL) {
+                    ID3D12Resource* counter_resource = descriptor->buffers[i]->counter_buffer->dx_resource;
+                    p_renderer->dx_device->CreateUnorderedAccessView(resource, counter_resource, view_desc, handle);
+                }
+                else {
+                    p_renderer->dx_device->CreateUnorderedAccessView(resource, NULL, view_desc, handle);
+                }
+                handle.ptr += handle_inc_size;
+            }
+        }
+                                                        break;
+
+
+        case tr_descriptor_type_texture_srv: {
+            assert(NULL != descriptor->textures);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            for (uint32_t i = 0; i < descriptor->count; ++i) {
+                assert(NULL != descriptor->textures[i]);
+
+                ID3D12Resource* resource = descriptor->textures[i]->dx_resource;
+                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(descriptor->textures[i]->dx_srv_view_desc);
+                p_renderer->dx_device->CreateShaderResourceView(resource, view_desc, handle);
+                handle.ptr += handle_inc_size;
+            }
+        }
+                                           break;
+
+        case tr_descriptor_type_texture_uav: {
+            assert(NULL != descriptor->textures);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            for (uint32_t i = 0; i < descriptor->count; ++i) {
+                assert(NULL != descriptor->textures[i]);
+
+                ID3D12Resource* resource = descriptor->textures[i]->dx_resource;
+                D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(descriptor->textures[i]->dx_uav_view_desc);
+                p_renderer->dx_device->CreateUnorderedAccessView(resource, NULL, view_desc, handle);
+                handle.ptr += handle_inc_size;
+            }
+        }
+                                           break;*/
+        }
+    }
+
+
+    //assuming everything went well, update the objects stored in the descriptorSet
+
+    descriptorSet->_objects = objects;
+}
 
 #endif

@@ -42,7 +42,7 @@ namespace poco {
 
 
     struct BufferInit {
-        ResourceState usage;
+        ResourceUsage usage;
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
 

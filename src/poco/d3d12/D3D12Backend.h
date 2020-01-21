@@ -85,6 +85,7 @@ namespace poco {
    
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) override;
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) override;
+        void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
@@ -126,6 +127,7 @@ namespace poco {
         void setScissor(vec4& scissor) override;
 
         void setPipeline(PipelineStatePointer pipeline) override;
+        void bindDescriptorSet(DescriptorSetPointer descriptorSet) override;
 
         void bindIndexBuffer(BufferPointer& buffer) override;
         void bindVertexBuffers(uint32_t num, BufferPointer* buffers) override;
@@ -158,6 +160,7 @@ namespace poco {
         ComPtr<ID3D12Resource> _buffer;
 
 
+        D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
 
@@ -210,9 +213,14 @@ namespace poco {
         D3D12DescriptorSetBackend();
         virtual ~D3D12DescriptorSetBackend();
 
-        ID3D12DescriptorHeap* _cbvsrvuav_heap;
-        ID3D12DescriptorHeap* _sampler_heap; 
+        ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
+        ComPtr < ID3D12DescriptorHeap> _sampler_heap;
         std::vector< uint32_t > _dxHeapOffsets;
+        //std::vector< D3D12_CPU_DESCRIPTOR_HANDLE > _dxCPUHandles;
+        std::vector< D3D12_GPU_DESCRIPTOR_HANDLE > _dxGPUHandles;
+        std::vector< uint32_t > _dxRootParameterIndices;
+        uint32_t cbvsrvuav_count = 0;
+        uint32_t sampler_count = 0;
     };
 
 }

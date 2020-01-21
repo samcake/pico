@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     vertexData[4 * 3 + 0] += 0.5f;
 
     poco::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+    vertexBufferInit.usage = poco::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
     vertexBufferInit.vertexStride = sizeof(float) * 4;
@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
         0, 2, 3
     };
     poco::BufferInit indexBufferInit{};
-    indexBufferInit.usage = poco::ResourceState::INDEX_BUFFER;
+    indexBufferInit.usage = poco::ResourceUsage::INDEX_BUFFER;
     indexBufferInit.hostVisible = true;
     indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);

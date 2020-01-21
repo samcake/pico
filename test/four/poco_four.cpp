@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 
     // Let's allocate buffer to hold the point cloud mesh
     poco::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+    vertexBufferInit.usage = poco::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
     vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor.evalBufferViewByteStride(0);
@@ -151,21 +151,72 @@ int main(int argc, char *argv[])
 
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-    // then we will assin resource in it
+    // then we will assign a uniform buffer in it
     poco::DescriptorSetInit descriptorSetInit{
         descriptorSetLayout
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
+    // Let s create a uniform buffer
+    float aspectRatio = (viewportRect.z / viewportRect.w);
+    struct CameraUB{
+        poco::vec3 _eye{ 0.5f, 1.0f, 2.04f };                float _focal { 0.056f };
+        poco::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
+        poco::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio {16.0f / 9.0f };
+        poco::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.f };
+    };
+    CameraUB cameraData;
+    cameraData._aspectRatio = aspectRatio;
 
+    // look down
+    cameraData._up = { 0.f, 0.f, -1.f};
+  //  cameraData._back = { 0.f, 1.f, 0.f };
+    cameraData._eye = { 0.5f, 3.f, 0.f };
+
+    // look 3/4 down
+   cameraData._up = poco::normalize({ 0.f, 1.f, -0.5f });
+   // cameraData._back = { 0.f, 1.f, 0.f };
+    cameraData._eye = { 0.5f, 2.f, 3.f };
+
+    // look side
+    cameraData._up = poco::normalize({ 0.f, 1.f, 0.0f });
+    // cameraData._back = { 0.f, 1.f, 0.f };
+    cameraData._eye = { 0.5f, 0.f, 3.f };
+
+    // look up from under
+/*    cameraData._up = { 0.f, 0.f, 1.f };
+    //  cameraData._back = { 0.f, 1.f, 0.f };
+    cameraData._eye = { 0.5f, -3.f, 0.f };
+*/
+    poco::BufferInit uboInit;
+    uboInit.usage = poco::ResourceUsage::UNIFORM_BUFFER;
+    uboInit.bufferSize = sizeof(CameraUB);
+    uboInit.hostVisible = true;
+    auto cameraUBO = gpuDevice->createBuffer(uboInit);
+    memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
+
+    // Assign the UBO just created as the resource of the descriptorSet
+    // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
+
+    poco::DescriptorObject uboDescriptorObject;
+    uboDescriptorObject._uniformBuffers.push_back( cameraUBO );
+    poco::DescriptorObjects descriptorObjects = {
+        uboDescriptorObject,
+    };
+    gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
+    
     // And now a render callback where we describe the rendering sequence
     poco::RenderCallback renderCallback = [&](const poco::CameraPointer& camera, poco::SwapchainPointer& swapchain, poco::DevicePointer& device, poco::BatchPointer& batch) {
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
-        time = modf(time, &intPart);
+        float timeNorm = modf(time, &intPart);
 
         auto currentIndex = swapchain->currentIndex();
+
+      //  cameraData._eye.x = sinf(time);
+
+      //  memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
 
         batch->begin(currentIndex);
 
@@ -208,6 +259,8 @@ int main(int argc, char *argv[])
         mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
         commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 */
+
+        batch->bindDescriptorSet(descriptorSet);
 
         batch->draw(numVertices, 0);
 

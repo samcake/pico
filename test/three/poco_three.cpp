@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 
     // Let's allocate buffer to hold the point cloud mesh
     poco::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = poco::ResourceState::VERTEX_AND_CONSTANT_BUFFER;
+    vertexBufferInit.usage = poco::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
     vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor.evalBufferViewByteStride(0);

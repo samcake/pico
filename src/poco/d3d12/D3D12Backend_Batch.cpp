@@ -163,6 +163,66 @@ void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
     _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
 }
 
+void D3D12BatchBackend::bindDescriptorSet(DescriptorSetPointer descriptorSet) {
+    auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
+
+    uint32_t descriptor_heap_count = 0;
+    ID3D12DescriptorHeap* descriptor_heaps[2];
+    if (NULL != dxds->_cbvsrvuav_heap) {
+        descriptor_heaps[descriptor_heap_count] = dxds->_cbvsrvuav_heap.Get();
+        ++descriptor_heap_count;
+    }
+    if (NULL != dxds->_sampler_heap) {
+        descriptor_heaps[descriptor_heap_count] = dxds->_sampler_heap.Get();
+        ++descriptor_heap_count;
+    }
+
+    if (descriptor_heap_count > 0) {
+        _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
+    }
+
+    for (uint32_t i = 0; i < dxds->_dxRootParameterIndices.size(); ++i) {
+        auto rooParameterIndex = dxds->_dxRootParameterIndices[i];
+        if (-1 == rooParameterIndex) {
+            continue;
+        }
+
+        _commandList->SetGraphicsRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
+
+/*
+        switch (p_descriptor_set->descriptors[i].type) {
+        case tr_descriptor_type_sampler: {
+            D3D12_GPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_sampler_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_cmd->cmd_pool->renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            p_cmd->dx_cmd_list->SetGraphicsRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
+        }
+                                       break;
+
+        case tr_descriptor_type_uniform_buffer_cbv:
+        case tr_descriptor_type_storage_buffer_srv:
+        case tr_descriptor_type_storage_buffer_uav:
+        case tr_descriptor_type_texture_srv:
+        case tr_descriptor_type_texture_uav:
+        case tr_descriptor_type_uniform_texel_buffer_srv:
+        case tr_descriptor_type_storage_texel_buffer_uav: {
+            D3D12_GPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = p_cmd->cmd_pool->renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
+            if (p_pipeline->type == tr_pipeline_type_graphics) {
+                p_cmd->dx_cmd_list->SetGraphicsRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
+            }
+            else if (p_pipeline->type == tr_pipeline_type_compute) {
+                p_cmd->dx_cmd_list->SetComputeRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
+            }
+        }
+                                                        break;
+        }
+*/
+    }
+    
+}
+
 void D3D12BatchBackend::bindIndexBuffer(BufferPointer & buffer) {
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());
     _commandList->IASetIndexBuffer(&dbBuffer->_indexBufferView);

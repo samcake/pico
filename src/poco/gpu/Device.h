@@ -28,6 +28,8 @@
 
 #include "../Forward.h"
 
+#include "Descriptor.h" 
+
 namespace poco {
 
     struct DeviceInit {
@@ -53,6 +55,7 @@ namespace poco {
         
         virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
+        virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
 
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
@@ -78,6 +81,8 @@ namespace poco {
 
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init);
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);
+
+        void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects);
 
         // CommandQueue work
         void executeBatch(const BatchPointer& batch);

@@ -37,6 +37,13 @@ namespace poco {
     struct BatchInit {
     };
 
+    enum class ResourceUsage {
+        INDEX_BUFFER = 0,
+        VERTEX_BUFFER,
+        UNIFORM_BUFFER,
+
+        COUNT,
+    };
 
     enum class ResourceState {
         COMMON = 0,
@@ -102,6 +109,7 @@ namespace poco {
         virtual void setScissor(vec4& scissor);
 
         virtual void setPipeline(PipelineStatePointer pipeline);
+        virtual void bindDescriptorSet(DescriptorSetPointer descriptorSet);
 
         virtual void bindIndexBuffer(BufferPointer& buffer);
         virtual void bindVertexBuffers(uint32_t num, BufferPointer* buffers);

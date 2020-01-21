@@ -102,7 +102,12 @@ namespace poco {
     } tr_descriptor_set;
 */
 
-
+    struct DescriptorObject{
+        std::vector<BufferPointer> _uniformBuffers;
+        std::vector<BufferPointer> _buffers;
+      //  std::vector<SamplerPointer> _samplers;
+    };
+    using DescriptorObjects = std::vector<DescriptorObject>;
 
 
     struct DescriptorSetInit {
@@ -119,5 +124,7 @@ namespace poco {
         virtual ~DescriptorSet();
 
         DescriptorSetInit _init;
+
+        DescriptorObjects _objects;
     };
 }

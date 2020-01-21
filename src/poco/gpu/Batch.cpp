@@ -52,6 +52,7 @@ void Batch::setViewport(vec4& viewport) {}
 void Batch::setScissor(vec4& scissor) {}
 
 void Batch::setPipeline(PipelineStatePointer pipeline) {}
+void Batch::bindDescriptorSet(DescriptorSetPointer descriptorSet) {}
 
 void Batch::bindIndexBuffer(BufferPointer& buffer) {}
 void Batch::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {}

@@ -65,6 +65,9 @@ DescriptorSetLayoutPointer Device::createDescriptorSetLayout(const DescriptorSet
 DescriptorSetPointer Device::createDescriptorSet(const DescriptorSetInit& init) {
     return _backend->createDescriptorSet(init);
 }
+void Device::updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) {
+    return _backend->updateDescriptorSet(descriptorSet, objects);
+}
 
 BatchPointer Device::createBatch(const BatchInit& init) {
     return _backend->createBatch(init);

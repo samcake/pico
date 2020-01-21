@@ -138,6 +138,29 @@ namespace poco {
         return vec4(mix(a.x, b.x, t.x), mix(a.y, b.y, t.y), mix(a.z, b.z, t.z), mix(a.w, b.w, t.w));
     }
 
+    // Dot product
+    inline float dot(float a, float b) { return (a * b); }
+    inline float dot(const vec2& a, const vec2& b) {
+        return a.x * b.x  + a.y * b.y;
+    }
+    inline float dot(const vec3& a, const vec3& b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+    inline float dot(const vec4& a, const vec4& b) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    }
+
+    // Normalize
+    inline vec2 normalize(const vec2& a) {
+        return scale(a, 1.0f/ dot(a,a));
+    }
+    inline vec3 normalize(const vec3& a) {
+        return scale(a, 1.0f / dot(a, a));
+    }
+    inline vec4 normalize(const vec4& a) {
+        return scale(a, 1.0f / dot(a, a));
+    }
+
     // Clamp
     inline float clamp(float a, float b, float c) { return (a < b ? b : (a > c ? c : a)); }
     inline vec2 clamp(const vec2& a, const vec2& b, const vec2& c) {
