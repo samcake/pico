@@ -214,9 +214,9 @@ int main(int argc, char *argv[])
 
         auto currentIndex = swapchain->currentIndex();
 
-      //  cameraData._eye.x = sinf(time);
+        cameraData._focal = 0.15 + 0.1f * sinf(time);
 
-      //  memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
+        memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
 
         batch->begin(currentIndex);
 
@@ -253,12 +253,6 @@ int main(int argc, char *argv[])
 
         batch->setViewport(viewportRect);
         batch->setScissor(viewportRect);
-
-        // Update the MVP matrix
-      /*  XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-        mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-        commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-*/
 
         batch->bindDescriptorSet(descriptorSet);
 
