@@ -25,6 +25,9 @@
 // SOFTWARE.
 //
 #include "Mesh.h"
+#include "../Api.h"
+
+#include <algorithm>
 
 using namespace poco;
 
@@ -36,3 +39,27 @@ Mesh::~Mesh() {
 
 }
 
+void Mesh::evalMinMaxPos() {
+    auto numVertices = _vertexBuffers.getNumElements();
+    pocoAssert((numVertices > 0));
+
+    uint16_t posStride = 0;
+    auto posBufferBegin = getPositionBegin(posStride);
+    pocoAssert(posBufferBegin != nullptr);
+
+    auto positionBegin = reinterpret_cast<const vec3*> (posBufferBegin);
+    _minPos = _maxPos = (*positionBegin);
+
+    for (uint32_t i = 1; i < numVertices; ++i) {
+
+        auto bufferOffset = posBufferBegin + (size_t) (i * posStride);
+        auto position = reinterpret_cast<const vec3*> (bufferOffset);
+        _minPos.x = std::min(position->x, _minPos.x);
+        _minPos.y = std::min(position->y, _minPos.y);
+        _minPos.z = std::min(position->z, _minPos.z);
+        _maxPos.x = std::max(position->x, _maxPos.x);
+        _maxPos.y = std::max(position->y, _maxPos.y);
+        _maxPos.z = std::max(position->z, _maxPos.z);
+    }
+
+}

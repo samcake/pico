@@ -110,6 +110,10 @@ namespace poco {
             return (_byteStride == AUTO_BYTE_STRIDE ? concreteStreamAttribSize : _byteStride);
         }
 
+        uint16_t evalViewByteoffset(uint16_t concreteStreamAttribOffset) const {
+           return _byteOffset + concreteStreamAttribOffset;
+        }
+
         AttribBufferView() {}
         AttribBufferView(uint32_t offset) : _byteOffset(offset) {}
         AttribBufferView(uint32_t offset, uint32_t length) : _byteOffset(offset), _byteLength(length) {}
@@ -120,7 +124,10 @@ namespace poco {
     using AttribBufferViews_0 = AttribBufferViews<0>;
 
     class StreamLayout {
+    public:
+        static const uint8_t INVALID_ATTRIB_INDEX{ 0xFF };
 
+    protected:
         class Base {
         public:
             virtual ~Base() {};
@@ -133,6 +140,20 @@ namespace poco {
 
 
             uint8_t attribSize(uint8_t a) const { return Attrib::sizeOf(getAttrib(a)->_format); }
+            uint16_t attribOffset(uint8_t a) const {
+                if (a <= 0 ) {
+                    return  0;
+                }
+                auto attrib = getAttrib(a);
+                auto attribBufferIndex = attrib->_bufferIndex;
+                uint16_t streamOffset = 0;
+                for (int i = (a - 1); i >= 0; i--) {
+                    attrib--;
+                    streamOffset += (attrib->_bufferIndex == attribBufferIndex ? Attrib::sizeOf(attrib->_format) : 0);
+                }
+                return streamOffset;
+            }
+
 
             uint16_t streamAttribSize(uint8_t b) const {
                 uint16_t streamSize = 0;
@@ -148,6 +169,17 @@ namespace poco {
             uint32_t evalBufferViewByteLength(uint8_t b, uint32_t concreteBufferSize) const { return getBufferView(b)->evalViewByteLength(concreteBufferSize); }
 
             uint16_t evalBufferViewByteStride(uint8_t b) const { return getBufferView(b)->evalViewByteStride(streamAttribSize(b)); }
+
+            uint8_t findAttribAt(AttribSemantic semantic) const {
+                auto attrib = getAttrib(0);
+                for (uint8_t a = 0; a < numAttribs(); a++) {
+                    if (attrib->_semantic == semantic) {
+                        return a;
+                    }
+                    attrib++;
+                }
+                return INVALID_ATTRIB_INDEX;
+            }
         };
 
 
@@ -184,6 +216,10 @@ namespace poco {
         uint16_t streamAttribSize(uint8_t b) const { return _base->streamAttribSize(b); }
         uint32_t evalBufferViewByteLength(uint8_t b, uint32_t concreteBufferSize) const { return _base->evalBufferViewByteLength(b, concreteBufferSize); }
         uint16_t evalBufferViewByteStride(uint8_t b) const { return _base->evalBufferViewByteStride(b); }
+
+        uint16_t evalBufferViewByteOffsetForAttribute(uint8_t a) const { return _base->attribOffset(a) + getBufferView(getAttrib(a)->_bufferIndex)->_byteOffset; }
+
+        uint8_t findAttribAt(AttribSemantic semantic) const { return _base->findAttribAt(semantic); }
 
         template <int A, int B>
         static bool check(const Attribs<A>& attribs, const AttribBufferViews<B> bufferViews) {

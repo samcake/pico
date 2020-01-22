@@ -101,8 +101,10 @@ namespace poco {
 
         ComPtr<IDXGISwapChain4> _swapchain;
         ComPtr<ID3D12Resource> _backBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
+        ComPtr<ID3D12Resource> _depthBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
 
         ComPtr<ID3D12DescriptorHeap> _rtvDescriptorHeap;
+        ComPtr<ID3D12DescriptorHeap> _dstDescriptorHeap;
         UINT _rtvDescriptorSize;
     };
 

@@ -43,23 +43,34 @@ namespace poco {
         uint32_t getSize() const { return _data.size(); }
 
         AttribBuffer() {}
-        AttribBuffer(void* data, size_t size) : _data(size, 0) { memcpy(_data.data(), data, size); }
+        AttribBuffer(void* data, size_t size) : _data(size, 0) { if (data) memcpy(_data.data(), data, size); }
     };
     using AttribBufferPointer = std::shared_ptr<AttribBuffer>;
     using AttribBufferPointers = std::vector<AttribBufferPointer>;
 
     struct StreamView {
-        StreamLayout _accessor;
+        StreamLayout _streamLayout;
         AttribBufferPointers _buffers;
 
-        uint32_t getNumlements() const {
+        uint32_t getNumElements() const {
             auto buffer0Size = _buffers[0]->_data.size();
-            auto buffer0ByteLength = _accessor.evalBufferViewByteLength(0, buffer0Size);
+            auto buffer0ByteLength = _streamLayout.evalBufferViewByteLength(0, buffer0Size);
             
-            auto elementStride = _accessor.evalBufferViewByteStride(0);
+            auto elementStride = _streamLayout.evalBufferViewByteStride(0);
 
             auto numElements = buffer0ByteLength / elementStride;
             return numElements;
+        }
+
+        const uint8_t* getBufferBegin(AttribSemantic semantic, uint16_t& stride) const {
+            auto attribIndex = _streamLayout.findAttribAt(semantic);
+            if (attribIndex != StreamLayout::INVALID_ATTRIB_INDEX) {
+                auto attrib = _streamLayout.getAttrib(attribIndex);
+                auto offset = _streamLayout.evalBufferViewByteOffsetForAttribute(attribIndex);
+                stride = _streamLayout.evalBufferViewByteStride(attribIndex);
+                return _buffers[attrib->_bufferIndex]->_data.data() + offset;
+            }
+            return nullptr;
         }
     };
     
@@ -69,11 +80,16 @@ namespace poco {
         ~Mesh();
 
         StreamView _vertexBuffers;
-        uint32_t getNumVertices() const { return _vertexBuffers.getNumlements(); }
+        uint32_t getNumVertices() const { return _vertexBuffers.getNumElements(); }
+        const uint8_t* getPositionBegin(uint16_t& stride) const { return (_vertexBuffers.getBufferBegin(AttribSemantic::A, stride)); }
 
         StreamView _indexBuffer { StreamLayout::build( Attribs<1>(), AttribBufferViews<1>() ), { AttribBufferPointer() } };
 
         Topology _topology { Topology::POINT };
+
+        vec3 _minPos;
+        vec3 _maxPos;
+        void evalMinMaxPos();
     };
 
 }

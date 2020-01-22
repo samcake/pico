@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     vertexBufferInit.usage = poco::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor.evalBufferViewByteStride(0);
+    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
     memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 
 
     // And a Pipeline
-    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice, pointCloud->_mesh->_vertexBuffers._accessor);
+    poco::PipelineStatePointer pipeline = createPipelineState(gpuDevice, pointCloud->_mesh->_vertexBuffers._streamLayout);
 
 
     // And now a render callback where we describe the rendering sequence

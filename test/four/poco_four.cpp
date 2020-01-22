@@ -75,6 +75,12 @@ poco::PointCloudPointer createPointCloud(const std::string& filepath) {
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
+
+    std::string cloudPointFile("./20191211-brain.ply");
+    if (argc > 1) {
+        cloudPointFile = std::string(argv[argc - 1]);
+    }
+
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the poco api
@@ -108,7 +114,7 @@ int main(int argc, char *argv[])
 
 
     // Some content, why not a pointcloud ?
-    auto pointCloud = createPointCloud("./20191211-brain.ply");
+    auto pointCloud = createPointCloud(cloudPointFile);
 
 
     // Let's allocate buffer to hold the point cloud mesh
@@ -116,7 +122,7 @@ int main(int argc, char *argv[])
     vertexBufferInit.usage = poco::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._accessor.evalBufferViewByteStride(0);
+    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
     memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
@@ -143,7 +149,7 @@ int main(int argc, char *argv[])
 
     poco::PipelineStateInit pipelineInit{
         programShader,
-        pointCloud->_mesh->_vertexBuffers._accessor,
+        pointCloud->_mesh->_vertexBuffers._streamLayout,
         poco::PrimitiveTopology::POINT,
         descriptorSetLayout
     };
@@ -181,7 +187,7 @@ int main(int argc, char *argv[])
     // look side
     cameraData._up = poco::normalize({ 0.f, 1.f, 0.0f });
     // cameraData._back = { 0.f, 1.f, 0.f };
-    cameraData._eye = { 0.5f, 0.f, 3.f };
+    cameraData._eye = { 0.5f, 0.6f, 2.f };
 
     // look up from under
 /*    cameraData._up = { 0.f, 0.f, 1.f };
@@ -214,7 +220,7 @@ int main(int argc, char *argv[])
 
         auto currentIndex = swapchain->currentIndex();
 
-        cameraData._focal = 0.15 + 0.1f * sinf(time);
+        cameraData._focal = 0.15 + 0.1f * sinf( 0.1f * time);
 
         memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
 
@@ -226,7 +232,8 @@ int main(int argc, char *argv[])
             poco::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-        poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.1f, 0.1f, 0.3f)), 1.f);
+       // poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.1f, 0.1f, 0.3f)), 1.f);
+        poco::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
         batch->clear(clearColor, swapchain, currentIndex);
 
         batch->beginPass(swapchain, currentIndex);
