@@ -1,6 +1,6 @@
 // poco_three.cpp 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
             swapchain, currentIndex, -1);
 
         poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.1f, 0.1f, 0.3f)), 1.f);
-        batch->clear(clearColor, swapchain, currentIndex);
+        batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
 

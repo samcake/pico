@@ -1,6 +1,6 @@
 // Renderer.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -64,7 +64,7 @@ void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) 
         time = poco::frac(time);
         poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
 
-        _batch->clear(clearColor, swapchain, currentIndex);
+        _batch->clear(swapchain, currentIndex, clearColor);
 
         _batch->resourceBarrierTransition(
             poco::ResourceBarrierFlag::NONE,

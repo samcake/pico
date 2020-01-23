@@ -1,6 +1,6 @@
 // poco_three.cpp 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -232,28 +232,11 @@ int main(int argc, char *argv[])
             poco::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-       // poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.1f, 0.1f, 0.3f)), 1.f);
         poco::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
-        batch->clear(clearColor, swapchain, currentIndex);
+        batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
 
-/*
-        auto backBuffer = m_pWindow->GetCurrentBackBuffer();
-        auto rtv = m_pWindow->GetCurrentRenderTargetView();
-        auto dsv = m_DSVHeap->GetCPUDescriptorHandleForHeapStart();
-
-        // Clear the render targets.
-        {
-            TransitionResource(commandList, backBuffer,
-                D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-
-            FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
-
-            ClearRTV(commandList, rtv, clearColor);
-            ClearDepth(commandList, dsv);
-        }
-*/
         batch->setPipeline(pipeline);
 
         batch->bindVertexBuffers(1, &vertexBuffer);
@@ -294,7 +277,7 @@ int main(int argc, char *argv[])
     auto window =poco::api::createWindow(windowInit);
 
     
-    poco::SwapchainInit swapchainInit { viewportRect.z, viewportRect.w, (HWND) window->nativeWindow() };
+    poco::SwapchainInit swapchainInit { viewportRect.z, viewportRect.w, (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render

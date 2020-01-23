@@ -1,6 +1,6 @@
 // poco_two.cpp 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         time = modf(time, &intPart);
        // poco::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         poco::vec4 clearColor(poco::colorRGBfromHSV(poco::vec3(0.5f, 0.5f, 1.f)), 1.f);
-        batch->clear(clearColor, swapchain, currentIndex);
+        batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
 

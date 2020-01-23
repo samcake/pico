@@ -1,6 +1,6 @@
 // D3D12Backend.h 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -28,16 +28,19 @@
 
 #include "../gpu/Device.h"
 #include "../gpu/Swapchain.h"
+#include "../gpu/Framebuffer.h"
 #include "../gpu/Batch.h"
 #include "../gpu/Resource.h"
 #include "../gpu/Pipeline.h"
 #include "../gpu/Shader.h"
 #include "../gpu/Descriptor.h"
 
+#include "Api.h"
+
 #ifdef WIN32
 
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+//#define WIN32_LEAN_AND_MEAN
+//#include <Windows.h>
 
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
@@ -75,7 +78,10 @@ namespace poco {
         HANDLE _fenceEvent;
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
+        FramebufferPointer createFramebuffer(const FramebufferInit& init) override;
+
         BatchPointer createBatch(const BatchInit& init) override;
+
         BufferPointer createBuffer(const BufferInit& init) override;
 
         ShaderPointer createShader(const ShaderInit& init) override;
@@ -91,21 +97,28 @@ namespace poco {
         void presentSwapchain(const SwapchainPointer& swapchain) override;
     };
 
-
     class D3D12SwapchainBackend : public Swapchain {
     public:
         friend class D3D12Backend;
         D3D12SwapchainBackend();
         virtual ~D3D12SwapchainBackend();
 
-
         ComPtr<IDXGISwapChain4> _swapchain;
         ComPtr<ID3D12Resource> _backBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
-        ComPtr<ID3D12Resource> _depthBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
-
         ComPtr<ID3D12DescriptorHeap> _rtvDescriptorHeap;
-        ComPtr<ID3D12DescriptorHeap> _dstDescriptorHeap;
         UINT _rtvDescriptorSize;
+
+        ComPtr<ID3D12Resource> _depthBuffer;
+        ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
+        UINT _dsvDescriptorSize { 0 };
+    };
+
+    class D3D12FramebufferBackend : public Framebuffer {
+    public:
+        friend class D3D12Backend;
+        D3D12FramebufferBackend();
+        virtual ~D3D12FramebufferBackend();
+
     };
 
     class D3D12BatchBackend : public Batch {
@@ -120,7 +133,7 @@ namespace poco {
         void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) override;
         void endPass() override;
 
-        void clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) override;
+        void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) override;
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
@@ -142,8 +155,6 @@ namespace poco {
 
         UINT _currentBackBufferIndex { 0 };
 
-
-
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
 
@@ -151,7 +162,6 @@ namespace poco {
         static const D3D12_PRIMITIVE_TOPOLOGY  PrimitiveTopologies[uint32_t(PrimitiveTopology::COUNT)];
 
     };
-
 
     class D3D12BufferBackend : public Buffer {
     public:
@@ -165,9 +175,6 @@ namespace poco {
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
-
-    //    ComPtr<ID3D12DescriptorHeap> g_RTVDescriptorHeap;
-    //    UINT g_RTVDescriptorSize;
     };
 
     class D3D12ShaderBackend : public Shader {
@@ -177,11 +184,8 @@ namespace poco {
         virtual ~D3D12ShaderBackend();
 
         ComPtr<ID3DBlob> _shaderBlob;
-        //    UINT g_RTVDescriptorSize;
-
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
-
     };
 
     class D3D12PipelineStateBackend : public PipelineState {
@@ -193,7 +197,6 @@ namespace poco {
         ComPtr<ID3D12RootSignature> _rootSignature;
         ComPtr<ID3D12PipelineState> _pipelineState;
         D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
-
     };
 
     class D3D12DescriptorSetLayoutBackend : public DescriptorSetLayout {

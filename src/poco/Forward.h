@@ -1,6 +1,6 @@
 // Forward.h
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -68,6 +68,10 @@ namespace poco {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
     struct PipelineStateInit;
+
+    class Framebuffer;
+    using FramebufferPointer = std::shared_ptr<Framebuffer>;
+    struct FramebufferInit;
 
     // Render types
     class Scene;

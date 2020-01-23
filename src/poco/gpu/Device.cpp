@@ -1,6 +1,6 @@
 // Device.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -42,6 +42,10 @@ Device::~Device() {
 
 SwapchainPointer Device::createSwapchain(const SwapchainInit& init) {
     return _backend->createSwapchain(init);
+}
+
+FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
+    return _backend->createFramebuffer(init);
 }
 
 BufferPointer Device::createBuffer(const BufferInit& init) {

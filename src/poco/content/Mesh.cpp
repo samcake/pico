@@ -1,6 +1,6 @@
 // Mesh.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -43,7 +43,7 @@ void Mesh::evalMinMaxPos() {
     auto numVertices = _vertexBuffers.getNumElements();
     pocoAssert((numVertices > 0));
 
-    uint16_t posStride = 0;
+    uint32_t posStride = 0;
     auto posBufferBegin = getPositionBegin(posStride);
     pocoAssert(posBufferBegin != nullptr);
 
@@ -52,7 +52,7 @@ void Mesh::evalMinMaxPos() {
 
     for (uint32_t i = 1; i < numVertices; ++i) {
 
-        auto bufferOffset = posBufferBegin + (size_t) (i * posStride);
+        auto bufferOffset = posBufferBegin + (i * posStride);
         auto position = reinterpret_cast<const vec3*> (bufferOffset);
         _minPos.x = std::min(position->x, _minPos.x);
         _minPos.y = std::min(position->y, _minPos.y);

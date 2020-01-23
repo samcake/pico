@@ -1,6 +1,6 @@
 // Swapchain.h 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -45,6 +45,8 @@ namespace poco {
 #ifdef WIN32
         HWND hWnd;
 #endif
+        // No depth buffer by default
+        bool     depthBuffer{ false };
     };
 
     class Swapchain {
@@ -55,6 +57,8 @@ namespace poco {
 
     public:
         ~Swapchain();
+
+        SwapchainInit _init;
 
         uint8_t _currentIndex;
         uint8_t currentIndex() const;

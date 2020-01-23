@@ -1,4 +1,4 @@
-// Descriptor.cpp
+// Framebuffer.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -24,22 +24,39 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Descriptor.h"
+#pragma once
 
-using namespace poco;
+#include "../Forward.h"
 
-DescriptorSetLayout::DescriptorSetLayout() {
+#include "Device.h"
 
-}
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <Windows.h>
+#endif 
 
-DescriptorSetLayout::~DescriptorSetLayout() {
+namespace poco {
 
-}
+    struct FramebufferInit {
+        uint32_t width;
+        uint32_t height;
 
-DescriptorSet::DescriptorSet() {
+        
+#ifdef WIN32
+        HWND hWnd;
+#endif
+    };
 
-}
+    class Framebuffer {
+    protected:
+        // Framebuffer is created from the device
+        friend class Device;
+        Framebuffer();
 
-DescriptorSet::~DescriptorSet() {
+    public:
+        ~Framebuffer();
 
+        uint8_t _currentIndex;
+        uint8_t currentIndex() const;
+    };
 }

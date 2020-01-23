@@ -1,6 +1,6 @@
 // Batch.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -42,7 +42,7 @@ void Batch::end() {}
 void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}
 void Batch::endPass() {}
 
-void Batch::clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index) {}
+void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) {}
 
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,

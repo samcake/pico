@@ -1,6 +1,6 @@
 // Batch.h 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -99,7 +99,7 @@ namespace poco {
         virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);
         virtual void endPass();
 
-        virtual void clear(const vec4& color, const SwapchainPointer& swapchain, uint8_t index);
+        virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth = 1.0f);
 
         virtual void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,

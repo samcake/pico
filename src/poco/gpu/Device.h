@@ -1,6 +1,6 @@
 // Device.h 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -42,6 +42,7 @@ namespace poco {
         virtual ~DeviceBackend() {}
 
         virtual SwapchainPointer createSwapchain(const SwapchainInit& init) = 0;
+        virtual FramebufferPointer createFramebuffer(const FramebufferInit& init) = 0;
 
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
 
@@ -70,6 +71,8 @@ namespace poco {
 
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
+        FramebufferPointer createFramebuffer(const FramebufferInit& init);
+
         BatchPointer createBatch(const BatchInit& init);
 
         BufferPointer createBuffer(const BufferInit& init);

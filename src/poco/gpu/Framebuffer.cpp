@@ -1,4 +1,4 @@
-// Descriptor.cpp
+// Framebuffer.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,22 +24,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Descriptor.h"
+#include "Framebuffer.h"
 
 using namespace poco;
 
-DescriptorSetLayout::DescriptorSetLayout() {
+Framebuffer::Framebuffer() : _currentIndex(0) {
 
 }
 
-DescriptorSetLayout::~DescriptorSetLayout() {
+Framebuffer::~Framebuffer() {
 
 }
 
-DescriptorSet::DescriptorSet() {
 
-}
-
-DescriptorSet::~DescriptorSet() {
-
+uint8_t Framebuffer::currentIndex() const {
+    return _currentIndex;
 }

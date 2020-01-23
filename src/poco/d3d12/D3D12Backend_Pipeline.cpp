@@ -1,6 +1,6 @@
 // D3D12Backend_Descriptor.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -125,13 +125,23 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
             psoDesc.BlendState.AlphaToCoverageEnable = FALSE;
-            psoDesc.DepthStencilState.DepthEnable = FALSE;
+
+            psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
+            psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+            psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+   
             psoDesc.DepthStencilState.StencilEnable = FALSE;
+            psoDesc.DepthStencilState.StencilReadMask = 0xFF;
+            psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
+//            D3D12_DEPTH_STENCILOP_DESC FrontFace;
+ //           D3D12_DEPTH_STENCILOP_DESC BackFace;
+
             psoDesc.SampleMask = UINT_MAX;
             psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
+            psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
             ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
         }

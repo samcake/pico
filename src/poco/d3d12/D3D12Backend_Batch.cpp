@@ -1,6 +1,6 @@
 // D3D12Backend_Descriptor.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -92,22 +92,31 @@ void D3D12BatchBackend::end() {
 void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t index) {
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
     D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
-
-    _commandList->OMSetRenderTargets(1, &rtv, TRUE, nullptr);
+    
+    if (sw->_dsvDescriptorHeap) {
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv{ sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr};
+        _commandList->OMSetRenderTargets(1, &rtv, TRUE, &dsv);
+    } else {
+        _commandList->OMSetRenderTargets(1, &rtv, TRUE, nullptr);
+    }
 }
 
 void D3D12BatchBackend::endPass() {
+    _commandList->OMSetRenderTargets(0, nullptr, TRUE, nullptr); // needed ?
 
 }
 
-void D3D12BatchBackend::clear(const vec4 & color, const SwapchainPointer & swapchain, uint8_t index) {
+void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) {
 
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
-    FLOAT clearColor[] = { 0.4f, 0.6f, 0.9f, 1.0f };
     D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
-
     _commandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
+
+    if (sw->_dsvDescriptorHeap) {
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv{ sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr };
+        _commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+    }
 }
 
 void D3D12BatchBackend::resourceBarrierTransition(

@@ -1,6 +1,6 @@
 // Mesh.h 
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -62,7 +62,7 @@ namespace poco {
             return numElements;
         }
 
-        const uint8_t* getBufferBegin(AttribSemantic semantic, uint16_t& stride) const {
+        const uint8_t* getBufferBegin(AttribSemantic semantic, uint32_t& stride) const {
             auto attribIndex = _streamLayout.findAttribAt(semantic);
             if (attribIndex != StreamLayout::INVALID_ATTRIB_INDEX) {
                 auto attrib = _streamLayout.getAttrib(attribIndex);
@@ -81,7 +81,7 @@ namespace poco {
 
         StreamView _vertexBuffers;
         uint32_t getNumVertices() const { return _vertexBuffers.getNumElements(); }
-        const uint8_t* getPositionBegin(uint16_t& stride) const { return (_vertexBuffers.getBufferBegin(AttribSemantic::A, stride)); }
+        const uint8_t* getPositionBegin(uint32_t& stride) const { return (_vertexBuffers.getBufferBegin(AttribSemantic::A, stride)); }
 
         StreamView _indexBuffer { StreamLayout::build( Attribs<1>(), AttribBufferViews<1>() ), { AttribBufferPointer() } };
 

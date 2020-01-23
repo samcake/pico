@@ -1,6 +1,6 @@
 // D3D12Backend_Descriptor.cpp
 //
-// Sam Gateau - 2020/1/1
+// Sam Gateau - January 2020
 // 
 // MIT License
 //
@@ -159,8 +159,6 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit & init) {
     sw->_rtvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
     sw->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    auto rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
@@ -172,7 +170,59 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit & init) {
 
         sw->_backBuffers[i] = backBuffer;
 
-        rtvHandle.ptr += (rtvDescriptorSize);
+        rtvHandle.ptr += (sw->_rtvDescriptorSize);
+    }
+
+    if (init.depthBuffer) {
+
+        // Create a depth buffer.
+        D3D12_CLEAR_VALUE optimizedClearValue = {};
+        optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+        optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+        D3D12_HEAP_PROPERTIES heapProp;
+        heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heapProp.CreationNodeMask = 1;
+        heapProp.VisibleNodeMask = 1;
+
+        D3D12_RESOURCE_DESC desc;
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        desc.Alignment = 0;
+        desc.Width = init.width;
+        desc.Height = init.height;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 0;
+        desc.Format = DXGI_FORMAT_D32_FLOAT;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+        _device->CreateCommittedResource(
+            &heapProp,
+            D3D12_HEAP_FLAG_NONE,
+            &desc,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            &optimizedClearValue,
+            IID_PPV_ARGS(&sw->_depthBuffer)
+        );
+
+        sw->_dsvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+        sw->_dsvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+        // Update the depth-stencil view.
+        D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+        dsv.Format = DXGI_FORMAT_D32_FLOAT;
+        dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+        dsv.Texture2D.MipSlice = 0;
+        dsv.Flags = D3D12_DSV_FLAG_NONE;
+
+        _device->CreateDepthStencilView(sw->_depthBuffer.Get(), &dsv,
+            dsvHandle);
     }
 
     return SwapchainPointer(sw);
