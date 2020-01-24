@@ -8,40 +8,40 @@
 
 
 #---------------------------------------------
-# Poco Library
+# Pico Library
 #---------------------------------------------
 
-include_directories("poco/")
+include_directories("pico/")
 
-file(GLOB POCO_HEADERS
-    "poco/*.h"
-    "poco/gpu/*.h"
-    "poco/d3d12/*.h"
-    "poco/render/*.h"
-    "poco/content/*.h"
+file(GLOB PICO_HEADERS
+    "pico/*.h"
+    "pico/gpu/*.h"
+    "pico/d3d12/*.h"
+    "pico/render/*.h"
+    "pico/content/*.h"
 )
 
-file(GLOB POCO_SOURCES
-    "poco/*.cpp"
-    "poco/gpu/*.cpp"
-    "poco/d3d12/*.cpp"
-    "poco/render/*.cpp"
-    "poco/content/*.cpp"
+file(GLOB PICO_SOURCES
+    "pico/*.cpp"
+    "pico/gpu/*.cpp"
+    "pico/d3d12/*.cpp"
+    "pico/render/*.cpp"
+    "pico/content/*.cpp"
 )
 
-add_library (poco
-    ${POCO_HEADERS}
-    ${POCO_SOURCES}
+add_library (pico
+    ${PICO_HEADERS}
+    ${PICO_SOURCES}
 )
 
-target_link_libraries(poco
-    ${POCO_LIBRARIES}
+target_link_libraries(pico
+    ${PICO_LIBRARIES}
     ${GRAPHICS_LIBRARIES}
 )
 
-source_group(poco\\content REGULAR_EXPRESSION poco/content/*)
-source_group(poco\\render REGULAR_EXPRESSION poco/render/*)
-source_group(poco\\gpu REGULAR_EXPRESSION poco/gpu/*)
-source_group(poco\\d3d12 REGULAR_EXPRESSION poco/d3d12/*)
-source_group(poco REGULAR_EXPRESSION poco/*)
+source_group(pico\\content REGULAR_EXPRESSION pico/content/*)
+source_group(pico\\render REGULAR_EXPRESSION pico/render/*)
+source_group(pico\\gpu REGULAR_EXPRESSION pico/gpu/*)
+source_group(pico\\d3d12 REGULAR_EXPRESSION pico/d3d12/*)
+source_group(pico REGULAR_EXPRESSION pico/*)
 

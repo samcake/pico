@@ -1,8 +1,8 @@
 
 
-add_executable(poco_two poco_two.cpp)
+add_executable(pico_two pico_two.cpp)
 
-# Set include path for poco.h
-target_include_directories(poco_two PRIVATE ../../src)
+# Set include path for pico.h
+target_include_directories(pico_two PRIVATE ../../src)
 
-target_link_libraries(poco_two poco)
+target_link_libraries(pico_two pico)

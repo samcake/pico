@@ -7,10 +7,10 @@
 
 cbuffer UniformBlock0 : register(b0)
 {
-    //poco::vec3 _eye{ 0.0f };                float _focal { 0.036f };
-    //poco::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
-    //poco::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio { 16.f / 9.f };
-    //poco::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.0f };
+    //pico::vec3 _eye{ 0.0f };                float _focal { 0.036f };
+    //pico::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
+    //pico::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio { 16.f / 9.f };
+    //pico::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.0f };
 
     float4 eye_focal;
     float4 right_sensorHeight;
