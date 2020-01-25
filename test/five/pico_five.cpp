@@ -98,7 +98,6 @@ int main(int argc, char *argv[])
     // Some content, why not a pointcloud ?
     auto pointCloud = createPointCloud(cloudPointFile);
 
-
     // Let's allocate buffer to hold the point cloud mesh
     pico::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;

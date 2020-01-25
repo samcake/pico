@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.16.1 ) # Latest version of CMake when this file was created.
+cmake_minimum_required( VERSION 3.15.4 ) # Latest version of CMake when this file was created.
 
 # Use solution folders to organize projects
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

@@ -223,18 +223,18 @@ Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_NOPE, // VK_XBUTTON1
     KEY_NOPE, // VK_XBUTTON2
     KEY_NOPE, //  0x07 : reserved
-    KEY_NOPE, // VK_BACK
-    KEY_NOPE, // VK_TAB
+    KEY_BACK, // VK_BACK
+    KEY_TAB, // VK_TAB
     KEY_NOPE, // 0x0A : reserved
     KEY_NOPE, // 0x0B : reserved
-    KEY_NOPE, // VK_CLEAR
-    KEY_NOPE, // VK_RETURN
+    KEY_CLEAR, // VK_CLEAR
+    KEY_RETURN, // VK_RETURN
     KEY_NOPE, // 0x0E : reserved
     KEY_NOPE, // 0x0F : reserved
-    KEY_NOPE, // VK_SHIFT          0x10
-    KEY_NOPE, // VK_CONTROL        0x11
-    KEY_NOPE, // VK_MENU           0x12
-    KEY_NOPE, // VK_PAUSE          0x13
+    KEY_SHIFT, // VK_SHIFT          0x10
+    KEY_CONTROL, // VK_CONTROL        0x11
+    KEY_MENU, // VK_MENU           0x12
+    KEY_PAUSE, // VK_PAUSE          0x13
     KEY_NOPE, // VK_CAPITAL        0x14
     KEY_NOPE, // VK_KANA           0x15
     KEY_NOPE, // 0x16 : unassigned
@@ -243,28 +243,28 @@ Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_NOPE, // VK_HANJA          0x19
 
     KEY_NOPE, // 0x1A : unassigned
-    KEY_NOPE, // VK_ESCAPE         0x1B
+    KEY_ESC, // VK_ESCAPE         0x1B
     KEY_NOPE, // VK_CONVERT        0x1C
     KEY_NOPE, // VK_NONCONVERT     0x1D
     KEY_NOPE, // VK_ACCEPT         0x1E
     KEY_NOPE, // VK_MODECHANGE     0x1F
 
     KEY_SPACE, // VK_SPACE          0x20
-    KEY_NOPE, // VK_PRIOR          0x21
-    KEY_NOPE, // VK_NEXT           0x22
-    KEY_NOPE, // VK_END            0x23
-    KEY_NOPE, // VK_HOME           0x24
-    KEY_NOPE, // VK_LEFT           0x25
-    KEY_NOPE, // VK_UP             0x26
-    KEY_NOPE, // VK_RIGHT          0x27
-    KEY_NOPE, // VK_DOWN           0x28
+    KEY_PRIOR, // VK_PRIOR          0x21
+    KEY_NEXT, // VK_NEXT           0x22
+    KEY_END, // VK_END            0x23
+    KEY_HOME, // VK_HOME           0x24
+    KEY_LEFT, // VK_LEFT           0x25
+    KEY_UP, // VK_UP             0x26
+    KEY_RIGHT, // VK_RIGHT          0x27
+    KEY_DOWN, // VK_DOWN           0x28
     KEY_NOPE, // VK_SELECT         0x29
-    KEY_NOPE, // VK_PRINT          0x2A
+    KEY_PRINT, // VK_PRINT          0x2A
     KEY_NOPE, // VK_EXECUTE        0x2B
-    KEY_NOPE, // VK_SNAPSHOT       0x2C
-    KEY_NOPE, // VK_INSERT         0x2D
-    KEY_NOPE, // VK_DELETE         0x2E
-    KEY_NOPE, // VK_HELP           0x2F
+    KEY_SNAPSHOT, // VK_SNAPSHOT       0x2C
+    KEY_INSERT, // VK_INSERT         0x2D
+    KEY_DELETE, // VK_DELETE         0x2E
+    KEY_HELP, // VK_HELP           0x2F
     KEY_0, //  * VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
     KEY_1, //  * VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
     KEY_2, //  * VK_0 - VK_9 are the same as ASCII '0' - '9' (0x30 - 0x39)
