@@ -40,7 +40,8 @@ using namespace pico;
 
 class WIN32WindowBackend : public WindowBackend {
 public:
-    static Key _KeyCodesToKey[0x5B];
+    static const uint8_t _NumKeyCodes{ 0xA6 };
+    static const Key _KeyCodesToKey[_NumKeyCodes];
 
     HWND _sysWindow{ nullptr };
     uint32_t _width{ 0 };
@@ -140,14 +141,14 @@ public:
             return 0;
         } break;
         case WM_KEYDOWN: {
-            if (wparam < 0x5B) {
+            if (wparam < _NumKeyCodes) {
             KeyboardEvent e{ _KeyCodesToKey[wparam], true };
             _ownerWindow->onKeyboard(e);
             }
             return 0;
         } break;
         case WM_KEYUP: {
-            if (wparam < 0x5B) {
+            if (wparam < _NumKeyCodes) {
                 KeyboardEvent e{ _KeyCodesToKey[wparam], false };
                 _ownerWindow->onKeyboard(e);
             }
@@ -214,7 +215,7 @@ public:
 WIN32WindowBackend::SysWindowMap WIN32WindowBackend::_sysWindowMap;
 std::string WIN32WindowBackend::WINDOW_CLASS;
 
-Key WIN32WindowBackend::_KeyCodesToKey[] = {
+const Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_NOPE,
     KEY_LMB, //  VK_LBUTTON
     KEY_RMB, //  VK_RBUTTON
@@ -233,9 +234,9 @@ Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_NOPE, // 0x0F : reserved
     KEY_SHIFT, // VK_SHIFT          0x10
     KEY_CONTROL, // VK_CONTROL        0x11
-    KEY_MENU, // VK_MENU           0x12
+    KEY_ALT, // VK_MENU           0x12
     KEY_PAUSE, // VK_PAUSE          0x13
-    KEY_NOPE, // VK_CAPITAL        0x14
+    KEY_CAPSLOCK, // VK_CAPITAL        0x14
     KEY_NOPE, // VK_KANA           0x15
     KEY_NOPE, // 0x16 : unassigned
     KEY_NOPE, // VK_JUNJA          0x17
@@ -250,8 +251,8 @@ Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_NOPE, // VK_MODECHANGE     0x1F
 
     KEY_SPACE, // VK_SPACE          0x20
-    KEY_PRIOR, // VK_PRIOR          0x21
-    KEY_NEXT, // VK_NEXT           0x22
+    KEY_PAGEUP, // VK_PRIOR          0x21
+    KEY_PAGEDOWN, // VK_NEXT           0x22
     KEY_END, // VK_END            0x23
     KEY_HOME, // VK_HOME           0x24
     KEY_LEFT, // VK_LEFT           0x25
@@ -309,104 +310,92 @@ Key WIN32WindowBackend::_KeyCodesToKey[] = {
     KEY_Y,
     KEY_Z,
 
-#ifdef notDefinedYet
-         #define VK_LWIN           0x5B
-         #define VK_RWIN           0x5C
-         #define VK_APPS           0x5D
+    KEY_LOS, // VK_LWIN           0x5B
+    KEY_ROS, // VK_RWIN           0x5C
+    KEY_NOPE, // VK_APPS           0x5D
+    KEY_NOPE, //           0x5E
 
-          /*
-           * 0x5E : reserved
-           */
+    KEY_NOPE, // VK_SLEEP          0x5F
 
-          #define VK_SLEEP          0x5F
+    KEY_NOPE, // VK_NUMPAD0        0x60
+    KEY_NOPE, // VK_NUMPAD1        0x61
+    KEY_NOPE, // VK_NUMPAD2        0x62
+    KEY_NOPE, // VK_NUMPAD3        0x63
+    KEY_NOPE, // VK_NUMPAD4        0x64
+    KEY_NOPE, // VK_NUMPAD5        0x65
+    KEY_NOPE, // VK_NUMPAD6        0x66
+    KEY_NOPE, // VK_NUMPAD7        0x67
+    KEY_NOPE, // VK_NUMPAD8        0x68
+    KEY_NOPE, // VK_NUMPAD9        0x69
 
-          #define VK_NUMPAD0        0x60
-          #define VK_NUMPAD1        0x61
-          #define VK_NUMPAD2        0x62
-          #define VK_NUMPAD3        0x63
-          #define VK_NUMPAD4        0x64
-          #define VK_NUMPAD5        0x65
-          #define VK_NUMPAD6        0x66
-          #define VK_NUMPAD7        0x67
-          #define VK_NUMPAD8        0x68
-          #define VK_NUMPAD9        0x69
-          #define VK_MULTIPLY       0x6A
-          #define VK_ADD            0x6B
-          #define VK_SEPARATOR      0x6C
-          #define VK_SUBTRACT       0x6D
-          #define VK_DECIMAL        0x6E
-          #define VK_DIVIDE         0x6F
-          #define VK_F1             0x70
-          #define VK_F2             0x71
-          #define VK_F3             0x72
-          #define VK_F4             0x73
-          #define VK_F5             0x74
-          #define VK_F6             0x75
-          #define VK_F7             0x76
-          #define VK_F8             0x77
-          #define VK_F9             0x78
-          #define VK_F10            0x79
-          #define VK_F11            0x7A
-          #define VK_F12            0x7B
-          #define VK_F13            0x7C
-          #define VK_F14            0x7D
-          #define VK_F15            0x7E
-          #define VK_F16            0x7F
-          #define VK_F17            0x80
-          #define VK_F18            0x81
-          #define VK_F19            0x82
-          #define VK_F20            0x83
-          #define VK_F21            0x84
-          #define VK_F22            0x85
-          #define VK_F23            0x86
-          #define VK_F24            0x87
+    KEY_MULTIPLY, // VK_MULTIPLY       0x6A
+    KEY_ADD, // VK_ADD            0x6B
+    KEY_SEPARATOR, // VK_SEPARATOR      0x6C
+    KEY_SUBSTRACT, // VK_SUBTRACT       0x6D
+    KEY_DECIMAL, // VK_DECIMAL        0x6E
+    KEY_DIVIDE, // VK_DIVIDE         0x6F
+    KEY_F1, // VK_F1             0x70
+    KEY_F2, // VK_F2             0x71
+    KEY_F3, // VK_F3             0x72
+    KEY_F4, // VK_F4             0x73
+    KEY_F5, // VK_F5             0x74
+    KEY_F6, // VK_F6             0x75
+    KEY_F7, // VK_F7             0x76
+    KEY_F8, // VK_F8             0x77
+    KEY_F9, // VK_F9             0x78
+    KEY_F10, // VK_F10            0x79
+    KEY_F11, // VK_F11            0x7A
+    KEY_F12, // VK_F12            0x7B
+    KEY_F13, // VK_F13            0x7C
+    KEY_F14, // VK_F14            0x7D
+    KEY_F15, // VK_F15            0x7E
+    KEY_F16, // VK_F16            0x7F
+    KEY_F17, // VK_F17            0x80
+    KEY_F18, // VK_F18            0x81
+    KEY_F19, // VK_F19            0x82
+    KEY_F20, // VK_F20            0x83
+    KEY_F21, // VK_F21            0x84
+    KEY_F22, // VK_F22            0x85
+    KEY_F23, // VK_F23            0x86
+    KEY_F24, // VK_F24            0x87
 
-          #if(_WIN32_WINNT >= 0x0604)
+    KEY_NOPE, // VK_NAVIGATION_VIEW     0x88 // reserved
+    KEY_NOPE, // VK_NAVIGATION_MENU     0x89 // reserved
+    KEY_NOPE, // VK_NAVIGATION_UP       0x8A // reserved
+    KEY_NOPE, // VK_NAVIGATION_DOWN     0x8B // reserved
+    KEY_NOPE, // VK_NAVIGATION_LEFT     0x8C // reserved
+    KEY_NOPE, // VK_NAVIGATION_RIGHT    0x8D // reserved
+    KEY_NOPE, // VK_NAVIGATION_ACCEPT   0x8E // reserved
+    KEY_NOPE, // VK_NAVIGATION_CANCEL   0x8F // reserved
 
-           /*
-            * 0x88 - 0x8F : UI navigation
-            */
 
-           #define VK_NAVIGATION_VIEW     0x88 // reserved
-           #define VK_NAVIGATION_MENU     0x89 // reserved
-           #define VK_NAVIGATION_UP       0x8A // reserved
-           #define VK_NAVIGATION_DOWN     0x8B // reserved
-           #define VK_NAVIGATION_LEFT     0x8C // reserved
-           #define VK_NAVIGATION_RIGHT    0x8D // reserved
-           #define VK_NAVIGATION_ACCEPT   0x8E // reserved
-           #define VK_NAVIGATION_CANCEL   0x8F // reserved
+    KEY_NUMLOCK, // VK_NUMLOCK        0x90
+    KEY_SCROLL, // VK_SCROLL         0x91
 
-           #endif /* _WIN32_WINNT >= 0x0604 */
+    KEY_NOPE, // VK_OEM_NEC_EQUAL  0x92   // '=' key on numpad
+              // VK_OEM_FJ_JISHO   0x92   // 'Dictionary' key
+    KEY_NOPE, // VK_OEM_FJ_MASSHOU 0x93   // 'Unregister word' key
+    KEY_NOPE, // VK_OEM_FJ_TOUROKU 0x94   // 'Register word' key
+    KEY_NOPE, // VK_OEM_FJ_LOYA    0x95   // 'Left OYAYUBI' key
+    KEY_NOPE, // VK_OEM_FJ_ROYA    0x96   // 'Right OYAYUBI' key
 
-           #define VK_NUMLOCK        0x90
-           #define VK_SCROLL         0x91
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
+    KEY_NOPE, // 0x97 - 0x9F : unassigned
 
-            /*
-             * NEC PC-9800 kbd definitions
-             */
-            #define VK_OEM_NEC_EQUAL  0x92   // '=' key on numpad
 
-             /*
-              * Fujitsu/OASYS kbd definitions
-              */
-             #define VK_OEM_FJ_JISHO   0x92   // 'Dictionary' key
-             #define VK_OEM_FJ_MASSHOU 0x93   // 'Unregister word' key
-             #define VK_OEM_FJ_TOUROKU 0x94   // 'Register word' key
-             #define VK_OEM_FJ_LOYA    0x95   // 'Left OYAYUBI' key
-             #define VK_OEM_FJ_ROYA    0x96   // 'Right OYAYUBI' key
-
-              /*
-               * 0x97 - 0x9F : unassigned
-               */
-
-               #define VK_LSHIFT         0xA0
-               #define VK_RSHIFT         0xA1
-               #define VK_LCONTROL       0xA2
-               #define VK_RCONTROL       0xA3
-               #define VK_LMENU          0xA4
-               #define VK_RMENU          0xA5
-
-#endif
+    KEY_LSHIFT, // VK_LSHIFT         0xA0
+    KEY_RSHIFT, // VK_RSHIFT         0xA1
+    KEY_LCONTROL, // VK_LCONTROL       0xA2
+    KEY_RCONTROL, // VK_RCONTROL       0xA3
+    KEY_LALT, // VK_LMENU          0xA4
+    KEY_RALT, // VK_RMENU          0xA5
 
 };
 
