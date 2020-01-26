@@ -36,13 +36,6 @@ namespace pico {
         ~Scene();
     };
 
-    class Camera {
-    public:
-        Camera(const ScenePointer& scene) {}
-        ~Camera() {}
-
-    };
-
     class Geometry {
     public:
         Geometry(const ScenePointer& scene) {}
