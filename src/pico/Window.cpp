@@ -136,7 +136,7 @@ public:
             return 0;
         } break;
         case WM_MOUSEMOVE: {
-            MouseEvent e{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam) };
+            MouseEvent e{ { (float)GET_X_LPARAM(lparam),(float) GET_Y_LPARAM(lparam) } };
             _ownerWindow->onMouse(e);
             return 0;
         } break;

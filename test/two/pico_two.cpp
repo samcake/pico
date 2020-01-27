@@ -39,10 +39,7 @@
 #include <pico/gpu/Swapchain.h>
 #include <pico/gpu/gpu.h>
 
-
-#include <pico/render/Scene.h>
 #include <pico/render/Renderer.h>
-#include <pico/render/Viewport.h>
 
 #include <vector>
 
@@ -82,13 +79,6 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Content creation
-
-    // let's create a scene
-    auto scene = std::make_shared<pico::Scene>();
-
-    // A Camera added to the scene
-    auto camera = std::make_shared<pico::Camera>(scene);
 
     // Renderer creation
 
@@ -96,10 +86,7 @@ int main(int argc, char *argv[])
     pico::DeviceInit deviceInit {};
     auto gpuDevice = pico::api::createDevice(deviceInit);
 
-    // We need a Batch too, where to express the device commands
-    pico::BatchInit batchInit {};
-    auto batch = gpuDevice->createBatch(batchInit);
-
+    // Content creation
 
     // Let's allocate buffer
     // quad
@@ -145,7 +132,7 @@ int main(int argc, char *argv[])
 
 
     // And now a render callback where we describe the rendering sequence
-    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, pico::SwapchainPointer& swapchain, pico::DevicePointer& device, pico::BatchPointer& batch) {
+    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
         pico::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
 
         auto currentIndex = swapchain->currentIndex();
@@ -194,7 +181,7 @@ int main(int argc, char *argv[])
     };
 
 
-    // Next, a renderer built on this device
+    // Next, a renderer built on this device which will use this renderCallback
     auto renderer = std::make_shared<pico::Renderer>(gpuDevice, renderCallback);
 
 
@@ -209,12 +196,9 @@ int main(int argc, char *argv[])
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
-    // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
-    auto viewport = std::make_shared<pico::Viewport>(camera, renderer, swapchain);
-
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([viewport](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -238,7 +222,7 @@ int main(int argc, char *argv[])
 
 
         // Render!
-        viewport->render();
+        renderer->render(nullptr, swapchain);
     });
 
     // Render Loop 

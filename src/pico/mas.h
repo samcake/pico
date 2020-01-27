@@ -41,6 +41,7 @@ namespace pico {
         vec2 operator+(const vec2& a) const { return vec2(x + a.x, y + a.y); }
         vec2 operator-(const vec2& a) const { return vec2(x - a.x, y - a.y); }
         vec2 operator*(float s) const { return vec2(x * s, y * s); }
+        vec2 operator-() const { return vec2(-x, -y); }
     };
     struct vec3 {
         float x, y, z;
@@ -55,6 +56,7 @@ namespace pico {
         vec3 operator+(const vec3& a) const { return vec3(x + a.x, y + a.y, z + a.z); }
         vec3 operator-(const vec3& a) const { return vec3(x - a.x, y - a.y, z - a.z); }
         vec3 operator*(float s) const { return vec3(x * s, y * s, z * s); }
+        vec3 operator-() const { return vec3(-x, -y, -z); }
     };
     struct vec4 {
         float x, y, z, w;
@@ -70,8 +72,8 @@ namespace pico {
         vec4 operator+(const vec4& a) const { return vec4(x + a.x, y + a.y, z + a.z, w + a.w); }
         vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
+        vec4 operator-() const { return vec4(-x, -y, -z, -w); }
     };
-
     struct ucvec4 {
         uint8_t x, y, z, w;
         uint8_t* data() { return &x; }
@@ -85,6 +87,7 @@ namespace pico {
         ucvec4 operator+(const ucvec4& a) const { return ucvec4(x + a.x, y + a.y, z + a.z, w + a.w); }
         ucvec4 operator-(const ucvec4& a) const { return ucvec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         ucvec4 operator*(uint8_t s) const { return ucvec4(x * s, y * s, z * s, w * s); }
+        ucvec4 operator-() const { return ucvec4(-x, -y, -z, -w); }
     };
 
     // Abs
@@ -98,6 +101,11 @@ namespace pico {
     inline vec4 abs(const vec4& v) {
         return vec4(abs(v.x), abs(v.y), abs(v.z), abs(v.w));
     }
+    // Max Min
+    inline float max(float a, float b) { return (a > b ? a : b); }
+    inline float min(float a, float b) { return (a < b ? a : b); }
+
+    static const float FLOAT_EPSILON { 0.0001f };
 
     // Frac
     inline float frac(float v) {
@@ -150,6 +158,11 @@ namespace pico {
         return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     }
 
+    // Cross product
+    inline vec3 cross(const vec3& a, const vec3& b) {
+        return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x );
+    }
+
     // Normalize
     inline vec2 normalize(const vec2& a) {
         return scale(a, 1.0f/ dot(a,a));
@@ -193,6 +206,42 @@ namespace pico {
                      yuv.x - 0.395f * yuv.y - 0.581f * yuv.z,
                      yuv.x + 2.032f * yuv.y);
     }
+
+    // Matrix: 3 raws . 4 columns
+    struct mat4x3 {
+        vec3 _columns[4]{ {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f} };
+        float* data() { return _columns[0].data(); }
+        const float* data() const { return _columns[0].data(); }
+
+        mat4x3() {}
+        mat4x3(const vec3& c0, const vec3& c1, const vec3& c2, const vec3& c3) {
+            _columns[0] = (c0);
+            _columns[1] = (c1);
+            _columns[2] = (c2);
+            _columns[3] = (c3);
+        }
+    };
+
+    // Matrix: 3 raws . 4 columns
+    struct mat4 {
+        vec4 _columns[4]{ {1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f} };
+        float* data() { return _columns[0].data(); }
+        const float* data() const { return _columns[0].data(); }
+
+        mat4() {}
+        mat4(const vec4& c0, const vec4& c1, const vec4& c2, const vec4& c3) {
+            _columns[0] = (c0);
+            _columns[1] = (c1);
+            _columns[2] = (c2);
+            _columns[3] = (c3);
+        }
+        mat4(const vec3& c0, const vec3& c1, const vec3& c2, const vec3& c3) {
+            _columns[0] = vec4(c0, 0.f);
+            _columns[1] = vec4(c1, 0.f);
+            _columns[2] = vec4(c2, 0.f);
+            _columns[3] = vec4(c3, 1.f);
+        }
+    };
 
 }
 

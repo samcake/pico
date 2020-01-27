@@ -32,9 +32,7 @@
 #include <pico/gpu/Batch.h>
 #include <pico/gpu/Swapchain.h>
 #include <pico/Window.h>
-#include <pico/render/Scene.h>
 #include <pico/render/Renderer.h>
-#include <pico/render/Viewport.h>
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -57,26 +55,14 @@ int main(int argc, char *argv[])
 
     // Content creation
 
-    // let's create a scene
-    auto scene = std::make_shared<pico::Scene>();
-
-    // A Camera added to the scene
-    auto camera = std::make_shared<pico::Camera>(scene);
-
-
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
     auto gpuDevice = pico::api::createDevice(deviceInit);
 
-    // We need a Batch too, where to express the device commands
-    pico::BatchInit batchInit {};
-    auto batch = gpuDevice->createBatch(batchInit);
-
     // Next, a renderer built on this device
     auto renderer = std::make_shared<pico::Renderer>(gpuDevice, nullptr);
-
 
     // Presentation creation
 
@@ -89,12 +75,9 @@ int main(int argc, char *argv[])
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
-    // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
-    auto viewport = std::make_shared<pico::Viewport>(camera, renderer, swapchain);
-
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([viewport](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -118,7 +101,7 @@ int main(int argc, char *argv[])
 
 
         // Render!
-        viewport->render();
+        renderer->render(nullptr, swapchain);
     });
 
     // Render Loop 

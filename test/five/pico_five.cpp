@@ -40,9 +40,8 @@
 #include <pico/gpu/Batch.h>
 #include <pico/gpu/Swapchain.h>
 
-#include <pico/render/Scene.h>
 #include <pico/render/Renderer.h>
-#include <pico/render/Viewport.h>
+#include <pico/render/Camera.h>
 
 #include <pico/content/PointCloud.h>
 
@@ -74,26 +73,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    // Content creation
-
-    // let's create a scene
-    auto scene = std::make_shared<pico::Scene>();
-
-    // A Camera added to the scene
-    auto camera = std::make_shared<pico::Camera>(scene);
-
-    pico::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
-
-    // Renderer creation
-
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
     auto gpuDevice = pico::api::createDevice(deviceInit);
 
-    // We need a Batch too, where to express the device commands
-    pico::BatchInit batchInit {};
-    auto batch = gpuDevice->createBatch(batchInit);
 
+    // Content creation
+    pico::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
+    float doAnimate = 1.0f;
 
     // Some content, why not a pointcloud ?
     auto pointCloud = createPointCloud(cloudPointFile);
@@ -136,7 +123,6 @@ int main(int argc, char *argv[])
     };
     pico::PipelineStatePointer pipeline = gpuDevice->createPipelineState(pipelineInit);
 
-
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a uniform buffer in it
     pico::DescriptorSetInit descriptorSetInit{
@@ -144,44 +130,28 @@ int main(int argc, char *argv[])
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
-    // Let s create a uniform buffer
-    float aspectRatio = (viewportRect.z / viewportRect.w);
-    struct CameraUB{
-        pico::vec3 _eye{ 0.5f, 1.0f, 2.04f };                float _focal { 0.056f };
-        pico::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
-        pico::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio {16.0f / 9.0f };
-        pico::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.f };
-        pico::vec4 _stuff { 1.0f, 0.0f, 0.0f, 0.0f};    
-    };
-    CameraUB cameraData;
-    cameraData._aspectRatio = aspectRatio;
+    // A Camera to look at the scene
+    auto camera = std::make_shared<pico::Camera>();
+    camera->setAspectRatio((viewportRect.z / viewportRect.w));
+    camera->setEye({ 0.5f, 1.0f, 2.04f });
+    camera->setOrientation({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
 
-    // look side
-    cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
-    // cameraData._back = { 0.f, 1.f, 0.f };
-    cameraData._eye = { 0.5f, 0.6f, 2.f };
+    // Let s allocate a gpu buffer managed by the Camera
+    camera->allocateGPUData(gpuDevice);
 
-    pico::BufferInit uboInit;
-    uboInit.usage = pico::ResourceUsage::UNIFORM_BUFFER;
-    uboInit.bufferSize = sizeof(CameraUB);
-    uboInit.hostVisible = true;
-    auto cameraUBO = gpuDevice->createBuffer(uboInit);
-    memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
-
-    // Assign the UBO just created as the resource of the descriptorSet
+    // Assign the Camera UBO just created as the resource of the descriptorSet
     // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-
     pico::DescriptorObject uboDescriptorObject;
-    uboDescriptorObject._uniformBuffers.push_back( cameraUBO );
+    uboDescriptorObject._uniformBuffers.push_back( camera->getGPUBuffer() );
     pico::DescriptorObjects descriptorObjects = {
         uboDescriptorObject,
     };
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
   
-      
-  
+    // Renderer creation
+
     // And now a render callback where we describe the rendering sequence
-    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, pico::SwapchainPointer& swapchain, pico::DevicePointer& device, pico::BatchPointer& batch) {
+    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
@@ -189,11 +159,11 @@ int main(int argc, char *argv[])
 
         auto currentIndex = swapchain->currentIndex();
 
-        if (cameraData._stuff.x) {
-            cameraData._focal = 0.15 + 0.1f * sinf( 0.1f * time);
+        if (doAnimate) {
+            camera->setFocal(0.15f + 0.1f * sinf( 0.1f * time));
         }
 
-        memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
+        camera->updateGPUData();
 
         batch->begin(currentIndex);
 
@@ -235,7 +205,7 @@ int main(int argc, char *argv[])
     };
 
 
-    // Next, a renderer built on this device
+    // Next, a renderer built on this device and callback
     auto renderer = std::make_shared<pico::Renderer>(gpuDevice, renderCallback);
 
 
@@ -248,15 +218,12 @@ int main(int argc, char *argv[])
     auto window =pico::api::createWindow(windowInit);
 
     
-    pico::SwapchainInit swapchainInit { viewportRect.z, viewportRect.w, (HWND) window->nativeWindow(), true };
+    pico::SwapchainInit swapchainInit { (uint32_t)viewportRect.z, (uint32_t)viewportRect.w, (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
-
-    // Finally, the viewport brings the Renderer, the Swapchain and the Camera in the Scene together to produce a render
-    auto viewport = std::make_shared<pico::Viewport>(camera, renderer, swapchain);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([viewport](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -280,40 +247,45 @@ int main(int argc, char *argv[])
 
 
         // Render!
-        viewport->render();
+        renderer->render(camera, swapchain);
     });
 
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
         if (e.state && e.key == pico::KEY_SPACE) {
-            cameraData._stuff.x = (cameraData._stuff.x == 0.f ? 1.0f : 0.0f);
+            doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
         if (e.state && e.key == pico::KEY_3) {
             // look down
-            cameraData._right = { 1.f, 0.f, 0.f };
-            cameraData._up = { 0.f, 0.f, -1.f };
-            //  cameraData._back = { 0.f, 1.f, 0.f };
-            cameraData._eye = { 0.5f, 3.f, 0.f };
+            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
+            camera->setEye({ 0.5f, 3.f, 0.f });
         }
         if (e.state && e.key == pico::KEY_1) {
             // look side
-            cameraData._right = { 1.f, 0.f, 0.f };
-            cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
-            // cameraData._back = { 0.f, 1.f, 0.f };
-            cameraData._eye = { 0.5f, 0.6f, 2.f };
+            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
+            camera->setEye({ 0.5f, 0.6f, 2.f });
         }
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
-            cameraData._right = { 0.f, 0.f, -1.f };
-            cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
-            // cameraData._back = { 0.f, 1.f, 0.f };
-            cameraData._eye = { 2.5f, 0.6f, 0.f };
+            camera->setOrientation({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
+            camera->setEye({ 2.5f, 0.6f, 0.f });
         }
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
-            cameraData._right = pico::normalize({ 1.f, 0.f, -1.f });
-            cameraData._up = pico::normalize({ 0.f, 1.f, -1.f });
-            // cameraData._back = { 0.f, 1.f, 0.f };
-            cameraData._eye = { 2.f, 2.f, 2.f };
+            camera->setOrientation({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
+            camera->setEye({ 2.f, 2.f, 2.f });
+        }
+
+        if (e.state && e.key == pico::KEY_UP) {
+            camera->setEye(camera->getEye() + camera->getFront() * 0.1f);
+        }
+        if (e.state && e.key == pico::KEY_DOWN) {
+            camera->setEye(camera->getEye() + camera->getBack() * 0.1f);
+        }
+        if (e.state && e.key == pico::KEY_LEFT) {
+            camera->setEye(camera->getEye() + camera->getLeft() * 0.1f);
+        }
+        if (e.state && e.key == pico::KEY_RIGHT) {
+            camera->setEye(camera->getEye() + camera->getRight() * 0.1f);
         }
     };
 

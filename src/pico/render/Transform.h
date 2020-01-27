@@ -1,4 +1,4 @@
-// Renderer.h 
+// Transform.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -27,31 +27,14 @@
 #pragma once
 
 #include "../Forward.h"
-#include <functional>
+#include "../mas.h"
 
 namespace pico {
-
-    // Renderer concrete backend implementation
-    class RendererBackend {
+    class Transform {
     public:
-        virtual ~RendererBackend() {}
-    };
+        Transform() {}
+        ~Transform() {}
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch)>;
-
-    class Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
-
-        void render(const CameraPointer& camera, const SwapchainPointer& swapchain);
-
-    protected:
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
-
-    private:
-        std::unique_ptr<RendererBackend> _backend;
+        mat3x4 _matRTS;
     };
 }

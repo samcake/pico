@@ -45,7 +45,7 @@ Renderer::~Renderer() {
 
 }
 
-void Renderer::render(const CameraPointer& camera, SwapchainPointer& swapchain) {
+void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapchain) {
     if (_callback) {
         _callback(camera, swapchain, _device, _batch);
     } else {

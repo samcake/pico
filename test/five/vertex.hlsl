@@ -1,44 +1,15 @@
-/*struct ModelViewProjection
-{
-    matrix MVP;
-};
-*/
-//ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
-
-cbuffer UniformBlock0 : register(b0)
-{
-    //pico::vec3 _eye{ 0.0f };                float _focal { 0.036f };
-    //pico::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
-    //pico::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio { 16.f / 9.f };
-    //pico::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.0f };
-
-    float4 eye_focal;
-    float4 right_sensorHeight;
-    float4 up_aspectRatio;
-    float4 back_far;
+struct CameraData {
+    float4x3 _view;
+    float4 _projection;
 };
 
-float3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, float2 clipPos) {
-	return float3(clipPos.x*aspectRatio*sensorHeight * 0.5, clipPos.y * sensorHeight * 0.5, -focal);
-}
-float3 worldFromEyeSpaceDir(float3 right, float3 up, float3 eyeDir) {
-	return eyeDir * eyeDir.x + up * eyeDir.y + cross(right, up) * eyeDir.z;
-}
-float3 worldFromEyeSpace(float3 eye, float3 right, float3 up, float3 eyePos) {
-	return worldFromEyeSpaceDir(right, up, eyePos) + eye;
-}
-/*
-float3 worldFromEyeSpaceDir(float3 right, float3 up, float3 eyeDir) {
-	return eyeDir * eyePos.x + up * eyeDir.y + cross(right, up) * eyeDir.z;
-}*/
-float3 eyeFromWorldSpace(float3 eye, float3 right, float3 up, float3 worldPos) {
-	float3 eyeCenteredPos = worldPos - eye;
-    return float3( 
-        dot(right, eyeCenteredPos),
-        dot(up, eyeCenteredPos),
-        dot(cross(right, up), eyeCenteredPos)
-    );
-}
+#define mat43 float4x3
+
+cbuffer UniformBlock0 : register(b0) {
+    mat43 _view;
+    float4 _projection;
+};
+
 
 float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float far, float3 eyePos) {
     
@@ -49,6 +20,31 @@ float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, floa
     float x = eyePos.x * foc / (0.5 * sensorHeight * aspectRatio);
     float y = eyePos.y * foc / (0.5 * sensorHeight);
     return float4(x, y, z, w);
+}
+float4 clipFromEyeSpace(float4 proj, float3 eyePos) {
+    return clipFromEyeSpace(proj.x, proj.y, proj.z, proj.w, eyePos);
+}
+
+
+float3 eyeFromWorldSpace(float3 right, float3 up, float3 back, float3 eye, float3 worldPos) {
+	float3 eyeCenteredPos = worldPos - eye;
+    return float3( 
+        dot(right, eyeCenteredPos),
+        dot(up, eyeCenteredPos),
+        dot(back, eyeCenteredPos)
+    );
+}
+
+float3 eyeFromWorldSpace(mat43 view, float3 worldPos) {
+ /*   float4 pos = float4(worldPos, -1.0f);
+
+    return float3(
+        dot(view._m00_m10_m20_m30, pos),
+        dot(view._m01_m11_m21_m31, pos),
+        dot(view._m02_m12_m22_m32, pos)
+        );*/
+
+    return eyeFromWorldSpace(view._m00_m01_m02, view._m10_m11_m12, view._m20_m21_m22, view._m30_m31_m32, worldPos);
 }
 
 
@@ -70,9 +66,10 @@ VertexShaderOutput mainVertex(VertexPosColor IN)
     VertexShaderOutput OUT;
 
     float3 position = IN.Position * 0.075f;
-    float3 eyePosition = eyeFromWorldSpace(eye_focal.xyz, right_sensorHeight.xyz, up_aspectRatio.xyz, position);
-  
-    float4 clipPos = clipFromEyeSpace(eye_focal.w, right_sensorHeight.w, up_aspectRatio.w, back_far.w, eyePosition);
+ 
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
     OUT.Position = clipPos;
     OUT.Color = float4(IN.Color.xyz, 1.0f);
 
