@@ -56,9 +56,9 @@ namespace pico {
             _mat._columns[1] = cross(_mat._columns[2], _mat._columns[0]); // make sure Up is orthogonal
 */
             _mat._columns[0] = normalize(right); // make sure Right is normalized
-            _mat._columns[1] = normalize(up); // make sure Up is normalized
+         //   _mat._columns[1] = normalize(up); // make sure Up is normalized
             _mat._columns[2] = normalize(cross(right, up)); // compute Back as normalize(Right^Up)
-         //   _mat._columns[1] = cross(_mat._columns[2], _mat._columns[0]); // make sure Up is normalized
+            _mat._columns[1] = normalize(cross(_mat._columns[2], _mat._columns[0])); // make sure Up is normalized
 
         }
 
@@ -182,4 +182,41 @@ namespace pico {
         BufferPointer getGPUBuffer() const;
 
     };
+
+    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+
+    struct KeyboardEvent;
+    struct MouseEvent;
+    struct ResizeEvent;
+    class CameraController {
+
+        CameraPointer _cam;
+    public:
+        CameraController(const CameraPointer& cam);
+
+        struct ControlData {
+            float _translateFront{ 0 };
+            float _translateBack{ 0 };
+
+            float _translateLeft{ 0 };
+            float _translateRight{ 0 };
+
+            float _rotateLeft{ 0 };
+            float _rotateRight{ 0 };
+
+            float _zoomIn{ 0 };
+            float _zoomOut{ 0 };
+        };
+
+        ControlData _controlData;
+
+        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+
+        void update(std::chrono::milliseconds& duration);
+
+        bool onKeyboard(const KeyboardEvent& e);
+        bool onMouse(const MouseEvent& e);
+        bool onResize(const ResizeEvent& e);
+
+      };
 }

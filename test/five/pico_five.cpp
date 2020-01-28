@@ -216,14 +216,16 @@ int main(int argc, char *argv[])
     auto windowHandler = new pico::WindowHandlerDelegate();
     pico::WindowInit windowInit { windowHandler };
     auto window =pico::api::createWindow(windowInit);
-
     
     pico::SwapchainInit swapchainInit { (uint32_t)viewportRect.z, (uint32_t)viewportRect.w, (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
+    // Let's use a CameraController to have easy camera drive
+    auto cameraController = std::make_shared<pico::CameraController>(camera);
+
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera, cameraController](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -245,48 +247,43 @@ int main(int argc, char *argv[])
             elapsedSeconds = 0.0;
         }
 
+        cameraController->update(std::chrono::duration_cast<std::chrono::milliseconds>(deltaTime));
 
         // Render!
         renderer->render(camera, swapchain);
     });
 
+
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
         if (e.state && e.key == pico::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
-        }
-        if (e.state && e.key == pico::KEY_3) {
-            // look down
-            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
-            camera->setEye({ 0.5f, 3.f, 0.f });
         }
         if (e.state && e.key == pico::KEY_1) {
             // look side
             camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
             camera->setEye({ 0.5f, 0.6f, 2.f });
         }
+
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
             camera->setOrientation({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
             camera->setEye({ 2.5f, 0.6f, 0.f });
         }
+
+        if (e.state && e.key == pico::KEY_3) {
+            // look down
+            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
+            camera->setEye({ 0.5f, 3.f, 0.f });
+        }
+
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
             camera->setOrientation({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
             camera->setEye({ 2.f, 2.f, 2.f });
         }
 
-        if (e.state && e.key == pico::KEY_UP) {
-            camera->setEye(camera->getEye() + camera->getFront() * 0.1f);
-        }
-        if (e.state && e.key == pico::KEY_DOWN) {
-            camera->setEye(camera->getEye() + camera->getBack() * 0.1f);
-        }
-        if (e.state && e.key == pico::KEY_LEFT) {
-            camera->setEye(camera->getEye() + camera->getLeft() * 0.1f);
-        }
-        if (e.state && e.key == pico::KEY_RIGHT) {
-            camera->setEye(camera->getEye() + camera->getRight() * 0.1f);
-        }
+        // Delegate to the controller for standard camera inputs handling
+        cameraController->onKeyboard(e);
     };
 
     // Render Loop 
