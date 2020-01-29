@@ -382,7 +382,7 @@ PointCloudPointer PointCloud::createFromPLY(const std::string& filename) {
     
 
     mesh->_vertexBuffers._buffers.push_back(vertices);
-    mesh->evalMinMaxPos();
+    mesh->evalMinMaxMidPos();
 
     PointCloudInit pcinit{ mesh };
     return std::make_shared<PointCloud>(pcinit);

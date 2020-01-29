@@ -39,7 +39,7 @@ Mesh::~Mesh() {
 
 }
 
-void Mesh::evalMinMaxPos() {
+void Mesh::evalMinMaxMidPos() {
     auto numVertices = _vertexBuffers.getNumElements();
     picoAssert((numVertices > 0));
 
@@ -48,7 +48,7 @@ void Mesh::evalMinMaxPos() {
     picoAssert(posBufferBegin != nullptr);
 
     auto positionBegin = reinterpret_cast<const vec3*> (posBufferBegin);
-    _minPos = _maxPos = (*positionBegin);
+    _minPos = _maxPos = _midPos = (*positionBegin);
 
     for (uint32_t i = 1; i < numVertices; ++i) {
 
@@ -60,6 +60,9 @@ void Mesh::evalMinMaxPos() {
         _maxPos.x = std::max(position->x, _maxPos.x);
         _maxPos.y = std::max(position->y, _maxPos.y);
         _maxPos.z = std::max(position->z, _maxPos.z);
+        _midPos = _midPos + (*position);
     }
+
+    _midPos = _midPos * (1.0f / (float) numVertices);
 
 }

@@ -89,7 +89,8 @@ namespace pico {
 
         vec3 _minPos;
         vec3 _maxPos;
-        void evalMinMaxPos();
+        vec3 _midPos;
+        void evalMinMaxMidPos();
     };
 
 }
