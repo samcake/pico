@@ -44,6 +44,10 @@ SwapchainPointer Device::createSwapchain(const SwapchainInit& init) {
     return _backend->createSwapchain(init);
 }
 
+void Device::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) {
+    _backend->resizeSwapchain(swapchain, width, height);
+}
+
 FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
     return _backend->createFramebuffer(init);
 }

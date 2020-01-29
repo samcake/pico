@@ -78,6 +78,8 @@ namespace pico {
         HANDLE _fenceEvent;
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
+        void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
+
         FramebufferPointer createFramebuffer(const FramebufferInit& init) override;
 
         BatchPointer createBatch(const BatchInit& init) override;
@@ -95,6 +97,8 @@ namespace pico {
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
+
+        void flush();
     };
 
     class D3D12SwapchainBackend : public Swapchain {

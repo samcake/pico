@@ -46,6 +46,7 @@ public:
     HWND _sysWindow{ nullptr };
     uint32_t _width{ 0 };
     uint32_t _height{ 0 };
+    bool _didResize{ false };
 
     using SysWindowMap = std::map<HWND, WIN32WindowBackend*>;
     static SysWindowMap _sysWindowMap;
@@ -125,10 +126,22 @@ public:
         // case WM_DESTROY:
 
         // Pass on events to standard handler
+     //   case WM_ENTERSIZEMOVE:
         case WM_SIZE: {
-            ResizeEvent e {};
+            ResizeEvent e { LOWORD(lparam), HIWORD(lparam) };
+            _width = e.width;
+            _height = e.height;
+            _didResize = true;
             _ownerWindow->onResize({e});
            return 0;
+        } break;
+        case WM_EXITSIZEMOVE: {
+            if (_didResize) {
+                ResizeEvent e{ _width, _height, true };
+                _ownerWindow->onResize({ e });
+            }
+            _didResize = false;
+            return 0;
         } break;
         case WM_PAINT: {
             PaintEvent e{};

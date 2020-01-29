@@ -253,6 +253,16 @@ int main(int argc, char *argv[])
         renderer->render(camera, swapchain);
     });
 
+    // On resize deal with it
+    windowHandler->_onResizeDelegate = [&](const pico::ResizeEvent& e) {
+        // only resize the swapchain when we re done with the resize
+        if (e.over) {
+            gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
+        }
+
+        // Adjust Camera aspect ratio 
+        cameraController->onResize(e);
+    };
 
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
         if (e.state && e.key == pico::KEY_SPACE) {

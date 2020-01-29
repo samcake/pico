@@ -344,4 +344,9 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     WaitForFenceValue(_fence, _frameFenceValues[sw->_currentIndex], _fenceEvent);
 }
 
+void D3D12Backend::flush() {
+    Flush(_commandQueue, _fence, _fenceValue, _fenceEvent);
+}
+
+
 #endif

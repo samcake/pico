@@ -151,6 +151,7 @@ D3D12SwapchainBackend::~D3D12SwapchainBackend() {
 SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit & init) {
     auto sw = new D3D12SwapchainBackend();
 
+    sw->_init = init;
     sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
 
 
@@ -226,6 +227,107 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit & init) {
     }
 
     return SwapchainPointer(sw);
+}
+
+
+void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) {
+
+    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
+
+    // Update the client size.
+    if (sw->_init.width != width || sw->_init.height != height)
+    {
+        sw->_init.width = max(1, width);
+        sw->_init.height = max(1, height);
+
+        flush();
+
+        for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
+        {
+            sw->_backBuffers[i].Reset();
+        }
+
+        DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
+        ThrowIfFailed(sw->_swapchain->GetDesc(&swapChainDesc));
+        ThrowIfFailed(sw->_swapchain->ResizeBuffers(D3D12Backend::CHAIN_NUM_FRAMES, width,
+            height, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+
+        sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
+
+//        UpdateRenderTargetViews();
+
+        sw->_rtvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
+        sw->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+        for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
+        {
+            ComPtr<ID3D12Resource> backBuffer;
+            ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+
+            _device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+            sw->_backBuffers[i] = backBuffer;
+
+            rtvHandle.ptr += (sw->_rtvDescriptorSize);
+        }
+
+        if (sw->_init.depthBuffer) {
+            sw->_depthBuffer.Reset();
+
+            // Create a depth buffer.
+            D3D12_CLEAR_VALUE optimizedClearValue = {};
+            optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+            optimizedClearValue.DepthStencil = { 1.0f, 0 };
+
+            D3D12_HEAP_PROPERTIES heapProp;
+            heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+            heapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+            heapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+            heapProp.CreationNodeMask = 1;
+            heapProp.VisibleNodeMask = 1;
+
+            D3D12_RESOURCE_DESC desc;
+            desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+            desc.Alignment = 0;
+            desc.Width = width;
+            desc.Height = height;
+            desc.DepthOrArraySize = 1;
+            desc.MipLevels = 0;
+            desc.Format = DXGI_FORMAT_D32_FLOAT;
+            desc.SampleDesc.Count = 1;
+            desc.SampleDesc.Quality = 0;
+            desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+            desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+
+            _device->CreateCommittedResource(
+                &heapProp,
+                D3D12_HEAP_FLAG_NONE,
+                &desc,
+                D3D12_RESOURCE_STATE_DEPTH_WRITE,
+                &optimizedClearValue,
+                IID_PPV_ARGS(&sw->_depthBuffer)
+            );
+
+            sw->_dsvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+            sw->_dsvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+
+            D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle = sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+            // Update the depth-stencil view.
+            D3D12_DEPTH_STENCIL_VIEW_DESC dsv = {};
+            dsv.Format = DXGI_FORMAT_D32_FLOAT;
+            dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+            dsv.Texture2D.MipSlice = 0;
+            dsv.Flags = D3D12_DSV_FLAG_NONE;
+
+            _device->CreateDepthStencilView(sw->_depthBuffer.Get(), &dsv,
+                dsvHandle);
+        }
+
+
+    }
 }
 
 

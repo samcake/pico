@@ -42,6 +42,8 @@ namespace pico {
         virtual ~DeviceBackend() {}
 
         virtual SwapchainPointer createSwapchain(const SwapchainInit& init) = 0;
+        virtual void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) = 0;
+
         virtual FramebufferPointer createFramebuffer(const FramebufferInit& init) = 0;
 
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
@@ -71,6 +73,8 @@ namespace pico {
 
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
+        void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height);
+
         FramebufferPointer createFramebuffer(const FramebufferInit& init);
 
         BatchPointer createBatch(const BatchInit& init);

@@ -329,6 +329,8 @@ bool CameraController::onMouse(const MouseEvent& e) {
 }
 
 bool CameraController::onResize(const ResizeEvent& e) {
+    //aspect ratio changes with a resize
+    _cam->setAspectRatio(e.width / (float) e.height);
 
     return false;
 }
