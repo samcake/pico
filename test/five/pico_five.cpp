@@ -57,7 +57,7 @@ pico::PointCloudPointer createPointCloud(const std::string& filepath) {
 int main(int argc, char *argv[])
 {
 
-    std::string cloudPointFile("./20191211-brain.ply");
+    std::string cloudPointFile("../asset/20191211-brain.ply");
     if (argc > 1) {
         cloudPointFile = std::string(argv[argc - 1]);
     }
@@ -79,7 +79,6 @@ int main(int argc, char *argv[])
 
 
     // Content creation
-    pico::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
     float doAnimate = 1.0f;
 
     // Some content, why not a pointcloud ?
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
 
     // A Camera to look at the scene
     auto camera = std::make_shared<pico::Camera>();
-    camera->setAspectRatio((viewportRect.z / viewportRect.w));
+    camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setEye({ 0.5f, 1.0f, 2.04f });
     camera->setOrientation({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
 
@@ -182,8 +181,8 @@ int main(int argc, char *argv[])
 
         batch->bindVertexBuffers(1, &vertexBuffer);
 
-        batch->setViewport(viewportRect);
-        batch->setScissor(viewportRect);
+        batch->setViewport(camera->getViewportRect());
+        batch->setScissor(camera->getViewportRect());
 
         batch->bindDescriptorSet(descriptorSet);
 
@@ -217,7 +216,7 @@ int main(int argc, char *argv[])
     pico::WindowInit windowInit { windowHandler };
     auto window =pico::api::createWindow(windowInit);
     
-    pico::SwapchainInit swapchainInit { (uint32_t)viewportRect.z, (uint32_t)viewportRect.w, (HWND) window->nativeWindow(), true };
+    pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Let's use a CameraController to have easy camera drive

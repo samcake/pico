@@ -58,7 +58,7 @@ pico::PointCloudPointer createPointCloud(const std::string& filepath) {
 int main(int argc, char *argv[])
 {
 
-    std::string cloudPointFile("./20191211-brain.ply");
+    std::string cloudPointFile("../asset/20191211-brain.ply");
     if (argc > 1) {
         cloudPointFile = std::string(argv[argc - 1]);
     }

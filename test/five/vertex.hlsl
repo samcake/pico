@@ -16,6 +16,7 @@ cbuffer UniformBlock0 : register(b0) {
     //float4x3 _view;
     View _view;
     float4 _projection;
+    float4 _viewport;
 };
 
 

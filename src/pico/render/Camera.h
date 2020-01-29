@@ -120,10 +120,32 @@ namespace pico {
         }
     };
 
+    struct Viewport {
+        vec4 _rect{ 0.f, 0.f, 1280.f, 720.f}; // the rect of the viewport origin XY and Width Z & Height W
+
+        void setRect(const vec4& r) {
+            // check that resolution is 1 at minimum
+            _rect.x = r.x;
+            _rect.y = r.y;
+            _rect.z = max(1.0f, r.z);
+            _rect.w = max(1.0f, r.w);
+        }
+
+        vec4 rect() const { return _rect; }
+
+        vec2 origin() const { return vec2(_rect.x, _rect.y); }
+        float originX() const { return _rect.x; }
+        float originY() const { return _rect.y; }
+
+        vec2 size() const { return vec2(_rect.z, _rect.w); }
+        float width() const { return _rect.z; }
+        float height() const { return _rect.w; }
+    };
 
     struct CameraData {
         View _view;
         Projection _projection;
+        Viewport _viewport;
     };
 
     class Camera {
@@ -146,11 +168,9 @@ namespace pico {
         Camera();
         ~Camera();
 
+        // View
         void setView(const View& view);
         View getView() const;
-
-        void setProjection(const Projection& proj);
-        Projection getProjection() const;
 
         void setEye(const vec3& pos);
         vec3 getEye() const;
@@ -162,6 +182,10 @@ namespace pico {
         vec3 getLeft() const;
         vec3 getDown() const;
         vec3 getFront() const;
+
+        // Projection
+        void setProjection(const Projection& proj);
+        Projection getProjection() const;
 
         void setFocal(float focal);
         float getFocal() const;
@@ -175,6 +199,16 @@ namespace pico {
 
         void setFar(float far);
         float getFar() const;
+
+        // Viewport
+        void setViewport(const Viewport& viewport);
+        Viewport getViewport() const;
+
+        void setViewport(float width, float height, bool adjustAspectRatio);
+        void setViewport(float oriX, float oriY, float width, float height, bool adjustAspectRatio);
+        vec4 getViewportRect() const;
+        float getViewportWidth() const;
+        float getViewportHeight() const;
 
         // Gpu version of the camera Data
         void allocateGPUData(const DevicePointer& device);

@@ -64,16 +64,6 @@ View Camera::getView() const {
     return _camData._data._view;
 }
 
-void Camera::setProjection(const Projection& proj) {
-    WriteLock();
-    _camData._data._projection = proj;
-}
-Projection Camera::getProjection() const {
-    ReadLock();
-    return _camData._data._projection;
-}
-
-
 void Camera::setEye(const vec3& pos) {
     WriteLock();
     _camData._data._view.setEye(pos);
@@ -113,6 +103,16 @@ vec3 Camera::getDown() const {
 vec3 Camera::getFront() const {
     ReadLock();
     return -_camData._data._view.back();
+}
+
+
+void Camera::setProjection(const Projection& proj) {
+    WriteLock();
+    _camData._data._projection = proj;
+}
+Projection Camera::getProjection() const {
+    ReadLock();
+    return _camData._data._projection;
 }
 
 void Camera::setFocal(float focal) {
@@ -158,6 +158,42 @@ void Camera::setFar(float pfar) {
 float Camera::getFar() const {
     ReadLock();
     return _camData._data._projection._far;
+}
+
+void Camera::setViewport(const Viewport& viewport) {
+    WriteLock();
+    _camData._data._viewport = viewport;
+}
+
+Viewport Camera::getViewport() const {
+    ReadLock();
+    return _camData._data._viewport;
+}
+
+void Camera::setViewport(float width, float height, bool adjustAspectRatio) {
+    setViewport(0.f, 0.f, width, height, adjustAspectRatio);
+}
+
+void Camera::setViewport(float oriX, float oriY, float width, float height, bool adjustAspectRatio) {
+    WriteLock();
+    _camData._data._viewport.setRect(vec4(0.f, 0.f, width, height));
+    if (adjustAspectRatio) {
+        _camData._data._projection.setAspectRatio(_camData._data._viewport.width() / _camData._data._viewport.height());
+    }
+}
+
+vec4 Camera::getViewportRect() const {
+    ReadLock();
+    return _camData._data._viewport.rect();
+}
+
+float Camera::getViewportWidth() const {
+    ReadLock();
+    return _camData._data._viewport.width();
+}
+float Camera::getViewportHeight() const {
+    ReadLock();
+    return _camData._data._viewport.height();
 }
 
 void Camera::allocateGPUData(const DevicePointer& device) {
@@ -329,8 +365,13 @@ bool CameraController::onMouse(const MouseEvent& e) {
 }
 
 bool CameraController::onResize(const ResizeEvent& e) {
-    //aspect ratio changes with a resize
-    _cam->setAspectRatio(e.width / (float) e.height);
+    // aspect ratio changes with a resize always
+    // viewport resolution, only once the resize is over
+    if (!e.over) {
+        _cam->setAspectRatio(e.width/ (float) e.height);
+    } else {
+        _cam->setViewport(e.width, e.height, true);
+    }
 
     return false;
 }
