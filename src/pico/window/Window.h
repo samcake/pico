@@ -26,10 +26,10 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include "../Forward.h"
 
 #include <functional>
-#include "mas.h"
+#include "../mas.h"
 
 namespace pico {
 
@@ -225,8 +225,11 @@ struct WindowInit {
 };
 
 class Window {
-public:
     Window(WindowHandler* handler);
+public:
+
+    static WindowPointer createWindow(const WindowInit& init);
+
     ~Window();
 
     bool messagePump();

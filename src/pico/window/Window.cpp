@@ -414,6 +414,11 @@ const Key WIN32WindowBackend::_KeyCodesToKey[] = {
 
 #endif
 
+WindowPointer Window::createWindow(const WindowInit& init) {
+    WindowPointer window(new Window((init.handler ? init.handler : new WindowHandler())));
+    return window;
+}
+
 Window::Window(WindowHandler* handler) :
     _handler(handler),
 #ifdef WIN32

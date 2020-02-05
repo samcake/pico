@@ -34,7 +34,7 @@
 
 namespace pico {
 
-    struct BatchInit {
+    struct VISUALIZATION_API BatchInit {
     };
 
     enum class ResourceUsage {
@@ -62,16 +62,10 @@ namespace pico {
         RESOLVE_DEST,
         RESOLVE_SOURCE,
         _GENERIC_READ,
-       // RAYTRACING_ACCELERATION_STRUCTURE,
-       // SHADING_RATE_SOURCE,
+
         PRESENT,
         PREDICATION,
-       // VIDEO_DECODE_READ,
-       // VIDEO_DECODE_WRITE,
-       // VIDEO_PROCESS_READ,
-       // VIDEO_PROCESS_WRITE,
-       // VIDEO_ENCODE_READ,
-       // VIDEO_ENCODE_WRITE,
+
 
         COUNT,
     };
@@ -83,7 +77,7 @@ namespace pico {
         COUNT,
     };
 
-    class Batch {
+    class VISUALIZATION_API Batch {
     protected:
         // Batch is created from the device
         friend class Device;

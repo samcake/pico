@@ -32,7 +32,7 @@
 
 namespace pico {
 
-    struct DeviceInit {
+    struct VISUALIZATION_API DeviceInit {
 
     };
 
@@ -64,7 +64,7 @@ namespace pico {
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
     };
 
-    class Device {
+    class VISUALIZATION_API Device {
         // Device is created from the api instance
         friend class api;
         Device();

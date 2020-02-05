@@ -28,6 +28,8 @@
 
 #include <cstdint>
 #include <memory>
+#include <iostream>
+#include "dllmain.h"
 
 namespace pico {
 
@@ -95,5 +97,5 @@ namespace pico {
 
 }
 #define picoLog() ::pico::api::log(__FILE__, __LINE__, __FUNCTION__)
-#define picoAssert(t) ::pico::api::assert((t), __FILE__, __LINE__, __FUNCTION__)
+#define picoAssert(t) ::pico::api::_assert((t), __FILE__, __LINE__, __FUNCTION__)
 

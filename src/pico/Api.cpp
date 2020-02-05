@@ -27,7 +27,7 @@
 #include "Api.h"
 
 #include "gpu/Device.h"
-#include "Window.h"
+#include "window/Window.h"
 
 using namespace pico;
 
@@ -38,7 +38,7 @@ std::ostream& api::log(const char* file, int line, const char* functionName) {
     return std::clog << file << " - " << line << " - " << functionName << " : ";
 }
 
-void api::assert(bool test, const char* file, int line, const char* functionName) {
+void api::_assert(bool test, const char* file, int line, const char* functionName) {
     if (!test) {
         api::log(file, line, functionName);
     }
@@ -73,9 +73,11 @@ DevicePointer api::createDevice(const DeviceInit& init) {
     return device;
 }
 
-
-WindowPointer api::createWindow(const WindowInit& init) {
-    WindowPointer window(new Window((init.handler ? init.handler : new WindowHandler())));
-
-    return window;
+#ifdef WIN32
+#ifdef PICO_SUPPORT_MFC
+HMODULE api::getResourceHandle() {
+    return reinterpret_cast<HMODULE>(&__ImageBase);
 }
+#endif
+#endif
+

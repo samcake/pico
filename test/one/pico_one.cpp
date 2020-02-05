@@ -31,7 +31,7 @@
 #include <pico/gpu/Device.h>
 #include <pico/gpu/Batch.h>
 #include <pico/gpu/Swapchain.h>
-#include <pico/Window.h>
+#include <pico/window/Window.h>
 #include <pico/render/Renderer.h>
 
 //--------------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the pico api
-    pico::ApiInit pico_init{ hInstance };
+    pico::ApiInit pico_init{ };
     auto result = pico::api::create(pico_init);
 
     if (!result) {
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new pico::WindowHandlerDelegate();
     pico::WindowInit windowInit { windowHandler };
-    auto window =pico::api::createWindow(windowInit);
+    auto window = pico::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);

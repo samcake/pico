@@ -26,18 +26,14 @@
 //
 #pragma once
 
+#include "../Api.h"
 #include "../Forward.h"
 
 #include "Device.h"
 
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif 
-
 namespace pico {
 
-    struct SwapchainInit {
+    struct VISUALIZATION_API SwapchainInit {
         uint32_t width;
         uint32_t height;
 
@@ -49,7 +45,7 @@ namespace pico {
         bool     depthBuffer{ false };
     };
 
-    class Swapchain {
+    class VISUALIZATION_API Swapchain {
     protected:
         // Swapchain is created from the device
         friend class Device;

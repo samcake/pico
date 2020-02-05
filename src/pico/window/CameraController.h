@@ -1,4 +1,4 @@
-// Renderer.h 
+// CameraController.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -27,34 +27,44 @@
 #pragma once
 
 #include "../Forward.h"
-#include <functional>
+#include "../mas.h"
 
 namespace pico {
 
-    // Renderer concrete backend implementation
-    class VISUALIZATION_API RendererBackend {
+    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+
+    struct KeyboardEvent;
+    struct MouseEvent;
+    struct ResizeEvent;
+    class CameraController {
+
+        CameraPointer _cam;
     public:
-        virtual ~RendererBackend() {}
-    };
+        CameraController(const CameraPointer& cam);
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch)>;
+        struct ControlData {
+            float _translateFront{ 0 };
+            float _translateBack{ 0 };
 
-    class VISUALIZATION_API Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
+            float _translateLeft{ 0 };
+            float _translateRight{ 0 };
 
-        void render(const CameraPointer& camera, const SwapchainPointer& swapchain);
+            float _rotateLeft{ 0 };
+            float _rotateRight{ 0 };
 
-    protected:
-#pragma warning(push)
-#pragma warning(disable: 4251)    
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
+            float _zoomIn{ 0 };
+            float _zoomOut{ 0 };
+        };
 
-    private:
-        std::unique_ptr<RendererBackend> _backend;
-#pragma warning(pop)
-    };
+        ControlData _controlData;
+
+        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+
+        void update(std::chrono::milliseconds& duration);
+
+        bool onKeyboard(const KeyboardEvent& e);
+        bool onMouse(const MouseEvent& e);
+        bool onResize(const ResizeEvent& e);
+
+        };
 }

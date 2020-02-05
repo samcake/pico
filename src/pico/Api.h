@@ -26,37 +26,39 @@
 //
 #pragma once
 
-// Supposed to be included from pico.h, so this one is not needed
 #include "Forward.h"
-#include <iostream>
 
 #ifdef WIN32
+#ifdef PICO_SUPPORT_MFC
+#include "stdafx.h"
+#else
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <windows.h>
+#endif
 #endif
 
 namespace pico {
     // Desc struct creating the api
     struct ApiInit {
-#ifdef WIN32
-        HINSTANCE hInstance;
-#endif
     };
 
     // Singleton Api
-    class api {
+    class VISUALIZATION_API api {
     public:
         ~api();
         static bool create(const ApiInit& init);
         static void destroy();
         static std::ostream& log(const char* file, int line, const char* functionName);
-
-        static void assert(bool test, const char* file, int line, const char* functionName);
+        static void _assert(bool test, const char* file, int line, const char* functionName);
 
         // Factory
         static DevicePointer createDevice(const DeviceInit& init);
-        static WindowPointer createWindow(const WindowInit& init);
+#ifdef WIN32
+#ifdef PICO_SUPPORT_MFC
+        static HMODULE getResourceHandle();
+#endif
+#endif
 
     private: 
         static std::unique_ptr<api> _instance;
