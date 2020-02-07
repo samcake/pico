@@ -25,7 +25,8 @@
 // SOFTWARE.
 //
 #include "D3D12Backend.h"
-#include "Api.h"
+
+#include <algorithm>
 
 using namespace pico;
 
@@ -237,8 +238,8 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
     // Update the client size.
     if (sw->_init.width != width || sw->_init.height != height)
     {
-        sw->_init.width = max(1, width);
-        sw->_init.height = max(1, height);
+        sw->_init.width = std::max(1U, width);
+        sw->_init.height = std::max(1U, height);
 
         flush();
 

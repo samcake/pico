@@ -35,10 +35,9 @@ namespace pico {
 
     struct ShaderInit {
         ShaderType type;
-
         std::string entryPoint;
-
         std::string url;
+        std::string source;
     };
 
     struct ProgramInit {

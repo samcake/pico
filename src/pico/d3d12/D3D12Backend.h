@@ -35,13 +35,9 @@
 #include "../gpu/Shader.h"
 #include "../gpu/Descriptor.h"
 
-#include "Api.h"
+#include "../Api.h"
 
 #ifdef WIN32
-
-//#define WIN32_LEAN_AND_MEAN
-//#include <Windows.h>
-
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
@@ -142,14 +138,14 @@ namespace pico {
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
 
-        void setViewport(vec4& viewport) override;
-        void setScissor(vec4& scissor) override;
+        void setViewport(const vec4& viewport) override;
+        void setScissor(const vec4& scissor) override;
 
-        void setPipeline(PipelineStatePointer pipeline) override;
-        void bindDescriptorSet(DescriptorSetPointer descriptorSet) override;
+        void setPipeline(const PipelineStatePointer& pipeline) override;
+        void bindDescriptorSet(const DescriptorSetPointer& descriptorSet) override;
 
-        void bindIndexBuffer(BufferPointer& buffer) override;
-        void bindVertexBuffers(uint32_t num, BufferPointer* buffers) override;
+        void bindIndexBuffer(const BufferPointer& buffer) override;
+        void bindVertexBuffers(uint32_t num, const BufferPointer* buffers) override;
 
         void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;

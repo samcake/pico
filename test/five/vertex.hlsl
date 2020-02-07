@@ -70,7 +70,8 @@ VertexShaderOutput mainVertex(VertexPosColor IN)
 {
     VertexShaderOutput OUT;
 
-    float3 position = IN.Position * 0.075f;
+  //  float3 position = IN.Position * 0.075f;
+    float3 position = IN.Position;
 
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);

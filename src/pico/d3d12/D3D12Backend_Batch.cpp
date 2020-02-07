@@ -25,7 +25,6 @@
 // SOFTWARE.
 //
 #include "D3D12Backend.h"
-#include "Api.h"
 
 using namespace pico;
 
@@ -138,7 +137,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
 }
 
 
-void D3D12BatchBackend::setViewport(vec4 & viewport) {
+void D3D12BatchBackend::setViewport(const vec4 & viewport) {
     D3D12_VIEWPORT dxViewport;
     dxViewport.TopLeftX = viewport.x;
     dxViewport.TopLeftY = viewport.y;
@@ -150,17 +149,17 @@ void D3D12BatchBackend::setViewport(vec4 & viewport) {
     _commandList->RSSetViewports(1, &dxViewport);
 }
 
-void D3D12BatchBackend::setScissor(vec4 & scissor) {
+void D3D12BatchBackend::setScissor(const vec4 & scissor) {
     D3D12_RECT dxRect;
-    dxRect.left = scissor.x;
-    dxRect.top = scissor.y;
-    dxRect.right = scissor.x + scissor.z;
-    dxRect.bottom = scissor.y + scissor.w;
+    dxRect.left = (LONG) scissor.x;
+    dxRect.top = (LONG) scissor.y;
+    dxRect.right = (LONG) (scissor.x + scissor.z);
+    dxRect.bottom = (LONG) (scissor.y + scissor.w);
 
     _commandList->RSSetScissorRects(1, &dxRect);
 }
 
-void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
+void D3D12BatchBackend::setPipeline(const PipelineStatePointer& pipeline) {
     auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
 
     auto dxPso = dpso->_pipelineState;
@@ -172,7 +171,7 @@ void D3D12BatchBackend::setPipeline(PipelineStatePointer pipeline) {
     _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
 }
 
-void D3D12BatchBackend::bindDescriptorSet(DescriptorSetPointer descriptorSet) {
+void D3D12BatchBackend::bindDescriptorSet(const DescriptorSetPointer& descriptorSet) {
     auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
 
     uint32_t descriptor_heap_count = 0;
@@ -232,12 +231,12 @@ void D3D12BatchBackend::bindDescriptorSet(DescriptorSetPointer descriptorSet) {
     
 }
 
-void D3D12BatchBackend::bindIndexBuffer(BufferPointer & buffer) {
+void D3D12BatchBackend::bindIndexBuffer(const BufferPointer& buffer) {
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());
     _commandList->IASetIndexBuffer(&dbBuffer->_indexBufferView);
 }
 
-void D3D12BatchBackend::bindVertexBuffers(uint32_t num, BufferPointer * buffers) {
+void D3D12BatchBackend::bindVertexBuffers(uint32_t num, const BufferPointer * buffers) {
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffers[0].get());
     _commandList->IASetVertexBuffers(0, 1, &dbBuffer->_vertexBufferView);
 }

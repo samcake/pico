@@ -132,8 +132,12 @@ int main(int argc, char *argv[])
     // A Camera to look at the scene
     auto camera = std::make_shared<pico::Camera>();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
-    camera->setEye({ 0.5f, 1.0f, 2.04f });
-    camera->setOrientation({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
+    auto cloudCenter = pointCloud->_mesh->_midPos;
+    auto cloudHalfSize = (pointCloud->_mesh->_maxPos - pointCloud->_mesh->_minPos);
+    auto cloudHalfDiag = sqrt(pico::dot(cloudHalfSize, cloudHalfSize));
+    camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
+    camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+    camera->setFar(10.0f * cloudHalfSize.z);
 
     // Let s allocate a gpu buffer managed by the Camera
     camera->allocateGPUData(gpuDevice);
@@ -264,32 +268,48 @@ int main(int argc, char *argv[])
     };
 
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
+
+        auto cloudCenter = pointCloud->_mesh->_midPos;
+        auto cloudHalfSize = (pointCloud->_mesh->_maxPos - pointCloud->_mesh->_minPos);
+        auto cloudHalfDiag = sqrt(pico::dot(cloudHalfSize, cloudHalfSize));
+
         if (e.state && e.key == pico::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
         if (e.state && e.key == pico::KEY_1) {
             // look side
             camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
-            camera->setEye({ 0.5f, 0.6f, 2.f });
+            camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+            camera->setFar(10.0f * cloudHalfSize.z);
         }
 
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
             camera->setOrientation({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
-            camera->setEye({ 2.5f, 0.6f, 0.f });
+            camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+            camera->setFar(10.0f * cloudHalfSize.z);
         }
 
         if (e.state && e.key == pico::KEY_3) {
             // look down
             camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
-            camera->setEye({ 0.5f, 3.f, 0.f });
+            camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+            camera->setFar(10.0f * cloudHalfSize.z);
         }
 
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
             camera->setOrientation({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
-            camera->setEye({ 2.f, 2.f, 2.f });
+            camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+            camera->setFar(10.0f * cloudHalfSize.z);
         }
+
+        if (e.state && e.key == pico::KEY_5) {
+            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
+            camera->setEye(cloudCenter + camera->getBack() * cloudHalfDiag);
+            camera->setFar(10.0f * cloudHalfSize.z);
+        }
+
 
         // Delegate to the controller for standard camera inputs handling
         cameraController->onKeyboard(e);

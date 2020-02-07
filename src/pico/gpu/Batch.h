@@ -99,14 +99,14 @@ namespace pico {
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource);
 
-        virtual void setViewport(vec4& viewport);
-        virtual void setScissor(vec4& scissor);
+        virtual void setViewport(const vec4& viewport);
+        virtual void setScissor(const vec4& scissor);
 
-        virtual void setPipeline(PipelineStatePointer pipeline);
-        virtual void bindDescriptorSet(DescriptorSetPointer descriptorSet);
+        virtual void setPipeline(const PipelineStatePointer& pipeline);
+        virtual void bindDescriptorSet(const DescriptorSetPointer& descriptorSet);
 
-        virtual void bindIndexBuffer(BufferPointer& buffer);
-        virtual void bindVertexBuffers(uint32_t num, BufferPointer* buffers);
+        virtual void bindIndexBuffer(const BufferPointer& buffer);
+        virtual void bindVertexBuffers(uint32_t num, const BufferPointer* buffers);
 
         virtual void draw(uint32_t numPrimitives, uint32_t startIndex);
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
