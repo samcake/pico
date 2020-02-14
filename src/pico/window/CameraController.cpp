@@ -24,8 +24,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "../render/Camera.h"
+#include "CameraController.h"
 
+#include "../render/Camera.h"
 #include "../gpu/Device.h"
 #include "../gpu/Resource.h"
 #include "Window.h"
@@ -158,7 +159,6 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
 }
 
 bool CameraController::onMouse(const MouseEvent& e) {
-
     return false;
 }
 

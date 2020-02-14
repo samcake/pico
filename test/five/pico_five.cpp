@@ -149,9 +149,8 @@ int main(int argc, char *argv[])
     auto camera = std::make_shared<pico::Camera>();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
-  //  camera->zoomTo(sceneSphere);
-    camera->setEye(core::vec3(sceneSphere.x, sceneSphere.y, sceneSphere.z) + camera->getBack() * sceneSphere.w);
-    camera->setFar(10.0f * sceneSphere.w);
+    camera->zoomTo(sceneSphere);
+
 
     // Let s allocate a gpu buffer managed by the Camera
     camera->allocateGPUData(gpuDevice);
@@ -237,12 +236,9 @@ int main(int argc, char *argv[])
     pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
-    // Let's use a CameraController to have easy camera drive
-    auto cameraController = std::make_shared<pico::CameraController>(camera);
-
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera, cameraController](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -264,8 +260,6 @@ int main(int argc, char *argv[])
             elapsedSeconds = 0.0;
         }
 
-        cameraController->update(std::chrono::duration_cast<std::chrono::milliseconds>(deltaTime));
-
         // Render!
         renderer->render(camera, swapchain);
     });
@@ -277,8 +271,14 @@ int main(int argc, char *argv[])
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
         }
 
-        // Adjust Camera aspect ratio 
-        cameraController->onResize(e);
+        // aspect ratio changes with a resize always
+        // viewport resolution, only once the resize is over
+        if (!e.over) {
+            camera->setAspectRatio(e.width / (float)e.height);
+        }
+        else {
+            camera->setViewport(e.width, e.height, true);
+        }
     };
 
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
@@ -288,29 +288,48 @@ int main(int argc, char *argv[])
         if (e.state && e.key == pico::KEY_1) {
             // look side
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
-            camera->setEye({ 0.5f, 0.6f, 2.f });
+            camera->zoomTo(sceneSphere);
         }
 
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
             camera->setOrientationFromRightUp({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
-            camera->setEye({ 2.5f, 0.6f, 0.f });
+            camera->zoomTo(sceneSphere);
         }
 
         if (e.state && e.key == pico::KEY_3) {
             // look down
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
-            camera->setEye({ 0.5f, 3.f, 0.f });
+            camera->zoomTo(sceneSphere);
         }
 
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
             camera->setOrientationFromRightUp({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
-            camera->setEye({ 2.f, 2.f, 2.f });
+            camera->zoomTo(sceneSphere);
         }
+    };
 
-        // Delegate to the controller for standard camera inputs handling
-        cameraController->onKeyboard(e);
+    windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
+        if (e.state & pico::MOUSE_MOVE) {
+            if (e.state & pico::MOUSE_RBUTTON) {
+                float orbitScale = 0.01f;
+                camera->orbit(sceneSphere.w, e.delta.x * orbitScale, -e.delta.y * orbitScale);
+            }
+            if (e.state & pico::MOUSE_MBUTTON) {
+                float panScale = sceneSphere.w * 0.001f;
+                camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
+            }
+        } else if (e.state & pico::MOUSE_WHEEL) {
+            if (e.state & pico::MOUSE_CONTROL) {
+                float zoomScale = 0.1f;
+                camera->setFocal( camera->getFocal() * (1.0f +  e.wheel * zoomScale));
+            } else {
+                float dollyScale = 0.05f;
+                sceneSphere.w *= (1.0f + e.wheel * dollyScale);
+                camera->zoomTo(sceneSphere);
+            }
+        }
     };
 
     // Render Loop 

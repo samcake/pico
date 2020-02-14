@@ -269,3 +269,8 @@ void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
     nextView.setEye( pivotWS - PEr );
 
 }
+
+void Camera::zoomTo(const core::vec4& sphere) {
+    setEye(core::vec3(sphere.x, sphere.y, sphere.z) + getBack() * sphere.w);
+    setFar(10.0f * sphere.w);
+}

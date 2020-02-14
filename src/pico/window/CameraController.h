@@ -27,7 +27,9 @@
 #pragma once
 
 #include "../Forward.h"
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
+
+#include <chrono>
 
 namespace pico {
 

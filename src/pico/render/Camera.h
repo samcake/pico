@@ -226,42 +226,7 @@ namespace pico {
         // Some nice moves
         void pan(float deltaRight, float deltaUp);
         void orbit(float boomLength, float deltaRight, float deltaUp);
+
+        void zoomTo(const core::vec4& sphere);
     };
-
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
-
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
-
-        CameraPointer _cam;
-    public:
-        CameraController(const CameraPointer& cam);
-
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
-
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
-
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-      };
 }

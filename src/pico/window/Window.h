@@ -150,6 +150,18 @@ enum Key : uint8_t {
     KEY_COUNT,
 };
 
+enum MouseState : uint8_t {
+    MOUSE_LBUTTON = 0x01,
+    MOUSE_RBUTTON = 0x02,
+    MOUSE_MBUTTON = 0x04,
+
+    MOUSE_SHIFT = 0x10,
+    MOUSE_CONTROL = 0x20,
+
+    MOUSE_MOVE = 0x40,
+    MOUSE_WHEEL = 0x80,
+};
+
 struct ResizeEvent {
     uint32_t width;
     uint32_t height;
@@ -159,10 +171,11 @@ struct PaintEvent {
 };
 struct MouseEvent {
     core::vec2 pos;
-    bool state;
-    bool dblclick;
-    
+    core::vec2 delta; // (moving ? pos - last mouse event pos : 0,0)
+    float  wheel;
+    uint8_t state; // bitfield of MouseState 
 };
+
 struct KeyboardEvent {
     Key key;
     bool state;
