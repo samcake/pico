@@ -237,8 +237,8 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
     // Update the client size.
     if (sw->_init.width != width || sw->_init.height != height)
     {
-        sw->_init.width = max(1, width);
-        sw->_init.height = max(1, height);
+        sw->_init.width = core::max(1, width);
+        sw->_init.height = core::max(1, height);
 
         flush();
 

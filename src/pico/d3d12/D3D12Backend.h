@@ -137,13 +137,13 @@ namespace pico {
         void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) override;
         void endPass() override;
 
-        void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) override;
+        void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) override;
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
 
-        void setViewport(vec4& viewport) override;
-        void setScissor(vec4& scissor) override;
+        void setViewport(core::vec4& viewport) override;
+        void setScissor(core::vec4& scissor) override;
 
         void setPipeline(PipelineStatePointer pipeline) override;
         void bindDescriptorSet(DescriptorSetPointer descriptorSet) override;

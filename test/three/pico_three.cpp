@@ -42,6 +42,7 @@
 #include <pico/render/Renderer.h>
 
 #include <pico/content/PointCloud.h>
+#include <pico/content/Mesh.h>
 
 
 #include <vector>
@@ -97,24 +98,34 @@ int main(int argc, char *argv[])
 
     // Content creation
 
-    pico::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
+    core::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
 
 
     // Some content, why not a pointcloud ?
     auto pointCloud = createPointCloud("../asset/20191211-brain.ply");
 
 
+    // Step 1, create a Mesh from the point cloud data
+
+    // Declare the vertex format == PointCloud::Point
+    pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::AttribBufferViews<1> bufferViews{ {0} };
+    auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
+
+    // Create the Mesh for real
+    pico::MeshPointer mesh = pico::Mesh::createFromPointArray(vertexFormat, (uint32_t)pointCloud->_points.size(), (const uint8_t*)pointCloud->_points.data());
+
     // Let's allocate buffer to hold the point cloud mesh
     pico::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+    vertexBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+    vertexBufferInit.vertexStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
-    memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+    memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
-    auto numVertices = pointCloud->_mesh->getNumVertices();
+    auto numVertices = mesh->getNumVertices();
 
   /*  std::vector<uint32_t> indexData = {
         0, 2, 1,
@@ -129,7 +140,7 @@ int main(int argc, char *argv[])
 */
 
     // And a Pipeline
-    pico::PipelineStatePointer pipeline = createPipelineState(gpuDevice, pointCloud->_mesh->_vertexBuffers._streamLayout);
+    pico::PipelineStatePointer pipeline = createPipelineState(gpuDevice, mesh->_vertexBuffers._streamLayout);
 
     // Renderer creation
     // And now a render callback where we describe the rendering sequence
@@ -149,7 +160,7 @@ int main(int argc, char *argv[])
             pico::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-        pico::vec4 clearColor(pico::colorRGBfromHSV(pico::vec3(0.1f, 0.1f, 0.3f)), 1.f);
+        core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.1f, 0.1f, 0.3f)), 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);

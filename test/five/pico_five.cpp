@@ -44,6 +44,7 @@
 #include <pico/render/Camera.h>
 
 #include <pico/content/PointCloud.h>
+#include <pico/content/Mesh.h>
 
 #include <vector>
 
@@ -57,7 +58,7 @@ pico::PointCloudPointer createPointCloud(const std::string& filepath) {
 int main(int argc, char *argv[])
 {
 
-    std::string cloudPointFile("../asset/20191211-brain.ply");
+    std::string cloudPointFile("../asset/dragonStandRight_0.ply");
     if (argc > 1) {
         cloudPointFile = std::string(argv[argc - 1]);
     }
@@ -84,17 +85,27 @@ int main(int argc, char *argv[])
     // Some content, why not a pointcloud ?
     auto pointCloud = createPointCloud(cloudPointFile);
 
+    // Step 1, create a Mesh from the point cloud data
+
+    // Declare the vertex format == PointCloud::Point
+    pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::AttribBufferViews<1> bufferViews{ {0} };
+    auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
+
+    // Create the Mesh for real
+    pico::MeshPointer mesh = pico::Mesh::createFromPointArray(vertexFormat, (uint32_t)pointCloud->_points.size(), (const uint8_t*)pointCloud->_points.data());
+
     // Let's allocate buffer to hold the point cloud mesh
     pico::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+    vertexBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+    vertexBufferInit.vertexStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
-    memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+    memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
-    auto numVertices = pointCloud->_mesh->getNumVertices();
+    auto numVertices = mesh->getNumVertices();
 
     // Let's describe the pipeline Descriptors layout
     pico::DescriptorLayouts descriptorLayouts {
@@ -116,7 +127,7 @@ int main(int argc, char *argv[])
 
     pico::PipelineStateInit pipelineInit{
         programShader,
-        pointCloud->_mesh->_vertexBuffers._streamLayout,
+        mesh->_vertexBuffers._streamLayout,
         pico::PrimitiveTopology::POINT,
         descriptorSetLayout
     };
@@ -129,11 +140,18 @@ int main(int argc, char *argv[])
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
+    // Scene sphere:
+    auto meshHalfSize = (mesh->_maxPos - mesh->_minPos);
+    auto meshHalfDiag = sqrt(core::dot(meshHalfSize, meshHalfSize));
+    core::vec4 sceneSphere(mesh->_midPos, meshHalfDiag);
+
     // A Camera to look at the scene
     auto camera = std::make_shared<pico::Camera>();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
-    camera->setEye({ 0.5f, 1.0f, 2.04f });
-    camera->setOrientation({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
+    camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
+  //  camera->zoomTo(sceneSphere);
+    camera->setEye(core::vec3(sceneSphere.x, sceneSphere.y, sceneSphere.z) + camera->getBack() * sceneSphere.w);
+    camera->setFar(10.0f * sceneSphere.w);
 
     // Let s allocate a gpu buffer managed by the Camera
     camera->allocateGPUData(gpuDevice);
@@ -172,7 +190,7 @@ int main(int argc, char *argv[])
             pico::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-        pico::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
+        core::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
@@ -269,25 +287,25 @@ int main(int argc, char *argv[])
         }
         if (e.state && e.key == pico::KEY_1) {
             // look side
-            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
+            camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
             camera->setEye({ 0.5f, 0.6f, 2.f });
         }
 
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
-            camera->setOrientation({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
+            camera->setOrientationFromRightUp({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
             camera->setEye({ 2.5f, 0.6f, 0.f });
         }
 
         if (e.state && e.key == pico::KEY_3) {
             // look down
-            camera->setOrientation({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
+            camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
             camera->setEye({ 0.5f, 3.f, 0.f });
         }
 
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
-            camera->setOrientation({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
+            camera->setOrientationFromRightUp({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
             camera->setEye({ 2.f, 2.f, 2.f });
         }
 

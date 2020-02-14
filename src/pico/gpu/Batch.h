@@ -30,7 +30,7 @@
 
 #include "Device.h"
 
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
 
 namespace pico {
 
@@ -93,14 +93,14 @@ namespace pico {
         virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);
         virtual void endPass();
 
-        virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth = 1.0f);
+        virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth = 1.0f);
 
         virtual void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource);
 
-        virtual void setViewport(vec4& viewport);
-        virtual void setScissor(vec4& scissor);
+        virtual void setViewport(core::vec4& viewport);
+        virtual void setScissor(core::vec4& scissor);
 
         virtual void setPipeline(PipelineStatePointer pipeline);
         virtual void bindDescriptorSet(DescriptorSetPointer descriptorSet);

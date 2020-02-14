@@ -29,7 +29,7 @@
 #include "../Forward.h"
 
 #include <functional>
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
 
 namespace pico {
 
@@ -158,7 +158,7 @@ struct ResizeEvent {
 struct PaintEvent {
 };
 struct MouseEvent {
-    vec2 pos;
+    core::vec2 pos;
     bool state;
     bool dblclick;
     

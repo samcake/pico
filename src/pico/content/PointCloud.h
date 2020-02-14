@@ -26,28 +26,42 @@
 //
 #pragma once
 
-#include "../Forward.h"
-#include "../mas.h"
-
 #include <string>
+#include <vector>
+#include <memory>
 
-#include "Mesh.h"
+#include "../core/LinearAlgebra.h"
+#include "../dllmain.h"
 
-namespace pico {
+namespace pico
+{
+    class PointCloud;
+    using PointCloudPointer = std::shared_ptr<PointCloud>;
 
-    struct PointCloudInit {
-        MeshPointer mesh;
-    };
-
-    class PointCloud {
+    class VISUALIZATION_API PointCloud {
     public:
-        PointCloud(const PointCloudInit& init);
+        static PointCloudPointer createFromPLY(const std::string& filename);
+
+        PointCloud();
         ~PointCloud();
 
-        MeshPointer _mesh;
+        // Each point attributes 
+        struct Point {
+            core::vec3 pos;
+            core::vec3 nor;
+            core::ucvec4 color;
+        };
 
+        // A continuous array of Points
+        using Points = std::vector<Point>;
 
-        static PointCloudPointer createFromPLY(const std::string& filename);
+        // Here is the PointCloud data
+
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        Points _points;
+#pragma warning(pop)
+
     };
 
 }

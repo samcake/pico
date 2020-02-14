@@ -55,7 +55,7 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
 
     
     std::string target(D3D12ShaderBackend::ShaderTypes[(int) init.type]);
-    std::string source;
+    std::string source = init.source;
 
     if (!init.url.empty()) {
         std::ifstream file(init.url, std::ifstream::in);

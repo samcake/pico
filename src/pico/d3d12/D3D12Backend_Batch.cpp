@@ -106,7 +106,7 @@ void D3D12BatchBackend::endPass() {
 
 }
 
-void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) {
+void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {
 
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
@@ -138,7 +138,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
 }
 
 
-void D3D12BatchBackend::setViewport(vec4 & viewport) {
+void D3D12BatchBackend::setViewport(core::vec4 & viewport) {
     D3D12_VIEWPORT dxViewport;
     dxViewport.TopLeftX = viewport.x;
     dxViewport.TopLeftY = viewport.y;
@@ -150,7 +150,7 @@ void D3D12BatchBackend::setViewport(vec4 & viewport) {
     _commandList->RSSetViewports(1, &dxViewport);
 }
 
-void D3D12BatchBackend::setScissor(vec4 & scissor) {
+void D3D12BatchBackend::setScissor(core::vec4 & scissor) {
     D3D12_RECT dxRect;
     dxRect.left = scissor.x;
     dxRect.top = scissor.y;

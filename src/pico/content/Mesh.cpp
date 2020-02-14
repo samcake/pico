@@ -26,43 +26,60 @@
 //
 #include "Mesh.h"
 #include "../Api.h"
-
 #include <algorithm>
 
-using namespace pico;
+namespace pico
+{
 
-Mesh::Mesh() {
+    Mesh::Mesh()
+    {
 
-}
-
-Mesh::~Mesh() {
-
-}
-
-void Mesh::evalMinMaxMidPos() {
-    auto numVertices = _vertexBuffers.getNumElements();
-    picoAssert((numVertices > 0));
-
-    uint32_t posStride = 0;
-    auto posBufferBegin = getPositionBegin(posStride);
-    picoAssert(posBufferBegin != nullptr);
-
-    auto positionBegin = reinterpret_cast<const vec3*> (posBufferBegin);
-    _minPos = _maxPos = _midPos = (*positionBegin);
-
-    for (uint32_t i = 1; i < numVertices; ++i) {
-
-        auto bufferOffset = posBufferBegin + (i * posStride);
-        auto position = reinterpret_cast<const vec3*> (bufferOffset);
-        _minPos.x = std::min(position->x, _minPos.x);
-        _minPos.y = std::min(position->y, _minPos.y);
-        _minPos.z = std::min(position->z, _minPos.z);
-        _maxPos.x = std::max(position->x, _maxPos.x);
-        _maxPos.y = std::max(position->y, _maxPos.y);
-        _maxPos.z = std::max(position->z, _maxPos.z);
-        _midPos = _midPos + (*position);
     }
 
-    _midPos = _midPos * (1.0f / (float) numVertices);
+    Mesh::~Mesh() {
 
-}
+    }
+
+    void Mesh::evalMinMaxMidPos() {
+        auto numVertices = _vertexBuffers.getNumElements();
+        picoAssert((numVertices > 0));
+
+        uint32_t posStride = 0;
+        auto posBufferBegin = getPositionBegin(posStride);
+        picoAssert(posBufferBegin != nullptr);
+
+        auto positionBegin = reinterpret_cast<const core::vec3*> (posBufferBegin);
+        _minPos = _maxPos = _midPos = (*positionBegin);
+
+        for (uint32_t i = 1; i < numVertices; ++i) {
+
+            auto bufferOffset = posBufferBegin + (i * posStride);
+            auto position = reinterpret_cast<const core::vec3*> (bufferOffset);
+            _minPos.x = std::min(position->x, _minPos.x);
+            _minPos.y = std::min(position->y, _minPos.y);
+            _minPos.z = std::min(position->z, _minPos.z);
+            _maxPos.x = std::max(position->x, _maxPos.x);
+            _maxPos.y = std::max(position->y, _maxPos.y);
+            _maxPos.z = std::max(position->z, _maxPos.z);
+            _midPos = _midPos + (*position);
+        }
+
+        _midPos = _midPos * (1.0f / (float)numVertices);
+    }
+
+
+    MeshPointer Mesh::createFromPointArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points) {
+        auto mesh = std::make_shared<Mesh>();
+        mesh->_vertexBuffers._streamLayout = layout;
+
+        AttribBufferPointer vertices;
+        size_t verticesByteSize = numVertices * layout.streamAttribSize(0);
+
+        vertices = std::make_shared<AttribBuffer>((void*)points, verticesByteSize);
+        mesh->_vertexBuffers._buffers.push_back(vertices);
+        mesh->evalMinMaxMidPos();
+
+        return mesh;
+    }
+
+} // !namespace pico

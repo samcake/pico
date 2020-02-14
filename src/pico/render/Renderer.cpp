@@ -61,8 +61,8 @@ void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapc
 
         static float time = 0.0f;
         time += 1.0f/60.0f;
-        time = pico::frac(time);
-        pico::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
+        time = core::frac(time);
+        core::vec4 clearColor(colorRGBfromHSV(core::vec3(time, 0.5f, 1.f)), 1.f);
 
         _batch->clear(swapchain, currentIndex, clearColor);
 

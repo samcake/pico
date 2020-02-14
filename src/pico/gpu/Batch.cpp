@@ -42,14 +42,14 @@ void Batch::end() {}
 void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}
 void Batch::endPass() {}
 
-void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) {}
+void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {}
 
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {}
 
-void Batch::setViewport(vec4& viewport) {}
-void Batch::setScissor(vec4& scissor) {}
+void Batch::setViewport(core::vec4& viewport) {}
+void Batch::setScissor(core::vec4& scissor) {}
 
 void Batch::setPipeline(PipelineStatePointer pipeline) {}
 void Batch::bindDescriptorSet(DescriptorSetPointer descriptorSet) {}

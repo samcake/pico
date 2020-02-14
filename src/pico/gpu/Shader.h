@@ -39,6 +39,7 @@ namespace pico {
         std::string entryPoint;
 
         std::string url;
+        std::string source;
     };
 
     struct ProgramInit {

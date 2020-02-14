@@ -64,43 +64,49 @@ View Camera::getView() const {
     return _camData._data._view;
 }
 
-void Camera::setEye(const vec3& pos) {
+void Camera::setEye(const core::vec3& pos) {
     WriteLock();
     _camData._data._view.setEye(pos);
 }
-vec3 Camera::getEye() const {
+core::vec3 Camera::getEye() const {
     ReadLock();
     return _camData._data._view.eye();
 
 }
 
-void Camera::setOrientation(const vec3& right, const vec3& up) {
+void Camera::setOrientationFromRightUp(const core::vec3& right, const core::vec3& up) {
     WriteLock();
-    _camData._data._view.setOrientation(right, up);
+    _camData._data._view.setOrientationFromRightUp(right, up);
 
 }
-vec3 Camera::getRight() const {
+void Camera::setOrientationFromFrontUp(const core::vec3& front, const core::vec3& up) {
+    WriteLock();
+    _camData._data._view.setOrientationFromFrontUp(front, up);
+
+}
+
+core::vec3 Camera::getRight() const {
     ReadLock();
     return _camData._data._view.right();
 }
-vec3 Camera::getUp() const {
+core::vec3 Camera::getUp() const {
     ReadLock();
     return _camData._data._view.up();
 }
-vec3 Camera::getBack() const {
+core::vec3 Camera::getBack() const {
     ReadLock();
     return _camData._data._view.back();
 }
 
-vec3 Camera::getLeft() const {
+core::vec3 Camera::getLeft() const {
     ReadLock();
     return -_camData._data._view.right();
 }
-vec3 Camera::getDown() const {
+core::vec3 Camera::getDown() const {
     ReadLock();
     return -_camData._data._view.up();
 }
-vec3 Camera::getFront() const {
+core::vec3 Camera::getFront() const {
     ReadLock();
     return -_camData._data._view.back();
 }
@@ -160,12 +166,12 @@ float Camera::getFar() const {
     return _camData._data._projection._far;
 }
 
-void Camera::setViewport(const Viewport& viewport) {
+void Camera::setViewport(const ViewportRect& viewport) {
     WriteLock();
     _camData._data._viewport = viewport;
 }
 
-Viewport Camera::getViewport() const {
+ViewportRect Camera::getViewport() const {
     ReadLock();
     return _camData._data._viewport;
 }
@@ -176,13 +182,13 @@ void Camera::setViewport(float width, float height, bool adjustAspectRatio) {
 
 void Camera::setViewport(float oriX, float oriY, float width, float height, bool adjustAspectRatio) {
     WriteLock();
-    _camData._data._viewport.setRect(vec4(0.f, 0.f, width, height));
+    _camData._data._viewport.setRect(core::vec4(0.f, 0.f, width, height));
     if (adjustAspectRatio) {
         _camData._data._projection.setAspectRatio(_camData._data._viewport.width() / _camData._data._viewport.height());
     }
 }
 
-vec4 Camera::getViewportRect() const {
+core::vec4 Camera::getViewportRect() const {
     ReadLock();
     return _camData._data._viewport.rect();
 }
@@ -230,4 +236,36 @@ bool Camera::updateGPUData() {
 BufferPointer Camera::getGPUBuffer() const {
     ReadGPULock();
     return _gpuData._buffer;
+}
+
+void Camera::pan(float deltaRight, float deltaUp) {
+    WriteLock();
+    auto& view = _camData._data._view;
+    view.setEye( view.eye() + view.right() * deltaRight + view.up() * deltaUp );
+}
+
+void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
+    WriteLock();
+    auto oriView = _camData._data._view;
+    auto& nextView = _camData._data._view;
+
+    // PE is the vector from Pivot to Eye position
+    auto boomVecWS = oriView.back() * (-boomLength);
+    auto pivotWS = oriView.eye() + boomVecWS;
+
+    // the initial Frame Centered on Pivot using the Camera axes
+    // THen Eye expressed relative to that frame is:
+    auto eyeOS = core::vec3(0.0f, 0.0f, -boomLength);
+
+    // Rotate frame by delta right and delta up
+    auto newRight = normalize(oriView.right() + oriView.back() * deltaRight);
+    auto newUp = normalize( oriView.up() + oriView.back() * deltaUp);
+    nextView.setOrientationFromRightUp(newRight, newUp);
+    
+    // Compute PE' in world space form the new frame orientation
+    auto PEr = nextView.right() * eyeOS.x + nextView.up() * eyeOS.y + nextView.back() * eyeOS.z;
+
+    // translate by the pivot point to recover world space
+    nextView.setEye( pivotWS - PEr );
+
 }
