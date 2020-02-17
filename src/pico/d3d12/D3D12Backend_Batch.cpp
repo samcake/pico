@@ -93,6 +93,23 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
     D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
     
+/*
+    IDXGISurface1* g_pSurface1 = NULL;
+    sw->_swapchain->GetBuffer(0, __uuidof(IDXGISurface1), (void**)&g_pSurface1);
+
+    HDC g_hDC;
+    g_pSurface1->GetDC(TRUE, &g_hDC);
+
+    RECT theRect;
+    theRect.top = 0;
+    theRect.bottom = swapchain->_init.height;
+    theRect.left = 0;
+    theRect.right = swapchain->_init.width;
+
+    FillRect(g_hDC, &theRect, GetSysColorBrush(COLOR_WINDOW));
+
+    g_pSurface1->ReleaseDC(&theRect);
+*/
     if (sw->_dsvDescriptorHeap) {
         D3D12_CPU_DESCRIPTOR_HANDLE dsv{ sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr};
         _commandList->OMSetRenderTargets(1, &rtv, TRUE, &dsv);

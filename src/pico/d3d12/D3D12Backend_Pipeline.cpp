@@ -140,6 +140,7 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+         //   psoDesc.RTVFormats[0] = DXGI_FORMAT_B8G8R8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
             psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
             ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
