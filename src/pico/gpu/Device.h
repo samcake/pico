@@ -33,7 +33,7 @@
 namespace pico {
 
     struct VISUALIZATION_API DeviceInit {
-
+        std::string backend{ "D3D12" };
     };
 
     // Device concrete backend implementation
@@ -65,10 +65,16 @@ namespace pico {
     };
 
     class VISUALIZATION_API Device {
-        // Device is created from the api instance
-        friend class api;
-        Device();
+
+
     public:
+        // Device is created from the factory call instance
+        // Do not use this
+        Device(DeviceBackend* backend);
+
+        // Factory
+        static DevicePointer createDevice(const DeviceInit& init);
+
         ~Device();
 
         // Factories

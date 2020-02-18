@@ -52,8 +52,7 @@ namespace pico {
         static std::ostream& log(const char* file, int line, const char* functionName);
         static void _assert(bool test, const char* file, int line, const char* functionName);
 
-        // Factory
-        static DevicePointer createDevice(const DeviceInit& init);
+
 #ifdef WIN32
 #ifdef PICO_SUPPORT_MFC
         static HMODULE getResourceHandle();

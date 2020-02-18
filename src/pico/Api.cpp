@@ -67,12 +67,6 @@ void api::destroy() {
     }
 }
 
-DevicePointer api::createDevice(const DeviceInit& init) {
-    DevicePointer device(new Device());
-
-    return device;
-}
-
 #ifdef WIN32
 #ifdef PICO_SUPPORT_MFC
 HMODULE api::getResourceHandle() {

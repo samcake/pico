@@ -52,6 +52,8 @@ using namespace Microsoft::WRL;
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 
+#include <d3d11on12.h>
+
 namespace pico {
     
     class D3D12Backend : public DeviceBackend {
@@ -60,7 +62,11 @@ namespace pico {
         D3D12Backend();
         virtual ~D3D12Backend();
 
+        void createD3D11Wrapper();
+
         static const uint8_t CHAIN_NUM_FRAMES = 3;
+        ComPtr<ID3D11On12Device> _d3d11On12Device;
+        ComPtr<ID3D11DeviceContext> _d3d11DeviceContext;
 
         // DirectX 12 Objects
         ComPtr<ID3D12Device2> _device;

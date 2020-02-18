@@ -36,6 +36,8 @@
 #pragma comment(lib, "D3DCompiler.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
+#pragma comment(lib, "d3d11.lib")
+
 // The min/max macros conflict with like-named member functions.
 // Only use std::min and std::max defined in <algorithm>.
 #if defined(min)
@@ -312,6 +314,29 @@ D3D12Backend::D3D12Backend() {
     _fence = CreateFence(_device);
     _fenceEvent = CreateEventHandle();
 }
+
+void D3D12Backend::createD3D11Wrapper() {
+    UINT d3d11DeviceFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT | D3D11_CREATE_DEVICE_DEBUG;
+
+    ComPtr<ID3D11Device> d3d11Device;
+
+    ThrowIfFailed(D3D11On12CreateDevice(
+        _device.Get(),
+        d3d11DeviceFlags,
+        nullptr,
+        0,
+        reinterpret_cast<IUnknown**>(_commandQueue.GetAddressOf()),
+        1,
+        0,
+        &d3d11Device,
+        &_d3d11DeviceContext,
+        nullptr
+    ));
+    // Query the 11On12 device from the 11 device.
+    ThrowIfFailed(d3d11Device.As(&_d3d11On12Device));
+
+}
+
 
 D3D12Backend::~D3D12Backend() {
 

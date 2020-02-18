@@ -32,8 +32,22 @@
 
 using namespace pico;
 
-Device::Device() {
-    _backend.reset(new D3D12Backend());
+
+DevicePointer Device::createDevice(const DeviceInit& init) {
+    DevicePointer device;
+    if (init.backend.compare("D3D12") == 0 ) {
+        device = std::make_shared<Device>(new D3D12Backend());
+    }
+    else if (init.backend.compare("D3D12-GDI") == 0) {
+        auto d3d12Backend = new D3D12Backend();
+        device = std::make_shared<Device>(d3d12Backend);
+        d3d12Backend->createD3D11Wrapper();
+    }
+
+    return device;
+}
+
+Device::Device(DeviceBackend* backend) : _backend(backend) {
 }
 
 Device::~Device() {

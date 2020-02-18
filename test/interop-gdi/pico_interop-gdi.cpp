@@ -1,6 +1,6 @@
-// pico_one.cpp 
+// pico_interop-gdi.cpp 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - FEbruary 2020
 // 
 // MIT License
 //
@@ -48,17 +48,12 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-  /*  result = pico::api::create(pico_init);
-    if (!result) {
-        std::clog << "Pico api failed to create on second attempt, yes?" << std::endl;
-    }*/
-
-    // Content creation
+   // Content creation
 
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit {};
+    pico::DeviceInit deviceInit { "D3D12-GDI" };
     auto gpuDevice = pico::Device::createDevice(deviceInit);
 
     // Next, a renderer built on this device
