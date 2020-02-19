@@ -92,6 +92,8 @@ namespace pico {
 
         BufferPointer createBuffer(const BufferInit& init) override;
 
+        TexturePointer createTexture(const TextureInit& init) override;
+
         ShaderPointer createShader(const ShaderInit& init) override;
         ShaderPointer createProgram(const ProgramInit& init) override;
 
@@ -185,6 +187,18 @@ namespace pico {
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
+    };
+
+    class D3D12TextureBackend : public Texture {
+    public:
+        friend class D3D12Backend;
+        D3D12TextureBackend();
+        virtual ~D3D12TextureBackend();
+
+        ComPtr<ID3D12Resource> _buffer;
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
+   
     };
 
     class D3D12ShaderBackend : public Shader {

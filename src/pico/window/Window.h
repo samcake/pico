@@ -229,7 +229,10 @@ public:
     virtual ~WindowBackend() {}
 
     virtual bool messagePump() = 0;
+
     virtual void* nativeWindow() = 0;
+    virtual uint32_t width() const = 0;
+    virtual uint32_t height() const = 0;
 };
 
 
@@ -250,6 +253,9 @@ public:
     void* nativeWindow() {
         return _backend->nativeWindow();
     }
+
+    uint32_t width() const;
+    uint32_t height() const;
 
     void onResize(const ResizeEvent & e);
     void onPaint(const PaintEvent& e);

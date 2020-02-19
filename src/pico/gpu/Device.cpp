@@ -69,6 +69,9 @@ FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
 BufferPointer Device::createBuffer(const BufferInit& init) {
     return _backend->createBuffer(init);
 }
+TexturePointer Device::createTexture(const TextureInit& init) {
+    return _backend->createTexture(init);
+}
 
 ShaderPointer Device::createShader(const ShaderInit& init) {
     return _backend->createShader(init);

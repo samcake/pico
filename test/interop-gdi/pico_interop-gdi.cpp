@@ -34,6 +34,126 @@
 #include <pico/window/Window.h>
 #include <pico/render/Renderer.h>
 
+#include <pico/gpu/Resource.h>
+#pragma comment(lib, "msimg32.lib")
+
+#include <mutex>
+
+//--------------------------------------------------------------------------------------
+
+struct GDCRenderer {
+
+    GDCRenderer() {
+    }
+    ~GDCRenderer() {
+        resize(0, 0, 0);
+    }
+
+    std::mutex _mutex;
+
+    uint32_t _width;
+    uint32_t _height;
+    HDC hdcOffscreen{ 0 };
+    HBITMAP bitmap;
+    BITMAPINFOHEADER   bi;
+    HANDLE hDIB{ 0 };
+    DWORD dwBmpSize = 0;
+
+    std::vector<uint8_t> pixels;
+
+    void resize(HDC srcgdc, uint32_t width, uint32_t height) {
+      
+        if (bitmap) {
+            DeleteObject(bitmap);
+            bitmap = 0;
+        }
+        if (hdcOffscreen) {
+            DeleteObject(hdcOffscreen);
+            hdcOffscreen = 0;
+        }
+        if (hDIB) {
+            GlobalFree(hDIB);
+            hDIB = 0;
+        }
+
+        // Early exit all clean
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+
+        hdcOffscreen = CreateCompatibleDC(srcgdc);
+        bitmap = CreateCompatibleBitmap(srcgdc, width, height);
+        HBITMAP old_bitmap = (HBITMAP)SelectObject(hdcOffscreen, bitmap);
+
+        _width = width;
+        _height = height;
+    
+        bi.biSize = sizeof(BITMAPINFOHEADER);
+        bi.biWidth = width;
+        bi.biHeight = height;
+        bi.biPlanes = 1;
+        bi.biBitCount = 32;
+        bi.biCompression = BI_RGB;
+        bi.biSizeImage = 0;
+        bi.biXPelsPerMeter = 0;
+        bi.biYPelsPerMeter = 0;
+        bi.biClrUsed = 0;
+        bi.biClrImportant = 0;
+
+
+        dwBmpSize = ((_width * 32 + 31) / 32) * 4 * _height;
+
+        // Starting with 32-bit Windows, GlobalAlloc and LocalAlloc are implemented as wrapper functions that 
+        // call HeapAlloc using a handle to the process's default heap. Therefore, GlobalAlloc and LocalAlloc 
+        // have greater overhead than HeapAlloc.
+        hDIB = GlobalAlloc(GHND, dwBmpSize);
+
+        pixels.resize(dwBmpSize);
+    }
+    
+    void render() {
+        HBITMAP old_bitmap = (HBITMAP)SelectObject(hdcOffscreen, bitmap);
+
+        TRIVERTEX vertices[2];
+        ZeroMemory(&vertices, sizeof(vertices));
+        vertices[0].Red = 0xFF00;
+        vertices[0].Green = 0x0000;
+        vertices[0].Blue = 0x0000;
+        vertices[0].x = 0;
+        vertices[0].y = 0;
+
+        vertices[1].Red = 0x0000;
+        vertices[1].Green = 0x0000;
+        vertices[1].Blue = 0xFF00;
+        vertices[1].x = _width;
+        vertices[1].y = _height;
+
+        GRADIENT_RECT rects[1];
+        ZeroMemory(&rects, sizeof(rects));
+        rects[0].UpperLeft = 0;
+        rects[0].LowerRight = 1;
+
+        GradientFill(hdcOffscreen, vertices, 2, rects, 1, GRADIENT_FILL_RECT_V);
+        //    BitBlt(hdc, 0, 0, c_nWndWidth, c_nWndHeight, hdcOffscreen, 0, 0, SRCCOPY);
+
+
+
+        // Lock 
+        char* lpbitmap = (char*)GlobalLock(hDIB);
+
+        // Gets the "bits" from the bitmap and copies them into a buffer 
+        // which is pointed to by lpbitmap.
+        GetDIBits(hdcOffscreen, bitmap, 0,
+            (UINT)_height,
+            lpbitmap,
+            (BITMAPINFO*)&bi, DIB_RGB_COLORS);
+
+        GlobalUnlock(hDIB);
+        memcpy( pixels.data(), lpbitmap, dwBmpSize);
+    }
+};
+
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -70,9 +190,16 @@ int main(int argc, char *argv[])
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
+    // Let's try to do something in a DC:
+    auto gdcRenderer = std::make_shared<GDCRenderer>();
+    gdcRenderer->resize(GetDC((HWND)window->nativeWindow()), window->width(), window->height());
+
+    pico::TextureInit textureInit { window->width(), window->height() };
+    auto textureForGDI = gpuDevice->createTexture(textureInit);
+
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, gdcRenderer](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -94,6 +221,9 @@ int main(int argc, char *argv[])
             elapsedSeconds = 0.0;
         }
 
+        gdcRenderer->render();
+
+        
 
         // Render!
         renderer->render(nullptr, swapchain);

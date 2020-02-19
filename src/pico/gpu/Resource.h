@@ -64,4 +64,27 @@ namespace pico {
         void* _cpuMappedAddress = nullptr;
         uint64_t _bufferSize;
     };
+
+
+
+    struct TextureInit {
+        uint32_t width { 0 };
+        uint32_t height { 0 };
+
+        
+    };
+
+    class Texture : public Resource {
+    protected:
+        // Texture is created from the device
+        friend class Device;
+        Texture();
+
+    public:
+        virtual ~Texture();
+
+        TextureInit _init;
+        void* _cpuMappedAddress = nullptr;
+        uint64_t _bufferSize;
+    };
 }

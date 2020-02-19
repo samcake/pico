@@ -49,6 +49,7 @@ namespace pico {
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
 
         virtual BufferPointer createBuffer(const BufferInit& init) = 0;
+        virtual TexturePointer createTexture(const TextureInit& init) = 0;
 
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
         virtual ShaderPointer createProgram(const ProgramInit& init) = 0;
@@ -86,6 +87,7 @@ namespace pico {
         BatchPointer createBatch(const BatchInit& init);
 
         BufferPointer createBuffer(const BufferInit& init);
+        TexturePointer createTexture(const TextureInit& init);
 
         ShaderPointer createShader(const ShaderInit& init);
         ShaderPointer createProgram(const ProgramInit& init);

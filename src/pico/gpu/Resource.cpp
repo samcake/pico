@@ -43,3 +43,11 @@ Buffer::Buffer() {
 Buffer::~Buffer() {
 
 }
+
+Texture::Texture() {
+
+}
+
+Texture::~Texture() {
+
+}

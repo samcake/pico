@@ -158,12 +158,12 @@ public:
             }
             auto wheelDelta = GET_WHEEL_DELTA_WPARAM(wparam) / (float) WHEEL_DELTA;
             MouseEvent e{ newPos, core::vec2(0.f), wheelDelta,
-                                        ((wparam & MK_CONTROL ? MouseState::MOUSE_CONTROL : 0)
+                              (uint8_t) ( (wparam & MK_CONTROL ? MouseState::MOUSE_CONTROL : 0)
                                         | (wparam & MK_SHIFT ? MouseState::MOUSE_SHIFT : 0)
                                         | (wparam & MK_LBUTTON ? MouseState::MOUSE_LBUTTON : 0)
                                         | (wparam & MK_RBUTTON ? MouseState::MOUSE_RBUTTON : 0)
                                         | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0))
-                                        | (uint8_t) MouseState::MOUSE_WHEEL };
+                                        | MouseState::MOUSE_WHEEL };
            _ownerWindow->onMouse(e);
         } break;
         case WM_MOUSEMOVE: {
@@ -173,12 +173,12 @@ public:
                 _unknownLastMousePos = false;
             }
             MouseEvent e{ newPos, newPos - _lastMouseEventPos, 0,
-                            (  (wparam & MK_CONTROL ? MouseState::MOUSE_CONTROL : 0)
+                  (uint8_t) ( (wparam & MK_CONTROL ? MouseState::MOUSE_CONTROL : 0)
                             | (wparam & MK_SHIFT ? MouseState::MOUSE_SHIFT : 0)
                             | (wparam & MK_LBUTTON ? MouseState::MOUSE_LBUTTON : 0)
                             | (wparam & MK_RBUTTON ? MouseState::MOUSE_RBUTTON : 0)
                             | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0)  ) 
-                            | (uint8_t) MouseState::MOUSE_MOVE };
+                            | MouseState::MOUSE_MOVE };
             _lastMouseEventPos = newPos;
             _ownerWindow->onMouse(e);
             return 0;
@@ -249,9 +249,9 @@ public:
         return runMessagePumpStep();
     }
 
-    void* nativeWindow() override {
-        return _sysWindow;
-    }
+    void* nativeWindow() override { return _sysWindow; }
+    uint32_t width() const override { return _width; }
+    uint32_t height() const override { return _height; }
 
 };
 
@@ -467,6 +467,12 @@ Window::~Window() {
 
 bool Window::messagePump() {
     return _backend->messagePump();
+}
+uint32_t Window::width() const {
+    return _backend->width();
+}
+uint32_t Window::height() const {
+    return _backend->height();
 }
 
 void Window::onResize(const ResizeEvent& e) {
