@@ -331,9 +331,9 @@ int main(int argc, char *argv[])
         batch->uploadTexture(textureForGDI, gdcRenderer->pixelBuffer);
         batch->resourceBarrierTransition(pico::ResourceBarrierFlag::NONE, pico::ResourceState::COPY_DEST, pico::ResourceState::IMAGE_SHADER_RESOURCE, textureForGDI);
     
-        batch->bindDescriptorSet(descriptorSet);
 
         batch->setPipeline(pipeline);
+        batch->bindDescriptorSet(descriptorSet);
 
         batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);

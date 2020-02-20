@@ -161,7 +161,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
     D3D12_RESOURCE_BARRIER barrier;
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
-    barrier.Transition.pResource = d3d12bb->_buffer.Get();
+    barrier.Transition.pResource = d3d12bb->_resource.Get();
     barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
     barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
@@ -176,7 +176,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
     D3D12_RESOURCE_BARRIER barrier;
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
     barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
-    barrier.Transition.pResource = d3d12tex->_buffer.Get();
+    barrier.Transition.pResource = d3d12tex->_resource.Get();
     barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
     barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
     barrier.Transition.Subresource = (subresource == -1 ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : subresource);
@@ -335,12 +335,12 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPo
     for (uint32_t mip_level = 0; mip_level < texResourceDesc.MipLevels; ++mip_level) {
         const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& layout = subres_layouts[mip_level];
         D3D12_TEXTURE_COPY_LOCATION srcLoc{};
-        srcLoc.pResource = srcBackend->_buffer.Get();
+        srcLoc.pResource = srcBackend->_resource.Get();
         srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
         srcLoc.PlacedFootprint = layout;
 
         D3D12_TEXTURE_COPY_LOCATION dstLoc{};
-        dstLoc.pResource = dstBackend->_buffer.Get();
+        dstLoc.pResource = dstBackend->_resource.Get();
         dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         dstLoc.SubresourceIndex = mip_level;
 

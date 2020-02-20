@@ -113,7 +113,7 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     D3D12BufferBackend* bufferBackend = new D3D12BufferBackend();
 
     bufferBackend->_init = init;
-    bufferBackend->_buffer = dxResource;
+    bufferBackend->_resource = dxResource;
     bufferBackend->_bufferSize = bufferSize;
 
 
@@ -241,11 +241,11 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
 
     auto d3d12TextureBackend = new D3D12TextureBackend();
     d3d12TextureBackend->_init = init;
-    d3d12TextureBackend->_buffer;
+    d3d12TextureBackend->_resource;
 
     HRESULT hres = backend->_device->CreateCommittedResource(
         &heap_props, heap_flags, &desc, res_states, p_clear_value,
-        __uuidof(d3d12TextureBackend->_buffer), (void**)&(d3d12TextureBackend->_buffer));
+        __uuidof(d3d12TextureBackend->_resource), (void**)&(d3d12TextureBackend->_resource));
    // assert(SUCCEEDED(hres));
 
   //  p_texture->owns_image = true;
@@ -266,7 +266,10 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
       d3d12TextureBackend->_shaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
       d3d12TextureBackend->_shaderResourceViewDesc.Format = d3d12Format;
       d3d12TextureBackend->_shaderResourceViewDesc.ViewDimension = view_dim;
-      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MipLevels = 0;
+      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MipLevels = 1;
+      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.PlaneSlice = 0;
+      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
   //  }
 /*
     if (p_texture->usage & tr_texture_usage_storage_image) {

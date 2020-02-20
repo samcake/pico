@@ -191,7 +191,7 @@ namespace pico {
         D3D12BufferBackend();
         virtual ~D3D12BufferBackend();
 
-        ComPtr<ID3D12Resource> _buffer;
+        ComPtr<ID3D12Resource> _resource;
 
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
@@ -205,7 +205,7 @@ namespace pico {
         D3D12TextureBackend();
         virtual ~D3D12TextureBackend();
 
-        ComPtr<ID3D12Resource> _buffer;
+        ComPtr<ID3D12Resource> _resource;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
    
