@@ -97,6 +97,8 @@ namespace pico {
         ShaderPointer createShader(const ShaderInit& init) override;
         ShaderPointer createProgram(const ProgramInit& init) override;
 
+        SamplerPointer createSampler(const SamplerInit& init) override;
+
         PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
    
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) override;
@@ -149,6 +151,12 @@ namespace pico {
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
+        void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const BufferPointer& buffer) override;
+        void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const TexturePointer& buffer, uint32_t subresource) override;
 
         void setViewport(core::vec4& viewport) override;
         void setScissor(core::vec4& scissor) override;
@@ -161,6 +169,8 @@ namespace pico {
 
         void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
+
+        void uploadTexture(const TexturePointer& dest, const BufferPointer& src) override;
 
         ComPtr<ID3D12GraphicsCommandList> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
@@ -210,6 +220,15 @@ namespace pico {
         ComPtr<ID3DBlob> _shaderBlob;
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
+    };
+
+    class D3D12SamplerBackend : public Sampler {
+    public:
+        friend class D3D12Backend;
+        D3D12SamplerBackend();
+        virtual ~D3D12SamplerBackend();
+
+        D3D12_SAMPLER_DESC _samplerDesc;
     };
 
     class D3D12PipelineStateBackend : public PipelineState {

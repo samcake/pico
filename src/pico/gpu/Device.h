@@ -54,9 +54,10 @@ namespace pico {
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
         virtual ShaderPointer createProgram(const ProgramInit& init) = 0;
 
+        virtual SamplerPointer createSampler(const SamplerInit& init) = 0;
+
         virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
 
-        
         virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
         virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
@@ -91,6 +92,8 @@ namespace pico {
 
         ShaderPointer createShader(const ShaderInit& init);
         ShaderPointer createProgram(const ProgramInit& init);
+
+        SamplerPointer createSampler(const SamplerInit& init);
 
         PipelineStatePointer createPipelineState(const PipelineStateInit& init);
 

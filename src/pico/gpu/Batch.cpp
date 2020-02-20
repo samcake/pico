@@ -47,6 +47,12 @@ void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const core::
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {}
+void Batch::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const BufferPointer& buffer) {}
+void Batch::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const TexturePointer& buffer, uint32_t subresource) {}
 
 void Batch::setViewport(core::vec4& viewport) {}
 void Batch::setScissor(core::vec4& scissor) {}
@@ -60,4 +66,5 @@ void Batch::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {}
 void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
+void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
 

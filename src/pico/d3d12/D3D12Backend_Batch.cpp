@@ -153,6 +153,36 @@ void D3D12BatchBackend::resourceBarrierTransition(
 
     _commandList->ResourceBarrier(1, &barrier);
 }
+void D3D12BatchBackend::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const BufferPointer& buffer) {
+    auto d3d12bb = static_cast<D3D12BufferBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.Transition.pResource = d3d12bb->_buffer.Get();
+    barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
+    barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
+    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
+void D3D12BatchBackend::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const TexturePointer& buffer, uint32_t subresource) {
+    auto d3d12tex = static_cast<D3D12TextureBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.Transition.pResource = d3d12tex->_buffer.Get();
+    barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
+    barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
+    barrier.Transition.Subresource = (subresource == -1 ? D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES : subresource);
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
 
 
 void D3D12BatchBackend::setViewport(core::vec4 & viewport) {
@@ -268,6 +298,56 @@ void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex)
     _commandList->DrawIndexedInstanced(numPrimitives, 1, startIndex, 0, 0);
 }
 
+void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {
+    auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
+    auto dstBackend = static_cast<D3D12TextureBackend*>(dest.get());
+
+
+
+    D3D12_RESOURCE_DESC texResourceDesc{};
+    texResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texResourceDesc.Alignment = 0;
+    texResourceDesc.Width = dstBackend->_init.width;
+    texResourceDesc.Height = dstBackend->_init.height;
+    texResourceDesc.DepthOrArraySize = 1;
+    texResourceDesc.MipLevels = 1;
+    texResourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texResourceDesc.SampleDesc.Count = 1;
+    texResourceDesc.SampleDesc.Quality = 0;
+    texResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    texResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    
+    std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> subres_layouts(texResourceDesc.MipLevels);
+    std::vector<UINT> subres_rowcounts(texResourceDesc.MipLevels, 0);
+    std::vector<UINT64> subres_row_strides(texResourceDesc.MipLevels, 0);
+    UINT64 buffer_size = 0;
+
+    ID3D12Device* pDevice;
+    _commandList->GetDevice(__uuidof(*pDevice), reinterpret_cast<void**>(&pDevice));
+    pDevice->GetCopyableFootprints(&texResourceDesc, 0, 1, 0, subres_layouts.data(), subres_rowcounts.data(), subres_row_strides.data(), &buffer_size);
+
+    // let s check that the source buffer is big enough
+    // maybe?
+
+
+    // Copy buffer to texture
+    // Assume a  resourceBarrier before
+    for (uint32_t mip_level = 0; mip_level < texResourceDesc.MipLevels; ++mip_level) {
+        const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& layout = subres_layouts[mip_level];
+        D3D12_TEXTURE_COPY_LOCATION srcLoc{};
+        srcLoc.pResource = srcBackend->_buffer.Get();
+        srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        srcLoc.PlacedFootprint = layout;
+
+        D3D12_TEXTURE_COPY_LOCATION dstLoc{};
+        dstLoc.pResource = dstBackend->_buffer.Get();
+        dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dstLoc.SubresourceIndex = mip_level;
+
+       _commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr );
+    }
+    // ANd one after
+}
 
 
 #endif

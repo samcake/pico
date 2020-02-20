@@ -58,6 +58,10 @@ namespace pico {
     using TexturePointer = std::shared_ptr<Texture>;
     struct TextureInit;
 
+    class Sampler;
+    using SamplerPointer = std::shared_ptr<Sampler>;
+    struct SamplerInit;
+
     class Shader;
     using ShaderPointer = std::shared_ptr<Shader>;
     struct ShaderInit;

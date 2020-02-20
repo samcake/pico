@@ -36,3 +36,10 @@ PipelineState::~PipelineState() {
 
 }
 
+Sampler::Sampler() {
+
+}
+
+Sampler::~Sampler() {
+
+}

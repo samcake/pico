@@ -53,8 +53,7 @@ namespace pico {
         UNORDERED_ACCESS,
         DEPTH_WRITE,
         DEPTH_READ,
-        NON_PIXEL_SHADER_RESOURCE,
-        PIXEL_SHADER_RESOURCE,
+        IMAGE_SHADER_RESOURCE,
         STREAM_OUT,
         INDIRECT_ARGUMENT,
         COPY_DEST,
@@ -98,6 +97,12 @@ namespace pico {
         virtual void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource);
+        virtual void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const BufferPointer& buffer);
+        virtual void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const TexturePointer& buffer, uint32_t subresource = -1);
 
         virtual void setViewport(core::vec4& viewport);
         virtual void setScissor(core::vec4& scissor);
@@ -112,6 +117,7 @@ namespace pico {
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
 
+        virtual void uploadTexture(const TexturePointer& dest, const BufferPointer& src);
 
     };
 }

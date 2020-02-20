@@ -177,7 +177,7 @@ BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
 D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& init) {
 
     // TODO: Should get all that from the init
-    auto d3d12Format = DXGI_FORMAT_R8G8B8A8_SNORM;
+    auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     auto texDimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
 

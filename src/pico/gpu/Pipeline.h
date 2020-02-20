@@ -36,6 +36,7 @@ namespace pico {
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
         DescriptorSetLayoutPointer descriptorSetLayout;
+        bool depth { false };
     };
 
     class PipelineState {
@@ -48,5 +49,21 @@ namespace pico {
         virtual ~PipelineState();
 
         ShaderPointer _program;
+    };
+
+    struct SamplerInit {
+
+    };
+
+    class Sampler {
+    protected:
+        // Sampler is created from the device
+        friend class Device;
+        Sampler();
+
+    public:
+        virtual ~Sampler();
+
+        SamplerInit _init;
     };
 }

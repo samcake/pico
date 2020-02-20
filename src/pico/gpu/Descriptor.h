@@ -105,7 +105,8 @@ namespace pico {
     struct DescriptorObject{
         std::vector<BufferPointer> _uniformBuffers;
         std::vector<BufferPointer> _buffers;
-      //  std::vector<SamplerPointer> _samplers;
+        std::vector<TexturePointer> _textures;
+        std::vector<SamplerPointer> _samplers;
     };
     using DescriptorObjects = std::vector<DescriptorObject>;
 

@@ -80,6 +80,9 @@ ShaderPointer Device::createProgram(const ProgramInit& init) {
     return _backend->createProgram(init);
 }
 
+SamplerPointer Device::createSampler(const SamplerInit& init) {
+    return _backend->createSampler(init);
+}
 PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) {
     return _backend->createPipelineState(init);
 }
