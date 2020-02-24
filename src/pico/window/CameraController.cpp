@@ -24,8 +24,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "../render/Camera.h"
+#include "CameraController.h"
 
+#include "../render/Camera.h"
 #include "../gpu/Device.h"
 #include "../gpu/Resource.h"
 #include "Window.h"
@@ -48,7 +49,7 @@ void CameraController::updateCameraFromController(CameraController::ControlData&
 
     if (!_cam) return;
 
-    float time = min(0.2f, (0.001f * duration.count()));
+    float time = core::min(0.2f, (0.001f * duration.count()));
 
     float translationSpeed = 2.0f;
     float rotationSpeed = 0.5f;
@@ -56,11 +57,11 @@ void CameraController::updateCameraFromController(CameraController::ControlData&
     auto view = _cam->getView();
     auto projection = _cam->getProjection();
 
-    vec3 back = view.back();
-    vec3 right = view.right();
-    vec3 up = view.up();
+    core::vec3 back = view.back();
+    core::vec3 right = view.right();
+    core::vec3 up = view.up();
 
-    vec3 translation{ 0.0f };
+    core::vec3 translation{ 0.0f };
     translation = translation + back * -(control._translateFront - control._translateBack) * translationSpeed * time;
     translation = translation + right * (control._translateRight - control._translateLeft) * translationSpeed * time;
 
@@ -69,8 +70,8 @@ void CameraController::updateCameraFromController(CameraController::ControlData&
     
     float rotation = - (control._rotateLeft - control._rotateRight) * rotationSpeed * time;
     if (rotation != 0) {
-        vec3 rotatedRight = right + back * rotation;
-        view.setOrientation(rotatedRight, up);
+        core::vec3 rotatedRight = right + back * rotation;
+        view.setOrientationFromRightUp(rotatedRight, up);
     }
 
     float focalChange = -(control._zoomOut - control._zoomIn) * 0.1f * time;
@@ -158,7 +159,6 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
 }
 
 bool CameraController::onMouse(const MouseEvent& e) {
-
     return false;
 }
 

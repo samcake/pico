@@ -32,7 +32,7 @@
 
 namespace pico {
 
-    class Resource {
+    class VISUALIZATION_API Resource {
     public:
         virtual ~Resource();
     protected:
@@ -41,7 +41,7 @@ namespace pico {
     };
 
 
-    struct BufferInit {
+    struct VISUALIZATION_API BufferInit {
         ResourceUsage usage;
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
@@ -50,7 +50,7 @@ namespace pico {
         uint32_t vertexStride { 0 };
     };
 
-    class Buffer : public Resource {
+    class VISUALIZATION_API Buffer : public Resource {
     protected:
         // Buffer is created from the device
         friend class Device;
@@ -60,6 +60,29 @@ namespace pico {
         virtual ~Buffer();
 
         BufferInit _init;
+        void* _cpuMappedAddress = nullptr;
+        uint64_t _bufferSize;
+    };
+
+
+
+    struct VISUALIZATION_API TextureInit {
+        uint32_t width { 0 };
+        uint32_t height { 0 };
+
+        
+    };
+
+    class VISUALIZATION_API Texture : public Resource {
+    protected:
+        // Texture is created from the device
+        friend class Device;
+        Texture();
+
+    public:
+        virtual ~Texture();
+
+        TextureInit _init;
         void* _cpuMappedAddress = nullptr;
         uint64_t _bufferSize;
     };

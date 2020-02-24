@@ -1,4 +1,4 @@
-// pico_five.cpp 
+// pico_six.cpp 
 //
 // Sam Gateau - January 2020
 // 
@@ -151,6 +151,7 @@ int main(int argc, char *argv[])
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f },{ 0.f, 1.f, 0.f });
     camera->zoomTo(sceneSphere);
 
+
     // Let s allocate a gpu buffer managed by the Camera
     camera->allocateGPUData(gpuDevice);
 
@@ -281,7 +282,6 @@ int main(int argc, char *argv[])
     };
 
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
-
         if (e.state && e.key == pico::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
@@ -318,7 +318,7 @@ int main(int argc, char *argv[])
             }
             if (e.state & pico::MOUSE_MBUTTON) {
                 float panScale = sceneSphere.w * 0.001f;
-                camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
+                camera->pan(-e.delta.x* panScale, e.delta.y * panScale);
             }
         } else if (e.state & pico::MOUSE_WHEEL) {
             if (e.state & pico::MOUSE_CONTROL) {

@@ -1,4 +1,4 @@
-// mas.h 
+// LinearAlgebra.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -25,8 +25,14 @@
 // SOFTWARE.
 //
 #pragma once
+#include <stdint.h>
+#include <cmath>
 
-namespace pico {
+#include "../dllmain.h"
+
+
+namespace core 
+{
 
     struct vec2 {
         float x, y;
@@ -101,6 +107,7 @@ namespace pico {
     inline vec4 abs(const vec4& v) {
         return vec4(abs(v.x), abs(v.y), abs(v.z), abs(v.w));
     }
+
     // Max Min
     inline float max(float a, float b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }
@@ -165,13 +172,19 @@ namespace pico {
 
     // Normalize
     inline vec2 normalize(const vec2& a) {
-        return scale(a, 1.0f/ dot(a,a));
+        auto l = sqrt(dot(a, a));
+        auto il = ((l > 0.0f) ? (1.0f / l) : 1.0f);
+        return scale(a, il);
     }
     inline vec3 normalize(const vec3& a) {
-        return scale(a, 1.0f / dot(a, a));
+        auto l = sqrt(dot(a, a));
+        auto il = ((l > 0.0f) ? (1.0f / l) : 1.0f);
+        return scale(a, il);
     }
     inline vec4 normalize(const vec4& a) {
-        return scale(a, 1.0f / dot(a, a));
+        auto l = sqrt(dot(a, a));
+        auto il = ((l > 0.0f) ? (1.0f / l) : 1.0f);
+        return scale(a, il);
     }
 
     // Clamp

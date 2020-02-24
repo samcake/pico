@@ -29,7 +29,7 @@
 #include "../Forward.h"
 #include "../Api.h"
 
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
 
 #include "../gpu/gpu.h"
 
@@ -40,7 +40,7 @@ namespace pico {
     struct AttribBuffer {
         std::vector<uint8_t> _data;
 
-        uint32_t getSize() const { return _data.size(); }
+        uint32_t getSize() const { return (unsigned) _data.size(); }
 
         AttribBuffer() {}
         AttribBuffer(void* data, size_t size) : _data(size, 0) { if (data) memcpy(_data.data(), data, size); }
@@ -54,7 +54,7 @@ namespace pico {
 
         uint32_t getNumElements() const {
             auto buffer0Size = _buffers[0]->_data.size();
-            auto buffer0ByteLength = _streamLayout.evalBufferViewByteLength(0, buffer0Size);
+            auto buffer0ByteLength = _streamLayout.evalBufferViewByteLength(0, (unsigned) buffer0Size);
             
             auto elementStride = _streamLayout.evalBufferViewByteStride(0);
 
@@ -74,7 +74,7 @@ namespace pico {
         }
     };
     
-    class Mesh {
+    class VISUALIZATION_API Mesh {
     public:
         Mesh();
         ~Mesh();
@@ -85,12 +85,15 @@ namespace pico {
 
         StreamView _indexBuffer { StreamLayout::build( Attribs<1>(), AttribBufferViews<1>() ), { AttribBufferPointer() } };
 
-        Topology _topology { Topology::POINT };
+        PrimitiveTopology _topology { PrimitiveTopology::POINT };
 
-        vec3 _minPos;
-        vec3 _maxPos;
-        vec3 _midPos;
+        core::vec3 _minPos;
+        core::vec3 _maxPos;
+        core::vec3 _midPos;
+
         void evalMinMaxMidPos();
+
+        static MeshPointer createFromPointArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points);
     };
 
 }

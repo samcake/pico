@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::api::createDevice(deviceInit);
+    auto gpuDevice = pico::Device::createDevice(deviceInit);
 
     // Content creation
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
     // And now a render callback where we describe the rendering sequence
     pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
-        pico::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
+        core::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
 
         auto currentIndex = swapchain->currentIndex();
 
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
         float intPart;
         time = modf(time, &intPart);
        // pico::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
-        pico::vec4 clearColor(pico::colorRGBfromHSV(pico::vec3(0.5f, 0.5f, 1.f)), 1.f);
+        core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);

@@ -27,7 +27,7 @@
 #pragma once
 
 #include "../Forward.h"
-#include "../mas.h"
+#include "core/LinearAlgebra.h"
 
 namespace pico {
     class Transform {

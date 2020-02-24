@@ -26,7 +26,8 @@
 //
 #include "Batch.h"
 
-using namespace pico;
+namespace pico
+{
 
 Batch::Batch() {
 
@@ -42,14 +43,20 @@ void Batch::end() {}
 void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}
 void Batch::endPass() {}
 
-void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) {}
+void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {}
 
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) {}
-
-void Batch::setViewport(const vec4& viewport) {}
-void Batch::setScissor(const vec4& scissor) {}
+void Batch::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const BufferPointer& buffer) {}
+void Batch::resourceBarrierTransition(
+    ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+    const TexturePointer& buffer, uint32_t subresource) {}
+    
+void Batch::setViewport(const core::vec4& viewport) {}
+void Batch::setScissor(const core::vec4& scissor) {}
 
 void Batch::setPipeline(const PipelineStatePointer& pipeline) {}
 void Batch::bindDescriptorSet(const DescriptorSetPointer& descriptorSet) {}
@@ -60,4 +67,6 @@ void Batch::bindVertexBuffers(uint32_t num, const BufferPointer* buffers) {}
 void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
+void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
 
+} // !using namespace pico

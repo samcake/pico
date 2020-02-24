@@ -27,7 +27,6 @@
 #include "Api.h"
 
 #include "gpu/Device.h"
-#include "window/Window.h"
 
 using namespace pico;
 
@@ -65,12 +64,6 @@ void api::destroy() {
     if (_instance) {
         _instance.reset();
     }
-}
-
-DevicePointer api::createDevice(const DeviceInit& init) {
-    DevicePointer device(new Device());
-
-    return device;
 }
 
 #ifdef WIN32

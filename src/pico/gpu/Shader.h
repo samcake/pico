@@ -33,19 +33,19 @@
 
 namespace pico {
 
-    struct ShaderInit {
+    struct VISUALIZATION_API ShaderInit {
         ShaderType type;
         std::string entryPoint;
         std::string url;
         std::string source;
     };
 
-    struct ProgramInit {
+    struct VISUALIZATION_API ProgramInit {
         ShaderPointer vertexShader;
         ShaderPointer pixelShader;
     };
 
-    class Shader {
+    class VISUALIZATION_API Shader {
     protected:
         // Shader is created from the device
         friend class Device;

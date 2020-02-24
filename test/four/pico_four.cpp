@@ -42,6 +42,7 @@
 #include <pico/render/Renderer.h>
 
 #include <pico/content/PointCloud.h>
+#include <pico/content/Mesh.h>
 
 
 #include <vector>
@@ -76,27 +77,36 @@ int main(int argc, char *argv[])
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::api::createDevice(deviceInit);
+    auto gpuDevice = pico::Device::createDevice(deviceInit);
 
     // Content creation
 
-    pico::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
+    core::vec4 viewportRect{ 0.0f, 0.0f, 1280.0f, 720.f };
 
     // Some content, why not a pointcloud ?
     auto pointCloud = createPointCloud(cloudPointFile);
 
+    // Step 1, create a Mesh from the point cloud data
+
+    // Declare the vertex format == PointCloud::Point
+    pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::AttribBufferViews<1> bufferViews{ {0} };
+    auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
+
+    // Create the Mesh for real
+    pico::MeshPointer mesh = pico::Mesh::createFromPointArray(vertexFormat, (uint32_t)pointCloud->_points.size(), (const uint8_t*)pointCloud->_points.data());
 
     // Let's allocate buffer to hold the point cloud mesh
     pico::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = pointCloud->_mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = pointCloud->_mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+    vertexBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+    vertexBufferInit.vertexStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
-    memcpy(vertexBuffer->_cpuMappedAddress, pointCloud->_mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+    memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
-    auto numVertices = pointCloud->_mesh->getNumVertices();
+    auto numVertices = mesh->getNumVertices();
 
     // Let's describe the pipeline Descriptors layout
     pico::DescriptorLayouts descriptorLayouts {
@@ -118,7 +128,7 @@ int main(int argc, char *argv[])
 
     pico::PipelineStateInit pipelineInit{
         programShader,
-        pointCloud->_mesh->_vertexBuffers._streamLayout,
+        mesh->_vertexBuffers._streamLayout,
         pico::PrimitiveTopology::POINT,
         descriptorSetLayout
     };
@@ -135,17 +145,17 @@ int main(int argc, char *argv[])
     // Let s create a uniform buffer
     float aspectRatio = (viewportRect.z / viewportRect.w);
     struct CameraUB{
-        pico::vec3 _eye{ 0.5f, 1.0f, 2.04f };                float _focal { 0.056f };
-        pico::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
-        pico::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio {16.0f / 9.0f };
-        pico::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.f };
-        pico::vec4 _stuff{ 1.0f, 0.0f, 0.0f, 0.0f };
+        core::vec3 _eye{ 0.5f, 1.0f, 2.04f };                float _focal { 0.056f };
+        core::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
+        core::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio {16.0f / 9.0f };
+        core::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.f };
+        core::vec4 _stuff{ 1.0f, 0.0f, 0.0f, 0.0f };
     };
     CameraUB cameraData;
     cameraData._aspectRatio = aspectRatio;
 
     // look side
-    cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
+    cameraData._up = core::normalize({ 0.f, 1.f, 0.0f });
     // cameraData._back = { 0.f, 1.f, 0.f };
     cameraData._eye = { 0.5f, 0.6f, 2.f };
 
@@ -189,7 +199,7 @@ int main(int argc, char *argv[])
             pico::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
-        pico::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
+        core::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
@@ -279,21 +289,21 @@ int main(int argc, char *argv[])
         if (e.state && e.key == pico::KEY_1) {
             // look side
             cameraData._right = { 1.f, 0.f, 0.f };
-            cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
+            cameraData._up = core::normalize({ 0.f, 1.f, 0.0f });
             // cameraData._back = { 0.f, 1.f, 0.f };
             cameraData._eye = { 0.5f, 0.6f, 2.f };
         }
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
             cameraData._right = { 0.f, 0.f, -1.f };
-            cameraData._up = pico::normalize({ 0.f, 1.f, 0.0f });
+            cameraData._up = core::normalize({ 0.f, 1.f, 0.0f });
             // cameraData._back = { 0.f, 1.f, 0.f };
             cameraData._eye = { 2.5f, 0.6f, 0.f };
         }
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
-            cameraData._right = pico::normalize({ 1.f, 0.f, -1.f });
-            cameraData._up = pico::normalize({ 0.f, 1.f, -1.f });
+            cameraData._right = core::normalize({ 1.f, 0.f, -1.f });
+            cameraData._up = core::normalize({ 0.f, 1.f, -1.f });
             // cameraData._back = { 0.f, 1.f, 0.f };
             cameraData._eye = { 2.f, 2.f, 2.f };
         }

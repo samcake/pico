@@ -48,7 +48,7 @@ namespace pico {
 
     protected:
 #pragma warning(push)
-#pragma warning(disable: 4251)    
+#pragma warning(disable: 4251)
         DevicePointer _device;
         BatchPointer _batch;
         RenderCallback _callback;

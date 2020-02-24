@@ -32,8 +32,17 @@
 
 using namespace pico;
 
-Device::Device() {
-    _backend.reset(new D3D12Backend());
+
+DevicePointer Device::createDevice(const DeviceInit& init) {
+    DevicePointer device;
+    if (init.backend.compare("D3D12") == 0 ) {
+        device = std::make_shared<Device>(new D3D12Backend());
+    }
+
+    return device;
+}
+
+Device::Device(DeviceBackend* backend) : _backend(backend) {
 }
 
 Device::~Device() {
@@ -55,6 +64,9 @@ FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
 BufferPointer Device::createBuffer(const BufferInit& init) {
     return _backend->createBuffer(init);
 }
+TexturePointer Device::createTexture(const TextureInit& init) {
+    return _backend->createTexture(init);
+}
 
 ShaderPointer Device::createShader(const ShaderInit& init) {
     return _backend->createShader(init);
@@ -63,6 +75,9 @@ ShaderPointer Device::createProgram(const ProgramInit& init) {
     return _backend->createProgram(init);
 }
 
+SamplerPointer Device::createSampler(const SamplerInit& init) {
+    return _backend->createSampler(init);
+}
 PipelineStatePointer Device::createPipelineState(const PipelineStateInit& init) {
     return _backend->createPipelineState(init);
 }

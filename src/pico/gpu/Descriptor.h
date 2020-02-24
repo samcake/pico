@@ -48,7 +48,7 @@ namespace pico {
         COUNT,
     };
 
-    struct DescriptorLayout {
+    struct VISUALIZATION_API DescriptorLayout {
         DescriptorType  _type;
         ShaderStage     _shaderStage;
         uint32_t        _binding;
@@ -59,11 +59,11 @@ namespace pico {
 
 
 
-    struct DescriptorSetLayoutInit {
+    struct VISUALIZATION_API DescriptorSetLayoutInit {
         DescriptorLayouts _layouts;
     };
 
-    class DescriptorSetLayout {
+    class VISUALIZATION_API DescriptorSetLayout {
     protected:
         friend class Device;
         DescriptorSetLayout();
@@ -74,47 +74,20 @@ namespace pico {
         DescriptorSetLayoutInit _init;
     };
 
-
-/*    struct DescriptorSetLayout{
-        Descriptor
-    }
-
-    struct Descriptor
-    typedef struct tr_descriptor {
-        tr_descriptor_type                  type;
-        tr_shader_stage                     shader_stages;
-        uint32_t                            binding;
-        uint32_t                            count;
-        tr_buffer* uniform_buffers[tr_max_descriptor_entries];
-        tr_texture* textures[tr_max_descriptor_entries];
-        tr_sampler* samplers[tr_max_descriptor_entries];
-        tr_buffer* buffers[tr_max_descriptor_entries];
-        uint32_t                            dx_heap_offset;
-        uint32_t                            dx_root_parameter_index;
-    } tr_descriptor;
-
-
-    typedef struct tr_descriptor_set {
-        uint32_t                            descriptor_count;
-        tr_descriptor* descriptors;
-        ID3D12DescriptorHeap* dx_cbvsrvuav_heap;
-        ID3D12DescriptorHeap* dx_sampler_heap;
-    } tr_descriptor_set;
-*/
-
-    struct DescriptorObject{
+    struct VISUALIZATION_API DescriptorObject{
         std::vector<BufferPointer> _uniformBuffers;
         std::vector<BufferPointer> _buffers;
-      //  std::vector<SamplerPointer> _samplers;
+        std::vector<TexturePointer> _textures;
+        std::vector<SamplerPointer> _samplers;
     };
     using DescriptorObjects = std::vector<DescriptorObject>;
 
 
-    struct DescriptorSetInit {
+    struct VISUALIZATION_API DescriptorSetInit {
         DescriptorSetLayoutPointer _layout;
     };
 
-    class DescriptorSet {
+    class VISUALIZATION_API DescriptorSet {
     protected:
         // Buffer is created from the device
         friend class Device;

@@ -30,7 +30,7 @@
 
 #include "Device.h"
 
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
 
 namespace pico {
 
@@ -53,8 +53,7 @@ namespace pico {
         UNORDERED_ACCESS,
         DEPTH_WRITE,
         DEPTH_READ,
-        NON_PIXEL_SHADER_RESOURCE,
-        PIXEL_SHADER_RESOURCE,
+        IMAGE_SHADER_RESOURCE,
         STREAM_OUT,
         INDIRECT_ARGUMENT,
         COPY_DEST,
@@ -93,14 +92,20 @@ namespace pico {
         virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);
         virtual void endPass();
 
-        virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth = 1.0f);
+        virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth = 1.0f);
 
         virtual void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource);
+        virtual void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const BufferPointer& buffer);
+        virtual void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const TexturePointer& buffer, uint32_t subresource = -1);
 
-        virtual void setViewport(const vec4& viewport);
-        virtual void setScissor(const vec4& scissor);
+        virtual void setViewport(const core::vec4& viewport);
+        virtual void setScissor(const core::vec4& scissor);
 
         virtual void setPipeline(const PipelineStatePointer& pipeline);
         virtual void bindDescriptorSet(const DescriptorSetPointer& descriptorSet);
@@ -112,6 +117,7 @@ namespace pico {
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
 
+        virtual void uploadTexture(const TexturePointer& dest, const BufferPointer& src);
 
     };
 }

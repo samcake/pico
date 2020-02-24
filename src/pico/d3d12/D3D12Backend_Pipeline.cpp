@@ -125,10 +125,16 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
 
             psoDesc.BlendState.AlphaToCoverageEnable = FALSE;
 
-            psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
-            psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-            psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-   
+            if (init.depth) {
+                psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
+                psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+            } else {
+                psoDesc.DepthStencilState.DepthEnable = FALSE; // disable depth
+                psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+            }
+
             psoDesc.DepthStencilState.StencilEnable = FALSE;
             psoDesc.DepthStencilState.StencilReadMask = 0xFF;
             psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
@@ -138,9 +144,14 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             psoDesc.SampleMask = UINT_MAX;
             psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
+           // psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
-            psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+            if (init.depth) {
+                psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+            } else {
+                psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+            }
             ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
         }
@@ -154,6 +165,35 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
     }
 
     return PipelineStatePointer(pso);
+}
+
+
+
+D3D12SamplerBackend::D3D12SamplerBackend() {
+
+}
+
+D3D12SamplerBackend::~D3D12SamplerBackend() {
+
+}
+
+SamplerPointer D3D12Backend::createSampler(const SamplerInit& init) {
+    auto sampler = new D3D12SamplerBackend;
+    sampler->_samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+    sampler->_samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler->_samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler->_samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler->_samplerDesc.MipLODBias = 0;
+    sampler->_samplerDesc.MaxAnisotropy = 0;
+    sampler->_samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+    sampler->_samplerDesc.BorderColor[0] = 0.0f;
+    sampler->_samplerDesc.BorderColor[1] = 0.0f;
+    sampler->_samplerDesc.BorderColor[2] = 0.0f;
+    sampler->_samplerDesc.BorderColor[3] = 0.0f;
+    sampler->_samplerDesc.MinLOD = 0.0f;
+    sampler->_samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
+
+    return SamplerPointer(sampler);
 }
 
 

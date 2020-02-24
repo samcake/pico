@@ -33,7 +33,7 @@
 namespace pico {
 
     struct VISUALIZATION_API DeviceInit {
-
+        std::string backend{ "D3D12" };
     };
 
     // Device concrete backend implementation
@@ -49,13 +49,15 @@ namespace pico {
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
 
         virtual BufferPointer createBuffer(const BufferInit& init) = 0;
+        virtual TexturePointer createTexture(const TextureInit& init) = 0;
 
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
         virtual ShaderPointer createProgram(const ProgramInit& init) = 0;
 
+        virtual SamplerPointer createSampler(const SamplerInit& init) = 0;
+
         virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
 
-        
         virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
         virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
@@ -65,10 +67,16 @@ namespace pico {
     };
 
     class VISUALIZATION_API Device {
-        // Device is created from the api instance
-        friend class api;
-        Device();
+
+
     public:
+        // Device is created from the factory call instance
+        // Do not use this
+        Device(DeviceBackend* backend);
+
+        // Factory
+        static DevicePointer createDevice(const DeviceInit& init);
+
         ~Device();
 
         // Factories
@@ -80,9 +88,12 @@ namespace pico {
         BatchPointer createBatch(const BatchInit& init);
 
         BufferPointer createBuffer(const BufferInit& init);
+        TexturePointer createTexture(const TextureInit& init);
 
         ShaderPointer createShader(const ShaderInit& init);
         ShaderPointer createProgram(const ProgramInit& init);
+
+        SamplerPointer createSampler(const SamplerInit& init);
 
         PipelineStatePointer createPipelineState(const PipelineStateInit& init);
 
@@ -96,7 +107,10 @@ namespace pico {
         void presentSwapchain(const SwapchainPointer& swapchain);
 
     private:
+#pragma warning(push)
+#pragma warning(disable: 4251)
         std::unique_ptr<DeviceBackend> _backend;
+#pragma warning(pop)
 
     };
 }

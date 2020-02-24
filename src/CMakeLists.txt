@@ -15,6 +15,7 @@ include_directories("pico/")
 
 file(GLOB PICO_HEADERS
     "pico/*.h"
+    "pico/core/*.h"
     "pico/gpu/*.h"
     "pico/d3d12/*.h"
     "pico/render/*.h"
@@ -24,6 +25,7 @@ file(GLOB PICO_HEADERS
 
 file(GLOB PICO_SOURCES
     "pico/*.cpp"
+    "pico/core/*.cpp"
     "pico/gpu/*.cpp"
     "pico/d3d12/*.cpp"
     "pico/render/*.cpp"
@@ -41,6 +43,7 @@ target_link_libraries(pico
     ${GRAPHICS_LIBRARIES}
 )
 
+source_group(pico\\core REGULAR_EXPRESSION pico/core/*)
 source_group(pico\\content REGULAR_EXPRESSION pico/content/*)
 source_group(pico\\render REGULAR_EXPRESSION pico/render/*)
 source_group(pico\\gpu REGULAR_EXPRESSION pico/gpu/*)

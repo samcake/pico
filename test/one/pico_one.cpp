@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::api::createDevice(deviceInit);
+    auto gpuDevice = pico::Device::createDevice(deviceInit);
 
     // Next, a renderer built on this device
     auto renderer = std::make_shared<pico::Renderer>(gpuDevice, nullptr);

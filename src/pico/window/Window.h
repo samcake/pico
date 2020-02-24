@@ -29,7 +29,7 @@
 #include "../Forward.h"
 
 #include <functional>
-#include "../mas.h"
+#include "../core/LinearAlgebra.h"
 
 namespace pico {
 
@@ -150,6 +150,18 @@ enum Key : uint8_t {
     KEY_COUNT,
 };
 
+enum MouseState : uint8_t {
+    MOUSE_LBUTTON = 0x01,
+    MOUSE_RBUTTON = 0x02,
+    MOUSE_MBUTTON = 0x04,
+
+    MOUSE_SHIFT = 0x10,
+    MOUSE_CONTROL = 0x20,
+
+    MOUSE_MOVE = 0x40,
+    MOUSE_WHEEL = 0x80,
+};
+
 struct ResizeEvent {
     uint32_t width;
     uint32_t height;
@@ -158,11 +170,12 @@ struct ResizeEvent {
 struct PaintEvent {
 };
 struct MouseEvent {
-    vec2 pos;
-    bool state;
-    bool dblclick;
-    
+    core::vec2 pos;
+    core::vec2 delta; // (moving ? pos - last mouse event pos : 0,0)
+    float  wheel;
+    uint8_t state; // bitfield of MouseState 
 };
+
 struct KeyboardEvent {
     Key key;
     bool state;
@@ -216,7 +229,10 @@ public:
     virtual ~WindowBackend() {}
 
     virtual bool messagePump() = 0;
+
     virtual void* nativeWindow() = 0;
+    virtual uint32_t width() const = 0;
+    virtual uint32_t height() const = 0;
 };
 
 
@@ -237,6 +253,9 @@ public:
     void* nativeWindow() {
         return _backend->nativeWindow();
     }
+
+    uint32_t width() const;
+    uint32_t height() const;
 
     void onResize(const ResizeEvent & e);
     void onPaint(const PaintEvent& e);

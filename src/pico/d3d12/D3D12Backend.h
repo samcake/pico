@@ -82,8 +82,12 @@ namespace pico {
 
         BufferPointer createBuffer(const BufferInit& init) override;
 
+        TexturePointer createTexture(const TextureInit& init) override;
+
         ShaderPointer createShader(const ShaderInit& init) override;
         ShaderPointer createProgram(const ProgramInit& init) override;
+
+        SamplerPointer createSampler(const SamplerInit& init) override;
 
         PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
    
@@ -133,13 +137,19 @@ namespace pico {
         void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) override;
         void endPass() override;
 
-        void clear(const SwapchainPointer& swapchain, uint8_t index, const vec4& color, float depth) override;
+        void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) override;
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
+        void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const BufferPointer& buffer) override;
+        void resourceBarrierTransition(
+            ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
+            const TexturePointer& buffer, uint32_t subresource) override;
 
-        void setViewport(const vec4& viewport) override;
-        void setScissor(const vec4& scissor) override;
+        void setViewport(const core::vec4& viewport) override;
+        void setScissor(const core::vec4& scissor) override;
 
         void setPipeline(const PipelineStatePointer& pipeline) override;
         void bindDescriptorSet(const DescriptorSetPointer& descriptorSet) override;
@@ -149,6 +159,8 @@ namespace pico {
 
         void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
+
+        void uploadTexture(const TexturePointer& dest, const BufferPointer& src) override;
 
         ComPtr<ID3D12GraphicsCommandList> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
@@ -169,12 +181,24 @@ namespace pico {
         D3D12BufferBackend();
         virtual ~D3D12BufferBackend();
 
-        ComPtr<ID3D12Resource> _buffer;
+        ComPtr<ID3D12Resource> _resource;
 
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
+    };
+
+    class D3D12TextureBackend : public Texture {
+    public:
+        friend class D3D12Backend;
+        D3D12TextureBackend();
+        virtual ~D3D12TextureBackend();
+
+        ComPtr<ID3D12Resource> _resource;
+
+        D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
+   
     };
 
     class D3D12ShaderBackend : public Shader {
@@ -186,6 +210,15 @@ namespace pico {
         ComPtr<ID3DBlob> _shaderBlob;
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
+    };
+
+    class D3D12SamplerBackend : public Sampler {
+    public:
+        friend class D3D12Backend;
+        D3D12SamplerBackend();
+        virtual ~D3D12SamplerBackend();
+
+        D3D12_SAMPLER_DESC _samplerDesc;
     };
 
     class D3D12PipelineStateBackend : public PipelineState {
