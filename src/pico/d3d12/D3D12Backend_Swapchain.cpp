@@ -84,25 +84,18 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     swapChainDesc.BufferCount = bufferCount;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
- //  swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_SEQUENTIAL;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
-
     // It is recommended to always allow tearing if tearing support is available.
     swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
     ComPtr<IDXGISwapChain1> swapChain1;
-    {
-        auto r = dxgiFactory4->CreateSwapChainForHwnd(
-            commandQueue.Get(),
-            hWnd,
-            &swapChainDesc,
-            nullptr,
-            nullptr,
-            &swapChain1);
-        if (FAILED(r)) {
-            picoLog() << "Swapchain creation error" << r << std::endl;
-        }
-    }
+    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
+        commandQueue.Get(),
+        hWnd,
+        &swapChainDesc,
+        nullptr,
+        nullptr,
+        &swapChain1));
 
     // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
     // will be handled manually.
@@ -134,13 +127,19 @@ bool CreateSwapchainRenderTargets(ComPtr<ID3D12Device2> device, D3D12SwapchainBa
     sw->_rtvDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    // Setup RTV descriptor to specify sRGB format.
+    D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+   // rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+    rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
     {
         ComPtr<ID3D12Resource> backBuffer;
         ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
-        device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+
+        device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, rtvHandle);
 
         sw->_backBuffers[i] = backBuffer;
 
@@ -248,7 +247,6 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
         for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
         {
             sw->_backBuffers[i].Reset();
-    //        sw->_surfaces[i].Reset();
         }
 
         DXGI_SWAP_CHAIN_DESC swapChainDesc = {};

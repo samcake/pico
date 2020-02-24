@@ -25,7 +25,6 @@
 // SOFTWARE.
 //
 #include "D3D12Backend.h"
-#include "Api.h"
 
 #include <vector>
 
@@ -56,7 +55,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
-    const uint32_t numDescriptors = init._layouts.size();
+    const uint32_t numDescriptors = (uint32_t) init._layouts.size();
     uint32_t cbvsrvuav_count = 0;
     uint32_t sampler_count = 0;
     for (uint32_t i = 0; i < numDescriptors; ++i) {
@@ -253,7 +252,7 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
     descriptorSet->_init = init;
 
     auto layout = static_cast<const D3D12DescriptorSetLayoutBackend*>(init._layout.get());
-    uint32_t numDescriptors = layout->_init._layouts.size();
+    uint32_t numDescriptors = (uint32_t) layout->_init._layouts.size();
     uint32_t cbvsrvuav_count = layout->cbvsrvuav_count;
     uint32_t sampler_count = layout->sampler_count;
 
@@ -333,7 +332,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
 */
 
     
-    uint32_t write_count = objects.size();
+    uint32_t write_count = (uint32_t) objects.size();
    // Bail if there's nothing to write
     if (0 == write_count) {
         return;

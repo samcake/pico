@@ -26,7 +26,8 @@
 //
 #include "Batch.h"
 
-using namespace pico;
+namespace pico
+{
 
 Batch::Batch() {
 
@@ -53,18 +54,19 @@ void Batch::resourceBarrierTransition(
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const TexturePointer& buffer, uint32_t subresource) {}
+    
+void Batch::setViewport(const core::vec4& viewport) {}
+void Batch::setScissor(const core::vec4& scissor) {}
 
-void Batch::setViewport(core::vec4& viewport) {}
-void Batch::setScissor(core::vec4& scissor) {}
+void Batch::setPipeline(const PipelineStatePointer& pipeline) {}
+void Batch::bindDescriptorSet(const DescriptorSetPointer& descriptorSet) {}
 
-void Batch::setPipeline(PipelineStatePointer pipeline) {}
-void Batch::bindDescriptorSet(DescriptorSetPointer descriptorSet) {}
-
-void Batch::bindIndexBuffer(BufferPointer& buffer) {}
-void Batch::bindVertexBuffers(uint32_t num, BufferPointer* buffers) {}
+void Batch::bindIndexBuffer(const BufferPointer& buffer) {}
+void Batch::bindVertexBuffers(uint32_t num, const BufferPointer* buffers) {}
 
 void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
 void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
 
+} // !using namespace pico

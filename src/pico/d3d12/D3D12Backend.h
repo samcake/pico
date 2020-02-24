@@ -35,13 +35,9 @@
 #include "../gpu/Shader.h"
 #include "../gpu/Descriptor.h"
 
-#include "Api.h"
+#include "../Api.h"
 
 #ifdef WIN32
-
-//#define WIN32_LEAN_AND_MEAN
-//#include <Windows.h>
-
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
@@ -52,8 +48,6 @@ using namespace Microsoft::WRL;
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 
-#include <d3d11on12.h>
-
 namespace pico {
     
     class D3D12Backend : public DeviceBackend {
@@ -62,11 +56,7 @@ namespace pico {
         D3D12Backend();
         virtual ~D3D12Backend();
 
-        void createD3D11Wrapper();
-
         static const uint8_t CHAIN_NUM_FRAMES = 3;
-        ComPtr<ID3D11On12Device> _d3d11On12Device;
-        ComPtr<ID3D11DeviceContext> _d3d11DeviceContext;
 
         // DirectX 12 Objects
         ComPtr<ID3D12Device2> _device;
@@ -158,14 +148,14 @@ namespace pico {
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const TexturePointer& buffer, uint32_t subresource) override;
 
-        void setViewport(core::vec4& viewport) override;
-        void setScissor(core::vec4& scissor) override;
+        void setViewport(const core::vec4& viewport) override;
+        void setScissor(const core::vec4& scissor) override;
 
-        void setPipeline(PipelineStatePointer pipeline) override;
-        void bindDescriptorSet(DescriptorSetPointer descriptorSet) override;
+        void setPipeline(const PipelineStatePointer& pipeline) override;
+        void bindDescriptorSet(const DescriptorSetPointer& descriptorSet) override;
 
-        void bindIndexBuffer(BufferPointer& buffer) override;
-        void bindVertexBuffers(uint32_t num, BufferPointer* buffers) override;
+        void bindIndexBuffer(const BufferPointer& buffer) override;
+        void bindVertexBuffers(uint32_t num, const BufferPointer* buffers) override;
 
         void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;

@@ -107,7 +107,10 @@ namespace pico {
         void presentSwapchain(const SwapchainPointer& swapchain);
 
     private:
+#pragma warning(push)
+#pragma warning(disable: 4251)
         std::unique_ptr<DeviceBackend> _backend;
+#pragma warning(pop)
 
     };
 }

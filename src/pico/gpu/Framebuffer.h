@@ -29,11 +29,7 @@
 #include "../Forward.h"
 
 #include "Device.h"
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
-#endif 
+ 
 
 namespace pico {
 
@@ -42,9 +38,7 @@ namespace pico {
         uint32_t height;
 
         
-#ifdef WIN32
-        HWND hWnd;
-#endif
+
     };
 
     class Framebuffer {

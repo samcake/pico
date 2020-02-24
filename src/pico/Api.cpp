@@ -27,7 +27,6 @@
 #include "Api.h"
 
 #include "gpu/Device.h"
-#include "window/Window.h"
 
 using namespace pico;
 
@@ -68,10 +67,8 @@ void api::destroy() {
 }
 
 #ifdef WIN32
-#ifdef PICO_SUPPORT_MFC
 HMODULE api::getResourceHandle() {
     return reinterpret_cast<HMODULE>(&__ImageBase);
 }
-#endif
 #endif
 

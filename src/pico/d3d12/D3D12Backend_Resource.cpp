@@ -177,6 +177,7 @@ BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
 D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& init) {
 
     // TODO: Should get all that from the init
+   // auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
     auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     auto texDimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 
@@ -197,7 +198,7 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     desc.Height = init.height;
     desc.DepthOrArraySize = 1;
     desc.MipLevels = (UINT16)1;
-    desc.Format = d3d12Format;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; //d3d12Format;
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;
     desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;

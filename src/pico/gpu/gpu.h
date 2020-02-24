@@ -42,15 +42,6 @@ namespace pico {
         COUNT,
     };
 
-    enum class Topology : uint8_t {
-        POINT,
-        LINE,
-        TRIANGLE,
-        TRIANGLE_STRIP,
-
-        COUNT,
-    };
-
     enum class AttribFormat : uint8_t {
         UINT32,
         VEC3,
@@ -202,7 +193,7 @@ namespace pico {
         StreamLayout(Base* base) : _base(base) {}
 
     public:
-        StreamLayout() {}
+        StreamLayout() : _base(new Instanced<0, 0>(Attribs_0(), AttribBufferViews_0())) {} // Simple constructor build an ampty stream layout
 
         std::shared_ptr<Base> _base{ nullptr };
 

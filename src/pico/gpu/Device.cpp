@@ -38,11 +38,6 @@ DevicePointer Device::createDevice(const DeviceInit& init) {
     if (init.backend.compare("D3D12") == 0 ) {
         device = std::make_shared<Device>(new D3D12Backend());
     }
-    else if (init.backend.compare("D3D12-GDI") == 0) {
-        auto d3d12Backend = new D3D12Backend();
-        device = std::make_shared<Device>(d3d12Backend);
-        d3d12Backend->createD3D11Wrapper();
-    }
 
     return device;
 }

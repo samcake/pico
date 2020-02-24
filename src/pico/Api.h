@@ -54,13 +54,14 @@ namespace pico {
 
 
 #ifdef WIN32
-#ifdef PICO_SUPPORT_MFC
         static HMODULE getResourceHandle();
-#endif
 #endif
 
     private: 
+#pragma warning(push)
+#pragma warning(disable: 4251)
         static std::unique_ptr<api> _instance;
+#pragma warning(pop)
         ApiInit _init;
 
     };

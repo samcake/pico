@@ -27,7 +27,6 @@
 #include "D3D12Backend.h"
 #include <fstream>
 #include <sstream>
-#include "Api.h"
 
 #include <vector>
 

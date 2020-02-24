@@ -127,12 +127,12 @@ struct GDCRenderer {
         pixelBuffer = device->createBuffer(bufferInit);
     }
     
-    void render() {
+    void render(float t) {
         HBITMAP old_bitmap = (HBITMAP)SelectObject(hdcOffscreen, bitmap);
 
         TRIVERTEX vertices[2];
         ZeroMemory(&vertices, sizeof(vertices));
-        vertices[0].Red = 0xFF00;
+        vertices[0].Red = uint16_t(0xFF00 * t);
         vertices[0].Green = 0x0000;
         vertices[0].Blue = 0x0000;
         vertices[0].x = 0;
@@ -152,7 +152,15 @@ struct GDCRenderer {
         GradientFill(hdcOffscreen, vertices, 2, rects, 1, GRADIENT_FILL_RECT_V);
         //    BitBlt(hdc, 0, 0, c_nWndWidth, c_nWndHeight, hdcOffscreen, 0, 0, SRCCOPY);
 
-
+        std::string text = "Ca Marche ";
+        RECT rect;
+        SetTextColor(hdcOffscreen, 0xFFFFFFFF);
+        SetBkMode(hdcOffscreen, TRANSPARENT);
+        rect.left = 0;
+        rect.top = 100;
+        rect.bottom = 300;
+        rect.right = 500;
+        DrawText(hdcOffscreen, text.c_str(), text.length(), &rect, DT_SINGLELINE | DT_NOCLIP);
 
         // Lock 
         char* lpbitmap = (char*)GlobalLock(hDIB);
@@ -221,10 +229,10 @@ int main(int argc, char *argv[])
     // Let's allocate buffer
     // quad
     std::vector<float> vertexData = {
-        -0.25f,  0.25f, 0.0f, 1.0f,
+        -0.25f,  1.0f, 0.0f, 1.0f,
         -0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f,  0.25f, 0.0f, 1.0f,
+        1.0f, -0.25f, 0.0f, 1.0f,
+        1.0f,  1.0f, 0.0f, 1.0f,
     };
 
     vertexData[4 * 0 + 0] += 0.5f;
@@ -386,7 +394,7 @@ int main(int argc, char *argv[])
             elapsedSeconds = 0.0;
         }
 
-        gdcRenderer->render();
+        gdcRenderer->render(frameCounter / 60.0f);
 
         
 

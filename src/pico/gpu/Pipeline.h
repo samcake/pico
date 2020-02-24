@@ -31,7 +31,7 @@
 
 namespace pico {
 
-    struct PipelineStateInit {
+    struct VISUALIZATION_API PipelineStateInit {
         ShaderPointer program;
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
@@ -39,7 +39,7 @@ namespace pico {
         bool depth { false };
     };
 
-    class PipelineState {
+    class VISUALIZATION_API PipelineState {
     protected:
         // PipelineState is created from the device
         friend class Device;
@@ -51,11 +51,11 @@ namespace pico {
         ShaderPointer _program;
     };
 
-    struct SamplerInit {
+    struct VISUALIZATION_API SamplerInit {
 
     };
 
-    class Sampler {
+    class VISUALIZATION_API Sampler {
     protected:
         // Sampler is created from the device
         friend class Device;

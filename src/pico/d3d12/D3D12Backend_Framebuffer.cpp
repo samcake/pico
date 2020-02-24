@@ -25,7 +25,6 @@
 // SOFTWARE.
 //
 #include "D3D12Backend.h"
-#include "Api.h"
 
 #include <vector>
 
