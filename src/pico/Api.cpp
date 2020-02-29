@@ -71,6 +71,30 @@ void api::destroy() {
 HMODULE api::getResourceHandle() {
     return reinterpret_cast<HMODULE>(&__ImageBase);
 }
-#endif
-#endif
 
+// load from resources
+std::string pico::api::loadTextResources(unsigned short resource_id)
+{
+    HMODULE instance = getResourceHandle();
+    HRSRC hresource = FindResource(instance, MAKEINTRESOURCE(resource_id), _T("TEXT"));
+    if (!hresource)
+        return "";
+
+    // load resource
+    HGLOBAL hloadedresource = LoadResource(instance, hresource);
+    if (!hloadedresource)
+        return "";
+
+    // lock and read 
+    LPVOID plockedresource = LockResource(hloadedresource);
+    if (!plockedresource)
+        return "";
+
+    DWORD resource_size = SizeofResource(instance, hresource);
+    if (!resource_size)
+        return "";
+
+    return std::string((char*) plockedresource, resource_size);
+}
+#endif
+#endif

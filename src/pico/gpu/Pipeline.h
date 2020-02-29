@@ -37,6 +37,7 @@ namespace pico {
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
         DescriptorSetLayoutPointer descriptorSetLayout;
         bool depth { false };
+        bool blend { false };
     };
 
     class VISUALIZATION_API PipelineState {

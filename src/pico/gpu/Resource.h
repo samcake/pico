@@ -45,6 +45,7 @@ namespace pico {
         ResourceUsage usage;
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
+        bool swapchainable {false};
 
         // VertexBuffer
         uint32_t vertexStride { 0 };

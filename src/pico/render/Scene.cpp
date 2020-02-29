@@ -26,13 +26,22 @@
 //
 #include "Scene.h"
 
-using namespace pico;
+namespace pico {
 
 Scene::Scene() {
 
 }
 
 Scene::~Scene() {
+
+}
+
+Item Scene::_createItem(Item& newItem) {
+    _items.emplace_back(newItem);
+
+ 
+    return _items.back();
+}
 
 }
 

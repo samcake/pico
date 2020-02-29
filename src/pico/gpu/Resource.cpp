@@ -36,7 +36,11 @@ Resource::~Resource() {
 
 }
 
-Buffer::Buffer() {
+Buffer::Buffer() :
+	_init{},
+	_bufferSize(0),
+	_cpuMappedAddress(nullptr)
+{
 
 }
 
@@ -44,7 +48,11 @@ Buffer::~Buffer() {
 
 }
 
-Texture::Texture() {
+Texture::Texture() :
+	_init{},
+	_bufferSize(0),
+	_cpuMappedAddress(nullptr)
+{
 
 }
 

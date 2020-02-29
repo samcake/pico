@@ -55,6 +55,7 @@ namespace pico {
 
 #ifdef WIN32
         static HMODULE getResourceHandle();
+        static std::string loadTextResources(unsigned short resource_id);
 #endif
 
     private: 

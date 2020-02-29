@@ -28,7 +28,10 @@
 
 using namespace pico;
 
-Shader::Shader() {
+Shader::Shader():
+	_shaderDesc{},
+	_programDesc{}
+{
 
 }
 

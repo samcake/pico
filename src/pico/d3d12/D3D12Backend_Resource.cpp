@@ -37,6 +37,11 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         auto numBlocks = ((uint32_t) init.bufferSize) / 256;
 
         bufferSize = (numBlocks + 1) * 256;
+
+        if (init.swapchainable) {
+            
+            bufferSize *= D3D12Backend::CHAIN_NUM_FRAMES;
+        }
     }
 
     D3D12_RESOURCE_DIMENSION res_dim = D3D12_RESOURCE_DIMENSION_BUFFER;

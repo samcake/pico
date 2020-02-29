@@ -27,23 +27,89 @@
 #include "Viewport.h"
 
 #include "Scene.h"
+#include "Camera.h"
 #include "Renderer.h"
 #include "../gpu/Swapchain.h"
+#include "../gpu/Batch.h"
+
 
 using namespace pico;
 
-Viewport::Viewport(const CameraPointer& camera, const RendererPointer& renderer, const SwapchainPointer& swapchain) :
+Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device) :
+    _scene(scene),
     _camera(camera),
-    _renderer(renderer),
-    _swapchain(swapchain)
+    _device(device)
 {
+    // Configure the Camera to look at the scene
+    _camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
+    _camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
+    _camera->setEye(_camera->getBack() * 10.0f);
+    _camera->setFar(100.0f);
 
+    // Let s allocate a gpu buffer managed by the Camera
+    _camera->allocateGPUData(_device);
+    //auto render = std::bind(&Viewport::_renderCallback, this);
+
+    _renderer = std::make_shared<Renderer>(device,
+         [this] (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
+             this->_renderCallback(camera, swapchain, device, batch); 
+          });
 }
 
 Viewport::~Viewport() {
 
 }
 
-void Viewport::render() {
-    _renderer->render(_camera, _swapchain);
+void Viewport::present(const SwapchainPointer& swapchain) {
+    _renderer->render(_camera, swapchain);
+}
+
+void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
+    static float time = 0.0f;
+    time += 1.0f / 60.0f;
+    float intPart;
+    float timeNorm = modf(time, &intPart);
+
+    auto currentIndex = swapchain->currentIndex();
+    camera->updateGPUData();
+
+    batch->begin(currentIndex);
+
+    batch->resourceBarrierTransition(
+        pico::ResourceBarrierFlag::NONE,
+        pico::ResourceState::PRESENT,
+        pico::ResourceState::RENDER_TARGET,
+        swapchain, currentIndex, -1);
+
+    core::vec4 clearColor(14 / 255.f, 14.f / 255.f, 45.f / 255.f, 1.f);
+    batch->clear(swapchain, currentIndex, clearColor);
+
+    batch->beginPass(swapchain, currentIndex);
+
+    batch->setViewport(camera->getViewportRect());
+    batch->setScissor(camera->getViewportRect());
+
+    this->renderScene(camera, swapchain, device, batch);
+
+    batch->endPass();
+
+    batch->resourceBarrierTransition(
+        pico::ResourceBarrierFlag::NONE,
+        pico::ResourceState::RENDER_TARGET,
+        pico::ResourceState::PRESENT,
+        swapchain, currentIndex, -1);
+
+    batch->end();
+
+    device->executeBatch(batch);
+
+    device->presentSwapchain(swapchain);
+}
+
+void Viewport::renderScene(const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+    for (int i = 1; i < _scene->getItems().size(); i++) {
+        getDrawable(_scene->getItems()[i])->_renderCallback(camera, swapchain, device, batch);
+    }
+
+    if (_scene->getItems().size() > 0) getDrawable(_scene->getItems()[0])->_renderCallback(camera, swapchain, device, batch);
 }

@@ -31,12 +31,6 @@
 
 namespace pico {
 
-    // Renderer concrete backend implementation
-    class VISUALIZATION_API RendererBackend {
-    public:
-        virtual ~RendererBackend() {}
-    };
-
     using RenderCallback = std::function<void (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch)>;
 
     class VISUALIZATION_API Renderer {
@@ -53,8 +47,6 @@ namespace pico {
         BatchPointer _batch;
         RenderCallback _callback;
 
-    private:
-        std::unique_ptr<RendererBackend> _backend;
 #pragma warning(pop)
     };
 }

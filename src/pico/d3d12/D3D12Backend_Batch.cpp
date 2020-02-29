@@ -147,6 +147,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
     barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
     barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
     _commandList->ResourceBarrier(1, &barrier);
 }
 void D3D12BatchBackend::resourceBarrierTransition(
