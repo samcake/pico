@@ -28,9 +28,9 @@
 
 #include "../Forward.h"
 #include <vector>
+#include "../core/LinearAlgebra.h"
 
 #include "Renderer.h"
-#include "core/LinearAlgebra.h"
 
 namespace pico {
 

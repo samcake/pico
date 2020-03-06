@@ -40,9 +40,9 @@
 #include <pico/gpu/Swapchain.h>
 
 #include <pico/render/Renderer.h>
+#include <pico/render/Mesh.h>
 
 #include <pico/content/PointCloud.h>
-#include <pico/content/Mesh.h>
 
 
 #include <vector>

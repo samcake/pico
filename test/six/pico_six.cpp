@@ -42,9 +42,10 @@
 
 #include <pico/render/Renderer.h>
 #include <pico/render/Camera.h>
+#include <pico/render/Mesh.h>
+#include <pico/render/Scene.h>
 
 #include <pico/content/PointCloud.h>
-#include <pico/content/Mesh.h>
 
 #include <vector>
 
@@ -74,16 +75,25 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    // Some content, why not a pointcloud ?
+    auto pointCloud = createPointCloud(cloudPointFile);
+
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
     auto gpuDevice = pico::Device::createDevice(deviceInit);
 
+    // Second a Scene
+    auto scene = std::shared_ptr<pico::Scene>();
+    
+    // a drawable from the pointcloud
+    auto pcd = PointCloudDrawable(pointCloud);
+
+    auto pointCloudDrawable = std::make_shared<pico::PointCloudDrawable>();
+    pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, my_new_pointcloud);
+    auto item = scene->createItem(pointcloudDrawable);
 
     // Content creation
     float doAnimate = 1.0f;
-
-    // Some content, why not a pointcloud ?
-    auto pointCloud = createPointCloud(cloudPointFile);
 
     // Step 1, create a Mesh from the point cloud data
 

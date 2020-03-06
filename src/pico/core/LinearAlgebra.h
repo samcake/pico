@@ -256,5 +256,20 @@ namespace core
         }
     };
 
+
+
+
+    struct Bounds {
+        vec3 _minPos{ 0.0f };
+        vec3 _maxPos{ 0.0f };
+        vec3 _midPos{ 0.0f };
+
+        const vec3& minPos() const { return _minPos; }
+        const vec3& maxPos() const { return _maxPos; }
+        const vec3& midPos() const { return _midPos; }
+
+    };
+
+
 }
 
