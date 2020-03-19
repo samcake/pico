@@ -108,8 +108,16 @@ void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPoint
 
 void Viewport::renderScene(const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
     for (int i = 1; i < _scene->getItems().size(); i++) {
-        getDrawable(_scene->getItems()[i])->_renderCallback(camera, swapchain, device, batch);
+        auto& item = _scene->getItems()[i];
+        if (item.isValid() && item.isVisible()) {
+            getDrawable(_scene->getItems()[i])->draw(camera, swapchain, device, batch);
+        }
     }
 
-    if (_scene->getItems().size() > 0) getDrawable(_scene->getItems()[0])->_renderCallback(camera, swapchain, device, batch);
+    if (_scene->getItems().size() > 0) {
+        auto item0 = _scene->getItems()[0];
+        if (item0.isValid() && item0.isVisible()) {
+            getDrawable(_scene->getItems()[0])->draw(camera, swapchain, device, batch);
+        }
+    }
 }

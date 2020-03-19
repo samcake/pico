@@ -58,6 +58,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
     const uint32_t numDescriptors = (uint32_t) init._layouts.size();
     uint32_t cbvsrvuav_count = 0;
     uint32_t sampler_count = 0;
+    uint32_t push_count = 0;
     for (uint32_t i = 0; i < numDescriptors; ++i) {
         uint32_t count = init._layouts[i]._count;
         switch (init._layouts[i]._type) {
@@ -69,6 +70,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         case DescriptorType::TEXTURE_UAV: cbvsrvuav_count += count; break;
         case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV: cbvsrvuav_count += count; break;
         case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: cbvsrvuav_count += count; break;
+        case DescriptorType::PUSH_UNIFORM: push_count += count; break;
         }
     }
 
@@ -98,6 +100,10 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
         param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        if (descriptor._type == DescriptorType::PUSH_UNIFORM) {
+            param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+            param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+        }
 
         // Start out with visibility on all shader stages
         param_11->ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
@@ -171,6 +177,18 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
             assign_range = true;
         }
                                             break;
+        case DescriptorType::PUSH_UNIFORM: {
+           // range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+           // range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+            assign_range = false;
+            param_11->Constants.RegisterSpace = 0;
+            param_11->Constants.Num32BitValues = descriptor._count;
+            param_11->Constants.ShaderRegister = descriptor._binding;
+            param_10->Constants.RegisterSpace = 0;
+            param_10->Constants.Num32BitValues = descriptor._count;
+            param_10->Constants.ShaderRegister = descriptor._binding;
+        }
+                                        break;
         }
 
         if (assign_range) {
@@ -190,12 +208,11 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
 
             param_10->DescriptorTable.pDescriptorRanges = range_10;
             param_10->DescriptorTable.NumDescriptorRanges = 1;
-
-            descriptorLayout->_dxParamIndices[descriptor_index] = parameter_count;
-
             ++range_count;
-            ++parameter_count;
         }
+
+        descriptorLayout->_dxParamIndices[descriptor_index] = parameter_count;
+        ++parameter_count;
     }
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc;
@@ -341,10 +358,16 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
     auto dxDescriptorSetLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (dxDescriptorSet->_init._layout.get());
     picoAssert(objects.size() == dxDescriptorSet->_dxHeapOffsets.size());
 
+    uint32_t objectId = 0;
     for (uint32_t i = 0; i < dxDescriptorSet->_dxHeapOffsets.size(); ++i) {
         //tr_descriptor* descriptor = &(p_descriptor_set->descriptors[i]);
         auto& descriptorLayout = dxDescriptorSetLayout->_init._layouts[i];
-        auto& descriptorObject = objects[i];
+        if (descriptorLayout._type == DescriptorType::PUSH_UNIFORM) {
+            continue;
+        }
+
+        auto& descriptorObject = objects[objectId];
+        objectId++;
 
   /*      if ((NULL == descriptor->samplers) && (NULL == descriptor->textures) && (NULL == descriptor->uniform_buffers)) {
             continue;

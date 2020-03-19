@@ -31,7 +31,7 @@
 
 namespace pico {
 
-    using RenderCallback = std::function<void (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch)>;
+    using RenderCallback = std::function<void(const CameraPointer & camera, const SwapchainPointer & swapchain, const DevicePointer & device, const BatchPointer & batch)>;
 
     class VISUALIZATION_API Renderer {
     public:

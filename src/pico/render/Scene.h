@@ -28,11 +28,18 @@
 
 #include "../Forward.h"
 #include <vector>
+#include <unordered_map>
 #include "../core/LinearAlgebra.h"
 
 #include "Renderer.h"
 
 namespace pico {
+  
+    using DrawObjectCallback = std::function<void(  const core::mat4x3 & transform,
+                                                    const CameraPointer & camera,
+                                                    const SwapchainPointer & swapchain,
+                                                    const DevicePointer & device,
+                                                    const BatchPointer & batch)>;
 
     // Here we define the DrawcallObject as the container of the various pico gpu objects we need to render a pointcloud.
     // this will evolve and probably clean up over time and move the genralized concepts in the visualization library
@@ -40,14 +47,19 @@ namespace pico {
     public:
 #pragma warning(push)
 #pragma warning(disable: 4251)
-        RenderCallback _renderCallback;
+        DrawObjectCallback _drawCallback;
         core::Bounds _bounds;
+        core::mat4x3 _transform;
 
 #pragma warning(pop)
 
-        DrawcallObject() : _renderCallback(nullptr) {}
-        DrawcallObject(RenderCallback callback) : _renderCallback(callback) {}
+        DrawcallObject() : _drawCallback(nullptr) {}
+        DrawcallObject(DrawObjectCallback callback) : _drawCallback(callback) {}
 
+        void draw(const CameraPointer& camera,
+            const SwapchainPointer& swapchain,
+            const DevicePointer& device,
+            const BatchPointer& batch);
     };
     using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
 
@@ -62,11 +74,14 @@ namespace pico {
     using ItemID = uint32_t;
 
     class VISUALIZATION_API Item {
+        Item() { } // invalid
+        friend class Scene;
     public:
         static const ItemID INVALID_ITEM_ID{ 0xFFFFFFFF };
+        static Item null;
 
-        template <typename T> Item(ItemID id, T x):
-            _id(id),
+        template <typename T> Item(uint32_t index, T x):
+            _index(index),
             _self(std::make_shared<Model<T>>(std::move(x))) {
         }
 
@@ -78,11 +93,23 @@ namespace pico {
             return x._self->_getDrawable();
         }
 
+        bool isValid() const { return (_self != nullptr); }
+
+        uint32_t getIndex() const { return _index; }
+
+        bool isVisible() const { return _self->isVisible(); }
+        void setVisible(bool visible) { _self->setVisible(visible); }
+
     private:
         struct Concept{
             virtual ~Concept() = default;
             virtual void _log(std::ostream& out, size_t position) const = 0;
             virtual DrawcallObjectPointer _getDrawable() const = 0;
+
+            bool isVisible() const { return _isVisible; }
+            void setVisible(bool visible) const { _isVisible = visible; }
+            
+            mutable bool _isVisible { true };
         };
         template <typename T> struct Model final : Concept {
             Model(T x) : _data(std::move(x)) {}
@@ -94,13 +121,14 @@ namespace pico {
              }
              T _data;
         };
-        ItemID _id { INVALID_ITEM_ID };
+        uint32_t _index { INVALID_ITEM_ID };
 #pragma warning(push)
 #pragma warning(disable: 4251)
         std::shared_ptr<const Concept> _self;
 #pragma warning(pop)
     };
     using Items = std::vector<Item>;
+    using IDToIndices = std::unordered_map<ItemID, uint32_t>;
 
 
     class VISUALIZATION_API Scene {
@@ -109,23 +137,29 @@ namespace pico {
         ~Scene();
 
         template <typename T>
-        Item createItem(T& x) {
-            return _createItem(Item((ItemID)_items.size(), x));
+        Item createItem(T& x, ItemID userID = Item::INVALID_ITEM_ID) {
+            return _createItem(Item((uint32_t)_items.size(), x), userID);
         }
 
+        void deleteAllItems();  // delete all user objects
+        void deleteAll();
+        Item deleteItem(ItemID id);
 
-        const Items& getItems() const { return _items; }
+        Item getItemFromID(ItemID id) const;
+        const Items& getItems() const { return _items; } // THe all items, beware this contains  INVALID items
+        const Item& getValidItemAt(uint32_t startIndex) const;
 
         const core::Bounds& getBounds() const { return _bounds; }
     protected:
 #pragma warning(push)
 #pragma warning(disable: 4251)
         Items _items;
+        IDToIndices _idToIndices;
 #pragma warning(pop)
 
         core::Bounds _bounds;
 
-        Item _createItem(Item& newItem);
+        Item _createItem(Item& newItem, ItemID userID);
     };
 
     class Geometry {

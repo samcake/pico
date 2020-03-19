@@ -49,22 +49,22 @@ namespace pico
         picoAssert(posBufferBegin != nullptr);
 
         auto positionBegin = reinterpret_cast<const core::vec3*> (posBufferBegin);
-        _minPos = _maxPos = _midPos = (*positionBegin);
+        _bounds._minPos = _bounds._maxPos = _bounds._midPos = (*positionBegin);
 
         for (uint32_t i = 1; i < numVertices; ++i) {
 
             auto bufferOffset = posBufferBegin + (i * posStride);
             auto position = reinterpret_cast<const core::vec3*> (bufferOffset);
-            _minPos.x = std::min(position->x, _minPos.x);
-            _minPos.y = std::min(position->y, _minPos.y);
-            _minPos.z = std::min(position->z, _minPos.z);
-            _maxPos.x = std::max(position->x, _maxPos.x);
-            _maxPos.y = std::max(position->y, _maxPos.y);
-            _maxPos.z = std::max(position->z, _maxPos.z);
-            _midPos = _midPos + (*position);
+            _bounds._minPos.x = std::min(position->x, _bounds._minPos.x);
+            _bounds._minPos.y = std::min(position->y, _bounds._minPos.y);
+            _bounds._minPos.z = std::min(position->z, _bounds._minPos.z);
+            _bounds._maxPos.x = std::max(position->x, _bounds._maxPos.x);
+            _bounds._maxPos.y = std::max(position->y, _bounds._maxPos.y);
+            _bounds._maxPos.z = std::max(position->z, _bounds._maxPos.z);
+            _bounds._midPos = _bounds._midPos + (*position);
         }
 
-        _midPos = _midPos * (1.0f / (float)numVertices);
+        _bounds._midPos = _bounds._midPos * (1.0f / (float)numVertices);
     }
 
 

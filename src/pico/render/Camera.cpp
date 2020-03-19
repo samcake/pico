@@ -244,6 +244,20 @@ void Camera::pan(float deltaRight, float deltaUp) {
     view.setEye( view.eye() + view.right() * deltaRight + view.up() * deltaUp );
 }
 
+void Camera::boom(float deltaBack) {
+    WriteLock();
+    auto oriView = _camData._data._view;
+    auto& nextView = _camData._data._view;
+
+    // PE is the vector from Pivot to Eye position
+    auto boomVecWS = oriView.back() * (deltaBack);
+    auto pivotWS = oriView.eye() + boomVecWS;
+
+     // translate by the pivot point to recover world space
+    nextView.setEye(pivotWS);
+
+}
+
 void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
     WriteLock();
     auto oriView = _camData._data._view;

@@ -109,6 +109,7 @@ namespace pico {
 
         virtual void setPipeline(const PipelineStatePointer& pipeline);
         virtual void bindDescriptorSet(const DescriptorSetPointer& descriptorSet);
+        virtual void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data);
 
         virtual void bindIndexBuffer(const BufferPointer& buffer);
         virtual void bindVertexBuffers(uint32_t num, const BufferPointer* buffers);

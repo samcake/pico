@@ -58,7 +58,8 @@ namespace pico
 
         // Let's describe the pipeline Descriptors layout
         pico::DescriptorLayouts descriptorLayouts{
-            { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1}
+            { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
+            { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(core::mat4x3) >> 2},
         };
 
         pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -106,21 +107,21 @@ namespace pico
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        pico::RenderCallback renderCallback = [pipeline, vertexBuffer, descriptorSet, numVertices](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+        pico::DrawObjectCallback drawCallback = [pipeline, vertexBuffer, descriptorSet, numVertices](const core::mat4x3& transform, const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
             batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
             batch->bindVertexBuffers(1, &vertexBuffer);
 
-
             batch->bindDescriptorSet(descriptorSet);
+            batch->bindPushUniform(1, sizeof(core::mat4x3), (const uint8_t*) transform.data());
 
             batch->draw(numVertices, 0);
         };
-        auto drawcall = new pico::DrawcallObject(renderCallback);
+        auto drawcall = new pico::DrawcallObject(drawCallback);
         drawcall->_bounds = mesh->_bounds;
+        drawcall->_transform = pointCloud->_transform;
         _drawcall = pico::DrawcallObjectPointer(drawcall);
-
 
         return _drawcall;
     }

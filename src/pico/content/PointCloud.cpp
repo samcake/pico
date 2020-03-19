@@ -224,18 +224,29 @@ namespace pico
         auto numVertProperties = vertexElement.second.size();
         auto numVertices = vertexElement.first.count;
         int vertexAttribOffset = 0;
-        std::vector<uint32_t> propertyOffsets(numVertProperties);
+        std::vector<uint32_t> propertyOffsets(numVertProperties + 1);
         for (int a = 0; a < numVertProperties; ++a) {
             const auto* prop = vertexElement.second.data() + a;
             propertyOffsets[a] = vertexAttribOffset;
             vertexAttribOffset += Type::sizeOf(prop->type.name);
         }
+        propertyOffsets[numVertProperties] = vertexAttribOffset;
 
 
         int vertexPositionPropIndex = -1;
         int vertexNormalPropIndex = -1;
         int vertexColorPropIndex = -1;
         int vertexAlphaPropIndex = -1;
+        
+        int vertexPositionByteOffset = -1;
+        int vertexNormalByteOffset = -1;
+        int vertexColorByteOffset = -1;
+        int vertexAlphaByteOffset = -1;
+
+        int vertexPositionByteSize =-1;
+        int vertexNormalByteSize = -1;
+        int vertexColorByteSize = -1;
+        int vertexAlphaByteSize = -1;
 
         for (int a = 0; a < numVertProperties; ++a) {
             const auto* prop = vertexElement.second.data() + a;
@@ -252,6 +263,8 @@ namespace pico
                     ) {
                     // this is the vertex position 
                     vertexPositionPropIndex = a;
+                    vertexPositionByteOffset = propertyOffsets[vertexPositionPropIndex];
+                    vertexPositionByteSize = propertyOffsets[vertexPositionPropIndex + 3] - vertexPositionByteOffset;
                 }
             }
             // detect normal with 'nx'
@@ -267,6 +280,9 @@ namespace pico
                     ) {
                     // this is the vertex normal 
                     vertexNormalPropIndex = a;
+                    vertexNormalByteOffset = propertyOffsets[vertexNormalPropIndex];
+                    vertexNormalByteSize = propertyOffsets[vertexNormalPropIndex + 3] - vertexNormalByteOffset;
+
                 }
             }
             // detect color with 'red'
@@ -282,6 +298,9 @@ namespace pico
                     ) {
                     // this is the vertex color 
                     vertexColorPropIndex = a;
+                    vertexColorByteOffset = propertyOffsets[vertexColorPropIndex];
+                    vertexColorByteSize = propertyOffsets[vertexColorPropIndex + 3] - vertexColorByteOffset;
+
 
                     // if the 4th prop exists and is called alpha then bingo
                     if (
@@ -293,6 +312,9 @@ namespace pico
                         ) {
                         // this is the vertex alpha
                         vertexAlphaPropIndex = a + 3;
+                        vertexAlphaByteOffset = propertyOffsets[vertexAlphaPropIndex];
+                        vertexAlphaByteSize = propertyOffsets[vertexAlphaPropIndex + 1] - vertexAlphaByteOffset;
+                        vertexColorByteSize += vertexAlphaByteSize; // We adjust the color byte size adding the A
                     }
                 }
             }
@@ -303,9 +325,15 @@ namespace pico
             return nullptr;
         }
 
+        // Unknwon data format, exit
+        if (format.name == Format::unknown) {
+            return nullptr;
+        }
+
         // Let's allocate the Points
         Points points;
         size_t verticesByteSize = numVertices * sizeof(Point);
+
 
         if (format.name == Format::ascii) {
             // allocate the vertex size for the expected size
@@ -316,10 +344,12 @@ namespace pico
             while ((v < numVertices) && !asciiStream.eof()) {
                 asciiStream >> vert->pos.x >> vert->pos.y >> vert->pos.z;
                 if (vertexNormalPropIndex > 0) {
-                    asciiStream >> vert->nor.x >> vert->nor.y >> vert->nor.z;
+                    core::vec3 nor;
+                    asciiStream >> nor.x >> nor.y >> nor.z;
+                    // vert->nor = nor;
                 }
                 else {
-                    vert->nor = core::vec3();
+                    //vert->nor = core::vec3();
                 }
                 if (vertexColorPropIndex > 0) {
                     int r, g, b, a(255);
@@ -360,16 +390,67 @@ namespace pico
             auto contentSize = fileBinaries.size() - beginPayloadPos;
             auto contentBegin = fileBinaries.data() + beginPayloadPos;
 
-            switch (format.name) {
-            case Format::binary_little_endian: {
+            uint32_t vertexByteStride = (uint32_t)(contentSize) / numVertices;
+
+            // Understand format layout and binary layout
+            bool formatLayoutMatch = (verticesByteSize == contentSize) && (vertexPositionPropIndex == 0) && (vertexColorPropIndex == 3) && (vertexAlphaPropIndex == 6);
+            bool binaryBigEndian = (format.name == Format::binary_big_endian);
+
+            // THe fast path is when the binary format is exactly what we need for rendering:
+            if (formatLayoutMatch && format.name == Format::binary_little_endian) {
                 points.resize(numVertices);
                 memcpy(points.data(), (void*)contentBegin, verticesByteSize);
-            } break;
-            case Format::binary_big_endian:
-            case Format::ascii:
-            case Format::unknown:
-                return nullptr;
-                break;
+            } else {
+                // The slow path, just like with ascii, we need to read attributes one by one
+  
+                // allocate the vertex size for the expected size
+                points.resize(numVertices);
+                auto vert = reinterpret_cast<Point*>(points.data());
+                // let's parse the vertices walking through the stream
+                uint32_t v = 0;
+
+                auto currentVertByteOffset = contentBegin;
+
+                for (; v < numVertices; v++) {
+                    currentVertByteOffset = contentBegin + v * vertexByteStride;
+
+                    // assume pos is first, no way around
+                    memcpy(vert->pos.data(), currentVertByteOffset + vertexPositionByteOffset, vertexPositionByteSize);
+
+                    if (vertexNormalPropIndex > 0) {
+                        core::vec3 nor;
+                        memcpy(nor.data(), currentVertByteOffset + vertexNormalByteOffset, vertexNormalByteSize);
+                        // vert->nor = nor;
+                    }
+                    else {
+                        //vert->nor = core::vec3();
+                    }
+                    if (vertexColorPropIndex > 0) {
+                        memcpy(vert->color.data(), currentVertByteOffset + vertexColorByteOffset, vertexColorByteSize);
+
+                        if (vertexAlphaPropIndex > 0) {
+                        } else {
+                            vert->color.w = 255;
+                        }
+                    }
+                    else {
+                        vert->color = core::ucvec4(255);
+                    }
+                    vert++;
+                }
+
+                // success probably?
+                if (v <= numVertices) {
+                    if (v < numVertices) {
+                        numVertices = v;
+                        points.resize(numVertices);
+                    }
+                }
+                else {
+                    // something went wrong ?
+                    return nullptr;
+                }
+
             }
         }
 

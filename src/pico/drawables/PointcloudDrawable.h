@@ -1,4 +1,4 @@
-// PointcloudDrawable
+// PointCloudDrawable
 // 
 #pragma once
 #ifndef POINTCLOUD_DRAWABLE_H_
@@ -8,7 +8,9 @@
 #include "../Forward.h"
 #include <memory>
 
-
+namespace core {
+    struct mat4x3;
+}
 namespace document {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
@@ -24,7 +26,7 @@ namespace pico
 
 
     /*
-    const pico::DrawcallObjectPointer& getDrawable(const PointcloudDrawable& x) {
+    const pico::DrawcallObjectPointer& getDrawable(const PointCloudDrawable& x) {
         return x.getDrawable();
     }*/
     class VISUALIZATION_API PointCloudDrawable {
@@ -36,7 +38,7 @@ namespace pico
         pico::DrawcallObjectPointer getDrawable() const;
 
 #pragma warning(push)
-#pragma warning(disable: 4251) // class 'std::shared_ptr<pico::DrawcallObject>' needs to have dll-interface to be used by clients of class 'pico::PointcloudDrawable'
+#pragma warning(disable: 4251) // class 'std::shared_ptr<pico::DrawcallObject>' needs to have dll-interface to be used by clients of class 'pico::PointCloudDrawable'
         pico::DrawcallObjectPointer _drawcall;     
 #pragma warning(pop)
     };

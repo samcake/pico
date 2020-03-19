@@ -261,6 +261,11 @@ void D3D12BatchBackend::bindDescriptorSet(const DescriptorSetPointer& descriptor
     
 }
 
+void D3D12BatchBackend::bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) {
+    _commandList->SetGraphicsRoot32BitConstants(slot, size >> 2, data, 0);
+}
+
+
 void D3D12BatchBackend::bindIndexBuffer(const BufferPointer& buffer) {
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());
     _commandList->IASetIndexBuffer(&dbBuffer->_indexBufferView);
