@@ -33,7 +33,7 @@
 #include "../core/LinearAlgebra.h"
 #include "../dllmain.h"
 
-namespace pico
+namespace document
 {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;

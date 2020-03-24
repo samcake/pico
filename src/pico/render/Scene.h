@@ -67,7 +67,7 @@ namespace pico {
         out << std::string(position, ' ') << std::endl;
     }
 
-    template <typename T> DrawcallObjectPointer getDrawable(const T& x) {
+    template <typename T> DrawcallObjectPointer item_getDrawable(const T& x) {
         return x->getDrawable();
     }
 
@@ -89,6 +89,10 @@ namespace pico {
             x._self->_log(out, position);
         }
 
+        DrawcallObjectPointer getDrawable() const { 
+            return _self->_getDrawable();
+        }
+            
         friend DrawcallObjectPointer getDrawable(const Item& x) {
             return x._self->_getDrawable();
         }
@@ -117,7 +121,7 @@ namespace pico {
                 log(_data, out, position);
              }
              DrawcallObjectPointer _getDrawable() const override {
-                 return getDrawable(_data);
+                 return item_getDrawable(_data);
              }
              T _data;
         };

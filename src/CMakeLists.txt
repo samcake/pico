@@ -10,6 +10,21 @@
 #---------------------------------------------
 # Pico Library
 #---------------------------------------------
+file(GLOB PICO_SHADERS
+    "pico/drawables/*.hlsl"
+)
+
+# for each shaders, pre compile them and add the generated  .h and .cpp to the build
+ foreach( item IN LISTS PICO_SHADERS )
+    get_filename_component(shadername )
+    if( item STREQUAL "" )
+   # set(generated_file ${item})
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${item}.h ${CMAKE_CURRENT_BINARY_DIR}/${item}.cpp
+        COMMAND scribe ${item} -c++ -o ${CMAKE_CURRENT_BINARY_DIR}/${item}
+    )
+endforeach()
+
 
 file(GLOB PICO_HEADERS
     "pico/*.h"

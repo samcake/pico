@@ -32,7 +32,7 @@
 #include <vector>
 
 // using namespace pico;
-namespace pico
+namespace document
 {
 
     PointCloud::PointCloud()
