@@ -42,16 +42,16 @@
 
 #include <pico/render/Renderer.h>
 #include <pico/render/Camera.h>
+#include <pico/render/Mesh.h>
 
 #include <pico/content/PointCloud.h>
-#include <pico/content/Mesh.h>
 
 #include <vector>
 
 //--------------------------------------------------------------------------------------
 
-pico::PointCloudPointer createPointCloud(const std::string& filepath) {
-    return pico::PointCloud::createFromPLY(filepath);
+document::PointCloudPointer createPointCloud(const std::string& filepath) {
+    return document::PointCloud::createFromPLY(filepath);
 }
 
 //--------------------------------------------------------------------------------------
@@ -141,9 +141,9 @@ int main(int argc, char *argv[])
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
     // Scene sphere:
-    auto meshHalfSize = (mesh->_maxPos - mesh->_minPos);
+    auto meshHalfSize = (mesh->_bounds.maxPos() - mesh->_bounds.minPos());
     auto meshHalfDiag = sqrt(core::dot(meshHalfSize, meshHalfSize));
-    core::vec4 sceneSphere(mesh->_midPos, meshHalfDiag);
+    core::vec4 sceneSphere(mesh->_bounds.midPos(), meshHalfDiag);
 
     // A Camera to look at the scene
     auto camera = std::make_shared<pico::Camera>();

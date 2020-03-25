@@ -28,7 +28,10 @@
 
 using namespace pico;
 
-Swapchain::Swapchain() : _currentIndex(0) {
+Swapchain::Swapchain() : 
+    _currentIndex(0),
+    _init{}
+{
 
 }
 

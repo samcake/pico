@@ -103,6 +103,11 @@ namespace pico {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
 
+    class DrawcallObject;
+    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
+
+    class GDI2GPUOverlay;
+    using GDI2GPUOverlayPointer = std::shared_ptr<GDI2GPUOverlay>;
 }
 #define picoLog() ::pico::api::log(__FILE__, __LINE__, __FUNCTION__)
 #define picoAssert(t) ::pico::api::_assert((t), __FILE__, __LINE__, __FUNCTION__)

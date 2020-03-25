@@ -40,18 +40,18 @@
 #include <pico/gpu/Swapchain.h>
 
 #include <pico/render/Renderer.h>
+#include <pico/render/Mesh.h>
 
 #include <pico/content/PointCloud.h>
-#include <pico/content/Mesh.h>
 
 
 #include <vector>
 
 //--------------------------------------------------------------------------------------
 
-pico::PointCloudPointer createPointCloud(const std::string& filepath) {
+document::PointCloudPointer createPointCloud(const std::string& filepath) {
 
-    return pico::PointCloud::createFromPLY(filepath);
+    return document::PointCloud::createFromPLY(filepath);
 
 }
 

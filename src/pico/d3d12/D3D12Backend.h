@@ -153,6 +153,7 @@ namespace pico {
 
         void setPipeline(const PipelineStatePointer& pipeline) override;
         void bindDescriptorSet(const DescriptorSetPointer& descriptorSet) override;
+        void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) override;
 
         void bindIndexBuffer(const BufferPointer& buffer) override;
         void bindVertexBuffers(uint32_t num, const BufferPointer* buffers) override;
@@ -243,6 +244,7 @@ namespace pico {
         ComPtr<ID3D12RootSignature> _rootSignature;
         uint32_t cbvsrvuav_count = 0;
         uint32_t sampler_count = 0;
+        uint32_t push_count = 0;
     };
 
     class D3D12DescriptorSetBackend : public DescriptorSet {
@@ -259,6 +261,7 @@ namespace pico {
         std::vector< uint32_t > _dxRootParameterIndices;
         uint32_t cbvsrvuav_count = 0;
         uint32_t sampler_count = 0;
+        uint32_t push_count = 0;
     };
 
 }

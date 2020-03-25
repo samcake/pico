@@ -147,6 +147,7 @@ void D3D12BatchBackend::resourceBarrierTransition(
     barrier.Transition.StateBefore = ResourceStates[uint32_t(stateBefore)];
     barrier.Transition.StateAfter = ResourceStates[uint32_t(stateAfter)];
     barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
     _commandList->ResourceBarrier(1, &barrier);
 }
 void D3D12BatchBackend::resourceBarrierTransition(
@@ -259,6 +260,11 @@ void D3D12BatchBackend::bindDescriptorSet(const DescriptorSetPointer& descriptor
     }
     
 }
+
+void D3D12BatchBackend::bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) {
+    _commandList->SetGraphicsRoot32BitConstants(slot, size >> 2, data, 0);
+}
+
 
 void D3D12BatchBackend::bindIndexBuffer(const BufferPointer& buffer) {
     auto dbBuffer = static_cast<D3D12BufferBackend*>(buffer.get());

@@ -33,7 +33,7 @@
 #include "../core/LinearAlgebra.h"
 #include "../dllmain.h"
 
-namespace pico
+namespace document
 {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
@@ -48,20 +48,22 @@ namespace pico
         // Each point attributes 
         struct Point {
             core::vec3 pos;
-            core::vec3 nor;
+           // core::vec3 nor;
             core::ucvec4 color;
         };
 
         // A continuous array of Points
         using Points = std::vector<Point>;
 
-        // Here is the PointCloud data
 
 #pragma warning(push)
 #pragma warning(disable: 4251)
+        // Here is the PointCloud data
         Points _points;
-#pragma warning(pop)
 
+        // A transform to place the point cloud in world space
+        core::mat4x3 _transform;
+#pragma warning(pop)
     };
 
 }

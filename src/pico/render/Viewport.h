@@ -29,17 +29,25 @@
 #include "../Forward.h"
 
 namespace pico {
-
-    class Viewport {
+    class VISUALIZATION_API Viewport {
     public:
-        Viewport(const CameraPointer& camera, const RendererPointer& renderer, const SwapchainPointer& swapchain);
+        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device);
         ~Viewport();
 
-        void render();
+        void present(const SwapchainPointer& swapchain);
 
     protected:
+        void _renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch);
+
+        void renderScene(const CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch);
+
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        ScenePointer _scene;
         CameraPointer _camera;
+        DevicePointer _device;
         RendererPointer _renderer;
-        SwapchainPointer _swapchain;
+#pragma warning(pop)
+
     };
 }

@@ -26,13 +26,90 @@
 //
 #include "Scene.h"
 
-using namespace pico;
+namespace pico {
+
+Item Item::null;
 
 Scene::Scene() {
 
 }
 
 Scene::~Scene() {
+    deleteAll();
+}
+
+Item Scene::_createItem(Item& newItem, ItemID userID) {
+    _items.emplace_back(newItem);
+    if (userID != Item::INVALID_ITEM_ID) {
+        _idToIndices[userID] = newItem.getIndex();
+    }
+ 
+    return _items.back();
+}
+
+void Scene::deleteAll() {
+    _idToIndices.clear();
+    _items.clear();
+}
+
+// delete all user objects
+void Scene::deleteAllItems() {
+    auto indexIt = _idToIndices.begin();
+    while (_idToIndices.size() && indexIt != _idToIndices.end())
+        deleteItem(indexIt->first);
+}
+
+Item Scene::deleteItem(ItemID id) {
+    auto indexIt = _idToIndices.find(id);
+    if (indexIt != _idToIndices.end()) {
+         auto removedItemIdx = indexIt->second;
+         _idToIndices.erase(indexIt); // frmove from id to idx table
+
+         auto item = _items[removedItemIdx];
+        if (removedItemIdx + 1 == _items.size()) {
+            _items.pop_back();
+        } else {
+            _items[removedItemIdx] = Item();
+        }
+   
+        return item;
+    }
+    return Item();
+}
+
+
+Item Scene::getItemFromID(ItemID id) const {
+    auto indexIt = _idToIndices.find(id);
+    if (indexIt != _idToIndices.end()) {
+         return getItems()[indexIt->second];
+    }
+    return Item();
+}
+
+const Item& Scene::getValidItemAt(uint32_t startIndex) const {
+    if (startIndex < _items.size()) {
+        do {
+            const auto* item = _items.data() + startIndex;
+            if (item->isValid()) {
+                return (*item);
+            }
+            startIndex++;
+        }
+        while (startIndex < _items.size());
+    }
+    return Item::null;
+}
+
+void DrawcallObject::draw(const CameraPointer& camera,
+    const SwapchainPointer& swapchain,
+    const DevicePointer& device,
+    const BatchPointer& batch) {
+    if (_drawCallback) {
+        _drawCallback(_transform, camera, swapchain, device, batch);
+    }
+}
+
 
 }
+
 

@@ -44,6 +44,7 @@ namespace pico {
         STORAGE_TEXEL_BUFFER_UAV,  // UAV | VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
         TEXTURE_SRV,               // SRV | VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
         TEXTURE_UAV,               // UAV | VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+        PUSH_UNIFORM,             // CONSTANT | PUSH_CONSTANT
         
         COUNT,
     };

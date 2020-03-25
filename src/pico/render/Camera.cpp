@@ -244,6 +244,20 @@ void Camera::pan(float deltaRight, float deltaUp) {
     view.setEye( view.eye() + view.right() * deltaRight + view.up() * deltaUp );
 }
 
+void Camera::dolly(float deltaBack) {
+    WriteLock();
+    auto oriView = _camData._data._view;
+    auto& nextView = _camData._data._view;
+
+    // PE is the vector from Pivot to Eye position
+    auto boomVecWS = oriView.back() * (deltaBack);
+    auto pivotWS = oriView.eye() + boomVecWS;
+
+    // translate by the pivot point to recover world space
+    nextView.setEye(pivotWS);
+
+}
+
 void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
     WriteLock();
     auto oriView = _camData._data._view;
@@ -270,7 +284,32 @@ void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
 
 }
 
+float Camera::boom(float boomLength, float delta) {
+    float nextBoomLength = boomLength + delta;
+    if (nextBoomLength <= 0.0f) {
+        nextBoomLength = 0.01f;
+        delta = nextBoomLength - boomLength;
+    }
+    dolly(delta);
+
+    return nextBoomLength;
+}
+
 void Camera::zoomTo(const core::vec4& sphere) {
     setEye(core::vec3(sphere.x, sphere.y, sphere.z) + getBack() * sphere.w);
     setFar(10.0f * sphere.w);
+}
+
+void Camera::lookFrom(const core::vec3& lookDirection) {
+    auto frontDir = core::normalize(lookDirection);
+
+    // Configure the Camera to look from the required direction
+    // this direction configure the front vector, we 'll assume the up vector is always y axis
+    // except if look direction is actually along y... in that case up is  +/- z axis
+    core::vec3 upAxis(0.f, 1.f, 0.f);
+    float lookDotY = core::dot(frontDir, upAxis);
+    if (lookDotY >= 1.0f || lookDotY <= -1.0f) {
+        upAxis = core::vec3(0.0f, 0.0f, lookDotY);
+    }
+    setOrientationFromFrontUp(lookDirection, upAxis);
 }

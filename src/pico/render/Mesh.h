@@ -87,9 +87,7 @@ namespace pico {
 
         PrimitiveTopology _topology { PrimitiveTopology::POINT };
 
-        core::vec3 _minPos;
-        core::vec3 _maxPos;
-        core::vec3 _midPos;
+        core::Bounds _bounds;
 
         void evalMinMaxMidPos();
 
