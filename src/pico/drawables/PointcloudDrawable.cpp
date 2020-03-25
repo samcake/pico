@@ -17,6 +17,9 @@
 
 #include "../content/pointcloud.h"
 
+#include "PointCloud_vert.h"
+#include "PointCloud_frag.h"
+
 //using namespace view3d;
 namespace pico
 {
@@ -66,8 +69,8 @@ namespace pico
         // And a Pipeline
 
         // Load shaders (as stored in the resources)
-        std::string shader_vertex_src;// = pico::api::loadTextResources(IDR_HLSL_VERTEX);
-        std::string shader_pixel_src;// = pico::api::loadTextResources(IDR_HLSL_PIXEL);
+        auto shader_vertex_src = PointCloud_vert::getSource();
+        auto shader_pixel_src = PointCloud_frag::getSource();
 
         // test: create shader
         pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "main", "", shader_vertex_src };

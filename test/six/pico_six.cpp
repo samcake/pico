@@ -93,39 +93,33 @@ int main(int argc, char *argv[])
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
-    float cameraOrbitLength = 1.0f;
 
     // The viewport managing the rendering of the scene from the camera
     auto viewport = std::make_shared<pico::Viewport>(scene, camera, gpuDevice);
 
     // a drawable from the pointcloud
     auto pointCloudDrawable = std::make_shared<pico::PointCloudDrawable>();
-  //  pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, pointCloud);
- //   auto item = scene->createItem(pointCloudDrawable);
+    pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, pointCloud);
+    auto item = scene->createItem(pointCloudDrawable);
 
     // Content creation
     float doAnimate = 1.0f;
 
-    // Scene sphere:
-    auto zoomToScene = [scene, camera, &cameraOrbitLength] ()
+    core::vec4 sceneSphere(0.0f, 0.0f, 0.0f, 10.0f);
     {
-        auto item = scene->getValidItemAt(1);
-        if (!item.isValid() || scene->getItems().size() <= 1) {
-            cameraOrbitLength = 10.0f;
-            camera->setEye(/* from world origin*/ camera->getBack() * cameraOrbitLength);
-            camera->setFar(10.0f * cameraOrbitLength);
-        } else {
+        auto item = scene->getValidItemAt(0);
+        if (item.isValid()) {
             // Configure the Camera to look at the scene
             auto bounds = item.getDrawable()->_bounds;
             auto cloudCenter = bounds.midPos();
             auto cloudHalfSize = (bounds.maxPos() - bounds.minPos());
             auto cloudHalfDiag = sqrt(core::dot(cloudHalfSize, cloudHalfSize));
-
-            cameraOrbitLength = cloudHalfDiag / 2.0f; // zoom a bunch; the scanner always produces noise close to the camera that offsets the "real" boundaries
-            camera->setEye(cloudCenter + camera->getBack() * cameraOrbitLength);
-            camera->setFar(10.0f * cameraOrbitLength);
+            sceneSphere = core::vec4(cloudCenter, cloudHalfDiag);
         }
-    };
+    }
+    float cameraOrbitLength = sceneSphere.w;
+    camera->setFar(cameraOrbitLength * 100.0f);
+    camera->zoomTo(sceneSphere);
  
     // Presentation creation
 
@@ -187,54 +181,67 @@ int main(int argc, char *argv[])
         if (e.state && e.key == pico::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
+
+        bool zoomToScene = false;
         if (e.state && e.key == pico::KEY_1) {
             // look side
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
-            zoomToScene();//camera->zoomTo(sceneSphere);
+            zoomToScene = true;
         }
 
         if (e.state && e.key == pico::KEY_2) {
             // look lateral
             camera->setOrientationFromRightUp({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
-            zoomToScene();//camera->zoomTo(sceneSphere);
+            zoomToScene = true;
         }
 
         if (e.state && e.key == pico::KEY_3) {
             // look down
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
-            zoomToScene();//camera->zoomTo(sceneSphere);
+            zoomToScene = true;
         }
 
         if (e.state && e.key == pico::KEY_4) {
             // look 3/4 down
             camera->setOrientationFromRightUp({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
-            zoomToScene();//camera->zoomTo(sceneSphere);
+            zoomToScene = true;
+        }
+
+        if (zoomToScene) {
+            camera->zoomTo(sceneSphere);
+            cameraOrbitLength = sceneSphere.w;
         }
     };
 
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
-            if (e.state & pico::MOUSE_RBUTTON) {
-                float orbitScale = 0.01f;
-                camera->orbit(cameraOrbitLength, e.delta.x * orbitScale, -e.delta.y * orbitScale);
-            }
             if (e.state & pico::MOUSE_MBUTTON) {
-                float panScale = cameraOrbitLength * 0.001f;
-                camera->pan(-e.delta.x* panScale, e.delta.y * panScale);
+                float orbitScale = 0.01f;
+                // Center of the screen is Focal = SensorHeight
+                float ny = (0.5f + e.pos.y / (float)window->height());
+                camera->setFocal(camera->getProjectionHeight() * (ny * ny * ny));
+            }
+            if (e.state & pico::MOUSE_RBUTTON) {
+                if (e.state & pico::MOUSE_CONTROL) {
+                    float panScale = -cameraOrbitLength * 0.001f;
+                    camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
+                } else {
+                    float orbitScale = 0.01f;
+                    camera->orbit(cameraOrbitLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                }
             }
         } else if (e.state & pico::MOUSE_WHEEL) {
             if (e.state & pico::MOUSE_CONTROL) {
                 float zoomScale = 0.1f;
                 camera->setFocal( camera->getFocal() * (1.0f +  e.wheel * zoomScale));
             } else {
-                float dollyScale = 0.05f;
-                cameraOrbitLength *= (1.0f + e.wheel * dollyScale);
-                zoomToScene();//camera->zoomTo(sceneSphere);
-  //              camera->zoomTo(sceneSphere);
+                float dollyScale = 0.08f;
+                float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
+                cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
             }
         }
     };
-
+ 
     // Render Loop 
     bool keepOnGoing = true;
     while (keepOnGoing) {

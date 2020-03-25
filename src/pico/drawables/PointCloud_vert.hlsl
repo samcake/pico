@@ -1,4 +1,3 @@
-
 #define mat43 float4x3
 
 struct View {
@@ -12,6 +11,7 @@ struct View {
     float3 eye() { return _backZ_eye.yzw; }
 };
 
+
 cbuffer UniformBlock0 : register(b0) {
     //float4x3 _view;
     View _view;
@@ -19,14 +19,13 @@ cbuffer UniformBlock0 : register(b0) {
     float4 _viewport;
 };
 
-
 float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float far, float3 eyePos) {
-    
-   // float foc = focal* (eyePos.x < 0.0 ? 1.0 : 1.5);
+
+    // float foc = focal* (eyePos.x < 0.0 ? 1.0 : 1.5);
     float foc = focal;
     float4 clipPos;
     clipPos.w = foc - eyePos.z;
-    clipPos.z = (-eyePos.z) *far / (far - foc);
+    clipPos.z = (-eyePos.z) * far / (far - foc);
     clipPos.x = eyePos.x * foc / (0.5 * sensorHeight * aspectRatio);
     clipPos.y = eyePos.y * foc / (0.5 * sensorHeight);
     return clipPos;
@@ -38,25 +37,50 @@ float4 clipFromEyeSpace(float4 proj, float3 eyePos) {
 
 float3 eyeFromWorldSpace(float3 right, float3 up, float3 back, float3 eye, float3 worldPos) {
     // TranslationInv
-	float3 eyeCenteredPos = worldPos - eye;
+    float3 eyeCenteredPos = worldPos - eye;
     return eyeCenteredPos;
-      // RotationInv
-    return float3( dot(right, eyeCenteredPos), dot(up, eyeCenteredPos), dot(back, eyeCenteredPos) );
+    // RotationInv
+    return float3(dot(right, eyeCenteredPos), dot(up, eyeCenteredPos), dot(back, eyeCenteredPos));
 }
 
 float3 eyeFromWorldSpace(View view, float3 worldPos) {
     // TranslationInv
     float3 eyeCenteredPos = worldPos - view.eye();
-  //  return eyeCenteredPos;
-    // RotationInv
+    //  return eyeCenteredPos;
+      // RotationInv
     return float3(dot(view.right(), eyeCenteredPos), dot(view.up(), eyeCenteredPos), dot(view.back(), eyeCenteredPos));
- }
+}
 
+struct Transform {
+    float4 _right_upX;
+    float4 _upYZ_backXY;
+    float4 _backZ_ori;
+
+    float3 right() { return _right_upX.xyz; }
+    float3 up() { return float3(_right_upX.w, _upYZ_backXY.xy); }
+    float3 back() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
+
+    float3 invX() { return float3(_right_upX.x, _right_upX.w, _upYZ_backXY.z); }
+    float3 invY() { return float3(_right_upX.y, _upYZ_backXY.x, _upYZ_backXY.w); }
+    float3 invZ() { return float3(_right_upX.z, _upYZ_backXY.y, _backZ_ori.x); }
+
+    float3 ori() { return _backZ_ori.yzw; }
+};
+
+cbuffer UniformBlock1 : register(b1) {
+    Transform _model;
+}
+
+float3 worldFromObjectSpace(Transform model, float3 objPos) {
+    float3 rotatedPos = float3(dot(model.invX(), objPos), dot(model.invY(), objPos), dot(model.invZ(), objPos));
+    // TranslationInv
+    return  rotatedPos + model.ori();
+}
 
 struct VertexPosColor
 {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
+    //  float3 Normal : NORMAL;
     float4 Color : COLOR;
 };
 
@@ -66,12 +90,13 @@ struct VertexShaderOutput
     float4 Position : SV_Position;
 };
 
-VertexShaderOutput mainVertex(VertexPosColor IN)
+VertexShaderOutput main(VertexPosColor IN)
 {
     VertexShaderOutput OUT;
 
     float3 position = IN.Position;
 
+    position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

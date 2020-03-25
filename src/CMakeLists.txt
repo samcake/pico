@@ -15,16 +15,29 @@ file(GLOB PICO_SHADERS
 )
 
 # for each shaders, pre compile them and add the generated  .h and .cpp to the build
+
+set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
+
  foreach( item IN LISTS PICO_SHADERS )
-    get_filename_component(shadername )
-    if( item STREQUAL "" )
-   # set(generated_file ${item})
+    get_filename_component(item_name ${item} NAME_WE)
+    set(item_target_root ${SHADER_OUTPUT_DIR}/${item_name})
+
+    list(APPEND INCLUDE_SHADERS_HPP ${item_target_root}.h)
+    list(APPEND INCLUDE_SHADERS_CPP ${item_target_root}.cpp)
+
+    set_source_files_properties(${item} PROPERTIES VS_TOOL_OVERRIDE "None")
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${item}.h ${CMAKE_CURRENT_BINARY_DIR}/${item}.cpp
-        COMMAND scribe ${item} -c++ -o ${CMAKE_CURRENT_BINARY_DIR}/${item}
+        DEPENDS ${item}
+        MAIN_DEPENDENCY ${item}
+        OUTPUT ${item_target_root}.h ${item_target_root}.cpp
+        COMMAND scribe ${item} -c++ -o ${item_target_root}
     )
+ 
 endforeach()
 
+message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
+message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
 
 file(GLOB PICO_HEADERS
     "pico/*.h"
@@ -37,6 +50,8 @@ file(GLOB PICO_HEADERS
     "pico/window/*.h"
 )
 
+list(APPEND  PICO_HEADERS   ${INCLUDE_SHADERS_HPP})
+
 file(GLOB PICO_SOURCES
     "pico/*.cpp"
     "pico/core/*.cpp"
@@ -48,9 +63,13 @@ file(GLOB PICO_SOURCES
     "pico/window/*.cpp"
 )
 
+list(APPEND  PICO_SOURCES   ${INCLUDE_SHADERS_CPP})
+
+
 add_library (pico
     ${PICO_HEADERS}
     ${PICO_SOURCES}
+    ${PICO_SHADERS}
 )
 
 target_link_libraries(pico
@@ -58,7 +77,10 @@ target_link_libraries(pico
     ${GRAPHICS_LIBRARIES}
 )
 
-target_include_directories(pico PRIVATE "pico/")
+target_include_directories(pico PRIVATE "pico/" ${SHADER_OUTPUT_DIR} )
+
+source_group(pico\\shaders FILES ${PICO_SHADERS})
+source_group(pico\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)
 
 source_group(pico\\core REGULAR_EXPRESSION pico/core/*)
 source_group(pico\\content REGULAR_EXPRESSION pico/content/*)

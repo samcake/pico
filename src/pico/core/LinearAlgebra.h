@@ -75,7 +75,7 @@ namespace core
         vec4(float _x) : x(_x), y(_x), z(_x), w(_x) {}
         vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
         vec4(const vec3& xyz, float _w) : x(xyz.x), y(xyz.y), z(xyz.z), w(_w) {}
-        vec4& operator=(const vec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+        vec4& operator=(const vec4& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
 
         vec4 operator+(const vec4& a) const { return vec4(x + a.x, y + a.y, z + a.z, w + a.w); }
         vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }

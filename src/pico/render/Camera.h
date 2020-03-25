@@ -225,9 +225,11 @@ namespace pico {
 
         // Some nice moves
         void pan(float deltaRight, float deltaUp);
+        void dolly(float deltaBack);
         void orbit(float boomLength, float deltaRight, float deltaUp);
-        void boom(float deltaBack);
 
+        float boom(float boomLength, float delta);
         void zoomTo(const core::vec4& sphere);
+        void lookFrom(const core::vec3& lookDirection);
     };
 }
