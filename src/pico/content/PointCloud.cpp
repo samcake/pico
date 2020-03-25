@@ -30,6 +30,7 @@
 #include <sstream>
 
 #include <vector>
+#include <algorithm>
 
 // using namespace pico;
 namespace document
@@ -390,14 +391,27 @@ namespace document
             auto contentSize = fileBinaries.size() - beginPayloadPos;
             auto contentBegin = fileBinaries.data() + beginPayloadPos;
 
-            uint32_t vertexByteStride = (uint32_t)(contentSize) / numVertices;
+            uint32_t vertexByteStride = propertyOffsets[numVertProperties];
+            contentSize = std::min(contentSize, (size_t) ( vertexByteStride * numVertices));
 
             // Understand format layout and binary layout
             bool formatLayoutMatch = (verticesByteSize == contentSize) && (vertexPositionPropIndex == 0) && (vertexColorPropIndex == 3) && (vertexAlphaPropIndex == 6);
-            bool binaryBigEndian = (format.name == Format::binary_big_endian);
+            
+            // Let's go back to little endian if we are big endian
+            if (format.name == Format::binary_big_endian) {
+                auto uint32Start = (uint32_t*)contentBegin;
+                auto uint32Count = contentSize >> 2;
+                
+                for (uint32_t i = 0; i < uint32Count; ++i) {
+                    uint32_t val = uint32Start[i];
+                    uint32Start[i] = (((val) >> 24) | (((val) & 0x00FF0000) >> 8) | (((val) & 0x0000FF00) << 8) | ((val) << 24));
+                }
+            }
+
+            
 
             // THe fast path is when the binary format is exactly what we need for rendering:
-            if (formatLayoutMatch && format.name == Format::binary_little_endian) {
+            if (formatLayoutMatch) {
                 points.resize(numVertices);
                 memcpy(points.data(), (void*)contentBegin, verticesByteSize);
             } else {
