@@ -27,7 +27,7 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
  
 endforeach()
 
-add_executable(pico_five pico_five.cpp ${SHADER_FILES} ${INCLUDE_SHADERS_CPP})
+add_executable(pico_five pico_five.cpp ${SHADER_FILES} ${INCLUDE_SHADERS_CPP} ${INCLUDE_SHADERS_HPP})
 
 
 # Set include path for pico.h

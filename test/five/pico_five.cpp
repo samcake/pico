@@ -48,11 +48,8 @@
 
 #include <vector>
 
-//--------------------------------------------------------------------------------------
-
-document::PointCloudPointer createPointCloud(const std::string& filepath) {
-    return document::PointCloud::createFromPLY(filepath);
-}
+#include "vertex.h"
+#include "pixel.h"
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -83,12 +80,12 @@ int main(int argc, char *argv[])
     float doAnimate = 1.0f;
 
     // Some content, why not a pointcloud ?
-    auto pointCloud = createPointCloud(cloudPointFile);
+    auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
 
     // Step 1, create a Mesh from the point cloud data
 
     // Declare the vertex format == PointCloud::Point
-    pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::Attribs<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
     pico::AttribBufferViews<1> bufferViews{ {0} };
     auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
 
@@ -116,10 +113,10 @@ int main(int argc, char *argv[])
     auto descriptorSetLayout = gpuDevice->createDescriptorSetLayout(descriptorSetLayoutInit);
 
     // And a Pipeline
-    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
+    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "", vertex::getSource() };
     pico::ShaderPointer vertexShader = gpuDevice->createShader(vertexShaderInit);
 
-    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
+    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "", pixel::getSource() };
     pico::ShaderPointer pixelShader = gpuDevice->createShader(pixelShaderInit);
 
     pico::ProgramInit programInit{ vertexShader, pixelShader };

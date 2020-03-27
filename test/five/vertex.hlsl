@@ -56,7 +56,7 @@ float3 eyeFromWorldSpace(View view, float3 worldPos) {
 struct VertexPosColor
 {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
+   // float3 Normal : NORMAL;
     float4 Color : COLOR;
 };
 
@@ -70,10 +70,6 @@ VertexShaderOutput mainVertex(VertexPosColor IN)
 {
     VertexShaderOutput OUT;
 
-<<<<<<< HEAD
-  //  float3 position = IN.Position * 0.075f;
-=======
->>>>>>> 08f69e4b202f408ba721847483747182e1329188
     float3 position = IN.Position;
 
     float3 eyePosition = eyeFromWorldSpace(_view, position);
