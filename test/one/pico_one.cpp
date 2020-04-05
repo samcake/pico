@@ -29,10 +29,17 @@
 
 #include <pico/pico.h>
 #include <pico/gpu/Device.h>
-#include <pico/gpu/Batch.h>
 #include <pico/gpu/Swapchain.h>
 #include <pico/window/Window.h>
 #include <pico/render/Renderer.h>
+
+//--------------------------------------------------------------------------------------
+// pico 1: Clear a swapchain
+// introducing:
+// gpu::Device
+// gpu::Swapchain
+// window::Window
+// render::Renderer
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -62,6 +69,8 @@ int main(int argc, char *argv[])
     auto gpuDevice = pico::Device::createDevice(deviceInit);
 
     // Next, a renderer built on this device
+    // the default renderer without any further configuration will do
+    //  a clear color of the swapchain passed in the render call
     auto renderer = std::make_shared<pico::Renderer>(gpuDevice, nullptr);
 
     // Presentation creation
@@ -101,6 +110,7 @@ int main(int argc, char *argv[])
 
 
         // Render!
+        // By default just clear the swapchain
         renderer->render(nullptr, swapchain);
     });
 

@@ -68,15 +68,6 @@ pico::PipelineStatePointer createPipelineState(const pico::DevicePointer& device
 
     return pipeline;
 }
-
-//--------------------------------------------------------------------------------------
-
-document::PointCloudPointer createPointCloud(const std::string& filepath) {
-
-    return document::PointCloud::createFromPLY(filepath);
-
-}
-
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -102,13 +93,13 @@ int main(int argc, char *argv[])
 
 
     // Some content, why not a pointcloud ?
-    auto pointCloud = createPointCloud("../asset/20191211-brain.ply");
+    auto pointCloud = document::PointCloud::createFromPLY("../asset/20191211-brain.ply");
 
 
     // Step 1, create a Mesh from the point cloud data
 
     // Declare the vertex format == PointCloud::Point
-    pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::Attribs<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
     pico::AttribBufferViews<1> bufferViews{ {0} };
     auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
 

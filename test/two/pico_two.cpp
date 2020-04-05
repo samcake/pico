@@ -43,15 +43,68 @@
 
 #include <vector>
 
+
 //--------------------------------------------------------------------------------------
+// pico 2: Draw a triangle
+// introducing:
+// gpu::Shader
+// gpu::Pipeline State 
+// gpu::Buffer as Vertex & Index buffer
+// gpu::StreamLayout
+// gpu::RenderCallback
+
+//--------------------------------------------------------------------------------------
+
+const std::string vertexShaderSource = std::string(R"HLSL(
+/*struct ModelViewProjection
+{
+    matrix MVP;
+};
+*/
+//ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
+
+struct VertexPosColor
+{
+    float3 Position : POSITION;
+};
+
+struct VertexShaderOutput
+{
+    float4 Color    : COLOR;
+    float4 Position : SV_Position;
+};
+
+VertexShaderOutput mainVertex(VertexPosColor IN)
+{
+    VertexShaderOutput OUT;
+
+   // OUT.Position = mul(ModelViewProjectionCB.MVP, float4(IN.Position, 1.0f));
+    OUT.Position = float4(IN.Position, 1.0f);
+    OUT.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+
+    return OUT;
+}
+)HLSL");
+
+const std::string pixelShaderSource = std::string(R"HLSL(
+struct PixelShaderInput
+{
+    float4 Color : COLOR;
+};
+
+float4 mainPixel(PixelShaderInput IN) : SV_Target
+{
+    return IN.Color;
+}
+)HLSL");
 
 pico::PipelineStatePointer createPipelineState(const pico::DevicePointer& device, pico::StreamLayout streamLayout ) {
 
-    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
+    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
     pico::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
 
-    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
+    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
     pico::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
     pico::ProgramInit programInit { vertexShader, pixelShader };
