@@ -13,16 +13,16 @@ Any algorithm should be embeddable in a job executing on parameter data that can
 This is the quest that we are after, design an elegant and powerful framework to achieve these goals.
 
 ## Samples & development
-Each step of the way we will develop a new sample to explore and draft the next piece of feature until we we get to a stable version. THe library code is constantly evolving as we refine the design and we will retroactively apply the changes required to the previous samples to keep them all consistent.
+Each step of the way we will develop a new sample to explore and draft the next piece of feature until we we get to a stable version. The library code is constantly evolving as we refine the design and we will retroactively apply the changes required to the previous samples to keep them all consistent.
 
-###  pico 1: Clear a swapchain
+### pico 1: Clear a swapchain
 introducing
 - gpu::Device
 - gpu::Swapchain
 - window::Window
 - render::Renderer
 
-###  pico 2: Draw a triangle
+### pico 2: Draw a triangle
 introducing
 - gpu::Shader
 - gpu::Pipeline State 
@@ -30,13 +30,20 @@ introducing
 - gpu::StreamLayout
 - gpu::RenderCallback
 
-###  pico 3: Load & Draw a Pointcloud, change view/projection transform
+### pico 3: Load & Draw a Pointcloud, change view/projection transform
 introducing:
 - gpu::Buffer as Uniform Buffer
 - gpu::Descriptor and DescriptorSetLayout
 - gpu::Buffer as Vertex & Index buffer
 - document::Pointcloud
 - render::Mesh
+
+### pico 4: Scene, Viewport and Camera to render a simple 3d scene
+introducing:
+- render::Scene
+- render::Camera
+- render::Viewport
+- drawable::PointcloudDrawable
 
 ## Credits, Inspiration & References
 - Hai Nguyen (chaoticbob) vulkan and D3d12 unifying abstraction https://github.com/chaoticbob/tinyrenderers
