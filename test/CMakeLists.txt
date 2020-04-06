@@ -1,9 +1,8 @@
-add_subdirectory( one )
-add_subdirectory( two )
-add_subdirectory( three )
-add_subdirectory( four )
+add_subdirectory( pico_01 )
+add_subdirectory( pico_02 )
+add_subdirectory( pico_03 )
+add_subdirectory( pico_04 )
+
+add_subdirectory( pico_interop-gdi )
+
 add_subdirectory( five )
-add_subdirectory( six )
-add_subdirectory( interop-gdi )
-
-

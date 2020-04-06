@@ -15,7 +15,6 @@ file(GLOB PICO_SHADERS
 )
 
 # for each shaders, pre compile them and add the generated  .h and .cpp to the build
-
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
