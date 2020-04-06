@@ -1,8 +1,9 @@
 # Pico
 2020/01/01 This one is called 'Pico'
-It is 2020, time to build yet another rendering engine and reinvent the wheel beause why not. We want to build a simple 'engine' framework to easily explore the cool computer graphics ideas of the next decade.
 
-Pico has a gpu api layer unifying the concepts of the modern graphics api (d3d12 / Vulkan / Metal)
+It is 2020, time to build yet another rendering engine and reinvent the wheel because why not. We want to build a simple 'engine' framework to easily explore the cool computer graphics ideas of the next decade.
+
+Pico is built on a gpu api layer abstraction unifying the concepts of the modern graphics api (d3d12 / Vulkan / Metal). Haiming for simple, few objects with a clear mapping to their underneath equivalent and allowing to write interesting samples once for all the plaftorm s supported.
 
 The scene management and rendering architecture mimics Apple SceneKit at a high level since it is well done & understood and easy to use (similar to Filament too).
 
