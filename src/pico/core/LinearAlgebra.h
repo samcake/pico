@@ -81,6 +81,8 @@ namespace core
         vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
         vec4 operator-() const { return vec4(-x, -y, -z, -w); }
+
+        vec3 xyz() const { return vec3(x, y, z); }
     };
     struct ucvec4 {
         uint8_t x, y, z, w;
@@ -170,6 +172,17 @@ namespace core
     // Cross product
     inline vec3 cross(const vec3& a, const vec3& b) {
         return vec3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x );
+    }
+
+    // Length
+    inline float length(const vec2& a) {
+        return sqrt(dot(a, a));
+    }
+    inline float length(const vec3& a) {
+        return sqrt(dot(a, a));
+    }
+    inline float length(const vec4& a) {
+        return sqrt(dot(a, a));
     }
 
     // Normalize
@@ -269,6 +282,11 @@ namespace core
         const vec3& maxPos() const { return _maxPos; }
         const vec3& midPos() const { return _midPos; }
 
+        vec4 toSphere() {
+            vec3 center = (_maxPos + _minPos) * 0.5;
+            float d = length(_maxPos - _minPos);
+            return vec4(center, d);
+        }
     };
 
 
