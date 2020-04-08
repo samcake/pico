@@ -135,7 +135,8 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             if (init.depth) {
                 psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
                 psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
+                // ^ We re using Inverted Z so need to test to pass greater tahn because near is at 1 and far is at 0
             } else {
                 psoDesc.DepthStencilState.DepthEnable = FALSE; // disable depth
                 psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;

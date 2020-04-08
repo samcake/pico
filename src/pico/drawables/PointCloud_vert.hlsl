@@ -19,15 +19,20 @@ cbuffer UniformBlock0 : register(b0) {
     float4 _viewport;
 };
 
-float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float far, float3 eyePos) {
+float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float pfar, float3 eyePos) {
 
-    // float foc = focal* (eyePos.x < 0.0 ? 1.0 : 1.5);
-    float foc = focal;
+    float ez = -eyePos.z;
+    float pnear = focal;
+    // Infinite far inverted Z
+    // float b = 0.0f; //lim at far  infinite of  pnear / (pnear- pfar);;
+    // float a = pnear; // lim at far infinite of - pfar * pnear / (pnear - pfar);
+
     float4 clipPos;
-    clipPos.w = foc - eyePos.z;
-    clipPos.z = (-eyePos.z) * far / (far - foc);
-    clipPos.x = eyePos.x * foc / (0.5 * sensorHeight * aspectRatio);
-    clipPos.y = eyePos.y * foc / (0.5 * sensorHeight);
+    clipPos.w = ez;
+    clipPos.z = pnear;
+    // float depthBuffer = z/w = a * (1/ez) + b; 
+    clipPos.x = eyePos.x * pnear * 2.0 / (sensorHeight * aspectRatio);
+    clipPos.y = eyePos.y * pnear * 2.0 / (sensorHeight);
     return clipPos;
 }
 float4 clipFromEyeSpace(float4 proj, float3 eyePos) {
@@ -88,6 +93,7 @@ struct VertexShaderOutput
 {
     float4 Color    : COLOR;
     float4 Position : SV_Position;
+    float pointSize : PSIZE;
 };
 
 VertexShaderOutput main(VertexPosColor IN)
@@ -102,6 +108,7 @@ VertexShaderOutput main(VertexPosColor IN)
 
     OUT.Position = clipPos;
     OUT.Color = float4(IN.Color.xyz, 1.0f);
+    OUT.pointSize = 0.5;
 
     return OUT;
 }

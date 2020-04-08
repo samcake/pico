@@ -114,12 +114,43 @@ namespace pico {
             return core::vec3(clipPos.x * aspectRatio * sensorHeight * 0.5f, clipPos.y * sensorHeight * 0.5f, -focal);
         }
 
+        static float depthClipFromEyeSpace(float pnear, float pfar, float eyeZ) {
+            // Standard z mapping [n, f] to [0, 1]
+            // float b = pfar / (pfar - pnear);
+            // float a = -pnear * b;
+            // Inverted z mapping [n, f] to [1, 0], need depth function "greater than"
+            // float b = pnear / (pnear- pfar);
+            // float a = -pfar * b;
+
+            // Infinite far mapping [n, infinity] to [0, 1]
+            // float b = 1.0f; //lim at far  infinite of  pfar / (pfar - pnear);
+            // float a = -pnear * b;
+            // Infinite far inverted Z
+            float b = 0.0f; //lim at far  infinite of  pnear / (pnear- pfar);;
+            float a = pnear; // lim at far infinite of - pfar * pnear / (pnear - pfar);
+
+            // float clipW = eyeZ;
+            float clipZ = a + b * eyeZ;
+            // float depthBuffer = clipZ/clipW = a * (1/eyeZ) + b;
+            return clipZ;
+        }
+
         static core::vec4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float pfar, const core::vec3& eyePos) {
-            float foc = focal;
-            float w = foc - eyePos.z;
-            float z = (-eyePos.z) * pfar / (pfar - foc);
-            float x = eyePos.x * foc / (0.5f * sensorHeight * aspectRatio);
-            float y = eyePos.y * foc / (0.5f * sensorHeight);
+            float ez = -eyePos.z;
+            float pnear = focal;
+            core::vec4 clipPos;
+            clipPos.w = ez;
+            clipPos.z = depthClipFromEyeSpace(pnear, pfar, ez);
+            clipPos.x = eyePos.x * pnear * 2.0f / (sensorHeight * aspectRatio);
+            clipPos. y = eyePos.y * pnear * 2.0f / (sensorHeight);
+            return clipPos;
+        }
+
+        static core::vec4 orthoClipFromEyeSpace(float pnear, float sensorHeight, float aspectRatio, float pfar, const core::vec3& eyePos) {
+            float w = 1.0f;
+            float z = -(eyePos.z * 2.0f + pfar + pnear) / (pfar - pnear);
+            float x = eyePos.x * 2.0f / (sensorHeight * aspectRatio);
+            float y = eyePos.y * 2.0f / (sensorHeight);
             return core::vec4(x, y, z, w);
         }
     };

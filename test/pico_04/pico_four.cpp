@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
+    pico::WindowInit windowInit { windowHandler, "Pico 4" };
     auto window = pico::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, viewport](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, viewport, window](const pico::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -154,8 +154,9 @@ int main(int argc, char *argv[])
         if (elapsedSeconds > 1.0) {
             char buffer[500];
             auto fps = frameCounter / elapsedSeconds;
-            sprintf_s(buffer, 500, "FPS: %f\n", fps);
-            OutputDebugString(buffer);
+            sprintf_s(buffer, 500, "Pico 4 : FPS %f\n", fps);
+            window->setTitle(std::string(buffer));
+        //    OutputDebugString(buffer);
             frameCounter = 0;
             elapsedSeconds = 0.0;
         }

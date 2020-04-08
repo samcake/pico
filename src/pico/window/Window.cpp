@@ -253,6 +253,7 @@ public:
     uint32_t width() const override { return _width; }
     uint32_t height() const override { return _height; }
 
+    void setTitle(const std::string& title) override { SetWindowTextA(_sysWindow, title.c_str()); }
 };
 
 WIN32WindowBackend::SysWindowMap WIN32WindowBackend::_sysWindowMap;
@@ -446,6 +447,8 @@ const Key WIN32WindowBackend::_KeyCodesToKey[] = {
 
 WindowPointer Window::createWindow(const WindowInit& init) {
     WindowPointer window(new Window((init.handler ? init.handler : new WindowHandler())));
+    window->setTitle(init.title);
+
     return window;
 }
 
@@ -486,4 +489,8 @@ void Window::onMouse(const MouseEvent& e) {
 }
 void Window::onKeyboard(const KeyboardEvent& e) {
     _handler->onKeyboard(e);
+}
+
+void Window::setTitle(const std::string& text) {
+    _backend->setTitle(text);
 }
