@@ -266,7 +266,6 @@ public:
     void onKeyboard(const KeyboardEvent& e);
 
     void setTitle(const std::string& title);
-
 protected:
     std::unique_ptr<WindowHandler> _handler;
     std::unique_ptr<WindowBackend> _backend;

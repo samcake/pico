@@ -131,6 +131,18 @@ float Camera::getFocal() const {
     return _camData._data._projection._focal;
 }
 
+
+float Camera::getFov() const {
+    ReadLock();
+    auto fovHalftan = _camData._data._projection._height /_camData._data._projection._focal;
+    auto fov = 2.0f * atanf(fovHalftan);
+    return fov;
+}
+float Camera::getFovDeg() const {
+    const float radToDeg = 180.f / std::acosf(-1);
+    return radToDeg * getFov();
+}
+
 void Camera::setProjectionHeight(float projHeight) {
     WriteLock();
     _camData._data._projection.setHeight(projHeight);
@@ -163,7 +175,47 @@ void Camera::setFar(float pfar) {
 }
 float Camera::getFar() const {
     ReadLock();
-    return _camData._data._projection._far;
+    return _camData._data._projection._persFar;
+}
+
+void Camera::setOrtho(bool enable) {
+    WriteLock();
+    _camData._data._projection.setOrtho(enable);
+
+}
+bool Camera::isOrtho() const {
+    ReadLock();
+    return _camData._data._projection.isOrtho();
+}
+
+void Camera::setOrthoHeight(float height) {
+    WriteLock();
+    _camData._data._projection.setOrthoHeight(height);
+
+}
+float Camera::getOrthoHeight() const {
+    ReadLock();
+    return _camData._data._projection._orthoHeight;
+}
+
+void Camera::setOrthoNear(float pnear) {
+    WriteLock();
+    _camData._data._projection.setOrthoNear(pnear);
+
+}
+float Camera::getOrthoNear() const {
+    ReadLock();
+    return _camData._data._projection._orthoNear;
+}
+
+void Camera::setOrthoFar(float pfar) {
+    WriteLock();
+    _camData._data._projection.setOrthoFar(pfar);
+
+}
+float Camera::getOrthoFar() const {
+    ReadLock();
+    return _camData._data._projection._orthoFar;
 }
 
 void Camera::setViewport(const ViewportRect& viewport) {
@@ -298,6 +350,8 @@ float Camera::boom(float boomLength, float delta) {
 void Camera::zoomTo(const core::vec4& sphere) {
     setEye(core::vec3(sphere.x, sphere.y, sphere.z) + getBack() * sphere.w);
     setFar(10.0f * sphere.w);
+    setOrthoHeight(sphere.w * 2.0f);
+    setOrthoFar(10.0f * sphere.w);
 }
 
 void Camera::lookFrom(const core::vec3& lookDirection) {

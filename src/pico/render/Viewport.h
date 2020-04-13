@@ -28,6 +28,8 @@
 
 #include "../Forward.h"
 
+#include "../core/Realtime.h"
+
 namespace pico {
     class VISUALIZATION_API Viewport {
     public:
@@ -35,6 +37,8 @@ namespace pico {
         ~Viewport();
 
         void present(const SwapchainPointer& swapchain);
+
+        core::FrameTimer::Sample lastFrameTimerSample() const;
 
     protected:
         void _renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch);
@@ -47,6 +51,9 @@ namespace pico {
         CameraPointer _camera;
         DevicePointer _device;
         RendererPointer _renderer;
+
+        // Measuring framerate
+        core::FrameTimer _frameTimer;
 #pragma warning(pop)
 
     };

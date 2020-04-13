@@ -460,7 +460,6 @@ Window::Window(WindowHandler* handler) :
     _backend()
 #endif
 {
-
 }
 
 Window::~Window() {
@@ -482,7 +481,7 @@ void Window::onResize(const ResizeEvent& e) {
     _handler->onResize(e);
 }
 void Window::onPaint(const PaintEvent& e) {
-    _handler->onPaint(e);
+     _handler->onPaint(e);
 }
 void Window::onMouse(const MouseEvent& e) {
     _handler->onMouse(e);

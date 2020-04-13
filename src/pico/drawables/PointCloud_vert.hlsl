@@ -11,22 +11,28 @@ struct View {
     float3 eye() { return _backZ_eye.yzw; }
 };
 
+struct Projection {
+    float4 _aspectRatio_sensorHeight_focal_far;
+    float4 _ortho_enabled_height_near_far;
 
-cbuffer UniformBlock0 : register(b0) {
-    //float4x3 _view;
-    View _view;
-    float4 _projection;
-    float4 _viewport;
+    float aspectRatio() { return (_aspectRatio_sensorHeight_focal_far.x); }
+    float sensorHeight() { return (_aspectRatio_sensorHeight_focal_far.y); }
+    float focal() { return (_aspectRatio_sensorHeight_focal_far.z); }
+    float persFar() { return (_aspectRatio_sensorHeight_focal_far.w); }
+
+    bool isOrtho() { return (_ortho_enabled_height_near_far.x > 0.0); }
+    float orthoHeight() { return (_ortho_enabled_height_near_far.y); }
+    float orthoNear() { return (_ortho_enabled_height_near_far.z); }
+    float orthoFar() { return (_ortho_enabled_height_near_far.w); }
 };
 
-float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float pfar, float3 eyePos) {
 
+float4 clipFromEyeSpace(float aspectRatio, float sensorHeight, float focal, float pfar, float3 eyePos) {
     float ez = -eyePos.z;
     float pnear = focal;
     // Infinite far inverted Z
     // float b = 0.0f; //lim at far  infinite of  pnear / (pnear- pfar);;
     // float a = pnear; // lim at far infinite of - pfar * pnear / (pnear - pfar);
-
     float4 clipPos;
     clipPos.w = ez;
     clipPos.z = pnear;
@@ -35,9 +41,30 @@ float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, floa
     clipPos.y = eyePos.y * pnear * 2.0 / (sensorHeight);
     return clipPos;
 }
-float4 clipFromEyeSpace(float4 proj, float3 eyePos) {
-    return clipFromEyeSpace(proj.x, proj.y, proj.z, proj.w, eyePos);
+
+float4 orthoClipFromEyeSpace(float aspectRatio, float sensorHeight, float pnear, float pfar, const float3 eyePos) {
+    float4 clipPos;
+    clipPos.w = 1.0f;
+    clipPos.z = (pfar - (-eyePos.z)) / (pfar - pnear);
+    clipPos.x = eyePos.x * 2.0f / (sensorHeight * aspectRatio);
+    clipPos.y = eyePos.y * 2.0f / (sensorHeight);
+    return clipPos;
 }
+
+float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
+    if (proj.isOrtho()) {
+        return orthoClipFromEyeSpace(proj.aspectRatio(), proj.orthoHeight(), proj.orthoNear(), proj.orthoFar(), eyePos);
+    } else {
+        return clipFromEyeSpace(proj.aspectRatio(), proj.sensorHeight(), proj.focal(), proj.persFar(), eyePos);
+    }
+}
+
+cbuffer UniformBlock0 : register(b0) {
+    //float4x3 _view;
+    View _view;
+    Projection _projection;
+    float4 _viewport;
+};
 
 
 float3 eyeFromWorldSpace(float3 right, float3 up, float3 back, float3 eye, float3 worldPos) {

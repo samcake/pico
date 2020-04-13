@@ -90,25 +90,46 @@ namespace pico {
     };
 
     struct VISUALIZATION_API Projection {
-        float _focal{ 0.056f };  // focal length between the focal plane and the origin of the projection
-        float _height{ 0.056f }; // height of the projection rectangle at the focal plane, similar to the sensor height
         float _aspectRatio{ 16.0f / 9.0f }; // aspectRatio = width / height of the projection rectangle
-        float _far{ 10.0f };
+        float _height{ 0.056f }; // height of the projection rectangle at the focal plane, similar to the sensor height
+        float _focal{ 0.056f };  // focal length between the focal plane and the origin of the projection
+        float _persFar{ 100.0f }; // ersepective far, Infinite if 0f
 
-        void setFocal(float focal) {
-            _focal = core::max(core::FLOAT_EPSILON, focal);
+        float _orthoEnabled { 0.0f }; 
+        float _orthoHeight{ 1.0f };
+        float _orthoNear{ 0.0f };
+        float _orthoFar { 100.0f };
+
+        void setAspectRatio(float aspectRatio) {
+            _aspectRatio = core::max(core::FLOAT_EPSILON, aspectRatio);
         }
         void setHeight(float height) {
             _height = core::max(core::FLOAT_EPSILON, height);
         }
-        void setAspectRatio(float aspectRatio) {
-            _aspectRatio = core::max(core::FLOAT_EPSILON, aspectRatio);
+
+        void setFocal(float focal) {
+            _focal = core::max(core::FLOAT_EPSILON, focal);
         }
         void setFar(float pfar) {
-            _far = core::max(core::FLOAT_EPSILON, pfar);
+            _persFar = core::max(core::FLOAT_EPSILON, pfar);
         }
 
         float width() const { return _aspectRatio * _height; }
+
+        void setOrtho(bool enable) {
+            _orthoEnabled = (enable ? 1.0f : 0.0f);
+        }
+        bool isOrtho() const { return (_orthoEnabled > 0.0f); }
+        void setOrthoHeight(float height) {
+            _orthoHeight = core::max(core::FLOAT_EPSILON, height);
+        }
+        void setOrthoNear(float orthoNear) {
+            _orthoNear = orthoNear;
+        }
+        void setOrthoFar(float orthoFar) {
+            _orthoFar = orthoFar;
+        }
+
 
         static core::vec3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, const core::vec2& clipPos) {
             return core::vec3(clipPos.x * aspectRatio * sensorHeight * 0.5f, clipPos.y * sensorHeight * 0.5f, -focal);
@@ -135,7 +156,7 @@ namespace pico {
             return clipZ;
         }
 
-        static core::vec4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float pfar, const core::vec3& eyePos) {
+        static core::vec4 persClipFromEyeSpace(float aspectRatio, float sensorHeight, float focal, float pfar, const core::vec3& eyePos) {
             float ez = -eyePos.z;
             float pnear = focal;
             core::vec4 clipPos;
@@ -146,13 +167,16 @@ namespace pico {
             return clipPos;
         }
 
-        static core::vec4 orthoClipFromEyeSpace(float pnear, float sensorHeight, float aspectRatio, float pfar, const core::vec3& eyePos) {
-            float w = 1.0f;
-            float z = -(eyePos.z * 2.0f + pfar + pnear) / (pfar - pnear);
-            float x = eyePos.x * 2.0f / (sensorHeight * aspectRatio);
-            float y = eyePos.y * 2.0f / (sensorHeight);
-            return core::vec4(x, y, z, w);
+        static core::vec4 orthoClipFromEyeSpace(float aspectRatio, float sensorHeight, float pnear, float pfar, const core::vec3& eyePos) {
+            core::vec4 clipPos;
+            clipPos.w = 1.0f;
+            clipPos.z = (pfar - eyePos.z) / (pfar - pnear);
+            clipPos.x = eyePos.x * 2.0f / (sensorHeight * aspectRatio);
+            clipPos.y = eyePos.y * 2.0f / (sensorHeight);
+            return clipPos;
         }
+
+        
     };
 
     struct VISUALIZATION_API ViewportRect {
@@ -228,6 +252,8 @@ namespace pico {
 
         void setFocal(float focal);
         float getFocal() const;
+        float getFov() const;
+        float getFovDeg() const;
 
         void setProjectionHeight(float projHeight);
         float getProjectionHeight() const;
@@ -238,6 +264,16 @@ namespace pico {
 
         void setFar(float far);
         float getFar() const;
+
+        void setOrtho(bool enable);
+        bool isOrtho() const;
+
+        void setOrthoHeight(float orthoHeight);
+        float getOrthoHeight() const;
+        void setOrthoNear(float orthoNear);
+        float getOrthoNear() const;
+        void setOrthoFar(float orthoFar);
+        float getOrthoFar() const;
 
         // Viewport
         void setViewport(const ViewportRect& viewport);

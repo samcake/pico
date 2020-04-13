@@ -81,7 +81,8 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
 
         if (FAILED(hr)) {
             if (errorBlob) {
-                OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+                picoLog() << (char*)errorBlob->GetBufferPointer();
+             //   OutputDebugStringA((char*)errorBlob->GetBufferPointer());
                 errorBlob->Release();
             }
 
