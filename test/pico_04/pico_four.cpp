@@ -131,8 +131,9 @@ int main(int argc, char *argv[])
     auto windowHandler = new pico::WindowHandlerDelegate();
     pico::WindowInit windowInit { windowHandler, "Pico 4" };
     auto window = pico::Window::createWindow(windowInit);
+    camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
+    pico::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
@@ -225,11 +226,12 @@ int main(int argc, char *argv[])
             }
             if (e.state & pico::MOUSE_RBUTTON) {
                 if (e.state & pico::MOUSE_CONTROL) {
-                    float panScale = -cameraOrbitLength * 0.001f;
+                    float panScale = cameraOrbitLength * 0.001f;
                     if (camera->isOrtho()) {
+                        panScale = camera->getOrthoHeight() / camera->getViewportHeight();
                     } else {
                     }    
-                    camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
+                    camera->pan(-e.delta.x* panScale, e.delta.y * panScale);
                 } else {
                     float orbitScale = 0.01f;
                     camera->orbit(cameraOrbitLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
