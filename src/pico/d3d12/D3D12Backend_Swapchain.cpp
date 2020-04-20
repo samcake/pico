@@ -158,7 +158,7 @@ bool CreateDepthStencilBuffer(ComPtr<ID3D12Device2> device, uint32_t width, uint
     // Create a depth buffer.
     D3D12_CLEAR_VALUE optimizedClearValue = {};
     optimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-    optimizedClearValue.DepthStencil = { 1.0f, 0 };
+    optimizedClearValue.DepthStencil = { 0.0f, 0 }; // Default clear value is 0.f because we use Inverted Z and 0 is matching Far
 
     D3D12_HEAP_PROPERTIES heapProp;
     heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;

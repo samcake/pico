@@ -60,15 +60,17 @@ Viewport::~Viewport() {
 
 }
 
+core::FrameTimer::Sample Viewport::lastFrameTimerSample() const {
+    return _frameTimer.lastSample();
+}
+
+
 void Viewport::present(const SwapchainPointer& swapchain) {
     _renderer->render(_camera, swapchain);
 }
 
 void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
-    static float time = 0.0f;
-    time += 1.0f / 60.0f;
-    float intPart;
-    float timeNorm = modf(time, &intPart);
+    _frameTimer.beginFrame();
 
     auto currentIndex = swapchain->currentIndex();
     camera->updateGPUData();
@@ -102,6 +104,8 @@ void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPoint
     batch->end();
 
     device->executeBatch(batch);
+
+    _frameTimer.endFrame();
 
     device->presentSwapchain(swapchain);
 }

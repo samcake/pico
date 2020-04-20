@@ -233,11 +233,14 @@ public:
     virtual void* nativeWindow() = 0;
     virtual uint32_t width() const = 0;
     virtual uint32_t height() const = 0;
+
+    virtual void setTitle(const std::string& title) = 0;
 };
 
 
 struct WindowInit {
     WindowHandler* handler {nullptr};
+    std::string title;
 };
 
 class Window {
@@ -262,6 +265,7 @@ public:
     void onMouse(const MouseEvent& e);
     void onKeyboard(const KeyboardEvent& e);
 
+    void setTitle(const std::string& title);
 protected:
     std::unique_ptr<WindowHandler> _handler;
     std::unique_ptr<WindowBackend> _backend;

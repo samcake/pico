@@ -51,7 +51,6 @@
 
 #include <vector>
 
-
 //--------------------------------------------------------------------------------------
 // pico 4: Scene, Viewport and Camera to render a simple 3d scene
 // introducing:
@@ -130,36 +129,29 @@ int main(int argc, char *argv[])
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
+    pico::WindowInit windowInit { windowHandler, "Pico 4" };
     auto window = pico::Window::createWindow(windowInit);
+    camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
+    pico::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, viewport](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, viewport, window, camera](const pico::PaintEvent& e) {
         // Measuring framerate
-        static uint64_t frameCounter = 0;
-        static double elapsedSeconds = 0.0;
-        static std::chrono::high_resolution_clock clock;
-        static auto t0 = clock.now();
-
-        frameCounter++;
-        auto t1 = clock.now();
-        auto deltaTime = t1 - t0;
-        t0 = t1;
-
-        elapsedSeconds += deltaTime.count() * 1e-9;
-        if (elapsedSeconds > 1.0) {
-            char buffer[500];
-            auto fps = frameCounter / elapsedSeconds;
-            sprintf_s(buffer, 500, "FPS: %f\n", fps);
-            OutputDebugString(buffer);
-            frameCounter = 0;
-            elapsedSeconds = 0.0;
+        static core::FrameTimer::Sample frameSample;
+        auto currentSample = viewport->lastFrameTimerSample();
+        if ((currentSample._frameNum - frameSample._frameNum) > 60) {
+            frameSample = currentSample;
+            std::string title = std::string("Pico 4: ") + std::to_string((uint32_t) frameSample.beginRate())
+                              + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
+                              + (camera->isOrtho()
+                                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
+                                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
+            window->setTitle(title);
         }
-
+ 
         // Render!
         viewport->present(swapchain);
     });
@@ -184,6 +176,11 @@ int main(int argc, char *argv[])
     windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
         if (e.state && e.key == pico::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
+        }
+
+        if (e.state && e.key == pico::KEY_P) {
+            // look side
+            camera->setOrtho(!camera->isOrtho());
         }
 
         bool zoomToScene = false;
@@ -220,15 +217,21 @@ int main(int argc, char *argv[])
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
             if (e.state & pico::MOUSE_MBUTTON) {
-                float orbitScale = 0.01f;
                 // Center of the screen is Focal = SensorHeight
                 float ny = (0.5f + e.pos.y / (float)window->height());
-                camera->setFocal(camera->getProjectionHeight() * (ny * ny * ny));
+                if (camera->isOrtho()) {
+                } else {
+                    camera->setFocal(camera->getProjectionHeight()* (ny* ny* ny));
+                }
             }
             if (e.state & pico::MOUSE_RBUTTON) {
                 if (e.state & pico::MOUSE_CONTROL) {
-                    float panScale = -cameraOrbitLength * 0.001f;
-                    camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
+                    float panScale = cameraOrbitLength * 0.001f;
+                    if (camera->isOrtho()) {
+                        panScale = camera->getOrthoHeight() / camera->getViewportHeight();
+                    } else {
+                    }    
+                    camera->pan(-e.delta.x* panScale, e.delta.y * panScale);
                 } else {
                     float orbitScale = 0.01f;
                     camera->orbit(cameraOrbitLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
@@ -236,12 +239,23 @@ int main(int argc, char *argv[])
             }
         } else if (e.state & pico::MOUSE_WHEEL) {
             if (e.state & pico::MOUSE_CONTROL) {
-                float zoomScale = 0.1f;
-                camera->setFocal( camera->getFocal() * (1.0f +  e.wheel * zoomScale));
+                if (camera->isOrtho()) {
+                    float dollyScale = 0.08f;
+                    float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
+                    cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
+                } else {
+                    float zoomScale = 0.1f;
+                    camera->setFocal(camera->getFocal() * (1.0f +  e.wheel * zoomScale));
+                }
             } else {
-                float dollyScale = 0.08f;
-                float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
-                cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
+                if (camera->isOrtho()) {
+                    float zoomScale = 0.1f;
+                    camera->setOrthoHeight(camera->getOrthoHeight() * (1.0f + e.wheel * zoomScale));
+                } else {
+                    float dollyScale = 0.08f;
+                    float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
+                    cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
+                }
             }
         }
     };
