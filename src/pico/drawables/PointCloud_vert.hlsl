@@ -150,11 +150,11 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
     // make the sprite
-    const float spriteSize = 3.0;
-    float2 invRes = float2( 1.0 / _viewport.z, 1.0 / _viewport.w);
-    OUT.sprite = float2(((sid == 1) ? 3.0 * spriteSize : -spriteSize), ((sid == 2) ? -3.0 * spriteSize : spriteSize));
+    OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? -3.0 : 1.0));
 
-    clipPos.xy += invRes.xy * OUT.sprite;
+    const float spriteSize = 10.0;
+    float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
+    clipPos.xy += invRes.xy * OUT.sprite * spriteSize;
 
     OUT.Position = clipPos;
     OUT.Color = float4(r, g, b, 1.0f);
