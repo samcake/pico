@@ -1,9 +1,15 @@
 struct PixelShaderInput
 {
     float4 Color    : COLOR;
+    float2 sprite : SPRITE;
 };
 
 float4 main(PixelShaderInput IN) : SV_Target
 {
-    return float4(1.0f, 0.0f, 0.0f, 1.0f);
+    float r2 = dot(IN.sprite, IN.sprite);
+
+    if ((r2 >= 1.0)) discard;
+    
+    //return IN.Color;
+    return float4(IN.Color.xyz, step(r2, 1.0));
 }

@@ -143,6 +143,22 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         bufferBackend->_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
     }
     break;
+
+    case ResourceUsage::RESOURCE_BUFFER: {
+        bufferBackend->_resourceBufferView.Format = DXGI_FORMAT_UNKNOWN;
+        bufferBackend->_resourceBufferView.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+        bufferBackend->_resourceBufferView.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        bufferBackend->_resourceBufferView.Buffer.FirstElement = bufferBackend->_init.firstElement;
+        bufferBackend->_resourceBufferView.Buffer.NumElements = (UINT)(bufferBackend->_init.numElements);
+        bufferBackend->_resourceBufferView.Buffer.StructureByteStride = (UINT)(bufferBackend->_init.structStride);
+        bufferBackend->_resourceBufferView.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+        if (bufferBackend->_init.raw) {
+            bufferBackend->_resourceBufferView.Buffer.StructureByteStride = 0;
+            bufferBackend->_resourceBufferView.Format = DXGI_FORMAT_R32_TYPELESS;
+            bufferBackend->_resourceBufferView.Buffer.Flags |= D3D12_BUFFER_SRV_FLAG_RAW;
+        }
+    }
+    break;
     }
 
     return bufferBackend;

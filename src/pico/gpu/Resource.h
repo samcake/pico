@@ -46,9 +46,15 @@ namespace pico {
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
         bool swapchainable {false};
+        bool raw {false};
 
         // VertexBuffer
         uint32_t vertexStride { 0 };
+
+        // ResourceBuffer
+        uint32_t firstElement{ 0 };
+        uint32_t numElements{ 0 };
+        uint32_t structStride{ 0 };
     };
 
     class VISUALIZATION_API Buffer : public Resource {

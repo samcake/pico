@@ -188,6 +188,7 @@ namespace pico {
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
+        D3D12_SHADER_RESOURCE_VIEW_DESC _resourceBufferView;
     };
 
     class D3D12TextureBackend : public Texture {

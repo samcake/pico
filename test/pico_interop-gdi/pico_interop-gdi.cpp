@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 
     // Let's describe the pipeline Descriptors layout
     pico::DescriptorLayouts descriptorLayouts{
-        { pico::DescriptorType::TEXTURE_SRV, pico::ShaderStage::PIXEL, 0, 1},
+        { pico::DescriptorType::RESOURCE_TEXTURE, pico::ShaderStage::PIXEL, 0, 1},
         { pico::DescriptorType::SAMPLER, pico::ShaderStage::PIXEL, 0, 1},
     };
 

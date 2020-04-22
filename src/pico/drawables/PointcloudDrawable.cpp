@@ -57,10 +57,23 @@ namespace pico
 
         auto numVertices = mesh->getNumVertices();
 
+        pico::BufferInit resourceBufferInit{};
+        resourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
+        resourceBufferInit.hostVisible = true;
+        resourceBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+        resourceBufferInit.firstElement = 0;
+        resourceBufferInit.numElements = numVertices;
+        resourceBufferInit.structStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+
+        auto resourceBuffer = device->createBuffer(resourceBufferInit);
+        memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
+
+
         // Let's describe the pipeline Descriptors layout
         pico::DescriptorLayouts descriptorLayouts{
             { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
             { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(core::mat4x3) >> 2},
+            { pico::DescriptorType::RESOURCE_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
         };
 
         pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -82,12 +95,21 @@ namespace pico
         pico::ProgramInit programInit{ vertexShader, pixelShader };
         pico::ShaderPointer programShader = device->createProgram(programInit);
 
-        pico::PipelineStateInit pipelineInit{
+  /*     pico::PipelineStateInit pipelineInit0{
             programShader,
             mesh->_vertexBuffers._streamLayout,
             pico::PrimitiveTopology::POINT,
             descriptorSetLayout,
             true // enable depth
+        };
+        pico::PipelineStatePointer pipeline0 = device->createPipelineState(pipelineInit0);
+*/
+        pico::PipelineStateInit pipelineInit{
+                    programShader,
+                    StreamLayout(),
+                    pico::PrimitiveTopology::TRIANGLE,
+                    descriptorSetLayout,
+                    true // enable depth
         };
         pico::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
@@ -102,8 +124,10 @@ namespace pico
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
         pico::DescriptorObject uboDescriptorObject;
         uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        pico::DescriptorObject rboDescriptorObject;
+        rboDescriptorObject._buffers.push_back(resourceBuffer);
         pico::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject,
+            uboDescriptorObject, rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -112,12 +136,12 @@ namespace pico
             batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
-            batch->bindVertexBuffers(1, &vertexBuffer);
+     //       batch->bindVertexBuffers(1, &vertexBuffer);
 
             batch->bindDescriptorSet(descriptorSet);
             batch->bindPushUniform(1, sizeof(core::mat4x3), (const uint8_t*) transform.data());
 
-            batch->draw(numVertices, 0);
+            batch->draw(3 * numVertices, 0);
         };
         auto drawcall = new pico::DrawcallObject(drawCallback);
         drawcall->_bounds = mesh->_bounds;

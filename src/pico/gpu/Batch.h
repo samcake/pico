@@ -41,6 +41,7 @@ namespace pico {
         INDEX_BUFFER = 0,
         VERTEX_BUFFER,
         UNIFORM_BUFFER,
+        RESOURCE_BUFFER,
 
         COUNT,
     };

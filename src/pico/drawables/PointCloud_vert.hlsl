@@ -109,33 +109,55 @@ float3 worldFromObjectSpace(Transform model, float3 objPos) {
     return  rotatedPos + model.ori();
 }
 
-struct VertexPosColor
+/*struct VertexPosColor
 {
     float3 Position : POSITION;
     //  float3 Normal : NORMAL;
     float4 Color : COLOR;
+};*/
+
+struct PointPosColor {
+    float x;
+    float y;
+    float z;
+    uint  color;
 };
+
+StructuredBuffer<PointPosColor>  BufferIn : register(t0);
 
 struct VertexShaderOutput
 {
     float4 Color    : COLOR;
+    float2 sprite   : SPRITE;
     float4 Position : SV_Position;
-    float pointSize : PSIZE;
 };
 
-VertexShaderOutput main(VertexPosColor IN)
+VertexShaderOutput main(uint vidT : SV_VertexID)
 {
     VertexShaderOutput OUT;
+    uint vid = vidT / 3;
+    uint sid = vidT - vid * 3;
 
-    float3 position = IN.Position;
+    uint color = BufferIn[vid].color;
+    const float INT8_TO_NF = 1.0 / 255.0;
+    float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
+    float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
+    float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
+    float3 position = float3(BufferIn[vid].x, BufferIn[vid].y, BufferIn[vid].z);
 
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
+    // make the sprite
+    const float spriteSize = 3.0;
+    float2 invRes = float2( 1.0 / _viewport.z, 1.0 / _viewport.w);
+    OUT.sprite = float2(((sid == 1) ? 3.0 * spriteSize : -spriteSize), ((sid == 2) ? -3.0 * spriteSize : spriteSize));
+
+    clipPos.xy += invRes.xy * OUT.sprite;
+
     OUT.Position = clipPos;
-    OUT.Color = float4(IN.Color.xyz, 1.0f);
-    OUT.pointSize = 0.5;
+    OUT.Color = float4(r, g, b, 1.0f);
 
     return OUT;
 }
