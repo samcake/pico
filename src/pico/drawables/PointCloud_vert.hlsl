@@ -152,9 +152,9 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
     // make the sprite
     OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? -3.0 : 1.0));
 
-    const float spriteSize = 10.0;
+    const float spriteSize = 1.0;
     float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
-    clipPos.xy += invRes.xy * OUT.sprite * spriteSize;
+    clipPos.xy += invRes.xy * OUT.sprite * spriteSize; // * clipPos.w; pixel size or 3d size? 
 
     OUT.Position = clipPos;
     OUT.Color = float4(r, g, b, 1.0f);

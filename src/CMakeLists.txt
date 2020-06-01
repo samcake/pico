@@ -1,3 +1,9 @@
+
+#---------------------------------------------
+# Find Scribe
+#---------------------------------------------
+set(SCRIBE_EXE  "C:/Build/pico/bin/Debug/scribe.exe")
+message( "Scribe is Pico Folder: ${SCRIBE_EXE}")
 #---------------------------------------------
 # Graphics Library
 #---------------------------------------------
@@ -30,7 +36,7 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
         DEPENDS ${item}
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
-        COMMAND scribe ${item} -c++ -o ${item_target_root}
+        COMMAND ${SCRIBE_EXE} ${item} -c++ -o ${item_target_root}
     )
  
 endforeach()
@@ -71,10 +77,13 @@ add_library (pico
     ${PICO_SHADERS}
 )
 
+
 target_link_libraries(pico
     ${PICO_LIBRARIES}
     ${GRAPHICS_LIBRARIES}
 )
+
+add_dependencies(pico scribe)
 
 target_include_directories(pico PRIVATE "pico/" ${SHADER_OUTPUT_DIR} )
 

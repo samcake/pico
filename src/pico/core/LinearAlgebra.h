@@ -466,5 +466,34 @@ namespace core
     inline rotor3 geo(const vec3& a, const vec3& b) {
         return rotor3(dot(a, b), wedge(a, b));
     }
+
+
+    // Noise function by Squirrel Eiserloh 'Squirrel3'
+    inline uint32_t noise1D(int32_t pos, uint32_t seed) {
+        const uint32_t BIT_NOISE1 = 0x68E31DA4;
+        const uint32_t BIT_NOISE2 = 0xB5297A4D;
+        const uint32_t BIT_NOISE3 = 0x1B56C4E9;
+
+        uint32_t mangled = (uint32_t) pos;
+        mangled *= BIT_NOISE1;
+        mangled += seed;
+        mangled ^= (mangled >> 8);
+        mangled += BIT_NOISE2;
+        mangled ^= (mangled << 8);
+        mangled *= BIT_NOISE3;
+        mangled ^= (mangled >> 8);
+        return mangled;
+    }
+
+    inline uint32_t noise2D(int32_t x, int32_t y, uint32_t seed) {
+        const int32_t PRIME_NUMBER = 198491317;
+        return noise1D(x + (PRIME_NUMBER * y), seed);
+    }
+
+    inline uint32_t noise3D(int32_t x, int32_t y, int32_t z, uint32_t seed) {
+        const int32_t PRIME_NUMBER1 = 198491317;
+        const int32_t PRIME_NUMBER2 = 6542989;
+        return noise1D(x + (PRIME_NUMBER1 * y) + (PRIME_NUMBER2 * z), seed);
+    }
 }
 
