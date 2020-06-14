@@ -26,9 +26,9 @@
 //
 #include "CameraController.h"
 
-#include "../render/Camera.h"
-#include "../gpu/Device.h"
-#include "../gpu/Resource.h"
+#include "render/Camera.h"
+#include "gpu/Device.h"
+#include "gpu/Resource.h"
 #include "Window.h"
 
 using namespace pico;

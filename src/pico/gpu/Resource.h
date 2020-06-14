@@ -26,7 +26,7 @@
 //
 #pragma once
 
-#include "../Forward.h"
+#include "Forward.h"
 
 #include "Batch.h"
 

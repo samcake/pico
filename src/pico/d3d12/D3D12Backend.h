@@ -26,16 +26,16 @@
 //
 #pragma once
 
-#include "../gpu/Device.h"
-#include "../gpu/Swapchain.h"
-#include "../gpu/Framebuffer.h"
-#include "../gpu/Batch.h"
-#include "../gpu/Resource.h"
-#include "../gpu/Pipeline.h"
-#include "../gpu/Shader.h"
-#include "../gpu/Descriptor.h"
+#include "gpu/Device.h"
+#include "gpu/Swapchain.h"
+#include "gpu/Framebuffer.h"
+#include "gpu/Batch.h"
+#include "gpu/Resource.h"
+#include "gpu/Pipeline.h"
+#include "gpu/Shader.h"
+#include "gpu/Descriptor.h"
 
-#include "../Api.h"
+#include "Api.h"
 
 #ifdef WIN32
 

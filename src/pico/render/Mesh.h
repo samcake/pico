@@ -26,12 +26,12 @@
 //
 #pragma once
 
-#include "../Forward.h"
-#include "../Api.h"
+#include "Forward.h"
+#include "Api.h"
 
-#include "../core/LinearAlgebra.h"
+#include <core/LinearAlgebra.h>
 
-#include "../gpu/gpu.h"
+#include "gpu/gpu.h"
 
 #include <vector>
 

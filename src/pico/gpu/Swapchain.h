@@ -26,8 +26,8 @@
 //
 #pragma once
 
-#include "../Api.h"
-#include "../Forward.h"
+#include "Api.h"
+#include "Forward.h"
 
 #include "Device.h"
 

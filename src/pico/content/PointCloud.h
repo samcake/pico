@@ -30,8 +30,9 @@
 #include <vector>
 #include <memory>
 
-#include "../core/LinearAlgebra.h"
-#include "../dllmain.h"
+#include <core/LinearAlgebra.h>
+
+#include "dllmain.h"
 
 namespace document
 {

@@ -26,10 +26,10 @@
 //
 #pragma once
 
-#include "../Forward.h"
+#include "Forward.h"
 #include <vector>
 #include <unordered_map>
-#include "../core/LinearAlgebra.h"
+#include <core/LinearAlgebra.h>
 
 #include "Renderer.h"
 

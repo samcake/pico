@@ -26,8 +26,8 @@
 //
 #pragma once
 
-#include "../Forward.h"
-#include "../Api.h"
+#include "Forward.h"
+#include "Api.h"
 
 #include <array>
 

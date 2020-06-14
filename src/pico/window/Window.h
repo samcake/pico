@@ -29,7 +29,7 @@
 #include "../Forward.h"
 
 #include <functional>
-#include "../core/LinearAlgebra.h"
+#include <core/LinearAlgebra.h>
 
 namespace pico {
 

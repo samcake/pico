@@ -29,8 +29,8 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Renderer.h"
-#include "../gpu/Swapchain.h"
-#include "../gpu/Batch.h"
+#include "gpu/Swapchain.h"
+#include "gpu/Batch.h"
 
 
 using namespace pico;

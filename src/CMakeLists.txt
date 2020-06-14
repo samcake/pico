@@ -1,10 +1,5 @@
 
 #---------------------------------------------
-# Find Scribe
-#---------------------------------------------
-set(SCRIBE_EXE  "C:/Build/pico/bin/Debug/scribe.exe")
-message( "Scribe is Pico Folder: ${SCRIBE_EXE}")
-#---------------------------------------------
 # Graphics Library
 #---------------------------------------------
 
@@ -33,16 +28,16 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
     set_source_files_properties(${item} PROPERTIES VS_TOOL_OVERRIDE "None")
     add_custom_command(
-        DEPENDS ${item}
+        DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
-        COMMAND ${SCRIBE_EXE} ${item} -c++ -o ${item_target_root}
+        COMMAND scribe ${item} -c++ -o ${item_target_root}
     )
  
 endforeach()
 
-message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
-message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
+#message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
+#message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
 
 file(GLOB PICO_HEADERS
     "pico/*.h"
@@ -85,7 +80,7 @@ target_link_libraries(pico
 
 add_dependencies(pico scribe)
 
-target_include_directories(pico PRIVATE "pico/" ${SHADER_OUTPUT_DIR} )
+target_include_directories(pico PUBLIC "pico/" ${SHADER_OUTPUT_DIR} )
 
 source_group(pico\\shaders FILES ${PICO_SHADERS})
 source_group(pico\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)
