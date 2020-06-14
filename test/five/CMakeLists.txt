@@ -19,7 +19,7 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
     set_source_files_properties(${item} PROPERTIES VS_TOOL_OVERRIDE "None")
     add_custom_command(
-        DEPENDS ${item}
+        DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
         COMMAND scribe ${item} -c++ -o ${item_target_root}
