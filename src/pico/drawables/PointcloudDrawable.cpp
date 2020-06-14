@@ -58,6 +58,9 @@ namespace pico
        
     pico::DrawcallObjectPointer PointCloudDrawable::allocateDocumentDrawcallObject(const pico::DevicePointer& device, const pico::CameraPointer& camera, const document::PointCloudPointer& pointCloud)
     {
+        if (!pointCloud) {
+            return nullptr;
+        }
 
         // Step 1, create a Mesh from the point cloud data
 

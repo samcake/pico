@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(scribe)
+project(Scribe)
 
 file(GLOB TARGET_SRCS src/*)
 add_executable(scribe ${TARGET_SRCS})
