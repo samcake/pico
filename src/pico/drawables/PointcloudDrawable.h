@@ -25,10 +25,7 @@
 // SOFTWARE.
 //
 #pragma once
-#ifndef POINTCLOUD_DRAWABLE_H_
-#define POINTCLOUD_DRAWABLE_H_
 
-// #include "stdafx.h"
 #include "Forward.h"
 #include <memory>
 
@@ -69,5 +66,3 @@ namespace pico
 
 
 } // !namespace pico
-
-#endif // POINTCLOUD_DRAWABLE_H_

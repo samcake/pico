@@ -25,6 +25,8 @@
 // SOFTWARE.
 //
 #pragma once
+#ifndef _POINTCLOUD_H_
+#define _POINTCLOUD_H_
 
 #include <string>
 #include <vector>
@@ -68,3 +70,5 @@ namespace document
     };
 
 }
+
+#endif

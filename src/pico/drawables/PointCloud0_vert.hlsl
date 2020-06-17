@@ -120,7 +120,6 @@ struct VertexShaderOutput
 {
     float4 Color    : COLOR;
     float4 Position : SV_Position;
-    float pointSize : PSIZE;
 };
 
 VertexShaderOutput main(VertexPosColor IN)
@@ -135,7 +134,6 @@ VertexShaderOutput main(VertexPosColor IN)
 
     OUT.Position = clipPos;
     OUT.Color = float4(IN.Color.xyz, 1.0f);
-    OUT.pointSize = 0.5;
 
     return OUT;
 }
