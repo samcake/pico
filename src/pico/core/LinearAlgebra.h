@@ -28,9 +28,6 @@
 #include <stdint.h>
 #include <cmath>
 
-#include "../dllmain.h"
-
-
 namespace core 
 {
 

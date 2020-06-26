@@ -25,8 +25,6 @@
 // SOFTWARE.
 //
 #pragma once
-#ifndef _POINTCLOUD_H_
-#define _POINTCLOUD_H_
 
 #include <Forward.h>
 
@@ -69,5 +67,3 @@ namespace document
     };
 
 }
-
-#endif

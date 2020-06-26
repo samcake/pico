@@ -26,12 +26,17 @@
 //
 #pragma once
 
-#include "Forward.h"
-
 #include <functional>
 #include <core/LinearAlgebra.h>
 
+#include "Forward.h"
+
 namespace pico {
+
+    //--------------------------------------------------------------------------------------
+    class Window;
+    using WindowPointer = std::shared_ptr<Window>;
+    struct WindowInit;
 
 //--------------------------------------------------------------------------------------
 

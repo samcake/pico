@@ -42,8 +42,4 @@
 #endif
 
 namespace pico {
-
-    class Window;
-    using WindowPointer = std::shared_ptr<Window>;
-    struct WindowInit;
 }
