@@ -37,6 +37,7 @@ using namespace pico;
 #include <Windows.h>
 #include <Winuser.h>
 #include <Windowsx.h>
+#include <shellapi.h>
 
 class WIN32WindowBackend : public WindowBackend {
 public:
@@ -197,6 +198,17 @@ public:
             }
             return 0;
         } break;
+        case WM_DROPFILES: {
+            DropFilesEvent e;
+            HDROP hDropInfo = (HDROP)wparam;
+            char sItem[MAX_PATH];
+            for (int i = 0; DragQueryFile(hDropInfo, i, (LPSTR)sItem, sizeof(sItem)); i++) {
+                e.fileUrls.push_back(std::string(sItem));
+            }
+            DragFinish(hDropInfo);
+            _ownerWindow->onDropFiles(e);
+            return 0;
+        } break;
         }
 
         // If nothing catched default 
@@ -207,10 +219,12 @@ public:
         initWinClass();
         width = (width == -1 ? 640 : width);
         height = (height == -1 ? 480 : height);
-        auto sysWindow = CreateWindowA(WINDOW_CLASS.c_str(), name.c_str(),
+       /* auto sysWindow = CreateWindowA(WINDOW_CLASS.c_str(), name.c_str(),
+            WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
+            width, height, NULL, NULL, NULL, NULL);*/
+        auto sysWindow = CreateWindowExA(WS_EX_ACCEPTFILES, WINDOW_CLASS.c_str(), name.c_str(),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
             width, height, NULL, NULL, NULL, NULL);
-
         auto window = new WIN32WindowBackend(owner, sysWindow, name, width, height);
 
         _sysWindowMap[sysWindow] = window;
@@ -488,6 +502,9 @@ void Window::onMouse(const MouseEvent& e) {
 }
 void Window::onKeyboard(const KeyboardEvent& e) {
     _handler->onKeyboard(e);
+}
+void Window::onDropFiles(const DropFilesEvent& e) {
+    _handler->onDropFiles(e);
 }
 
 void Window::setTitle(const std::string& text) {

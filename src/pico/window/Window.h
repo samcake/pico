@@ -27,6 +27,8 @@
 #pragma once
 
 #include <functional>
+#include <vector>
+
 #include <core/LinearAlgebra.h>
 
 #include "Forward.h"
@@ -186,6 +188,10 @@ struct KeyboardEvent {
     bool state;
 };
 
+struct DropFilesEvent {
+    std::vector<std::string> fileUrls;
+};
+
 class WindowHandler {
 public:
     WindowHandler() {}
@@ -195,6 +201,7 @@ public:
     virtual void onPaint(const PaintEvent& e) {}
     virtual void onMouse(const MouseEvent& e) {}
     virtual void onKeyboard(const KeyboardEvent& e) {}
+    virtual void onDropFiles(const DropFilesEvent& e) {}
 
 };
 
@@ -204,6 +211,7 @@ public:
     std::function<void(const pico::PaintEvent&)> _onPaintDelegate;
     std::function<void(const pico::MouseEvent&)> _onMouseDelegate;
     std::function<void(const pico::KeyboardEvent&)> _onKeyboardDelegate;
+    std::function<void(const pico::DropFilesEvent&)> _onDropFilesDelegate;
 
     WindowHandlerDelegate() {
     }
@@ -219,6 +227,9 @@ public:
     }
     void onKeyboard(const pico::KeyboardEvent& e) override {
         if (_onKeyboardDelegate) _onKeyboardDelegate(e);
+    }
+    void onDropFiles(const pico::DropFilesEvent& e) override {
+        if (_onDropFilesDelegate) _onDropFilesDelegate(e);
     }
 };
 
@@ -269,6 +280,7 @@ public:
     void onPaint(const PaintEvent& e);
     void onMouse(const MouseEvent& e);
     void onKeyboard(const KeyboardEvent& e);
+    void onDropFiles(const DropFilesEvent& e);
 
     void setTitle(const std::string& title);
 protected:
