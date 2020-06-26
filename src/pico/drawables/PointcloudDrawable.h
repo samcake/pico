@@ -27,7 +27,6 @@
 #pragma once
 
 #include "Forward.h"
-#include <memory>
 
 namespace core {
     struct mat4x3;
@@ -36,15 +35,13 @@ namespace document {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
 }
-namespace pico
-{
+namespace pico {
     class DrawcallObject;
     using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
     class Camera;
     using CameraPointer = std::shared_ptr<Camera>;
-
 
     /*
     const pico::DrawcallObjectPointer& getDrawable(const PointCloudDrawable& x) {

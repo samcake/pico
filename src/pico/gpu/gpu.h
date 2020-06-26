@@ -27,7 +27,6 @@
 #pragma once
 
 #include "Forward.h"
-#include "Api.h"
 
 #include <array>
 
@@ -59,173 +58,6 @@ namespace pico {
         COUNT,
     };
 
-
-    struct Attrib {
-
-        static uint8_t sizeOf(AttribFormat format) {
-            const uint8_t formatSizes[int(AttribFormat::COUNT)] = { 4, 12, 16, 4 };
-            return formatSizes[(int)format];
-        }
-
-        static const uint8_t AUTO_PACKING_OFFSET{ 0xFF };
-
-        AttribSemantic _semantic{ AttribSemantic::A };
-        AttribFormat _format{ AttribFormat::UINT32 };
-        uint8_t _bufferIndex{ 0 };
-        uint8_t _packingOffset{ AUTO_PACKING_OFFSET };
-
-        Attrib() {}
-        Attrib(AttribSemantic sem) : _semantic(sem) {}
-        Attrib(AttribSemantic sem, AttribFormat fmt) : _semantic(sem), _format(fmt) {}
-        Attrib(AttribSemantic sem, AttribFormat fmt, uint8_t bi) : _semantic(sem),  _format(fmt), _bufferIndex(bi) {}
-        Attrib(AttribSemantic sem, AttribFormat fmt, uint8_t bi, uint8_t po) : _semantic(sem), _format(fmt), _bufferIndex(bi), _packingOffset(po) {}
-    };
-
-    template <int A> using Attribs = std::array<Attrib, A>;
-    using Attribs_0 = Attribs<0>;
-
-    struct AttribBufferView {
-        static const uint32_t AUTO_BYTE_LENGTH{ 0xFFFFFFFF };
-        static const uint16_t AUTO_BYTE_STRIDE{ 0xFFFF };
-
-        uint32_t _byteOffset{ 0 };
-        uint32_t _byteLength{ AUTO_BYTE_LENGTH };
-        uint16_t _byteStride{ AUTO_BYTE_STRIDE };
-
-        uint32_t evalViewByteLength(uint32_t concreteBufferSize) const {
-            return (_byteLength == AUTO_BYTE_LENGTH ? concreteBufferSize - _byteOffset : _byteLength);
-        }
-
-        uint16_t evalViewByteStride(uint16_t concreteStreamAttribSize) const {
-            picoAssert(_byteStride >= concreteStreamAttribSize);
-            return (_byteStride == AUTO_BYTE_STRIDE ? concreteStreamAttribSize : _byteStride);
-        }
-
-        uint16_t evalViewByteoffset(uint16_t concreteStreamAttribOffset) const {
-           return _byteOffset + concreteStreamAttribOffset;
-        }
-
-        AttribBufferView() {}
-        AttribBufferView(uint32_t offset) : _byteOffset(offset) {}
-        AttribBufferView(uint32_t offset, uint32_t length) : _byteOffset(offset), _byteLength(length) {}
-        AttribBufferView(uint32_t offset, uint32_t length, uint16_t stride) : _byteOffset(offset), _byteLength(length), _byteStride(stride) {}
-    };
-
-    template <int B> using AttribBufferViews = std::array<AttribBufferView, B>;
-    using AttribBufferViews_0 = AttribBufferViews<0>;
-
-    class StreamLayout {
-    public:
-        static const uint8_t INVALID_ATTRIB_INDEX{ 0xFF };
-
-    protected:
-        class Base {
-        public:
-            virtual ~Base() {};
-
-            virtual uint8_t numAttribs() const = 0;
-            virtual uint8_t numBuffers() const = 0;
-
-            virtual const Attrib* getAttrib(uint8_t a) const = 0;
-            virtual const AttribBufferView* getBufferView(uint8_t b) const = 0;
-
-
-            uint8_t attribSize(uint8_t a) const { return Attrib::sizeOf(getAttrib(a)->_format); }
-            uint16_t attribOffset(uint8_t a) const {
-                if (a <= 0 ) {
-                    return  0;
-                }
-                auto attrib = getAttrib(a);
-                auto attribBufferIndex = attrib->_bufferIndex;
-                uint16_t streamOffset = 0;
-                for (int i = (a - 1); i >= 0; i--) {
-                    attrib--;
-                    streamOffset += (attrib->_bufferIndex == attribBufferIndex ? Attrib::sizeOf(attrib->_format) : 0);
-                }
-                return streamOffset;
-            }
-
-
-            uint16_t streamAttribSize(uint8_t b) const {
-                uint16_t streamSize = 0;
-                auto attrib = getAttrib(0);
-                for (uint8_t a = 0; a < numAttribs(); a++) {
-                    // TODO: this code assume the attrib packing offset is always "AUTO"
-                    streamSize += (attrib->_bufferIndex == b ? Attrib::sizeOf(attrib->_format) : 0);
-                    attrib++;
-                }
-                return streamSize;
-            }
-
-            uint32_t evalBufferViewByteLength(uint8_t b, uint32_t concreteBufferSize) const { return getBufferView(b)->evalViewByteLength(concreteBufferSize); }
-
-            uint16_t evalBufferViewByteStride(uint8_t b) const { return getBufferView(b)->evalViewByteStride(streamAttribSize(b)); }
-
-            uint8_t findAttribAt(AttribSemantic semantic) const {
-                auto attrib = getAttrib(0);
-                for (uint8_t a = 0; a < numAttribs(); a++) {
-                    if (attrib->_semantic == semantic) {
-                        return a;
-                    }
-                    attrib++;
-                }
-                return INVALID_ATTRIB_INDEX;
-            }
-        };
-
-
-        template <int A, int B> class Instanced : public Base {
-        public:
-            Instanced() {}
-            Instanced(Attribs<A> a, AttribBufferViews<B> b) : _attribs(a), _bufferViews(b) {}
-            virtual ~Instanced() {}
-
-            constexpr uint8_t numAttribs() const override { return A; }
-            constexpr uint8_t numBuffers() const override { return B; }
-            const Attrib* getAttrib(uint8_t a) const override { return _attribs.data() + a; }
-            const AttribBufferView* getBufferView(uint8_t b) const override { return _bufferViews.data() + b; }
-
-            Attribs<A> _attribs;
-            AttribBufferViews<B> _bufferViews;
-        };
-
-        // Private constructor from the row base pointer used by the build function
-        StreamLayout(Base* base) : _base(base) {}
-
-    public:
-        StreamLayout() : _base(new Instanced<0, 0>(Attribs_0(), AttribBufferViews_0())) {} // Simple constructor build an ampty stream layout
-
-        std::shared_ptr<Base> _base{ nullptr };
-
-        uint8_t numAttribs() const { return _base->numAttribs(); }
-        uint8_t numBuffers() const { return _base->numBuffers(); }
-
-        const Attrib* getAttrib(uint8_t a) const { return _base->getAttrib(a); }
-        const AttribBufferView* getBufferView(uint8_t b) const { return _base->getBufferView(b); }
-
-        uint8_t attribSize(uint8_t a) const { return _base->attribSize(a); }
-        uint16_t streamAttribSize(uint8_t b) const { return _base->streamAttribSize(b); }
-        uint32_t evalBufferViewByteLength(uint8_t b, uint32_t concreteBufferSize) const { return _base->evalBufferViewByteLength(b, concreteBufferSize); }
-        uint16_t evalBufferViewByteStride(uint8_t b) const { return _base->evalBufferViewByteStride(b); }
-
-        uint16_t evalBufferViewByteOffsetForAttribute(uint8_t a) const { return _base->attribOffset(a) + getBufferView(getAttrib(a)->_bufferIndex)->_byteOffset; }
-
-        uint8_t findAttribAt(AttribSemantic semantic) const { return _base->findAttribAt(semantic); }
-
-        template <int A, int B>
-        static bool check(const Attribs<A>& attribs, const AttribBufferViews<B> bufferViews) {
-            // TODO: implement a bunch of checks to make sure the attribs and stream work together
-            return true;
-        }
-
-        template <int A, int B>
-        static StreamLayout build(const Attribs<A>& attribs, const AttribBufferViews<B> bufferViews) {
-            picoAssert(check(attribs, bufferViews));
-            return StreamLayout(new Instanced<A, B>(attribs, bufferViews));
-        }
-    };
-
-
     enum class ShaderType : uint8_t {
         PROGRAM = 0,
         VERTEX,
@@ -242,5 +74,109 @@ namespace pico {
         COUNT = 3,
     };
 
+
+    // GPU types
+    class Swapchain;
+    using SwapchainPointer = std::shared_ptr<Swapchain>;
+    struct SwapchainInit;
+
+    class Device;
+    using DevicePointer = std::shared_ptr<Device>;
+    struct DeviceInit;
+
+    class Batch;
+    using BatchPointer = std::shared_ptr<Batch>;
+    struct BatchInit;
+
+    class Buffer;
+    using BufferPointer = std::shared_ptr<Buffer>;
+    struct BufferInit;
+
+    class Texture;
+    using TexturePointer = std::shared_ptr<Texture>;
+    struct TextureInit;
+
+    class Sampler;
+    using SamplerPointer = std::shared_ptr<Sampler>;
+    struct SamplerInit;
+
+    class Shader;
+    using ShaderPointer = std::shared_ptr<Shader>;
+    struct ShaderInit;
+    struct ProgramInit;
+
+    class DescriptorSetLayout;
+    using DescriptorSetLayoutPointer = std::shared_ptr<DescriptorSetLayout>;
+    struct DescriptorSetLayoutInit;
+
+    class DescriptorSet;
+    using DescriptorSetPointer = std::shared_ptr<DescriptorSet>;
+    struct DescriptorSetInit;
+
+    class PipelineState;
+    using PipelineStatePointer = std::shared_ptr<PipelineState>;
+    struct PipelineStateInit;
+
+    class Framebuffer;
+    using FramebufferPointer = std::shared_ptr<Framebuffer>;
+    struct FramebufferInit;
+
+
+    // Resource Types
+    enum class ResourceUsage {
+        INDEX_BUFFER = 0,
+        VERTEX_BUFFER,
+        UNIFORM_BUFFER,
+        RESOURCE_BUFFER,
+
+        COUNT,
+    };
+
+    enum class ResourceState {
+        COMMON = 0,
+        VERTEX_AND_CONSTANT_BUFFER,
+        INDEX_BUFFER,
+        RENDER_TARGET,
+        UNORDERED_ACCESS,
+        DEPTH_WRITE,
+        DEPTH_READ,
+        IMAGE_SHADER_RESOURCE,
+        STREAM_OUT,
+        INDIRECT_ARGUMENT,
+        COPY_DEST,
+        COPY_SOURCE,
+        RESOLVE_DEST,
+        RESOLVE_SOURCE,
+        _GENERIC_READ,
+
+        PRESENT,
+        PREDICATION,
+
+
+        COUNT,
+    };
+    enum class ResourceBarrierFlag {
+        NONE = 0,
+        BEGIN_ONLY,
+        END_ONLY,
+
+        COUNT,
+    };
+
+    // Descriptor types
+    enum class DescriptorType : uint8_t {
+        UNDEFINED = 0,
+        SAMPLER,
+        UNIFORM_BUFFER,            // CBV | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+        RESOURCE_BUFFER,        // SRV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+        STORAGE_BUFFER_UAV,        // UAV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+        UNIFORM_TEXEL_BUFFER_SRV,  // SRV | VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
+        STORAGE_TEXEL_BUFFER_UAV,  // UAV | VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+        RESOURCE_TEXTURE,               // SRV | VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+        TEXTURE_UAV,               // UAV | VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+        PUSH_UNIFORM,             // CONSTANT | PUSH_CONSTANT
+
+        COUNT,
+    };
 }
 

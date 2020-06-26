@@ -26,89 +26,24 @@
 //
 #pragma once
 
-#include <cstdint>
 #include <memory>
-#include <iostream>
+#include <string>
+
 #include "dllmain.h"
+
+#ifdef WIN32
+#ifdef PICO_SUPPORT_MFC
+#include "stdafx.h"
+#else
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+#endif
 
 namespace pico {
 
     class Window;
     using WindowPointer = std::shared_ptr<Window>;
     struct WindowInit;
-
-    // GPU types
-    class Swapchain;
-    using SwapchainPointer = std::shared_ptr<Swapchain>;
-    struct SwapchainInit;
-
-    class Device;
-    using DevicePointer = std::shared_ptr<Device>;
-    struct DeviceInit;
-
-    class Batch;
-    using BatchPointer = std::shared_ptr<Batch>;
-    struct BatchInit;
-
-    class Buffer;
-    using BufferPointer = std::shared_ptr<Buffer>;
-    struct BufferInit;
-
-    class Texture;
-    using TexturePointer = std::shared_ptr<Texture>;
-    struct TextureInit;
-
-    class Sampler;
-    using SamplerPointer = std::shared_ptr<Sampler>;
-    struct SamplerInit;
-
-    class Shader;
-    using ShaderPointer = std::shared_ptr<Shader>;
-    struct ShaderInit;
-    struct ProgramInit;
-
-    class DescriptorSetLayout;
-    using DescriptorSetLayoutPointer = std::shared_ptr<DescriptorSetLayout>;
-    struct DescriptorSetLayoutInit;
-
-    class DescriptorSet;
-    using DescriptorSetPointer = std::shared_ptr<DescriptorSet>;
-    struct DescriptorSetInit;
-
-    class PipelineState;
-    using PipelineStatePointer = std::shared_ptr<PipelineState>;
-    struct PipelineStateInit;
-
-    class Framebuffer;
-    using FramebufferPointer = std::shared_ptr<Framebuffer>;
-    struct FramebufferInit;
-
-    // Render types
-    class Scene;
-    using ScenePointer = std::shared_ptr<Scene>;
-
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-
-    class Renderer;
-    using RendererPointer = std::shared_ptr<Renderer>;
-
-    class Viewport;
-    using ViewportPointer = std::shared_ptr<Viewport>;
-
-    // Content types
-    class Mesh;
-    using MeshPointer = std::shared_ptr<Mesh>;
-
-    class PointCloud;
-    using PointCloudPointer = std::shared_ptr<PointCloud>;
-
-    class DrawcallObject;
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
-
-    class GDI2GPUOverlay;
-    using GDI2GPUOverlayPointer = std::shared_ptr<GDI2GPUOverlay>;
 }
-#define picoLog() ::pico::api::log(__FILE__, __LINE__, __FUNCTION__)
-#define picoAssert(t) ::pico::api::_assert((t), __FILE__, __LINE__, __FUNCTION__)
-

@@ -26,6 +26,8 @@
 //
 #include "D3D12Backend.h"
 
+#include "pico.h"
+
 using namespace pico;
 
 #ifdef WIN32

@@ -35,8 +35,6 @@
 #include "gpu/Shader.h"
 #include "gpu/Descriptor.h"
 
-#include "Api.h"
-
 #ifdef WIN32
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.

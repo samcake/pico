@@ -26,10 +26,8 @@
 //
 #pragma once
 
-#include "Forward.h"
-#include <core/LinearAlgebra.h>
-
 #include <chrono>
+#include <render/render.h>
 
 namespace pico {
 

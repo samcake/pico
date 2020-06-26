@@ -28,7 +28,7 @@
 
 #include <core/LinearAlgebra.h>
 
-#include "Forward.h"
+#include "gpu.h"
 
 #include "Device.h"
 
@@ -36,46 +36,6 @@
 namespace pico {
 
     struct VISUALIZATION_API BatchInit {
-    };
-
-    enum class ResourceUsage {
-        INDEX_BUFFER = 0,
-        VERTEX_BUFFER,
-        UNIFORM_BUFFER,
-        RESOURCE_BUFFER,
-
-        COUNT,
-    };
-
-    enum class ResourceState {
-        COMMON = 0,
-        VERTEX_AND_CONSTANT_BUFFER,
-        INDEX_BUFFER,
-        RENDER_TARGET,
-        UNORDERED_ACCESS,
-        DEPTH_WRITE,
-        DEPTH_READ,
-        IMAGE_SHADER_RESOURCE,
-        STREAM_OUT,
-        INDIRECT_ARGUMENT,
-        COPY_DEST,
-        COPY_SOURCE,
-        RESOLVE_DEST,
-        RESOLVE_SOURCE,
-        _GENERIC_READ,
-
-        PRESENT,
-        PREDICATION,
-
-
-        COUNT,
-    };
-    enum class ResourceBarrierFlag {
-        NONE = 0,
-        BEGIN_ONLY,
-        END_ONLY,
-
-        COUNT,
     };
 
     class VISUALIZATION_API Batch {

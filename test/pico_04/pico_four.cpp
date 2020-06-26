@@ -73,9 +73,9 @@ int main(int argc, char *argv[])
     }
 
     std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
-   /* if (argc > 1) {
+    if (argc > 1) {
         triangleSoupFile = std::string(argv[argc - 1]);
-    }*/
+    }
 
     HINSTANCE hInstance = GetModuleHandle(NULL);
 

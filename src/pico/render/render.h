@@ -1,6 +1,6 @@
-// Api.h 
+// render.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - June 2020
 // 
 // MIT License
 //
@@ -28,44 +28,30 @@
 
 #include "Forward.h"
 
-#ifdef WIN32
-#ifdef PICO_SUPPORT_MFC
-#include "stdafx.h"
-#else
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-#endif
-
 namespace pico {
-    // Desc struct creating the api
-    struct ApiInit {
-    };
 
-    // Singleton Api
-    class VISUALIZATION_API api {
-    public:
-        ~api();
-        static bool create(const ApiInit& init);
-        static void destroy();
-        static std::ostream& log(const char* file, int line, const char* functionName);
-        static void _assert(bool test, const char* file, int line, const char* functionName);
+    // Render types
+    class Scene;
+    using ScenePointer = std::shared_ptr<Scene>;
+
+    class Camera;
+    using CameraPointer = std::shared_ptr<Camera>;
+
+    class Renderer;
+    using RendererPointer = std::shared_ptr<Renderer>;
+
+    class Viewport;
+    using ViewportPointer = std::shared_ptr<Viewport>;
+
+    class Mesh;
+    using MeshPointer = std::shared_ptr<Mesh>;
+
+    class PointCloud;
+    using PointCloudPointer = std::shared_ptr<PointCloud>;
+
+    class DrawcallObject;
+    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
 
 
-#ifdef WIN32
-        static HMODULE getResourceHandle();
-        static std::string loadTextResources(unsigned short resource_id);
-#endif
-
-    private: 
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        static std::unique_ptr<api> _instance;
-#pragma warning(pop)
-        ApiInit _init;
-
-    };
 }
-
 

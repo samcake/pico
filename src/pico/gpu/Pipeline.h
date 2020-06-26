@@ -26,8 +26,8 @@
 //
 #pragma once
 
-#include "Forward.h"
 #include "gpu.h"
+#include "StreamLayout.h"
 
 namespace pico {
 

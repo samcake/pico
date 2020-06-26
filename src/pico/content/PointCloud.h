@@ -28,13 +28,12 @@
 #ifndef _POINTCLOUD_H_
 #define _POINTCLOUD_H_
 
-#include <string>
+#include <Forward.h>
+
 #include <vector>
-#include <memory>
 
 #include <core/LinearAlgebra.h>
 
-#include "dllmain.h"
 
 namespace document
 {

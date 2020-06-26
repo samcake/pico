@@ -26,10 +26,7 @@
 //
 #pragma once
 
-#include "Api.h"
-#include "Forward.h"
-
-#include "Device.h"
+#include "gpu.h"
 
 namespace pico {
 

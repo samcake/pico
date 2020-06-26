@@ -28,3 +28,71 @@
 
 using namespace pico;
 
+std::unique_ptr<api> api::_instance;
+
+
+std::ostream& api::log(const char* file, int line, const char* functionName) {
+    return std::clog << file << " - " << line << " - " << functionName << " : ";
+}
+
+void api::_assert(bool test, const char* file, int line, const char* functionName) {
+    if (!test) {
+        api::log(file, line, functionName);
+    }
+}
+
+api::~api() {
+    picoLog() << "pico api is destoyed, bye!\n";
+}
+
+bool api::create(const ApiInit& init) {
+    if (_instance) {
+        picoLog() << "pico::api::instance already exist, do not create a new instance and exit returning fail\n";
+        return false;
+    }
+    if (!_instance) {
+        _instance.reset(new api());
+        _instance->_init = init;
+    }
+
+    return true;
+}
+
+void api::destroy() {
+    if (_instance) {
+        _instance.reset();
+    }
+}
+
+#ifdef WIN32
+#ifdef PICO_SUPPORT_MFC
+HMODULE api::getResourceHandle() {
+    return reinterpret_cast<HMODULE>(&__ImageBase);
+}
+
+// load from resources
+std::string pico::api::loadTextResources(unsigned short resource_id)
+{
+    HMODULE instance = getResourceHandle();
+    HRSRC hresource = FindResource(instance, MAKEINTRESOURCE(resource_id), _T("TEXT"));
+    if (!hresource)
+        return "";
+
+    // load resource
+    HGLOBAL hloadedresource = LoadResource(instance, hresource);
+    if (!hloadedresource)
+        return "";
+
+    // lock and read 
+    LPVOID plockedresource = LockResource(hloadedresource);
+    if (!plockedresource)
+        return "";
+
+    DWORD resource_size = SizeofResource(instance, hresource);
+    if (!resource_size)
+        return "";
+
+    return std::string((char*)plockedresource, resource_size);
+}
+#endif
+#endif

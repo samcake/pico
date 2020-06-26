@@ -26,9 +26,7 @@
 //
 #pragma once
 
-#include "Forward.h"
-
-#include "Batch.h"
+#include "gpu.h"
 
 namespace pico {
 
