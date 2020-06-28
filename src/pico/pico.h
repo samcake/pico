@@ -27,5 +27,39 @@
 #pragma once
 
 #include "Forward.h"
-#include "Api.h"
+
+#include <iostream>
+#define picoLog() ::pico::api::log(__FILE__, __LINE__, __FUNCTION__)
+#define picoAssert(t) ::pico::api::_assert((t), __FILE__, __LINE__, __FUNCTION__)
+
+namespace pico {
+    // Desc struct creating the api
+    struct ApiInit {
+    };
+
+    // Singleton Api
+    class VISUALIZATION_API api {
+    public:
+        ~api();
+        static bool create(const ApiInit& init);
+        static void destroy();
+        static std::ostream& log(const char* file, int line, const char* functionName);
+        static void _assert(bool test, const char* file, int line, const char* functionName);
+
+
+#ifdef WIN32
+        static HMODULE getResourceHandle();
+        static std::string loadTextResources(unsigned short resource_id);
+#endif
+
+    private:
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        static std::unique_ptr<api> _instance;
+#pragma warning(pop)
+        ApiInit _init;
+
+    };
+}
+
 

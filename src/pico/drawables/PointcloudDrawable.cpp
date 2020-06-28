@@ -1,21 +1,46 @@
-// POINTCLOUD_DRAWABLE_CPP_
+// PointCloud_Drawable.cpp
+//
+// Sam Gateau - March 2020
+// 
+// MIT License
+//
+// Copyright (c) 2020 Sam Gateau
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+//
 #include "PointCloudDrawable.h"
 
-#include "../gpu/Device.h"
-#include "../gpu/Batch.h"
-#include "../gpu/Shader.h"
-#include "../gpu/Resource.h"
-#include "../gpu/Pipeline.h"
-#include "../gpu/Descriptor.h"
-#include "../gpu/Swapchain.h"
+#include "gpu/Device.h"
+#include "gpu/Batch.h"
+#include "gpu/Shader.h"
+#include "gpu/Resource.h"
+#include "gpu/Pipeline.h"
+#include "gpu/Descriptor.h"
+#include "gpu/Swapchain.h"
 
-#include "../render/Renderer.h"
-#include "../render/Camera.h"
-#include "../render/Scene.h"
-#include "../render/Viewport.h"
-#include "../render/Mesh.h"
+#include "render/Renderer.h"
+#include "render/Camera.h"
+#include "render/Scene.h"
+#include "render/Viewport.h"
+#include "render/Mesh.h"
 
-#include "../content/pointcloud.h"
+#include <content/pointcloud.h>
 
 #include "PointCloud_vert.h"
 #include "PointCloud_frag.h"
@@ -33,6 +58,9 @@ namespace pico
        
     pico::DrawcallObjectPointer PointCloudDrawable::allocateDocumentDrawcallObject(const pico::DevicePointer& device, const pico::CameraPointer& camera, const document::PointCloudPointer& pointCloud)
     {
+        if (!pointCloud) {
+            return nullptr;
+        }
 
         // Step 1, create a Mesh from the point cloud data
 
@@ -57,10 +85,23 @@ namespace pico
 
         auto numVertices = mesh->getNumVertices();
 
+        pico::BufferInit resourceBufferInit{};
+        resourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
+        resourceBufferInit.hostVisible = true;
+        resourceBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+        resourceBufferInit.firstElement = 0;
+        resourceBufferInit.numElements = numVertices;
+        resourceBufferInit.structStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+
+        auto resourceBuffer = device->createBuffer(resourceBufferInit);
+        memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
+
+
         // Let's describe the pipeline Descriptors layout
         pico::DescriptorLayouts descriptorLayouts{
             { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
             { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(core::mat4x3) >> 2},
+            { pico::DescriptorType::RESOURCE_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
         };
 
         pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -82,12 +123,21 @@ namespace pico
         pico::ProgramInit programInit{ vertexShader, pixelShader };
         pico::ShaderPointer programShader = device->createProgram(programInit);
 
-        pico::PipelineStateInit pipelineInit{
+  /*     pico::PipelineStateInit pipelineInit0{
             programShader,
             mesh->_vertexBuffers._streamLayout,
             pico::PrimitiveTopology::POINT,
             descriptorSetLayout,
             true // enable depth
+        };
+        pico::PipelineStatePointer pipeline0 = device->createPipelineState(pipelineInit0);
+*/
+        pico::PipelineStateInit pipelineInit{
+                    programShader,
+                    StreamLayout(),
+                    pico::PrimitiveTopology::TRIANGLE,
+                    descriptorSetLayout,
+                    true // enable depth
         };
         pico::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
@@ -102,8 +152,10 @@ namespace pico
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
         pico::DescriptorObject uboDescriptorObject;
         uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        pico::DescriptorObject rboDescriptorObject;
+        rboDescriptorObject._buffers.push_back(resourceBuffer);
         pico::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject,
+            uboDescriptorObject, rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -112,12 +164,12 @@ namespace pico
             batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
-            batch->bindVertexBuffers(1, &vertexBuffer);
+     //       batch->bindVertexBuffers(1, &vertexBuffer);
 
             batch->bindDescriptorSet(descriptorSet);
             batch->bindPushUniform(1, sizeof(core::mat4x3), (const uint8_t*) transform.data());
 
-            batch->draw(numVertices, 0);
+            batch->draw(3 * numVertices, 0);
         };
         auto drawcall = new pico::DrawcallObject(drawCallback);
         drawcall->_bounds = mesh->_bounds;

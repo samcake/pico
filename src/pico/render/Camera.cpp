@@ -26,8 +26,8 @@
 //
 #include "Camera.h"
 
-#include "../gpu/Device.h"
-#include "../gpu/Resource.h"
+#include "gpu/Device.h"
+#include "gpu/Resource.h"
 
 using namespace pico;
 

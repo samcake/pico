@@ -1,3 +1,4 @@
+
 #---------------------------------------------
 # Graphics Library
 #---------------------------------------------
@@ -27,7 +28,7 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
     set_source_files_properties(${item} PROPERTIES VS_TOOL_OVERRIDE "None")
     add_custom_command(
-        DEPENDS ${item}
+        DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
         COMMAND scribe ${item} -c++ -o ${item_target_root}
@@ -35,8 +36,8 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
  
 endforeach()
 
-message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
-message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
+#message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
+#message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
 
 file(GLOB PICO_HEADERS
     "pico/*.h"
@@ -71,12 +72,15 @@ add_library (pico
     ${PICO_SHADERS}
 )
 
+
 target_link_libraries(pico
     ${PICO_LIBRARIES}
     ${GRAPHICS_LIBRARIES}
 )
 
-target_include_directories(pico PRIVATE "pico/" ${SHADER_OUTPUT_DIR} )
+add_dependencies(pico scribe)
+
+target_include_directories(pico PUBLIC "pico/" ${SHADER_OUTPUT_DIR} )
 
 source_group(pico\\shaders FILES ${PICO_SHADERS})
 source_group(pico\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)

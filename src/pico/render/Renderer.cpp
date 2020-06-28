@@ -26,9 +26,9 @@
 //
 #include "Renderer.h"
 
-#include "../gpu/Device.h"
-#include "../gpu/Batch.h"
-#include "../gpu/Swapchain.h"
+#include "gpu/Device.h"
+#include "gpu/Batch.h"
+#include "gpu/Swapchain.h"
 
 using namespace pico;
 

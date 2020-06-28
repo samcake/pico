@@ -26,11 +26,12 @@
 //
 #pragma once
 
-#include "../Forward.h"
-#include "../core/LinearAlgebra.h"
-
-
 #include <mutex>
+
+#include <core/LinearAlgebra.h>
+#include <gpu/gpu.h>
+#include "render.h"
+
 
 namespace pico {
 

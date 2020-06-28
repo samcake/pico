@@ -26,8 +26,8 @@
 //
 #pragma once
 
-#include "../Forward.h"
-#include "../mas.h"
+#include "Forward.h"
+#include <core/LinearAlgebra.h>
 
 namespace pico {
     class Transform {
@@ -35,6 +35,6 @@ namespace pico {
         Transform() {}
         ~Transform() {}
 
-        mat3x4 _matRTS;
+        core::mat3x4 _matRTS;
     };
 }

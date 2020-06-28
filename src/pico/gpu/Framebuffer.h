@@ -26,11 +26,8 @@
 //
 #pragma once
 
-#include "../Forward.h"
-
-#include "Device.h"
+#include "Forward.h"
  
-
 namespace pico {
 
     struct FramebufferInit {

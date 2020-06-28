@@ -49,6 +49,9 @@
 #include <pico/content/PointCloud.h>
 #include <pico/drawables/PointcloudDrawable.h>
 
+
+#include <pico/content/TriangleSoup.h>\
+
 #include <vector>
 
 //--------------------------------------------------------------------------------------
@@ -69,6 +72,11 @@ int main(int argc, char *argv[])
         cloudPointFile = std::string(argv[argc - 1]);
     }
 
+    std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
+    if (argc > 1) {
+        triangleSoupFile = std::string(argv[argc - 1]);
+    }
+
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the pico api
@@ -82,6 +90,7 @@ int main(int argc, char *argv[])
 
     // Some content, why not a pointcloud ?
     auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
+    auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};

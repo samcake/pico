@@ -64,9 +64,9 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         switch (init._layouts[i]._type) {
         case DescriptorType::SAMPLER: sampler_count += count; break;
         case DescriptorType::UNIFORM_BUFFER: cbvsrvuav_count += count; break;
-        case DescriptorType::STORAGE_BUFFER_SRV: cbvsrvuav_count += count; break;
+        case DescriptorType::RESOURCE_BUFFER: cbvsrvuav_count += count; break;
         case DescriptorType::STORAGE_BUFFER_UAV: cbvsrvuav_count += count; break;
-        case DescriptorType::TEXTURE_SRV: cbvsrvuav_count += count; break;
+        case DescriptorType::RESOURCE_TEXTURE: cbvsrvuav_count += count; break;
         case DescriptorType::TEXTURE_UAV: cbvsrvuav_count += count; break;
         case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV: cbvsrvuav_count += count; break;
         case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: cbvsrvuav_count += count; break;
@@ -155,9 +155,9 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
             assign_range = true;
         }
                                         break;
-        case DescriptorType::STORAGE_BUFFER_SRV:
+        case DescriptorType::RESOURCE_BUFFER:
         case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV:
-        case DescriptorType::TEXTURE_SRV: {
+        case DescriptorType::RESOURCE_TEXTURE: {
             range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
             range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
             assign_range = true;
@@ -311,9 +311,9 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
                                            break;
 
             case DescriptorType::UNIFORM_BUFFER:
-            case DescriptorType::STORAGE_BUFFER_SRV:
+            case DescriptorType::RESOURCE_BUFFER:
             case DescriptorType::STORAGE_BUFFER_UAV:
-            case DescriptorType::TEXTURE_SRV:
+            case DescriptorType::RESOURCE_TEXTURE:
             case DescriptorType::TEXTURE_UAV:
             case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV:
             case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: {
@@ -422,26 +422,33 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 cpuHandle.ptr += handle_inc_size;
             }
         } break;
-/*
-        case tr_descriptor_type_storage_buffer_srv:
-        case tr_descriptor_type_uniform_texel_buffer_srv: {
-            assert(NULL != descriptor->buffers);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
-            for (uint32_t i = 0; i < descriptor->count; ++i) {
-                assert(NULL != descriptor->buffers[i]);
+        case DescriptorType::RESOURCE_BUFFER: {
+            picoAssert(descriptorObject._buffers.size() >= descriptorLayout._count);
 
-                ID3D12Resource* resource = descriptor->buffers[i]->dx_resource;
-                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(descriptor->buffers[i]->dx_srv_view_desc);
-                p_renderer->dx_device->CreateShaderResourceView(resource, view_desc, handle);
-                handle.ptr += handle_inc_size;
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+
+            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
+            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+
+            for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
+                picoAssert((descriptorObject._buffers[j].get()));
+                auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffers[j].get());
+
+                ID3D12Resource* resource = dxUbo->_resource.Get();
+                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxUbo->_resourceBufferView);
+                _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                cpuHandle.ptr += handle_inc_size;
             }
         }
-                                                        break;
+        break;
 
-        case tr_descriptor_type_storage_buffer_uav:
+/*        case tr_descriptor_type_storage_buffer_uav:
         case tr_descriptor_type_storage_texel_buffer_uav: {
             assert(NULL != descriptor->buffers);
 
@@ -466,7 +473,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                                                         break;
 
 */
-        case DescriptorType::TEXTURE_SRV: {
+        case DescriptorType::RESOURCE_TEXTURE: {
             picoAssert(descriptorObject._textures.size() >= descriptorLayout._count);
 
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();

@@ -70,6 +70,7 @@ public:
             _inPureFrame = false;
             return _sample;
         }
+        return Sample();
     }
 };
 }

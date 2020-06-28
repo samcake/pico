@@ -26,10 +26,10 @@
 //
 #pragma once
 
-#include "../Forward.h"
 #include <vector>
 #include <unordered_map>
-#include "../core/LinearAlgebra.h"
+
+#include <core/LinearAlgebra.h>
 
 #include "Renderer.h"
 
@@ -164,13 +164,6 @@ namespace pico {
         core::Bounds _bounds;
 
         Item _createItem(Item& newItem, ItemID userID);
-    };
-
-    class Geometry {
-    public:
-        Geometry(const ScenePointer& scene) {}
-        ~Geometry() {}
-
     };
 
 }

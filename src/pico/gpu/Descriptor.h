@@ -26,28 +26,11 @@
 //
 #pragma once
 
-#include "../Forward.h"
-
 #include "gpu.h"
 
 #include <vector>
 
 namespace pico {
-
-    enum class DescriptorType : uint8_t {
-        UNDEFINED = 0,
-        SAMPLER,
-        UNIFORM_BUFFER,            // CBV | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
-        STORAGE_BUFFER_SRV,        // SRV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-        STORAGE_BUFFER_UAV,        // UAV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-        UNIFORM_TEXEL_BUFFER_SRV,  // SRV | VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
-        STORAGE_TEXEL_BUFFER_UAV,  // UAV | VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
-        TEXTURE_SRV,               // SRV | VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-        TEXTURE_UAV,               // UAV | VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
-        PUSH_UNIFORM,             // CONSTANT | PUSH_CONSTANT
-        
-        COUNT,
-    };
 
     struct VISUALIZATION_API DescriptorLayout {
         DescriptorType  _type;
