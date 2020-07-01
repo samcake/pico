@@ -66,8 +66,8 @@ namespace pico
 
         // Declare the vertex format == PointCloud::Point
         //pico::Attribs<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
-        pico::Attribs<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
-        pico::AttribBufferViews<1> bufferViews{ {0} };
+        pico::AttribArray<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+        pico::AttribBufferViewArray<1> bufferViews{ {0} };
         auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
 
         // Create the Mesh for real
@@ -77,24 +77,24 @@ namespace pico
         pico::BufferInit vertexBufferInit{};
         vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
         vertexBufferInit.hostVisible = true;
-        vertexBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
-        vertexBufferInit.vertexStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+        vertexBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
+        vertexBufferInit.vertexStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
 
         auto vertexBuffer = device->createBuffer(vertexBufferInit);
-        memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+        memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
         auto numVertices = mesh->getNumVertices();
 
         pico::BufferInit resourceBufferInit{};
         resourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
         resourceBufferInit.hostVisible = true;
-        resourceBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
+        resourceBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
         resourceBufferInit.firstElement = 0;
         resourceBufferInit.numElements = numVertices;
-        resourceBufferInit.structStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+        resourceBufferInit.structStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
 
         auto resourceBuffer = device->createBuffer(resourceBufferInit);
-        memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
+        memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
 
 
         // Let's describe the pipeline Descriptors layout

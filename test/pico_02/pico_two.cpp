@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
 
 
     // Declare the vertex format
-    pico::Attribs<1> attribs {{{ pico::AttribSemantic::A, pico::AttribFormat::VEC4, 0 }}};
-    pico::AttribBufferViews<1> bufferViews;
+    pico::AttribArray<1> attribs {{{ pico::AttribSemantic::A, pico::AttribFormat::VEC4, 0 }}};
+    pico::AttribBufferViewArray<1> bufferViews;
     auto vertexLayout = pico::StreamLayout::build(attribs, bufferViews);
 
     // And a Pipeline

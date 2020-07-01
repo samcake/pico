@@ -77,11 +77,11 @@ namespace pico {
         Mesh();
         ~Mesh();
 
-        StreamView _vertexBuffers;
-        uint32_t getNumVertices() const { return _vertexBuffers.getNumElements(); }
-        const uint8_t* getPositionBegin(uint32_t& stride) const { return (_vertexBuffers.getBufferBegin(AttribSemantic::A, stride)); }
+        StreamView _vertexStream;
+        uint32_t getNumVertices() const { return _vertexStream.getNumElements(); }
+        const uint8_t* getPositionBegin(uint32_t& stride) const { return (_vertexStream.getBufferBegin(AttribSemantic::A, stride)); }
 
-        StreamView _indexBuffer { StreamLayout::build( Attribs<1>(), AttribBufferViews<1>() ), { AttribBufferPointer() } };
+        StreamView _indexStream { StreamLayout::build( StreamElement<1,1>() ), { AttribBufferPointer() } };
 
         PrimitiveTopology _topology { PrimitiveTopology::POINT };
 
@@ -90,6 +90,9 @@ namespace pico {
         void evalMinMaxMidPos();
 
         static MeshPointer createFromPointArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points);
+
+        static MeshPointer createFromIndexedTriangleArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points, uint32_t numIndices, const uint32_t* indices);
+
     };
 
 }

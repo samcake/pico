@@ -204,16 +204,16 @@ namespace document
         //analyze the vertex format described
         // look for the vertex element:
         int vertexElementIndex = -1;
-        int indexElementIndex = -1;
+        int faceElementIndex = -1;
         for (int i = 0; i < elements.size(); ++i) {
             const auto& element = elements[i];
             // detect vertex element
             if ((vertexElementIndex < 0) && element.first.name.compare("vertex") == 0) {
                 vertexElementIndex = i;
             }
-            // detect vertex element
-            if ((indexElementIndex < 0) && element.first.name.compare("face") == 0) {
-                indexElementIndex = i;
+            // detect face element
+            if ((faceElementIndex < 0) && element.first.name.compare("face") == 0) {
+                faceElementIndex = i;
             }
         }
 
@@ -333,39 +333,40 @@ namespace document
             return nullptr;
         }
 
-        if ((indexElementIndex < 0)) {
+        if ((faceElementIndex < 0)) {
             // No indices found ??? exit
             return nullptr;
         }
 
         // Let's understand the vertex attributes layout
-        const auto& indexElement = elements[indexElementIndex];
-        auto numFaceProperties = indexElement.second.size();
-        auto numFaces = indexElement.first.count;
-        int indexAttribOffset = 0;
+        const auto& faceElement = elements[faceElementIndex];
+        auto numFaceProperties = faceElement.second.size();
+        auto numFaces = faceElement.first.count;
+        int faceAttribOffset = 0;
         std::vector<uint32_t> facePropertyOffsets(numFaceProperties + 1);
         for (int a = 0; a < numFaceProperties; ++a) {
-            const auto* prop = indexElement.second.data() + a;
-            propertyOffsets[a] = indexAttribOffset;
-            indexAttribOffset += Type::sizeOf(prop->type.name);
+            const auto* prop = faceElement.second.data() + a;
+            propertyOffsets[a] = faceAttribOffset;
+            faceAttribOffset += Type::sizeOf(prop->type.name);
         }
-        propertyOffsets[numFaceProperties] = indexAttribOffset;
+        propertyOffsets[numFaceProperties] = faceAttribOffset;
 
         // Let's allocate the Points
         Points points;
         size_t verticesByteSize = numVertices * sizeof(Point);
 
 
-        // Let's allocate the Points
-      //  std::vector<uint32_t> indices;
-     //   size_t indicesByteSize = numIndices * sizeof(uint32_t);
+        // Let's allocate the Faces
+        std::vector<uint32_t> faces;
+        std::vector<uint32_t> faceIndices;
+        std::vector<uint32_t> triangleIndices;
 
         if (format.name == Format::ascii) {
             // allocate the vertex size for the expected size
             points.resize(numVertices);
             auto vert = reinterpret_cast<Point*>(points.data());
             // let's parse the vertices walking through the stream
-            unsigned int v = 0;
+            uint32_t v = 0;
             while ((v < numVertices) && !asciiStream.eof()) {
                 asciiStream >> vert->pos.x >> vert->pos.y >> vert->pos.z;
                 if (vertexNormalPropIndex > 0) {
@@ -402,6 +403,31 @@ namespace document
                 // something went wrong ?
                 return nullptr;
             }
+
+            // Vertices understoud, let's now parse the faces
+            faces.resize(numFaces, 0);
+            faceIndices.reserve(numFaces * 3); // just arbitrarly reserve 3 times the number of faces assuming these are triangles
+            uint32_t f = 0;
+            uint32_t fi = 0;
+            int numFaceVerts = 0;
+            while ((f < numFaces) && !asciiStream.eof()) {
+                faces[f] = fi; // this face starts in the faceIndices array at position fi
+                asciiStream >> numFaceVerts; // this face contains numFaceVerts indices
+                
+                // parse the numFaceVerts indices and store them in the faceIndices array
+                int index;
+                for (int j = 0; j < numFaceVerts; j++) { 
+                    asciiStream >> index;
+                    faceIndices.emplace_back(index);
+                    if (numFaceVerts == 3) {
+                        triangleIndices.emplace_back(index);
+                    }
+                }
+
+                // INcrement the fi and f counters 
+                fi += numFaceVerts;
+                f++;
+            }
         }
         else {
             // binary data let's grab the rest of the file
@@ -415,12 +441,6 @@ namespace document
             auto contentSize = fileBinaries.size() - beginPayloadPos;
             auto contentBegin = fileBinaries.data() + beginPayloadPos;
 
-            uint32_t vertexByteStride = propertyOffsets[numVertProperties];
-            contentSize = std::min(contentSize, (size_t) ( vertexByteStride * numVertices));
-
-            // Understand format layout and binary layout
-            bool formatLayoutMatch = (verticesByteSize == contentSize) && (vertexPositionPropIndex == 0) && (vertexColorPropIndex == 3) && (vertexAlphaPropIndex == 6);
-            
             // Let's go back to little endian if we are big endian
             if (format.name == Format::binary_big_endian) {
                 auto uint32Start = (uint32_t*)contentBegin;
@@ -432,7 +452,11 @@ namespace document
                 }
             }
 
-            
+            uint32_t vertexByteStride = propertyOffsets[numVertProperties];
+            size_t verticesContentSize = std::min(contentSize, (size_t) ( vertexByteStride * numVertices));
+
+            // Understand format layout and binary layout
+            bool formatLayoutMatch = (verticesByteSize == verticesContentSize) && (vertexPositionPropIndex == 0) && (vertexColorPropIndex == 3) && (vertexAlphaPropIndex == 6);
 
             // THe fast path is when the binary format is exactly what we need for rendering:
             if (formatLayoutMatch) {
@@ -490,17 +514,44 @@ namespace document
                 }
 
             }
+
+            // Vertices understoud, let's now parse the faces
+            auto facesContentBegin = contentBegin + verticesContentSize;
+            auto facesContentSize = contentSize - verticesContentSize;
+
+            faces.resize(numFaces, 0);
+            faceIndices.reserve(numFaces * 3); // just arbitrarly reserve 3 times the number of faces assuming these are triangles
+            uint32_t f = 0;
+            uint32_t fi = 0;
+            int numFaceVerts = 0;
+            auto faceByteOffset = 0;
+            while ((f < numFaces) && faceByteOffset < facesContentSize) {
+                faces[f] = fi; // this face starts in the faceIndices array at position fi
+                numFaceVerts = (uint8_t) *(facesContentBegin + faceByteOffset);// this face contains numFaceVerts indices
+                faceByteOffset++;
+
+                // parse the numFaceVerts indices and store them in the faceIndices array
+                int index;
+                for (int j = 0; j < numFaceVerts; j++) {
+                    index = (uint32_t) *(facesContentBegin + faceByteOffset);
+                    faceByteOffset = faceByteOffset + sizeof(uint32_t);
+                    faceIndices.emplace_back(index);
+                    if (numFaceVerts == 3) {
+                        triangleIndices.emplace_back(index);
+                    }
+                }
+
+                // INcrement the fi and f counters 
+                fi += numFaceVerts;
+                f++;
+            }
         }
 
         auto triangleSoup = std::make_shared<TriangleSoup>();
         triangleSoup->_points = points;
-        /*    triangleSoup->_points = points;
-            triangleSoup->_points = points;
-            triangleSoup->_points = points;
-        */
+        triangleSoup->_indices = triangleIndices;
+
         return triangleSoup;
-
-
     }
 
 

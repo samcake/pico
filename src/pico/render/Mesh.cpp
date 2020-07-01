@@ -40,7 +40,7 @@ namespace pico
     }
 
     void Mesh::evalMinMaxMidPos() {
-        auto numVertices = _vertexBuffers.getNumElements();
+        auto numVertices = _vertexStream.getNumElements();
         picoAssert((numVertices > 0));
 
         uint32_t posStride = 0;
@@ -69,16 +69,43 @@ namespace pico
 
     MeshPointer Mesh::createFromPointArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points) {
         auto mesh = std::make_shared<Mesh>();
-        mesh->_vertexBuffers._streamLayout = layout;
+        mesh->_vertexStream._streamLayout = layout;
 
         AttribBufferPointer vertices;
         size_t verticesByteSize = numVertices * layout.streamAttribSize(0);
 
         vertices = std::make_shared<AttribBuffer>((void*)points, verticesByteSize);
-        mesh->_vertexBuffers._buffers.push_back(vertices);
+        mesh->_vertexStream._buffers.push_back(vertices);
         mesh->evalMinMaxMidPos();
 
         return mesh;
     }
 
+    MeshPointer Mesh::createFromIndexedTriangleArray(const StreamLayout& layout, uint32_t numVertices, const uint8_t* points, uint32_t numIndices, const uint32_t* indices) {
+        auto mesh = std::make_shared<Mesh>();
+
+        // Adjust vertex StreamLayout bufferView[0] with the incoming packing of vertices and indices in the same buffer
+        mesh->_vertexStream._streamLayout = layout;
+        uint32_t verticesByteSize = numVertices * layout.streamAttribSize(0);
+        uint32_t indicesByteSize = numIndices * sizeof(uint32_t);
+        mesh->_vertexStream._streamLayout.editBufferView(0)->_byteLength = verticesByteSize;
+
+        // Define indexStream layout to be found after vertices in the same buffer
+        AttribArray<1> indexAttrib{ {{ AttribSemantic::INDEX, AttribFormat::UINT32, 0 }} };
+        AttribBufferViewArray<1> indexBufferViews{ {{verticesByteSize, indicesByteSize, 4}} };
+        mesh->_indexStream._streamLayout = StreamLayout::build(indexAttrib, indexBufferViews);
+
+        // Pack vertices then indices in the same buffer
+        AttribBufferPointer buffer = std::make_shared<AttribBuffer>(nullptr, (size_t) (verticesByteSize + indicesByteSize));
+        memcpy(buffer->_data.data(), (void*) points, verticesByteSize);
+        memcpy(buffer->_data.data() + verticesByteSize, (void*)indices, indicesByteSize);
+
+        // and assign it in both streams as the buffer 0
+        mesh->_vertexStream._buffers.push_back(buffer);
+        mesh->_indexStream._buffers.push_back(buffer);
+
+        mesh->evalMinMaxMidPos();
+
+        return mesh;
+    }
 } // !namespace pico

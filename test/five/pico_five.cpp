@@ -85,8 +85,8 @@ int main(int argc, char *argv[])
     // Step 1, create a Mesh from the point cloud data
 
     // Declare the vertex format == PointCloud::Point
-    pico::Attribs<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
-    pico::AttribBufferViews<1> bufferViews{ {0} };
+    pico::AttribArray<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
+    pico::AttribBufferViewArray<1> bufferViews{ {0} };
     auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
 
     // Create the Mesh for real
@@ -96,11 +96,11 @@ int main(int argc, char *argv[])
     pico::BufferInit vertexBufferInit{};
     vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = mesh->_vertexBuffers._buffers[0]->getSize();
-    vertexBufferInit.vertexStride = mesh->_vertexBuffers._streamLayout.evalBufferViewByteStride(0);
+    vertexBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
+    vertexBufferInit.vertexStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
 
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
-    memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexBuffers._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
+    memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
 
     auto numVertices = mesh->getNumVertices();
 
@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
     pico::PipelineStateInit pipelineInit{
         programShader,
-        mesh->_vertexBuffers._streamLayout,
+        mesh->_vertexStream._streamLayout,
         pico::PrimitiveTopology::POINT,
         descriptorSetLayout
     };

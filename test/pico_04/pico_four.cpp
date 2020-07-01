@@ -50,7 +50,9 @@
 #include <pico/drawables/PointcloudDrawable.h>
 
 
-#include <pico/content/TriangleSoup.h>\
+#include <pico/content/TriangleSoup.h>
+#include <pico/drawables/TriangleSoupDrawable.h>
+
 
 #include <vector>
 
@@ -112,7 +114,12 @@ int main(int argc, char *argv[])
     // a drawable from the pointcloud
     auto pointCloudDrawable = std::make_shared<pico::PointCloudDrawable>();
     pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, pointCloud);
-    auto item = scene->createItem(pointCloudDrawable);
+    auto pcitem = scene->createItem(pointCloudDrawable);
+
+    // a drawable from the trianglesoup
+    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
+    triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
+    auto tsitem = scene->createItem(triangleSoupDrawable);
 
     // Content creation
     float doAnimate = 1.0f;

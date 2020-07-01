@@ -33,6 +33,44 @@
 
 namespace pico {
 
+    // AttribBufferView describes a range of continous memory address space and a stride between structured elements in this range. 
+    struct AttribBufferView {
+        static const uint32_t AUTO_BYTE_LENGTH{ 0xFFFFFFFF };
+        static const uint16_t AUTO_BYTE_STRIDE{ 0xFFFF };
+
+        uint32_t _byteOffset{ 0 }; // Absolute offset in bytes from the begining of the Buffer
+        uint32_t _byteLength{ AUTO_BYTE_LENGTH }; // Length in bytes of the view in the buffer, if AUTO_BYTE_LENGTH then the length of the concrete buffer - offset
+        uint16_t _byteStride{ AUTO_BYTE_STRIDE }; // Stride in bytes between each stream attribs element, if AUTO_BYTE_STRIDE then use the packed size of the stream attribs element
+        uint16_t _spare; // just aligned on 32 bits
+        // sizeof(AttribBufferView) = 12
+
+        uint32_t evalViewByteLength(uint32_t concreteBufferSize) const {
+            return (_byteLength == AUTO_BYTE_LENGTH ? concreteBufferSize - _byteOffset : _byteLength);
+        }
+
+        uint16_t evalViewByteStride(uint16_t concreteStreamAttribSize) const {
+            picoAssert(_byteStride >= concreteStreamAttribSize);
+            return (_byteStride == AUTO_BYTE_STRIDE ? concreteStreamAttribSize : _byteStride);
+        }
+
+        uint32_t evalViewByteoffset(uint16_t concreteStreamAttribOffset) const {
+            return _byteOffset + concreteStreamAttribOffset;
+        }
+
+        AttribBufferView() {}
+        AttribBufferView(uint32_t offset) : _byteOffset(offset) {}
+        AttribBufferView(uint32_t offset, uint32_t length) : _byteOffset(offset), _byteLength(length) {}
+        AttribBufferView(uint32_t offset, uint32_t length, uint16_t stride) : _byteOffset(offset), _byteLength(length), _byteStride(stride) {}
+    };
+
+    // An array of AttribBufferViews
+    template <int B> using AttribBufferViewArray = std::array<AttribBufferView, B>;
+    using AttribBufferViews_0 = AttribBufferViewArray<0>;
+
+    // Attrib describes the layout of a single attribute in an element of a stream:
+    // - The type(called format) and semantic
+    // - The index of the attribBuffer of the stream providing the value for the Attrib
+    // - A packing offset
     struct Attrib {
 
         static uint8_t sizeOf(AttribFormat format) {
@@ -45,7 +83,8 @@ namespace pico {
         AttribSemantic _semantic{ AttribSemantic::A };
         AttribFormat _format{ AttribFormat::UINT32 };
         uint8_t _bufferIndex{ 0 };
-        uint8_t _packingOffset{ AUTO_PACKING_OFFSET };
+        uint8_t _packingOffset{ AUTO_PACKING_OFFSET }; //Packing offset relative to the begining of the attrib buffer view
+        // sizeof(Attrib) = 4
 
         Attrib() {}
         Attrib(AttribSemantic sem) : _semantic(sem) {}
@@ -54,38 +93,19 @@ namespace pico {
         Attrib(AttribSemantic sem, AttribFormat fmt, uint8_t bi, uint8_t po) : _semantic(sem), _format(fmt), _bufferIndex(bi), _packingOffset(po) {}
     };
 
-    template <int A> using Attribs = std::array<Attrib, A>;
-    using Attribs_0 = Attribs<0>;
+    
+    template <int A> using AttribArray = std::array<Attrib, A>;
+    using Attribs_0 = AttribArray<0>;
 
-    struct AttribBufferView {
-        static const uint32_t AUTO_BYTE_LENGTH{ 0xFFFFFFFF };
-        static const uint16_t AUTO_BYTE_STRIDE{ 0xFFFF };
+    template <int A, int B> struct StreamElement {
+        using Attribs = AttribArray<A>;
+        using BufferViews = AttribBufferViewArray<A>;
+        Attribs _attribs;
+        BufferViews _bufferViews;
 
-        uint32_t _byteOffset{ 0 };
-        uint32_t _byteLength{ AUTO_BYTE_LENGTH };
-        uint16_t _byteStride{ AUTO_BYTE_STRIDE };
-
-        uint32_t evalViewByteLength(uint32_t concreteBufferSize) const {
-            return (_byteLength == AUTO_BYTE_LENGTH ? concreteBufferSize - _byteOffset : _byteLength);
-        }
-
-        uint16_t evalViewByteStride(uint16_t concreteStreamAttribSize) const {
-            picoAssert(_byteStride >= concreteStreamAttribSize);
-            return (_byteStride == AUTO_BYTE_STRIDE ? concreteStreamAttribSize : _byteStride);
-        }
-
-        uint16_t evalViewByteoffset(uint16_t concreteStreamAttribOffset) const {
-           return _byteOffset + concreteStreamAttribOffset;
-        }
-
-        AttribBufferView() {}
-        AttribBufferView(uint32_t offset) : _byteOffset(offset) {}
-        AttribBufferView(uint32_t offset, uint32_t length) : _byteOffset(offset), _byteLength(length) {}
-        AttribBufferView(uint32_t offset, uint32_t length, uint16_t stride) : _byteOffset(offset), _byteLength(length), _byteStride(stride) {}
+        StreamElement() {}
+        StreamElement(const Attribs& attribs) : _attribs(attribs) {}
     };
-
-    template <int B> using AttribBufferViews = std::array<AttribBufferView, B>;
-    using AttribBufferViews_0 = AttribBufferViews<0>;
 
     class StreamLayout {
     public:
@@ -101,7 +121,7 @@ namespace pico {
 
             virtual const Attrib* getAttrib(uint8_t a) const = 0;
             virtual const AttribBufferView* getBufferView(uint8_t b) const = 0;
-
+            virtual AttribBufferView* editBufferView(uint8_t b) = 0;
 
             uint8_t attribSize(uint8_t a) const { return Attrib::sizeOf(getAttrib(a)->_format); }
             uint16_t attribOffset(uint8_t a) const {
@@ -150,16 +170,18 @@ namespace pico {
         template <int A, int B> class Instanced : public Base {
         public:
             Instanced() {}
-            Instanced(Attribs<A> a, AttribBufferViews<B> b) : _attribs(a), _bufferViews(b) {}
+            Instanced(AttribArray<A> a) : _attribs(a) {}
+            Instanced(AttribArray<A> a, AttribBufferViewArray<B> b) : _attribs(a), _bufferViews(b) {}
             virtual ~Instanced() {}
 
             constexpr uint8_t numAttribs() const override { return A; }
             constexpr uint8_t numBuffers() const override { return B; }
             const Attrib* getAttrib(uint8_t a) const override { return _attribs.data() + a; }
             const AttribBufferView* getBufferView(uint8_t b) const override { return _bufferViews.data() + b; }
+            AttribBufferView* editBufferView(uint8_t b) override { return _bufferViews.data() + b; }
 
-            Attribs<A> _attribs;
-            AttribBufferViews<B> _bufferViews;
+            AttribArray<A> _attribs;
+            AttribBufferViewArray<B> _bufferViews;
         };
 
         // Private constructor from the row base pointer used by the build function
@@ -181,21 +203,27 @@ namespace pico {
         uint32_t evalBufferViewByteLength(uint8_t b, uint32_t concreteBufferSize) const { return _base->evalBufferViewByteLength(b, concreteBufferSize); }
         uint16_t evalBufferViewByteStride(uint8_t b) const { return _base->evalBufferViewByteStride(b); }
 
-        uint16_t evalBufferViewByteOffsetForAttribute(uint8_t a) const { return _base->attribOffset(a) + getBufferView(getAttrib(a)->_bufferIndex)->_byteOffset; }
+        uint32_t evalBufferViewByteOffsetForAttribute(uint8_t a) const { return _base->attribOffset(a) + getBufferView(getAttrib(a)->_bufferIndex)->_byteOffset; }
 
         uint8_t findAttribAt(AttribSemantic semantic) const { return _base->findAttribAt(semantic); }
 
         template <int A, int B>
-        static bool check(const Attribs<A>& attribs, const AttribBufferViews<B> bufferViews) {
+        static bool check(const AttribArray<A>& attribs, const AttribBufferViewArray<B> bufferViews) {
             // TODO: implement a bunch of checks to make sure the attribs and stream work together
             return true;
         }
 
         template <int A, int B>
-        static StreamLayout build(const Attribs<A>& attribs, const AttribBufferViews<B> bufferViews) {
+        static StreamLayout build(const AttribArray<A>& attribs, const AttribBufferViewArray<B> bufferViews) {
             picoAssert(check(attribs, bufferViews));
             return StreamLayout(new Instanced<A, B>(attribs, bufferViews));
         }
+        template <int A, int B>
+        static StreamLayout build(const StreamElement<A, B>& element) {
+            return build(element._attribs, element._bufferViews);
+        }
+
+        AttribBufferView* editBufferView(uint8_t b) { return _base->editBufferView(b); }
     };
 }
 
