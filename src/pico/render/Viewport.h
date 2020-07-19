@@ -26,8 +26,7 @@
 //
 #pragma once
 
-#include "gpu/gpu.h"
-#include "render/render.h"
+#include "render.h"
 
 #include <core/Realtime.h>
 

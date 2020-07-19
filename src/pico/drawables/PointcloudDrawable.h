@@ -51,7 +51,10 @@ namespace pico {
     public:
         PointCloudDrawable();
         ~PointCloudDrawable();
-        
+
+        float spriteSize { 1.0f }; // Size of the sprite expressed in pixels
+        float spriteScale { 1.0f }; // Multiply size by scale
+
         pico::DrawcallObjectPointer allocateDocumentDrawcallObject(const pico::DevicePointer& device, const pico::CameraPointer& camera, const document::PointCloudPointer& pointcloud);
         pico::DrawcallObjectPointer getDrawable() const;
 

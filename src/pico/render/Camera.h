@@ -29,7 +29,6 @@
 #include <mutex>
 
 #include <core/LinearAlgebra.h>
-#include <gpu/gpu.h>
 #include "render.h"
 
 

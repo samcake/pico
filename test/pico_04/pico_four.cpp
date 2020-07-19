@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 
     // Some content, why not a pointcloud ?
     auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
-    auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
+//    auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
@@ -117,10 +117,10 @@ int main(int argc, char *argv[])
     auto pcitem = scene->createItem(pointCloudDrawable);
 
     // a drawable from the trianglesoup
-    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
+/*    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
     triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
     auto tsitem = scene->createItem(triangleSoupDrawable);
-
+*/
     // Content creation
     float doAnimate = 1.0f;
 
@@ -140,6 +140,8 @@ int main(int argc, char *argv[])
     camera->setFar(cameraOrbitLength * 100.0f);
     camera->zoomTo(sceneSphere);
  
+    bool editPointCloudScale = false;
+
     // Presentation creation
 
     // We need a window where to present, let s use the pico::Window for convenience
@@ -194,6 +196,10 @@ int main(int argc, char *argv[])
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
 
+        if (e.key == pico::KEY_O) {
+            editPointCloudScale = e.state;
+        }
+
         if (e.state && e.key == pico::KEY_P) {
             // look side
             camera->setOrtho(!camera->isOrtho());
@@ -232,6 +238,13 @@ int main(int argc, char *argv[])
 
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
+            if (e.state & pico::MOUSE_LBUTTON) {
+                if (editPointCloudScale) {
+                    auto v = pointCloudDrawable->spriteScale;
+                    v -= e.delta.y * 0.01f;
+                    pointCloudDrawable->spriteScale = std::min(std::max(0.01f, v), 5.0f);
+                }
+            }
             if (e.state & pico::MOUSE_MBUTTON) {
                 // Center of the screen is Focal = SensorHeight
                 float ny = (0.5f + e.pos.y / (float)window->height());

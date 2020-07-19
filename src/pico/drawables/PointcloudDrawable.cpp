@@ -96,11 +96,19 @@ namespace pico
         auto resourceBuffer = device->createBuffer(resourceBufferInit);
         memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
 
+        // Custom data uniforms
+        struct ObjectData {
+            core::mat4x3 transform;
+            float spriteSize { 1.0f };
+            float spriteScale{ 1.0f };
+            float A;
+            float B;
+        };
 
         // Let's describe the pipeline Descriptors layout
         pico::DescriptorLayouts descriptorLayouts{
             { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
-            { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(core::mat4x3) >> 2},
+            { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(ObjectData) >> 2},
             { pico::DescriptorType::RESOURCE_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
         };
 
@@ -160,14 +168,16 @@ namespace pico
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        pico::DrawObjectCallback drawCallback = [pipeline, vertexBuffer, descriptorSet, numVertices](const core::mat4x3& transform, const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+        pico::DrawObjectCallback drawCallback = [pipeline, vertexBuffer, descriptorSet, numVertices, this](const core::mat4x3& transform, const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
             batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
      //       batch->bindVertexBuffers(1, &vertexBuffer);
 
             batch->bindDescriptorSet(descriptorSet);
-            batch->bindPushUniform(1, sizeof(core::mat4x3), (const uint8_t*) transform.data());
+
+            ObjectData odata { transform, this->spriteSize, this->spriteScale };
+            batch->bindPushUniform(1, sizeof(ObjectData), (const uint8_t*) &odata);
 
             batch->draw(3 * numVertices, 0);
         };
