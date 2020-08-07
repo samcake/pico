@@ -75,7 +75,7 @@ namespace pico
                 triangleSoup->_indices.size(), triangleSoup->_indices.data());
 
         // Let's allocate buffer to hold the triangle soup mesh
-        pico::BufferInit vertexBufferInit{};
+  /*      pico::BufferInit vertexBufferInit{};
         vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
         vertexBufferInit.hostVisible = true;
         vertexBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
@@ -83,26 +83,54 @@ namespace pico
 
         auto vertexBuffer = device->createBuffer(vertexBufferInit);
         memcpy(vertexBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vertexBufferInit.bufferSize);
-
+    */
         auto numVertices = mesh->getNumVertices();
+        auto vertexBufferSize = vertexFormat.streamAttribSize(0) * numVertices;
+        uint32_t vertexStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
 
-        pico::BufferInit resourceBufferInit{};
-        resourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
-        resourceBufferInit.hostVisible = true;
-        resourceBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
-        resourceBufferInit.firstElement = 0;
-        resourceBufferInit.numElements = numVertices;
-        resourceBufferInit.structStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
+        pico::BufferInit vbresourceBufferInit{};
+        vbresourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
+        vbresourceBufferInit.hostVisible = true;
+        vbresourceBufferInit.bufferSize = vertexBufferSize;
+        vbresourceBufferInit.firstElement = 0;
+        vbresourceBufferInit.numElements = numVertices;
+        vbresourceBufferInit.structStride = vertexStride;
 
-        auto resourceBuffer = device->createBuffer(resourceBufferInit);
-        memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
+        auto vbresourceBuffer = device->createBuffer(vbresourceBufferInit);
+        memcpy(vbresourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vbresourceBufferInit.bufferSize);
+    
+
+        auto numIndices = mesh->_indexStream.getNumElements();
+        auto indexBufferSize = mesh->_indexStream._streamLayout.streamAttribSize(0) * numIndices;
+        uint32_t indexStride = mesh->_indexStream._streamLayout.evalBufferViewByteStride(0);
+
+        pico::BufferInit ibresourceBufferInit{};
+        ibresourceBufferInit.usage = pico::ResourceUsage::RESOURCE_BUFFER;
+        ibresourceBufferInit.hostVisible = true;
+        ibresourceBufferInit.bufferSize = indexBufferSize;
+        ibresourceBufferInit.firstElement = 0;
+        ibresourceBufferInit.numElements = numIndices;
+        ibresourceBufferInit.structStride = indexStride;
+
+        auto ibresourceBuffer = device->createBuffer(ibresourceBufferInit);
+        memcpy(ibresourceBuffer->_cpuMappedAddress, mesh->_indexStream._buffers[0]->_data.data(), ibresourceBufferInit.bufferSize);
+
+        // Custom data uniforms
+        struct ObjectData {
+            core::mat4x3 transform;
+            int32_t numVertices{ 0 };
+            int32_t numIndices{ 0 };
+            float A;
+            float B;
+        };
 
 
         // Let's describe the pipeline Descriptors layout
         pico::DescriptorLayouts descriptorLayouts{
             { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
-            { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(core::mat4x3) >> 2},
+            { pico::DescriptorType::PUSH_UNIFORM, pico::ShaderStage::VERTEX, 1, sizeof(ObjectData) >> 2},
             { pico::DescriptorType::RESOURCE_BUFFER, pico::ShaderStage::VERTEX, 0, 1},
+            { pico::DescriptorType::RESOURCE_BUFFER, pico::ShaderStage::VERTEX, 1, 1},
         };
 
         pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -124,15 +152,6 @@ namespace pico
         pico::ProgramInit programInit{ vertexShader, pixelShader };
         pico::ShaderPointer programShader = device->createProgram(programInit);
 
-  /*     pico::PipelineStateInit pipelineInit0{
-            programShader,
-            mesh->_vertexBuffers._streamLayout,
-            pico::PrimitiveTopology::POINT,
-            descriptorSetLayout,
-            true // enable depth
-        };
-        pico::PipelineStatePointer pipeline0 = device->createPipelineState(pipelineInit0);
-*/
         pico::PipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
@@ -153,24 +172,27 @@ namespace pico
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
         pico::DescriptorObject uboDescriptorObject;
         uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
-        pico::DescriptorObject rboDescriptorObject;
-        rboDescriptorObject._buffers.push_back(resourceBuffer);
+        pico::DescriptorObject vb_rboDescriptorObject;
+        vb_rboDescriptorObject._buffers.push_back(vbresourceBuffer);
+        pico::DescriptorObject ib_rboDescriptorObject;
+        ib_rboDescriptorObject._buffers.push_back(ibresourceBuffer);
         pico::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject, rboDescriptorObject
+            uboDescriptorObject, vb_rboDescriptorObject, ib_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        pico::DrawObjectCallback drawCallback = [pipeline, vertexBuffer, descriptorSet, numVertices](const core::mat4x3& transform, const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+        pico::DrawObjectCallback drawCallback = [pipeline, descriptorSet, numVertices, numIndices, vertexStride](const core::mat4x3& transform, const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
             batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
-     //       batch->bindVertexBuffers(1, &vertexBuffer);
 
             batch->bindDescriptorSet(descriptorSet);
-            batch->bindPushUniform(1, sizeof(core::mat4x3), (const uint8_t*) transform.data());
 
-            batch->draw(3 * numVertices, 0);
+            ObjectData odata{ transform, numVertices, numIndices, vertexStride };
+            batch->bindPushUniform(1, sizeof(ObjectData), (const uint8_t*)&odata);
+
+            batch->draw(numIndices, 0);
         };
         auto drawcall = new pico::DrawcallObject(drawCallback);
         drawcall->_bounds = mesh->_bounds;

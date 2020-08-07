@@ -92,17 +92,16 @@ namespace pico
 
         // Define indexStream layout to be found after vertices in the same buffer
         AttribArray<1> indexAttrib{ {{ AttribSemantic::INDEX, AttribFormat::UINT32, 0 }} };
-        AttribBufferViewArray<1> indexBufferViews{ {{verticesByteSize, indicesByteSize, 4}} };
+        AttribBufferViewArray<1> indexBufferViews{ {{0, indicesByteSize, 4}} };
         mesh->_indexStream._streamLayout = StreamLayout::build(indexAttrib, indexBufferViews);
 
         // Pack vertices then indices in the same buffer
-        AttribBufferPointer buffer = std::make_shared<AttribBuffer>(nullptr, (size_t) (verticesByteSize + indicesByteSize));
-        memcpy(buffer->_data.data(), (void*) points, verticesByteSize);
-        memcpy(buffer->_data.data() + verticesByteSize, (void*)indices, indicesByteSize);
+        AttribBufferPointer vbuffer = std::make_shared<AttribBuffer>((void*)points, (size_t)(verticesByteSize));
+        AttribBufferPointer ibuffer = std::make_shared<AttribBuffer>((void*)indices, (size_t)(indicesByteSize));
 
         // and assign it in both streams as the buffer 0
-        mesh->_vertexStream._buffers.push_back(buffer);
-        mesh->_indexStream._buffers.push_back(buffer);
+        mesh->_vertexStream._buffers.push_back(vbuffer);
+        mesh->_indexStream._buffers[0] = (ibuffer);
 
         mesh->evalMinMaxMidPos();
 

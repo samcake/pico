@@ -101,7 +101,7 @@ namespace pico
             core::mat4x3 transform;
             float spriteSize { 1.0f };
             float spriteScale{ 1.0f };
-            float A;
+            float perspectiveSprite{ 1.0f };
             float B;
         };
 
@@ -176,7 +176,7 @@ namespace pico
 
             batch->bindDescriptorSet(descriptorSet);
 
-            ObjectData odata { transform, this->spriteSize, this->spriteScale };
+            ObjectData odata { transform, this->spriteSize, this->spriteScale, this->perspectiveSprite };
             batch->bindPushUniform(1, sizeof(ObjectData), (const uint8_t*) &odata);
 
             batch->draw(3 * numVertices, 0);

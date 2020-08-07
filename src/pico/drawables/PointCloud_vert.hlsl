@@ -103,7 +103,7 @@ cbuffer UniformBlock1 : register(b1) {
     Transform _model;
     float _spriteSize;
     float _spriteScale;
-    float _spareA;
+    float _perspectiveSpriteX;
     float _spareB;
 }
 
@@ -160,12 +160,12 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
     const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
     float2 spriteOffset = invRes.xy * spriteSize; 
 
-    // fixed pixel size (compensate for division by clipPos.w) or perspective correct 3d size ?
-    const float isPerspective = float(clipPos.x > 0.0);
+    // fixed sprite pixel size in depth or perspective correct 3d size ?
+    const float isPerspective = float((0.5 * (clipPos.x / clipPos.w) + 0.5) <= _perspectiveSpriteX);
     spriteOffset *= (isPerspective > 0.0 ? 1.0 : eyeLinearDepth);
 
     // Apply scaling to the sprite coord and offset pointcloud pos
-    OUT.sprite = float2(((sid == 2) ? 3.0 : -1.0), ((sid == 1) ? 3.0 : -1.0));
+    OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
     spriteOffset *= OUT.sprite;
 
     clipPos.xy += spriteOffset;

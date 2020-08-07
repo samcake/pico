@@ -52,9 +52,14 @@ namespace pico {
         PointCloudDrawable();
         ~PointCloudDrawable();
 
+        // Size of the sprites
         float spriteSize { 1.0f }; // Size of the sprite expressed in pixels
         float spriteScale { 1.0f }; // Multiply size by scale
 
+        // control if the point sprites are rendered perspective correct divided by the depth (1.0)
+        // or fixed size in pixels (0.0)
+        float perspectiveSprite { 0.0f };
+ 
         pico::DrawcallObjectPointer allocateDocumentDrawcallObject(const pico::DevicePointer& device, const pico::CameraPointer& camera, const document::PointCloudPointer& pointcloud);
         pico::DrawcallObjectPointer getDrawable() const;
 

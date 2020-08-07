@@ -101,6 +101,10 @@ struct Transform {
 
 cbuffer UniformBlock1 : register(b1) {
     Transform _model;
+    int _numVertices;
+    int _numIndices;
+    int spareA;
+    int spareB;
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
@@ -109,12 +113,6 @@ float3 worldFromObjectSpace(Transform model, float3 objPos) {
     return  rotatedPos + model.ori();
 }
 
-/*struct VertexPosColor
-{
-    float3 Position : POSITION;
-    //  float3 Normal : NORMAL;
-    float4 Color : COLOR;
-};*/
 
 struct PointPosColor {
     float x;
@@ -123,40 +121,57 @@ struct PointPosColor {
     uint  color;
 };
 
-StructuredBuffer<PointPosColor>  BufferIn : register(t0);
+StructuredBuffer<PointPosColor>  VerticesIn : register(t0);
+Buffer<uint>  IndicesIn : register(t1);
 
 struct VertexShaderOutput
 {
     float4 Color    : COLOR;
-    float2 sprite   : SPRITE;
+    float3 Normal   : NORMAL;
     float4 Position : SV_Position;
 };
 
-VertexShaderOutput main(uint vidT : SV_VertexID)
-{
-    VertexShaderOutput OUT;
-    uint vid = vidT / 3;
-    uint sid = vidT - vid * 3;
+VertexShaderOutput main(uint vidx : SV_VertexID) {
 
-    uint color = BufferIn[vid].color;
-    const float INT8_TO_NF = 1.0 / 255.0;
-    float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
-    float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
-    float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
-    float3 position = float3(BufferIn[vid].x, BufferIn[vid].y, BufferIn[vid].z);
+    uint tidx = vidx / 3;
+    uint tvidx = vidx % 3;
+
+    // Fetch Face indices
+    uint3 fvid = uint3(IndicesIn[tidx * 3], IndicesIn[tidx * 3 + 1], IndicesIn[tidx * 3 + 2]);
+    uint vid = fvid[tvidx];
+
+    // Fetch Face vertices
+    float4 faceVerts[3];
+    for (int i = 0; i < 3; i++) {
+        uint vi = fvid[i];
+        faceVerts[i] = float4(VerticesIn[vi].x, VerticesIn[vi].y, VerticesIn[vi].z, asfloat(VerticesIn[vi].color));
+    }
+
+    // Generate normal
+    float3 faceEdge0 = faceVerts[1].xyz - faceVerts[0].xyz;
+    float3 faceEdge1 = faceVerts[2].xyz - faceVerts[0].xyz;
+    float3 normal = normalize(cross(faceEdge0, faceEdge1));
+ 
+    // Barycenter 
+    float3 barycenter = (faceVerts[0].xyz + faceVerts[1].xyz + faceVerts[2].xyz) / 3.0f;
+
+    // Transform
+    float3 position = faceVerts[tvidx].xyz;
+    position += 0.2f * (barycenter - position);
 
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
-    // make the sprite
-    OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? -3.0 : 1.0));
+    uint color = asuint(faceVerts[tvidx].w);
+    const float INT8_TO_NF = 1.0 / 255.0;
+    float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
+    float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
+    float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
 
-    const float spriteSize = 1.5;
-    float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
-    clipPos.xy += invRes.xy * OUT.sprite * spriteSize * clipPos.w;// pixel size or 3d size? 
-
+    VertexShaderOutput OUT;
     OUT.Position = clipPos;
+    OUT.Normal = normal;
     OUT.Color = float4(r, g, b, 1.0f);
 
     return OUT;

@@ -74,7 +74,9 @@ int main(int argc, char *argv[])
         cloudPointFile = std::string(argv[argc - 1]);
     }
 
-    std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
+   // std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
+    std::string triangleSoupFile("../asset/trianglesoup/cow.ply");
+  //  std::string triangleSoupFile("../asset/trianglesoup/cow.binary.ply");
     if (argc > 1) {
         triangleSoupFile = std::string(argv[argc - 1]);
     }
@@ -92,7 +94,7 @@ int main(int argc, char *argv[])
 
     // Some content, why not a pointcloud ?
     auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
-//    auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
+    auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
     // First a device, aka the gpu api used by pico
     pico::DeviceInit deviceInit {};
@@ -117,10 +119,10 @@ int main(int argc, char *argv[])
     auto pcitem = scene->createItem(pointCloudDrawable);
 
     // a drawable from the trianglesoup
-/*    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
+    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
     triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
-    auto tsitem = scene->createItem(triangleSoupDrawable);
-*/
+ //   auto tsitem = scene->createItem(triangleSoupDrawable);
+
     // Content creation
     float doAnimate = 1.0f;
 
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
     camera->zoomTo(sceneSphere);
  
     bool editPointCloudScale = false;
+    bool editPointCloudPerspectiveSpriteX = false;
 
     // Presentation creation
 
@@ -199,6 +202,9 @@ int main(int argc, char *argv[])
         if (e.key == pico::KEY_O) {
             editPointCloudScale = e.state;
         }
+        if (e.key == pico::KEY_I) {
+            editPointCloudPerspectiveSpriteX = e.state;
+        }
 
         if (e.state && e.key == pico::KEY_P) {
             // look side
@@ -239,10 +245,17 @@ int main(int argc, char *argv[])
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
             if (e.state & pico::MOUSE_LBUTTON) {
-                if (editPointCloudScale) {
-                    auto v = pointCloudDrawable->spriteScale;
-                    v -= e.delta.y * 0.01f;
-                    pointCloudDrawable->spriteScale = std::min(std::max(0.01f, v), 5.0f);
+                if (pointCloudDrawable) {
+                    if (editPointCloudScale) {
+                        auto v = pointCloudDrawable->spriteScale;
+                        v -= e.delta.y * 0.01f;
+                        pointCloudDrawable->spriteScale = std::min(std::max(0.01f, v), 5.0f);
+                    }
+                    if (editPointCloudPerspectiveSpriteX) {
+                        auto v = pointCloudDrawable->perspectiveSprite;
+                        v = e.pos.x / ((float)window->width());
+                        pointCloudDrawable->perspectiveSprite = std::min(std::max(0.0f, v), 1.0f);
+                    }
                 }
             }
             if (e.state & pico::MOUSE_MBUTTON) {
@@ -298,5 +311,5 @@ int main(int argc, char *argv[])
     pico::api::destroy();
     std::clog << "Pico api destroyed" << std::endl;
 
-     return 0;
+    return 0;
 }

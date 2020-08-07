@@ -73,6 +73,7 @@ namespace document
         struct Type {
             enum Name {
                 _uchar = 0,
+                _short,
                 _int,
                 _float,
                 unknown,
@@ -82,17 +83,29 @@ namespace document
                 if (token.compare("uchar") == 0) {
                     return Name::_uchar;
                 }
+                else if (token.compare("uint8") == 0) {
+                    return Name::_uchar;
+                }
                 else if (token.compare("int") == 0) {
                     return Name::_int;
                 }
+                else if (token.compare("int32") == 0) {
+                    return Name::_int;
+                }
+                else if (token.compare("short") == 0) {
+                    return Name::_short;
+                }
                 else if (token.compare("float") == 0) {
+                    return Name::_float;
+                }
+                else if (token.compare("float32") == 0) {
                     return Name::_float;
                 }
                 return Name::unknown;
             }
 
             static uint32_t sizeOf(Name name) {
-                static const uint32_t sizes[] = { 1, 4, 4, 0 }; // size for each type
+                static const uint32_t sizes[] = { 1, 2, 4, 4, 0 }; // size for each type
                 return sizes[(int)name];
             }
 

@@ -100,7 +100,7 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
 
             psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
             psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-            psoDesc.RasterizerState.FrontCounterClockwise = FALSE;
+            psoDesc.RasterizerState.FrontCounterClockwise = TRUE; // This is gltf convention front faces are CCW
             psoDesc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
             psoDesc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
             psoDesc.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
