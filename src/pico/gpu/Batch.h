@@ -26,7 +26,7 @@
 //
 #pragma once
 
-#include <core/LinearAlgebra.h>
+#include <core/math/LinearAlgebra.h>
 
 #include "gpu.h"
 

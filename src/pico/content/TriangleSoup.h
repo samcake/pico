@@ -30,7 +30,7 @@
 
 #include <vector>
 
-#include <core/LinearAlgebra.h>
+#include <core/math/LinearAlgebra.h>
 
 namespace document
 {

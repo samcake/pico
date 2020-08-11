@@ -29,7 +29,7 @@
 #include <functional>
 #include <vector>
 
-#include <core/LinearAlgebra.h>
+#include <core/math/LinearAlgebra.h>
 
 #include "Forward.h"
 
