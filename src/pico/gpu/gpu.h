@@ -55,6 +55,7 @@ namespace pico {
         B,
         C,
 
+        INDEX,
         COUNT,
     };
 

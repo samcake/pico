@@ -50,7 +50,9 @@
 #include <pico/drawables/PointcloudDrawable.h>
 
 
-#include <pico/content/TriangleSoup.h>\
+#include <pico/content/TriangleSoup.h>
+#include <pico/drawables/TriangleSoupDrawable.h>
+
 
 #include <vector>
 
@@ -72,7 +74,9 @@ int main(int argc, char *argv[])
         cloudPointFile = std::string(argv[argc - 1]);
     }
 
-    std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
+   // std::string triangleSoupFile("../asset/trianglesoup/meshlab_skull.ply");
+    std::string triangleSoupFile("../asset/trianglesoup/cow.ply");
+  //  std::string triangleSoupFile("../asset/trianglesoup/cow.binary.ply");
     if (argc > 1) {
         triangleSoupFile = std::string(argv[argc - 1]);
     }
@@ -112,7 +116,12 @@ int main(int argc, char *argv[])
     // a drawable from the pointcloud
     auto pointCloudDrawable = std::make_shared<pico::PointCloudDrawable>();
     pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, pointCloud);
-    auto item = scene->createItem(pointCloudDrawable);
+    auto pcitem = scene->createItem(pointCloudDrawable);
+
+    // a drawable from the trianglesoup
+    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
+    triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
+ //   auto tsitem = scene->createItem(triangleSoupDrawable);
 
     // Content creation
     float doAnimate = 1.0f;
@@ -133,6 +142,9 @@ int main(int argc, char *argv[])
     camera->setFar(cameraOrbitLength * 100.0f);
     camera->zoomTo(sceneSphere);
  
+    bool editPointCloudScale = false;
+    bool editPointCloudPerspectiveSpriteX = false;
+
     // Presentation creation
 
     // We need a window where to present, let s use the pico::Window for convenience
@@ -187,6 +199,13 @@ int main(int argc, char *argv[])
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
 
+        if (e.key == pico::KEY_O) {
+            editPointCloudScale = e.state;
+        }
+        if (e.key == pico::KEY_I) {
+            editPointCloudPerspectiveSpriteX = e.state;
+        }
+
         if (e.state && e.key == pico::KEY_P) {
             // look side
             camera->setOrtho(!camera->isOrtho());
@@ -225,6 +244,20 @@ int main(int argc, char *argv[])
 
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
+            if (e.state & pico::MOUSE_LBUTTON) {
+                if (pointCloudDrawable) {
+                    if (editPointCloudScale) {
+                        auto v = pointCloudDrawable->spriteScale;
+                        v -= e.delta.y * 0.01f;
+                        pointCloudDrawable->spriteScale = std::min(std::max(0.01f, v), 5.0f);
+                    }
+                    if (editPointCloudPerspectiveSpriteX) {
+                        auto v = pointCloudDrawable->perspectiveSprite;
+                        v = e.pos.x / ((float)window->width());
+                        pointCloudDrawable->perspectiveSprite = std::min(std::max(0.0f, v), 1.0f);
+                    }
+                }
+            }
             if (e.state & pico::MOUSE_MBUTTON) {
                 // Center of the screen is Focal = SensorHeight
                 float ny = (0.5f + e.pos.y / (float)window->height());
@@ -278,5 +311,5 @@ int main(int argc, char *argv[])
     pico::api::destroy();
     std::clog << "Pico api destroyed" << std::endl;
 
-     return 0;
+    return 0;
 }

@@ -101,6 +101,10 @@ struct Transform {
 
 cbuffer UniformBlock1 : register(b1) {
     Transform _model;
+    float _spriteSize;
+    float _spriteScale;
+    float _perspectiveSpriteX;
+    float _spareB;
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
@@ -148,16 +152,30 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float eyeLinearDepth = -eyePosition.z;
 
-    // make the sprite
-    OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? -3.0 : 1.0));
+    // make the sprite offsetting the vert from the pointcloud pos in clip space
+    // offset is expressed in ndc with spriteSize expressed in pixels
+    const float spriteSize = _spriteSize * _spriteScale;
+    const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
+    float2 spriteOffset = invRes.xy * spriteSize; 
 
-    const float spriteSize = 1.5;
-    float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
-    clipPos.xy += invRes.xy * OUT.sprite * spriteSize * clipPos.w;// pixel size or 3d size? 
+    // fixed sprite pixel size in depth or perspective correct 3d size ?
+    const float isPerspective = float((0.5 * (clipPos.x / clipPos.w) + 0.5) <= _perspectiveSpriteX);
+    spriteOffset *= (isPerspective > 0.0 ? 1.0 : eyeLinearDepth);
 
+    // Apply scaling to the sprite coord and offset pointcloud pos
+    OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
+    spriteOffset *= OUT.sprite;
+
+    clipPos.xy += spriteOffset;
     OUT.Position = clipPos;
+
     OUT.Color = float4(r, g, b, 1.0f);
+
+    if ((eyeLinearDepth - 1.0) * (eyeLinearDepth - 1.0) < 0.001) {
+        OUT.Color = float4(1.0, 1.0, 1.0, 1.0);
+    }
 
     return OUT;
 }

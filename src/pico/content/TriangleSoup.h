@@ -53,12 +53,17 @@ namespace document
 
         // A continuous array of Points
         using Points = std::vector<Point>;
-
-
+        
+        // A continous array of the Indices describing the triangle soup
+        using Indices = std::vector<uint32_t>;
+        
 #pragma warning(push)
 #pragma warning(disable: 4251)
-        // Here is the PointCloud data
+        // Here is the points data
         Points _points;
+
+        // here is the indices data
+        Indices _indices;
 
         // A transform to place the point cloud in world space
         core::mat4x3 _transform;
