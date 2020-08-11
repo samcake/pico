@@ -29,7 +29,7 @@
 #include <vector>
 
 #include <core/math/LinearAlgebra.h>
-#include <gpu/StreamLayout.h>
+#include "gpu/StreamLayout.h"
 #include "render.h"
 
 

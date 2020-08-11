@@ -27,7 +27,7 @@
 #pragma once
 
 #include "Forward.h"
-#include <gpu/gpu.h>
+#include "gpu/gpu.h"
 
 namespace pico {
 

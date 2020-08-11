@@ -64,7 +64,7 @@ void api::destroy() {
     }
 }
 
-#ifdef WIN32
+#ifdef _WINDOWS
 #ifdef PICO_SUPPORT_MFC
 HMODULE api::getResourceHandle() {
     return reinterpret_cast<HMODULE>(&__ImageBase);

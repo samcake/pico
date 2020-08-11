@@ -47,7 +47,7 @@ namespace pico {
         static void _assert(bool test, const char* file, int line, const char* functionName);
 
 
-#ifdef WIN32
+#ifdef _WINDOWS
         static HMODULE getResourceHandle();
         static std::string loadTextResources(unsigned short resource_id);
 #endif

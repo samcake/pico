@@ -28,7 +28,7 @@
 
 using namespace pico;
 
-#ifdef WIN32
+#ifdef _WINDOWS
 #define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
 
 

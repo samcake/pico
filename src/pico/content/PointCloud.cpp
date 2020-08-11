@@ -32,7 +32,6 @@
 #include <vector>
 #include <algorithm>
 
-// using namespace pico;
 namespace document
 {
 
@@ -407,8 +406,6 @@ namespace document
                     uint32Start[i] = (((val) >> 24) | (((val) & 0x00FF0000) >> 8) | (((val) & 0x0000FF00) << 8) | ((val) << 24));
                 }
             }
-
-            
 
             // THe fast path is when the binary format is exactly what we need for rendering:
             if (formatLayoutMatch) {
