@@ -35,7 +35,7 @@ namespace pico {
         uint32_t height;
 
         
-#ifdef WIN32
+#ifdef _WINDOWS
         HWND hWnd;
 #endif
         // No depth buffer by default

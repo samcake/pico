@@ -1,6 +1,6 @@
-// TriangleSoup.h 
+// Noise.h 
 //
-// Sam Gateau - May 2020
+// Sam Gateau - August 2020
 // 
 // MIT License
 //
@@ -25,49 +25,35 @@
 // SOFTWARE.
 //
 #pragma once
+#include <stdint.h>
 
-#include <Forward.h>
-
-#include <vector>
-
-#include <core/math/LinearAlgebra.h>
-
-namespace document
+namespace core 
 {
-    class TriangleSoup;
-    using TriangleSoupPointer = std::shared_ptr<TriangleSoup>;
+    // Noise function by Squirrel Eiserloh 'Squirrel3'
+    inline uint32_t noise1D(int32_t pos, uint32_t seed) {
+        const uint32_t BIT_NOISE1 = 0x68E31DA4;
+        const uint32_t BIT_NOISE2 = 0xB5297A4D;
+        const uint32_t BIT_NOISE3 = 0x1B56C4E9;
 
-    class VISUALIZATION_API TriangleSoup {
-    public:
-        static TriangleSoupPointer createFromPLY(const std::string& filename);
+        uint32_t mangled = (uint32_t) pos;
+        mangled *= BIT_NOISE1;
+        mangled += seed;
+        mangled ^= (mangled >> 8);
+        mangled += BIT_NOISE2;
+        mangled ^= (mangled << 8);
+        mangled *= BIT_NOISE3;
+        mangled ^= (mangled >> 8);
+        return mangled;
+    }
 
-        TriangleSoup();
-        ~TriangleSoup();
+    inline uint32_t noise2D(int32_t x, int32_t y, uint32_t seed) {
+        const int32_t PRIME_NUMBER = 198491317;
+        return noise1D(x + (PRIME_NUMBER * y), seed);
+    }
 
-        // Each point attributes 
-        struct Point {
-            core::vec3 pos;
-           // core::vec3 nor;
-            core::ucvec4 color;
-        };
-
-        // A continuous array of Points
-        using Points = std::vector<Point>;
-        
-        // A continous array of the Indices describing the triangle soup
-        using Indices = std::vector<uint32_t>;
-        
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        // Here is the points data
-        Points _points;
-
-        // here is the indices data
-        Indices _indices;
-
-        // A transform to place the point cloud in world space
-        core::mat4x3 _transform;
-#pragma warning(pop)
-    };
-
+    inline uint32_t noise3D(int32_t x, int32_t y, int32_t z, uint32_t seed) {
+        const int32_t PRIME_NUMBER1 = 198491317;
+        const int32_t PRIME_NUMBER2 = 6542989;
+        return noise1D(x + (PRIME_NUMBER1 * y) + (PRIME_NUMBER2 * z), seed);
+    }
 }

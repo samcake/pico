@@ -26,12 +26,12 @@
 //
 #pragma once
 
+#include <cstdint>
 #include <memory>
 #include <string>
-
 #include "dllmain.h"
 
-#ifdef WIN32
+#ifdef _WINDOWS
 #ifdef PICO_SUPPORT_MFC
 #include "stdafx.h"
 #else

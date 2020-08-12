@@ -118,8 +118,8 @@ namespace pico
         // Custom data uniforms
         struct ObjectData {
             core::mat4x3 transform;
-            int32_t numVertices{ 0 };
-            int32_t numIndices{ 0 };
+            uint32_t numVertices{ 0 };
+            uint32_t numIndices{ 0 };
             float A;
             float B;
         };

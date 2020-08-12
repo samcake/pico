@@ -28,7 +28,7 @@
 
 #include <chrono>
 
-#ifdef WIN32
+#ifdef _WINDOWS
 //d3d12.lib dxgi.lib dxguid.lib D3DCompiler.lib Shlwapi.lib
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")

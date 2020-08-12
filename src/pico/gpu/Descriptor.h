@@ -41,10 +41,11 @@ namespace pico {
 
     using DescriptorLayouts = std::vector<DescriptorLayout>;
 
-
-
     struct VISUALIZATION_API DescriptorSetLayoutInit {
+#pragma warning(push)
+#pragma warning(disable: 4251)
         DescriptorLayouts _layouts;
+#pragma warning(pop)
     };
 
     class VISUALIZATION_API DescriptorSetLayout {
@@ -59,16 +60,22 @@ namespace pico {
     };
 
     struct VISUALIZATION_API DescriptorObject{
+#pragma warning(push)
+#pragma warning(disable: 4251)
         std::vector<BufferPointer> _uniformBuffers;
         std::vector<BufferPointer> _buffers;
         std::vector<TexturePointer> _textures;
         std::vector<SamplerPointer> _samplers;
+#pragma warning(pop)
     };
     using DescriptorObjects = std::vector<DescriptorObject>;
 
 
     struct VISUALIZATION_API DescriptorSetInit {
-        DescriptorSetLayoutPointer _layout;
+#pragma warning(push)
+#pragma warning(disable: 4251)
+       DescriptorSetLayoutPointer _layout;
+#pragma warning(pop)
     };
 
     class VISUALIZATION_API DescriptorSet {
@@ -82,6 +89,9 @@ namespace pico {
 
         DescriptorSetInit _init;
 
+#pragma warning(push)
+#pragma warning(disable: 4251)
         DescriptorObjects _objects;
+#pragma warning(pop)
     };
 }

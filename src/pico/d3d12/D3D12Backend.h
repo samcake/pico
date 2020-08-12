@@ -35,7 +35,7 @@
 #include "gpu/Shader.h"
 #include "gpu/Descriptor.h"
 
-#ifdef WIN32
+#ifdef _WINDOWS
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
 #include <wrl.h>
@@ -265,4 +265,4 @@ namespace pico {
 
 }
 
-#endif WIN32
+#endif _WINDOWS

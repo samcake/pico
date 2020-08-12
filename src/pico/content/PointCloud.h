@@ -30,7 +30,7 @@
 
 #include <vector>
 
-#include <core/LinearAlgebra.h>
+#include <core/math/LinearAlgebra.h>
 
 
 namespace document
@@ -38,7 +38,7 @@ namespace document
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
 
-    class VISUALIZATION_API PointCloud {
+    class DOCUMENT_API PointCloud {
     public:
         static PointCloudPointer createFromPLY(const std::string& filename);
 
@@ -55,15 +55,14 @@ namespace document
         // A continuous array of Points
         using Points = std::vector<Point>;
 
-
 #pragma warning(push)
 #pragma warning(disable: 4251)
-        // Here is the PointCloud data
         Points _points;
 
         // A transform to place the point cloud in world space
         core::mat4x3 _transform;
 #pragma warning(pop)
+
     };
 
 }

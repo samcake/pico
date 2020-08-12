@@ -30,7 +30,7 @@
 
 using namespace pico;
 
-#ifdef WIN32
+#ifdef _WINDOWS
 
 D3D12FramebufferBackend::D3D12FramebufferBackend() : Framebuffer() {
 

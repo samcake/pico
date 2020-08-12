@@ -28,7 +28,7 @@
 
 #include <mutex>
 
-#include <core/LinearAlgebra.h>
+#include <core/math/LinearAlgebra.h>
 #include "render.h"
 
 

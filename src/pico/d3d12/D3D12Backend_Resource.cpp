@@ -28,7 +28,7 @@
 
 using namespace pico;
 
-#ifdef WIN32
+#ifdef _WINDOWS
 
 D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) {
     uint64_t bufferSize = init.bufferSize;
