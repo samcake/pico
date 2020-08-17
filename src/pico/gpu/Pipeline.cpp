@@ -43,3 +43,8 @@ Sampler::Sampler() {
 Sampler::~Sampler() {
 
 }
+
+
+DescriptorSetLayoutPointer PipelineState::getDescriptorSetLayout() const {
+    return _init.descriptorSetLayout;
+}

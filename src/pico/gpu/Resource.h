@@ -64,6 +64,8 @@ namespace pico {
     public:
         virtual ~Buffer();
 
+        uint32_t getNumElements() const { return _init.numElements; }
+
         BufferInit _init;
         void* _cpuMappedAddress = nullptr;
         uint64_t _bufferSize;

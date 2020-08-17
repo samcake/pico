@@ -43,6 +43,7 @@
 #include <pico/render/Renderer.h>
 #include <pico/render/Camera.h>
 #include <pico/render/Mesh.h>
+#include <pico/render/Drawable.h>
 #include <pico/render/Scene.h>
 #include <pico/render/Viewport.h>
 
@@ -113,9 +114,13 @@ int main(int argc, char *argv[])
     // The viewport managing the rendering of the scene from the camera
     auto viewport = std::make_shared<pico::Viewport>(scene, camera, gpuDevice);
 
+    // A point cloud drawable factory
+    auto pointCloudDrawableFactory = std::make_shared<pico::PointCloudDrawableFactory>();
+    pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
+
     // a drawable from the pointcloud
-    auto pointCloudDrawable = std::make_shared<pico::PointCloudDrawable>();
-    pointCloudDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, pointCloud);
+    pico::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
+    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
     auto pcitem = scene->createItem(pointCloudDrawable);
 
     // a drawable from the trianglesoup
@@ -142,8 +147,10 @@ int main(int argc, char *argv[])
     camera->setFar(cameraOrbitLength * 100.0f);
     camera->zoomTo(sceneSphere);
  
-    bool editPointCloudScale = false;
+    bool editPointCloudSize = false;
     bool editPointCloudPerspectiveSpriteX = false;
+    bool editPointCloudPerspectiveDepth = false;
+    bool editPointCloudShowPerspectiveDepth = false;
 
     // Presentation creation
 
@@ -200,10 +207,16 @@ int main(int argc, char *argv[])
         }
 
         if (e.key == pico::KEY_O) {
-            editPointCloudScale = e.state;
+            editPointCloudSize = e.state;
         }
         if (e.key == pico::KEY_I) {
             editPointCloudPerspectiveSpriteX = e.state;
+        }
+        if (e.key == pico::KEY_U) {
+            editPointCloudPerspectiveDepth = e.state;
+        }
+        if (e.key == pico::KEY_J) {
+            editPointCloudShowPerspectiveDepth = e.state;
         }
 
         if (e.state && e.key == pico::KEY_P) {
@@ -245,16 +258,26 @@ int main(int argc, char *argv[])
     windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
         if (e.state & pico::MOUSE_MOVE) {
             if (e.state & pico::MOUSE_LBUTTON) {
-                if (pointCloudDrawable) {
-                    if (editPointCloudScale) {
-                        auto v = pointCloudDrawable->spriteScale;
+                if (pointCloudDrawableFactory) {
+                    if (editPointCloudSize) {
+                        auto v = pointCloudDrawableFactory->getUniforms().getSpriteSize();
                         v -= e.delta.y * 0.01f;
-                        pointCloudDrawable->spriteScale = std::min(std::max(0.01f, v), 5.0f);
+                        pointCloudDrawableFactory->editUniforms().setSpriteSize(v);
                     }
                     if (editPointCloudPerspectiveSpriteX) {
-                        auto v = pointCloudDrawable->perspectiveSprite;
+                        auto v = pointCloudDrawableFactory->getUniforms().getPerspectiveSprite();
                         v = e.pos.x / ((float)window->width());
-                        pointCloudDrawable->perspectiveSprite = std::min(std::max(0.0f, v), 1.0f);
+                        pointCloudDrawableFactory->editUniforms().setPerspectiveSprite(v);
+                    }
+                    if (editPointCloudPerspectiveDepth) {
+                        auto v = pointCloudDrawableFactory->getUniforms().getPerspectiveDepth();
+                        v -= e.delta.y * 0.01f;
+                        pointCloudDrawableFactory->editUniforms().setPerspectiveDepth(v);
+                    }
+                    if (editPointCloudShowPerspectiveDepth) {
+                        auto v = pointCloudDrawableFactory->getUniforms().getShowPerspectiveDepthPlane();
+                        v = e.pos.x / ((float)window->width());
+                        pointCloudDrawableFactory->editUniforms().setShowPerspectiveDepthPlane(v);
                     }
                 }
             }

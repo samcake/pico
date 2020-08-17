@@ -1,4 +1,4 @@
-// Pipeline.h 
+// Drawable.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,48 +26,41 @@
 //
 #pragma once
 
-#include "gpu.h"
-#include "StreamLayout.h"
+#include <functional>
+
+#include <core/math/LinearAlgebra.h>
+
+#include "Renderer.h"
 
 namespace pico {
 
-    struct VISUALIZATION_API PipelineStateInit {
-        ShaderPointer program;
-        StreamLayout streamLayout;
-        PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
-        DescriptorSetLayoutPointer descriptorSetLayout;
-        bool depth { false };
-        bool blend { false };
-    };
+    using DrawObjectCallback = std::function<void(const core::mat4x3& transform,
+        const CameraPointer& camera,
+        const SwapchainPointer& swapchain,
+        const DevicePointer& device,
+        const BatchPointer& batch)>;
 
-    class VISUALIZATION_API PipelineState {
-    protected:
-        // PipelineState is created from the device
-        friend class Device;
-        PipelineState();
-
-        PipelineStateInit _init;
+    // Here we define the DrawcallObject as the container of the various pico gpu objects we need to render an item.
+    // this will evolve and probably clean up over time and move the genralized concepts in the visualization library
+    class VISUALIZATION_API DrawcallObject {
     public:
-        virtual ~PipelineState();
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        DrawObjectCallback _drawCallback;
+        core::Bounds _bounds;
+        core::mat4x3 _transform;
 
-        ShaderPointer _program;
+#pragma warning(pop)
 
-        DescriptorSetLayoutPointer getDescriptorSetLayout() const;
+        DrawcallObject() : _drawCallback(nullptr) {}
+        DrawcallObject(DrawObjectCallback callback) : _drawCallback(callback) {}
+
+        void draw(const CameraPointer& camera,
+            const SwapchainPointer& swapchain,
+            const DevicePointer& device,
+            const BatchPointer& batch);
     };
+    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
 
-    struct VISUALIZATION_API SamplerInit {
-
-    };
-
-    class VISUALIZATION_API Sampler {
-    protected:
-        // Sampler is created from the device
-        friend class Device;
-        Sampler();
-
-    public:
-        virtual ~Sampler();
-
-        SamplerInit _init;
-    };
 }
+

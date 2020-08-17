@@ -37,6 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
+#include "render/Drawable.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 

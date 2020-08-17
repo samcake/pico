@@ -100,16 +100,6 @@ const Item& Scene::getValidItemAt(uint32_t startIndex) const {
     return Item::null;
 }
 
-void DrawcallObject::draw(const CameraPointer& camera,
-    const SwapchainPointer& swapchain,
-    const DevicePointer& device,
-    const BatchPointer& batch) {
-    if (_drawCallback) {
-        _drawCallback(_transform, camera, swapchain, device, batch);
-    }
-}
-
-
 }
 
 

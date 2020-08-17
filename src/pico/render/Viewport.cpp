@@ -29,6 +29,7 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Renderer.h"
+#include "Drawable.h"
 #include "gpu/Swapchain.h"
 #include "gpu/Batch.h"
 

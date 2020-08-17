@@ -165,6 +165,7 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
         }
 
         pso = new D3D12PipelineStateBackend();
+        pso->_init = init;
         pso->_program = init.program;
         pso->_pipelineState = pipelineState;
         pso->_rootSignature = rootSignature;
