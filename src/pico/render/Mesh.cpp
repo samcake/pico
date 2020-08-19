@@ -54,12 +54,12 @@ namespace pico
 
             auto bufferOffset = posBufferBegin + (i * posStride);
             auto position = reinterpret_cast<const core::vec3*> (bufferOffset);
-            _bounds._minPos.x = std::min(position->x, _bounds._minPos.x);
-            _bounds._minPos.y = std::min(position->y, _bounds._minPos.y);
-            _bounds._minPos.z = std::min(position->z, _bounds._minPos.z);
-            _bounds._maxPos.x = std::max(position->x, _bounds._maxPos.x);
-            _bounds._maxPos.y = std::max(position->y, _bounds._maxPos.y);
-            _bounds._maxPos.z = std::max(position->z, _bounds._maxPos.z);
+            _bounds._minPos.x = core::min(position->x, _bounds._minPos.x);
+            _bounds._minPos.y = core::min(position->y, _bounds._minPos.y);
+            _bounds._minPos.z = core::min(position->z, _bounds._minPos.z);
+            _bounds._maxPos.x = core::max(position->x, _bounds._maxPos.x);
+            _bounds._maxPos.y = core::max(position->y, _bounds._maxPos.y);
+            _bounds._maxPos.z = core::max(position->z, _bounds._maxPos.z);
             _bounds._midPos = _bounds._midPos + (*position);
         }
 

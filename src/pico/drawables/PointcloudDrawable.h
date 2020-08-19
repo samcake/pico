@@ -64,16 +64,16 @@ namespace pico {
         // For debug, draw points at the perspective plane with a control color
         float showPerspectiveDepthPlane{ 0.0f };
 
-        void setSpriteSize(float v) { spriteSize = std::min(std::max(0.01f, v), 5.0f); }
+        void setSpriteSize(float v) { spriteSize = core::clamp(v, 0.01f, 5.0f); }
         float getSpriteSize() const { return spriteSize; }
 
-        void setPerspectiveSprite(float v) { perspectiveSprite =  std::min(std::max(0.0f, v), 1.0f); }
+        void setPerspectiveSprite(float v) { perspectiveSprite =  core::clamp(v, 0.0f, 1.0f); }
         float getPerspectiveSprite() const { return perspectiveSprite; }
 
-        void setPerspectiveDepth(float v) { perspectiveDepth = std::max(0.01f, v); }
+        void setPerspectiveDepth(float v) { perspectiveDepth = core::max(0.01f, v); }
         float getPerspectiveDepth() const { return perspectiveDepth; }
 
-        void setShowPerspectiveDepthPlane(float v) { showPerspectiveDepthPlane = std::min(std::max(0.0f, v), 1.0f); }
+        void setShowPerspectiveDepthPlane(float v) { showPerspectiveDepthPlane = core::clamp(v, 0.0f, 1.0f); }
         float getShowPerspectiveDepthPlane() const { return showPerspectiveDepthPlane; }
     };
     using PointCloudDrawableUniformsPointer = std::shared_ptr<PointCloudDrawableUniforms>;
