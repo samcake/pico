@@ -35,33 +35,6 @@
 
 namespace pico {
   
-    using DrawObjectCallback = std::function<void(  const core::mat4x3 & transform,
-                                                    const CameraPointer & camera,
-                                                    const SwapchainPointer & swapchain,
-                                                    const DevicePointer & device,
-                                                    const BatchPointer & batch)>;
-
-    // Here we define the DrawcallObject as the container of the various pico gpu objects we need to render a pointcloud.
-    // this will evolve and probably clean up over time and move the genralized concepts in the visualization library
-    class VISUALIZATION_API DrawcallObject {
-    public:
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        DrawObjectCallback _drawCallback;
-        core::Bounds _bounds;
-        core::mat4x3 _transform;
-
-#pragma warning(pop)
-
-        DrawcallObject() : _drawCallback(nullptr) {}
-        DrawcallObject(DrawObjectCallback callback) : _drawCallback(callback) {}
-
-        void draw(const CameraPointer& camera,
-            const SwapchainPointer& swapchain,
-            const DevicePointer& device,
-            const BatchPointer& batch);
-    };
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
 
     template <typename T> void log(const T& x, std::ostream& out, size_t position) {
         out << std::string(position, ' ') << std::endl;

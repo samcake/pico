@@ -1,4 +1,4 @@
-// Pipeline.h 
+// Drawable.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,50 +24,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Drawable.h"
 
-#include "gpu.h"
-#include "StreamLayout.h"
+using namespace pico;
 
-namespace pico {
 
-    struct VISUALIZATION_API PipelineStateInit {
-        ShaderPointer program;
-        StreamLayout streamLayout;
-        PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
-        DescriptorSetLayoutPointer descriptorSetLayout;
-        bool depth { false };
-        bool blend { false };
-    };
-
-    class VISUALIZATION_API PipelineState {
-    protected:
-        // PipelineState is created from the device
-        friend class Device;
-        PipelineState();
-
-        PipelineStateInit _init;
-    public:
-        virtual ~PipelineState();
-
-        ShaderPointer _program;
-
-        DescriptorSetLayoutPointer getDescriptorSetLayout() const;
-    };
-
-    struct VISUALIZATION_API SamplerInit {
-
-    };
-
-    class VISUALIZATION_API Sampler {
-    protected:
-        // Sampler is created from the device
-        friend class Device;
-        Sampler();
-
-    public:
-        virtual ~Sampler();
-
-        SamplerInit _init;
-    };
+void DrawcallObject::draw(const CameraPointer& camera,
+    const SwapchainPointer& swapchain,
+    const DevicePointer& device,
+    const BatchPointer& batch) {
+    if (_drawCallback) {
+        _drawCallback(_transform, camera, swapchain, device, batch);
+    }
 }

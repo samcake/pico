@@ -102,9 +102,9 @@ struct Transform {
 cbuffer UniformBlock1 : register(b1) {
     Transform _model;
     float _spriteSize;
-    float _spriteScale;
     float _perspectiveSpriteX;
-    float _spareB;
+    float _perspectiveDepth;
+    float _showPerspectiveDepthPlane;
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
@@ -156,13 +156,12 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
 
     // make the sprite offsetting the vert from the pointcloud pos in clip space
     // offset is expressed in ndc with spriteSize expressed in pixels
-    const float spriteSize = _spriteSize * _spriteScale;
     const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
-    float2 spriteOffset = invRes.xy * spriteSize; 
+    float2 spriteOffset = invRes.xy * _spriteSize;
 
     // fixed sprite pixel size in depth or perspective correct 3d size ?
     const float isPerspective = float((0.5 * (clipPos.x / clipPos.w) + 0.5) <= _perspectiveSpriteX);
-    spriteOffset *= (isPerspective > 0.0 ? 1.0 : eyeLinearDepth);
+    spriteOffset *= (isPerspective > 0.0 ? _perspectiveDepth : eyeLinearDepth);
 
     // Apply scaling to the sprite coord and offset pointcloud pos
     OUT.sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
@@ -173,7 +172,10 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
 
     OUT.Color = float4(r, g, b, 1.0f);
 
-    if ((eyeLinearDepth - 1.0) * (eyeLinearDepth - 1.0) < 0.001) {
+    // For debug, represent the points close to the '_perspectiveDepth' with a control color
+    float distanceToPerspectiveDepth = (eyeLinearDepth - _perspectiveDepth);
+    float perspectivePlaneTolerance = _showPerspectiveDepthPlane * 0.01 * _perspectiveDepth;
+    if ((distanceToPerspectiveDepth * distanceToPerspectiveDepth) < (perspectivePlaneTolerance * perspectivePlaneTolerance)) {
         OUT.Color = float4(1.0, 1.0, 1.0, 1.0);
     }
 
