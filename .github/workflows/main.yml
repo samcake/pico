@@ -1,3 +1,4 @@
+# taken from Jherico https://github.com/actions/starter-workflows/pull/47
 name: CMake
 
 on: [push]
