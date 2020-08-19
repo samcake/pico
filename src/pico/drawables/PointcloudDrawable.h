@@ -70,7 +70,7 @@ namespace pico {
         void setPerspectiveSprite(float v) { perspectiveSprite =  std::min(std::max(0.0f, v), 1.0f); }
         float getPerspectiveSprite() const { return perspectiveSprite; }
 
-        void setPerspectiveDepth(float v) { perspectiveDepth = std::min(std::max(0.01f, v), 10.0f); }
+        void setPerspectiveDepth(float v) { perspectiveDepth = std::max(0.01f, v); }
         float getPerspectiveDepth() const { return perspectiveDepth; }
 
         void setShowPerspectiveDepthPlane(float v) { showPerspectiveDepthPlane = std::min(std::max(0.0f, v), 1.0f); }
@@ -87,7 +87,7 @@ namespace pico {
         void allocateGPUShared(const pico::DevicePointer& device);
 
         // Create PointCloudDrawable for a given PointCloud document, building the gpu vertex buffer
-        pico::PointCloudDrawable* PointCloudDrawableFactory::createPointCloudDrawable(const pico::DevicePointer& device, const document::PointCloudPointer& pointcloud);
+        pico::PointCloudDrawable* createPointCloudDrawable(const pico::DevicePointer& device, const document::PointCloudPointer& pointcloud);
 
         // Create Drawcall object drawing the PointCloudDrawable in the rendering context
         pico::DrawcallObjectPointer allocateDrawcallObject(const pico::DevicePointer& device, const pico::CameraPointer& camera,
