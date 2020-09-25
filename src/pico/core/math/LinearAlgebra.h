@@ -270,7 +270,6 @@ namespace core
     };
 
 
-
     struct Bounds {
         vec3 _minPos{ 0.0f };
         vec3 _maxPos{ 0.0f };
@@ -280,10 +279,10 @@ namespace core
         const vec3& maxPos() const { return _maxPos; }
         const vec3& midPos() const { return _midPos; }
 
-        vec4 toSphere() {
+        vec4 toSphere() const {
             vec3 center = (_maxPos + _minPos) * 0.5;
-            float d = length(_maxPos - _minPos);
-            return vec4(center, d);
+            float radius = 0.5f * length(_maxPos - _minPos);
+            return vec4(center, radius);
         }
     };
 

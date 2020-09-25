@@ -1,6 +1,6 @@
-// PointCloud.h 
+// json.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - September 2020
 // 
 // MIT License
 //
@@ -26,49 +26,14 @@
 //
 #pragma once
 
-#include <Forward.h>
+// We are relying on Niels Lohmann modern json library.
+// https://github.com/nlohmann/json
+//
+// simply embbed the one header file library and alias the main type.
+//
 
-#include <vector>
+#include "nlohmann/json.hpp"
 
-#include <core/math/LinearAlgebra.h>
-
-
-namespace document
-{
-    class PointCloud;
-    using PointCloudPointer = std::shared_ptr<PointCloud>;
-
-    class DOCUMENT_API PointCloud {
-    public:
-        static PointCloudPointer createFromJSON(const std::string& filename);
-        static PointCloudPointer createFromPLY(const std::string& filename);
-
-        PointCloud();
-        ~PointCloud();
-
-        // Each point attributes 
-        struct Point {
-            core::vec3 pos;
-           // core::vec3 nor;
-            core::ucvec4 color;
-        };
-
-        // A continuous array of Points
-        using Points = std::vector<Point>;
-
-        const std::string& getName() const { return _name; }
-
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        Points _points;
-
-        // A transform to place the point cloud in world space
-        core::mat4x3 _transform;
-
-        // name assigned to the document
-        std::string _name;
-
-#pragma warning(pop)
-    };
-
+namespace core {
+    using json = nlohmann::json;
 }

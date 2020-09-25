@@ -42,6 +42,7 @@ endforeach()
 file(GLOB PICO_HEADERS
     "pico/*.h"
     "pico/core/math/*.h"
+    "pico/core/json/*.h"
     "pico/core/*.h"
     "pico/gpu/*.h"
     "pico/d3d12/*.h"

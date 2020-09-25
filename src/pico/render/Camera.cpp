@@ -128,19 +128,18 @@ void Camera::setFocal(float focal) {
 }
 float Camera::getFocal() const {
     ReadLock();
-    return _camData._data._projection._focal;
+    return _camData._data._projection.focal();
 }
 
-
-float Camera::getFov() const {
+float Camera::getFov(bool vertical) const {
     ReadLock();
-    auto fovHalftan = _camData._data._projection._height /_camData._data._projection._focal;
+    auto fovHalftan = _camData._data._projection.fovHalfTan(vertical);
     auto fov = 2.0f * atanf(fovHalftan);
     return fov;
 }
-float Camera::getFovDeg() const {
+float Camera::getFovDeg(bool vertical) const {
     const float radToDeg = 180.f / std::acosf(-1);
-    return radToDeg * getFov();
+    return radToDeg * getFov(vertical);
 }
 
 void Camera::setProjectionHeight(float projHeight) {
@@ -165,7 +164,11 @@ void Camera::setAspectRatio(float aspectRatio) {
 }
 float Camera::getAspectRatio() const {
     ReadLock();
-    return _camData._data._projection._aspectRatio;
+    return _camData._data._projection.aspectRatio();
+}
+bool Camera::isLandscape() const {
+    ReadLock();
+    return _camData._data._projection.isLandscape();
 }
 
 void Camera::setFar(float pfar) {
@@ -181,7 +184,6 @@ float Camera::getFar() const {
 void Camera::setOrtho(bool enable) {
     WriteLock();
     _camData._data._projection.setOrtho(enable);
-
 }
 bool Camera::isOrtho() const {
     ReadLock();
@@ -195,13 +197,20 @@ void Camera::setOrthoHeight(float height) {
 }
 float Camera::getOrthoHeight() const {
     ReadLock();
-    return _camData._data._projection._orthoHeight;
+    return _camData._data._projection.orthoHeight();
+}
+float Camera::getOrthoWidth() const {
+    ReadLock();
+    return _camData._data._projection.orthoWidth();
+}
+void Camera::setOrthoSide(float orthoSide, bool vertical) {
+    WriteLock();
+    _camData._data._projection.setOrthoSide(orthoSide, vertical);
 }
 
 void Camera::setOrthoNear(float pnear) {
     WriteLock();
     _camData._data._projection.setOrthoNear(pnear);
-
 }
 float Camera::getOrthoNear() const {
     ReadLock();
@@ -211,7 +220,6 @@ float Camera::getOrthoNear() const {
 void Camera::setOrthoFar(float pfar) {
     WriteLock();
     _camData._data._projection.setOrthoFar(pfar);
-
 }
 float Camera::getOrthoFar() const {
     ReadLock();
@@ -252,6 +260,15 @@ float Camera::getViewportWidth() const {
 float Camera::getViewportHeight() const {
     ReadLock();
     return _camData._data._viewport.height();
+}
+
+float Camera::getOrthoPixelSize() const {
+    ReadLock();
+    return _camData._data._projection.orthoHeight() / _camData._data._viewport.height();
+}
+float Camera::getPerspPixelSize(float depth) const {
+    ReadLock();
+    return _camData._data._projection.evalHeightAt(depth) / _camData._data._viewport.height();
 }
 
 void Camera::allocateGPUData(const DevicePointer& device) {
@@ -347,11 +364,40 @@ float Camera::boom(float boomLength, float delta) {
     return nextBoomLength;
 }
 
-void Camera::zoomTo(const core::vec4& sphere) {
-    setEye(core::vec3(sphere.x, sphere.y, sphere.z) + getBack() * sphere.w);
-    setFar(10.0f * sphere.w);
-    setOrthoHeight(sphere.w * 2.0f);
-    setOrthoFar(10.0f * sphere.w);
+float Camera::zoomTo(const core::vec4& sphere) {
+    auto proj = getProjection();
+
+    // zoom to translate the camera on the front ray toward the center of the sphere
+    // at a 'distance' from the center of the sphere:
+    float radius = sphere.w;
+
+    float distance = radius;
+    if (proj.isOrtho()) {
+        // in ortho, the distance is the sphere radius
+        distance = radius + proj._orthoNear;
+
+        // Adjust size of the proj to fit the sphere along the shortest side
+        auto v = proj.isLandscape();
+        setOrthoHeight((v ? 1.0f : 1.0f / proj.aspectRatio()) * 2.0f * radius);
+    } else {
+        // in perspective, knowing the field of view, find the distance from the center of the sphere to see all of it
+        // Compute the adjacent side of the fovHalfTan of opposite side 'sphere.radius',
+        // then  the distance as the hypotenuse 
+        auto fovHalfTanInv = 1.0f / proj.fovHalfTan(proj.isLandscape());
+        auto distance2 = radius * radius * (fovHalfTanInv + 1.0f) * (fovHalfTanInv + 1.0f);
+        distance = sqrt(distance2);
+
+        // make sure the near is not crossing the sphere:
+        auto radiusToNear = distance - radius - proj._focal;
+        if (radiusToNear < 0.0f) {
+             distance -= radiusToNear;
+        }
+    }
+
+    // move the camera on the ray toward the sphere from the distance.
+    setEye(core::vec3(sphere.x, sphere.y, sphere.z) + getBack() * distance);
+
+    return distance;
 }
 
 void Camera::lookFrom(const core::vec3& lookDirection) {
