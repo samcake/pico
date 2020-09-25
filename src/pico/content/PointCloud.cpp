@@ -102,7 +102,7 @@ namespace document
             if (pointcloud) {
                 // Assign extra properties provided in the json
                 // TODO
-                return nullptr;
+                return pointcloud;
             } else {
                 return nullptr;
             }
