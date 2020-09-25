@@ -1,6 +1,7 @@
 
 
 add_executable(pico_01 pico_one.cpp)
+target_compile_features(pico_01 PRIVATE cxx_std_17)
 
 # Set include path for pico.h
 target_include_directories(pico_01 PRIVATE ../../src)

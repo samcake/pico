@@ -83,6 +83,7 @@ target_link_libraries(pico
 add_dependencies(pico scribe)
 
 target_include_directories(pico PUBLIC "pico/" ${SHADER_OUTPUT_DIR} )
+target_compile_features(pico PRIVATE cxx_std_17)
 
 source_group(pico\\shaders FILES ${PICO_SHADERS})
 source_group(pico\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)
