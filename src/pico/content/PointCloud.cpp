@@ -77,11 +77,11 @@ namespace document
             if (meta_data.is_object()) {
                 
                 auto ply_path_kv = meta_data.find(POINT_CLOUD_PATH_K);
-                if ((*ply_path_kv).empty()) {
+                if (ply_path_kv != meta_data.end()) {
+                    pointcloud_ply_path = ((*ply_path_kv).get<std::string>());
+                } else {
                     picoLog() << "meta file " << meta_path.string() << " doesn't have a valid key <" << POINT_CLOUD_PATH_K << ">\n";
                     return nullptr;
-                } else {
-                    pointcloud_ply_path = ((*ply_path_kv).get<std::string>());
                 }
             } else {
                 picoLog() << "meta file " << meta_path.string() << " doesn't have root object\n";
@@ -101,7 +101,31 @@ namespace document
             auto pointcloud =  createFromPLY(pointcloud_ply_path.string());
             if (pointcloud) {
                 // Assign extra properties provided in the json
-                // TODO
+
+                auto transform_kv = meta_data.find(POINT_CLOUD_TRANSFORM_K);
+                if (transform_kv != meta_data.end()) {
+                    core::mat4x3 transform;
+
+                    auto translation_kv = (*transform_kv).find(TRANSLATION_K);
+                    if ((translation_kv != (*transform_kv).end()) && (*translation_kv).is_array()) {
+                        transform._columns[3] = core::vec3((*translation_kv).at(0).get<float>(), (*translation_kv).at(1).get<float>(), (*translation_kv).at(2).get<float>());
+                    }
+
+                    auto rotation_kv = (*transform_kv).find(ROTATION_K);
+                    if ((rotation_kv != (*transform_kv).end()) && (*rotation_kv).is_array()) {
+                        auto col0_v = (*rotation_kv).at(0);
+                        transform._columns[0] = core::vec3((col0_v).at(0).get<float>(), (col0_v).at(1).get<float>(), (col0_v).at(2).get<float>());
+
+                        auto col1_v = (*rotation_kv).at(1);
+                        transform._columns[1] = core::vec3((col1_v).at(0).get<float>(), (col1_v).at(1).get<float>(), (col1_v).at(2).get<float>());
+
+                        auto col2_v = (*rotation_kv).at(2);
+                        transform._columns[2] = core::vec3((col2_v).at(0).get<float>(), (col2_v).at(1).get<float>(), (col2_v).at(2).get<float>());
+                    }
+
+                    pointcloud->_transform = transform;
+                }
+
                 return pointcloud;
             } else {
                 return nullptr;
