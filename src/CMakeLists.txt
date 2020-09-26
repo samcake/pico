@@ -42,6 +42,7 @@ endforeach()
 file(GLOB PICO_HEADERS
     "pico/*.h"
     "pico/core/math/*.h"
+    "pico/core/json/*.h"
     "pico/core/*.h"
     "pico/gpu/*.h"
     "pico/d3d12/*.h"
@@ -82,6 +83,7 @@ target_link_libraries(pico
 add_dependencies(pico scribe)
 
 target_include_directories(pico PUBLIC "pico/" ${SHADER_OUTPUT_DIR} )
+target_compile_features(pico PRIVATE cxx_std_17)
 
 source_group(pico\\shaders FILES ${PICO_SHADERS})
 source_group(pico\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)

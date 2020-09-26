@@ -93,43 +93,62 @@ namespace pico {
         float _aspectRatio{ 16.0f / 9.0f }; // aspectRatio = width / height of the projection rectangle
         float _height{ 0.056f }; // height of the projection rectangle at the focal plane, similar to the sensor height
         float _focal{ 0.056f };  // focal length between the focal plane and the origin of the projection
-        float _persFar{ 100.0f }; // ersepective far, Infinite if 0f
+        float _persFar{ 100.0f }; // perspective far, Infinite if 0f
 
         float _orthoEnabled { 0.0f }; 
         float _orthoHeight{ 1.0f };
         float _orthoNear{ 0.0f };
         float _orthoFar { 100.0f };
 
+        float aspectRatio() const { return _aspectRatio; }
+        float aspectRatioInv() const { return 1.0f / aspectRatio(); }
         void setAspectRatio(float aspectRatio) {
             _aspectRatio = core::max(core::FLOAT_EPSILON, aspectRatio);
         }
+        bool isLandscape() const { return _aspectRatio > 1.0f; }
+
+        float height() const { return _height; }
         void setHeight(float height) {
             _height = core::max(core::FLOAT_EPSILON, height);
         }
+        float width() const { return _aspectRatio * _height; }
 
+        float evalHeightAt(float depth) const { return depth * _height / _focal; }
+        float evalDepthAt(float size) const { return size * _focal / _height; }
+
+        float focal() const { return _focal; }
         void setFocal(float focal) {
             _focal = core::max(core::FLOAT_EPSILON, focal);
         }
+
+        // tan of the half field of view angle
+        // @param vertical: true by default
+        float fovHalfTan(bool vertical = true) const { return (vertical ? 1.0f : _aspectRatio) * 0.5f * _height / _focal; }
+
         void setFar(float pfar) {
             _persFar = core::max(core::FLOAT_EPSILON, pfar);
         }
-
-        float width() const { return _aspectRatio * _height; }
 
         void setOrtho(bool enable) {
             _orthoEnabled = (enable ? 1.0f : 0.0f);
         }
         bool isOrtho() const { return (_orthoEnabled > 0.0f); }
+        
+        float orthoHeight() const { return _orthoHeight; }
         void setOrthoHeight(float height) {
             _orthoHeight = core::max(core::FLOAT_EPSILON, height);
         }
+        void setOrthoSide(float orthoSide, bool vertical) {
+            setOrthoHeight((vertical ? 1.0f : aspectRatioInv()) * orthoSide);
+        }
+        float orthoWidth() const { return aspectRatio() * orthoHeight(); }
+
         void setOrthoNear(float orthoNear) {
             _orthoNear = orthoNear;
         }
         void setOrthoFar(float orthoFar) {
             _orthoFar = orthoFar;
         }
-
 
         static core::vec3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, const core::vec2& clipPos) {
             return core::vec3(clipPos.x * aspectRatio * sensorHeight * 0.5f, clipPos.y * sensorHeight * 0.5f, -focal);
@@ -252,8 +271,8 @@ namespace pico {
 
         void setFocal(float focal);
         float getFocal() const;
-        float getFov() const;
-        float getFovDeg() const;
+        float getFov(bool vertical = true) const;
+        float getFovDeg(bool vertical = true) const;
 
         void setProjectionHeight(float projHeight);
         float getProjectionHeight() const;
@@ -261,6 +280,7 @@ namespace pico {
 
         void setAspectRatio(float aspectRatio);
         float getAspectRatio() const;
+        bool isLandscape() const; // true if aspect ratio > 1.0;
 
         void setFar(float far);
         float getFar() const;
@@ -270,6 +290,9 @@ namespace pico {
 
         void setOrthoHeight(float orthoHeight);
         float getOrthoHeight() const;
+        float getOrthoWidth() const;
+        void setOrthoSide(float orthoSide, bool vertical);
+
         void setOrthoNear(float orthoNear);
         float getOrthoNear() const;
         void setOrthoFar(float orthoFar);
@@ -285,18 +308,28 @@ namespace pico {
         float getViewportWidth() const;
         float getViewportHeight() const;
 
+        // Eval size of a pixel
+        // in ortho constant
+        float getOrthoPixelSize() const;
+        // in perspective at specified depth (positive in front of the camera)
+        float getPerspPixelSize(float depth) const;
+
         // Gpu version of the camera Data
         void allocateGPUData(const DevicePointer& device);
         bool updateGPUData();
         BufferPointer getGPUBuffer() const;
 
-        // Some nice moves
+        // Some nice relative moves
         void pan(float deltaRight, float deltaUp);
         void dolly(float deltaBack);
         void orbit(float boomLength, float deltaRight, float deltaUp);
-
         float boom(float boomLength, float delta);
-        void zoomTo(const core::vec4& sphere);
+
+        // zoom to a sphere
+        // translate the camera (keeping the current look direction and focal)
+        // so the camera points to the center of the sphere at enough distance to fit the full sphere in the viewport
+        // the distance from the eye to the center of the sphere is returned
+        float zoomTo(const core::vec4& sphere);
         void lookFrom(const core::vec3& lookDirection);
     };
 }

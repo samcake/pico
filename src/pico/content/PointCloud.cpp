@@ -26,11 +26,16 @@
 //
 #include "PointCloud.h"
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
 #include <vector>
 #include <algorithm>
+
+#include <core/json/json.h>
+
+#include <pico.h>
 
 namespace document
 {
@@ -42,6 +47,93 @@ namespace document
 
     PointCloud::~PointCloud() {
 
+    }
+
+    PointCloudPointer PointCloud::createFromJSON(const std::string& filename) {
+        if (filename.empty()) {
+            return nullptr;
+        }
+        auto meta_path = std::filesystem::absolute(std::filesystem::path(filename));
+        if (!std::filesystem::exists(meta_path)) {
+            picoLog() << "meta file " << meta_path.string() << " doesn't exist\n";
+            return nullptr;
+        }
+
+        // let's try to open the file
+        std::ifstream file(meta_path.string(), std::ifstream::in);
+        std::string content((std::istreambuf_iterator<char>(file)),
+            (std::istreambuf_iterator<char>()));
+        file.close();
+
+        // Collect properties from the meta file and specifically the actual path to the source point cloud resource file
+        core::json meta_data;
+        const std::string POINT_CLOUD_PATH_K{ "point_cloud_path" };
+        const std::string POINT_CLOUD_TRANSFORM_K{ "point_cloud_transform" };
+        const std::string TRANSLATION_K{ "translation" };
+        const std::string ROTATION_K{ "rotation" };
+        std::filesystem::path pointcloud_ply_path;
+        try {
+            meta_data = core::json::parse(content);
+            if (meta_data.is_object()) {
+                
+                auto ply_path_kv = meta_data.find(POINT_CLOUD_PATH_K);
+                if (ply_path_kv != meta_data.end()) {
+                    pointcloud_ply_path = ((*ply_path_kv).get<std::string>());
+                } else {
+                    picoLog() << "meta file " << meta_path.string() << " doesn't have a valid key <" << POINT_CLOUD_PATH_K << ">\n";
+                    return nullptr;
+                }
+            } else {
+                picoLog() << "meta file " << meta_path.string() << " doesn't have root object\n";
+                return nullptr;
+            }
+        } catch (...) {
+            picoLog() << "meta file " << meta_path.string() << " is not valid json\n";
+            return nullptr;
+        }
+
+        // adjust the pointcloud_ply path relative to the json path
+        if (pointcloud_ply_path.is_relative()) {
+            pointcloud_ply_path = meta_path.parent_path() / pointcloud_ply_path;
+        }
+
+        if (std::filesystem::exists(pointcloud_ply_path)) {
+            auto pointcloud =  createFromPLY(pointcloud_ply_path.string());
+            if (pointcloud) {
+                // Assign extra properties provided in the json
+
+                auto transform_kv = meta_data.find(POINT_CLOUD_TRANSFORM_K);
+                if (transform_kv != meta_data.end()) {
+                    core::mat4x3 transform;
+
+                    auto translation_kv = (*transform_kv).find(TRANSLATION_K);
+                    if ((translation_kv != (*transform_kv).end()) && (*translation_kv).is_array()) {
+                        transform._columns[3] = core::vec3((*translation_kv).at(0).get<float>(), (*translation_kv).at(1).get<float>(), (*translation_kv).at(2).get<float>());
+                    }
+
+                    auto rotation_kv = (*transform_kv).find(ROTATION_K);
+                    if ((rotation_kv != (*transform_kv).end()) && (*rotation_kv).is_array()) {
+                        auto col0_v = (*rotation_kv).at(0);
+                        transform._columns[0] = core::vec3((col0_v).at(0).get<float>(), (col0_v).at(1).get<float>(), (col0_v).at(2).get<float>());
+
+                        auto col1_v = (*rotation_kv).at(1);
+                        transform._columns[1] = core::vec3((col1_v).at(0).get<float>(), (col1_v).at(1).get<float>(), (col1_v).at(2).get<float>());
+
+                        auto col2_v = (*rotation_kv).at(2);
+                        transform._columns[2] = core::vec3((col2_v).at(0).get<float>(), (col2_v).at(1).get<float>(), (col2_v).at(2).get<float>());
+                    }
+
+                    pointcloud->_transform = transform;
+                }
+
+                return pointcloud;
+            } else {
+                return nullptr;
+            }
+        } else {
+            picoLog() << "pointcloud file " << pointcloud_ply_path.string() << " doesn't exist\n";
+            return nullptr;
+        }
     }
 
     PointCloudPointer PointCloud::createFromPLY(const std::string& filename) {
@@ -467,10 +559,8 @@ namespace document
 
         auto pointCloud = std::make_shared<PointCloud>();
         pointCloud->_points = points;
-        /*    pointCloud->_points = points;
-            pointCloud->_points = points;
-            pointCloud->_points = points;
-        */
+        pointCloud->_name = filename;
+
         return pointCloud;
 
 

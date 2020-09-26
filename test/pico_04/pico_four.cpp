@@ -70,7 +70,8 @@
 int main(int argc, char *argv[])
 {
 
-    std::string cloudPointFile("../asset/pointcloud/AsianElephantPointcloud.ply");
+ //   std::string cloudPointFile("../asset/pointcloud/AsianElephantPointcloud.ply");
+    std::string cloudPointFile("../asset/pointcloud/mammoth.json");
     if (argc > 1) {
         cloudPointFile = std::string(argv[argc - 1]);
     }
@@ -94,7 +95,8 @@ int main(int argc, char *argv[])
     }
 
     // Some content, why not a pointcloud ?
-    auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
+  //  auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
+    auto pointCloud = document::PointCloud::createFromJSON(cloudPointFile);
     auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
     // First a device, aka the gpu api used by pico
@@ -143,9 +145,9 @@ int main(int argc, char *argv[])
             sceneSphere = core::vec4(cloudCenter, cloudHalfDiag);
         }
     }
-    float cameraOrbitLength = sceneSphere.w;
+    float cameraOrbitLength = camera->zoomTo(sceneSphere);
     camera->setFar(cameraOrbitLength * 100.0f);
-    camera->zoomTo(sceneSphere);
+    
  
     bool editPointCloudSize = false;
     bool editPointCloudPerspectiveSpriteX = false;
@@ -250,8 +252,7 @@ int main(int argc, char *argv[])
         }
 
         if (zoomToScene) {
-            camera->zoomTo(sceneSphere);
-            cameraOrbitLength = sceneSphere.w;
+            cameraOrbitLength = camera->zoomTo(sceneSphere);
         }
     };
 
@@ -296,7 +297,7 @@ int main(int argc, char *argv[])
                         panScale = camera->getOrthoHeight() / camera->getViewportHeight();
                     } else {
                     }    
-                    camera->pan(-e.delta.x* panScale, e.delta.y * panScale);
+                    camera->pan(-e.delta.x * panScale, e.delta.y * panScale);
                 } else {
                     float orbitScale = 0.01f;
                     camera->orbit(cameraOrbitLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
