@@ -28,9 +28,7 @@
 #include <functional>
 #include <chrono>
 
-#include <pico/pico.h>
-
-#include <pico/window/Window.h>
+#include <core/api.h>
 
 #include <pico/gpu/Device.h>
 #include <pico/gpu/Resource.h>
@@ -44,7 +42,9 @@
 #include <pico/render/Camera.h>
 #include <pico/render/Mesh.h>
 
-#include <pico/content/PointCloud.h>
+#include <document/PointCloud.h>
+
+#include <uix/Window.h>
 
 #include <vector>
 
@@ -63,8 +63,8 @@ int main(int argc, char *argv[])
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the pico api
-    pico::ApiInit pico_init{ };
-    auto result = pico::api::create(pico_init);
+    core::ApiInit pico_init{ };
+    auto result = core::api::create(pico_init);
 
     if (!result) {
         std::clog << "Pico api failed to create ?" << std::endl;
@@ -225,16 +225,16 @@ int main(int argc, char *argv[])
 
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
-    auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
-    auto window = pico::Window::createWindow(windowInit);
+    auto windowHandler = new uix::WindowHandlerDelegate();
+    uix::WindowInit windowInit { windowHandler };
+    auto window = uix::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { (uint32_t) camera->getViewportWidth(), (uint32_t)camera->getViewportHeight(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, camera](const uix::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
     });
 
     // On resize deal with it
-    windowHandler->_onResizeDelegate = [&](const pico::ResizeEvent& e) {
+    windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
         // only resize the swapchain when we re done with the resize
         if (e.over) {
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
@@ -277,48 +277,48 @@ int main(int argc, char *argv[])
         }
     };
 
-    windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
+    windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
 
-        if (e.state && e.key == pico::KEY_SPACE) {
+        if (e.state && e.key == uix::KEY_SPACE) {
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
-        if (e.state && e.key == pico::KEY_1) {
+        if (e.state && e.key == uix::KEY_1) {
             // look side
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
             camera->zoomTo(sceneSphere);
         }
 
-        if (e.state && e.key == pico::KEY_2) {
+        if (e.state && e.key == uix::KEY_2) {
             // look lateral
             camera->setOrientationFromRightUp({ 0.f, 0.f, -1.f }, { 0.f, 1.f, 0.0f });
             camera->zoomTo(sceneSphere);
         }
 
-        if (e.state && e.key == pico::KEY_3) {
+        if (e.state && e.key == uix::KEY_3) {
             // look down
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 0.f, -1.f });
             camera->zoomTo(sceneSphere);
         }
 
-        if (e.state && e.key == pico::KEY_4) {
+        if (e.state && e.key == uix::KEY_4) {
             // look 3/4 down
             camera->setOrientationFromRightUp({ 1.f, 0.f, -1.f }, { 0.f, 1.f, -1.0f });
             camera->zoomTo(sceneSphere);
         }
     };
 
-    windowHandler->_onMouseDelegate = [&](const pico::MouseEvent& e) {
-        if (e.state & pico::MOUSE_MOVE) {
-            if (e.state & pico::MOUSE_RBUTTON) {
+    windowHandler->_onMouseDelegate = [&](const uix::MouseEvent& e) {
+        if (e.state & uix::MOUSE_MOVE) {
+            if (e.state & uix::MOUSE_RBUTTON) {
                 float orbitScale = 0.01f;
                 camera->orbit(sceneSphere.w, e.delta.x * orbitScale, -e.delta.y * orbitScale);
             }
-            if (e.state & pico::MOUSE_MBUTTON) {
+            if (e.state & uix::MOUSE_MBUTTON) {
                 float panScale = sceneSphere.w * 0.001f;
                 camera->pan(e.delta.x* panScale, -e.delta.y * panScale);
             }
-        } else if (e.state & pico::MOUSE_WHEEL) {
-            if (e.state & pico::MOUSE_CONTROL) {
+        } else if (e.state & uix::MOUSE_WHEEL) {
+            if (e.state & uix::MOUSE_CONTROL) {
                 float zoomScale = 0.1f;
                 camera->setFocal( camera->getFocal() * (1.0f +  e.wheel * zoomScale));
             } else {
@@ -335,8 +335,7 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
     }
 
-    pico::api::destroy();
-    std::clog << "Pico api destroyed" << std::endl;
+    core::api::destroy();
 
      return 0;
 }

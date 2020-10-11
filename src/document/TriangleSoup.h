@@ -26,18 +26,18 @@
 //
 #pragma once
 
-#include <Forward.h>
-
+#include <string>
 #include <vector>
-
+#include <memory>
 #include <core/math/LinearAlgebra.h>
+#include <document/dllmain.h>
 
 namespace document
 {
     class TriangleSoup;
     using TriangleSoupPointer = std::shared_ptr<TriangleSoup>;
 
-    class VISUALIZATION_API TriangleSoup {
+    class DOCUMENT_API TriangleSoup {
     public:
         static TriangleSoupPointer createFromPLY(const std::string& filename);
 

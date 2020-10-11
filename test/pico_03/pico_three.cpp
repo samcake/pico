@@ -27,9 +27,7 @@
 
 #include <chrono>
 
-#include <pico/pico.h>
-
-#include <pico/window/Window.h>
+#include <core/api.h>
 
 #include <pico/gpu/Device.h>
 #include <pico/gpu/Resource.h>
@@ -42,7 +40,9 @@
 #include <pico/render/Renderer.h>
 #include <pico/render/Mesh.h>
 
-#include <pico/content/PointCloud.h>
+#include <document/PointCloud.h>
+
+#include <uix/Window.h>
 
 #include <vector>
 
@@ -186,8 +186,8 @@ int main(int argc, char *argv[])
     }
 
     // Create the pico api
-    pico::ApiInit pico_init{ };
-    auto result = pico::api::create(pico_init);
+    core::ApiInit pico_init{ };
+    auto result = core::api::create(pico_init);
 
     if (!result) {
         std::clog << "Pico api failed to create ?" << std::endl;
@@ -349,16 +349,16 @@ int main(int argc, char *argv[])
 
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
-    auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
-    auto window = pico::Window::createWindow(windowInit);
+    auto windowHandler = new uix::WindowHandlerDelegate();
+    uix::WindowInit windowInit { windowHandler };
+    auto window = uix::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -385,32 +385,32 @@ int main(int argc, char *argv[])
     });
 
     // Let's react to keyboard events and change the camera views
-    windowHandler->_onKeyboardDelegate = [&](const pico::KeyboardEvent& e) {
-        if (e.state && e.key == pico::KEY_SPACE) {
+    windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
+        if (e.state && e.key == uix::KEY_SPACE) {
             cameraData._stuff.x = (cameraData._stuff.x == 0.f ? 1.0f : 0.0f);
         }
-        if (e.state && e.key == pico::KEY_3) {
+        if (e.state && e.key == uix::KEY_3) {
             // look down
             cameraData._right = { 1.f, 0.f, 0.f };
             cameraData._up = { 0.f, 0.f, -1.f };
             cameraData._back = core::cross(cameraData._right, cameraData._up);
             cameraData._eye = core::vec3(sceneSphere.xyz()) + cameraData._back * sceneSphere.w;
         }
-        if (e.state && e.key == pico::KEY_1) {
+        if (e.state && e.key == uix::KEY_1) {
             // look side
             cameraData._right = { 1.f, 0.f, 0.f };
             cameraData._up = core::normalize({ 0.f, 1.f, 0.0f });
             cameraData._back = core::cross(cameraData._right, cameraData._up);
             cameraData._eye = core::vec3(sceneSphere.xyz()) + cameraData._back * sceneSphere.w;
         }
-        if (e.state && e.key == pico::KEY_2) {
+        if (e.state && e.key == uix::KEY_2) {
             // look lateral
             cameraData._right = { 0.f, 0.f, -1.f };
             cameraData._up = core::normalize({ 0.f, 1.f, 0.0f });
             cameraData._back = core::cross(cameraData._right, cameraData._up);
             cameraData._eye = core::vec3(sceneSphere.xyz()) + cameraData._back * sceneSphere.w;
         }
-        if (e.state && e.key == pico::KEY_4) {
+        if (e.state && e.key == uix::KEY_4) {
             // look 3/4 down
             cameraData._right = core::normalize({ 1.f, 0.f, -1.f });
             cameraData._up = core::normalize({ 0.f, 1.f, -1.f });
@@ -425,7 +425,7 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
     }
 
-    pico::api::destroy();
+    core::api::destroy();
     std::clog << "Pico api destroyed" << std::endl;
 
      return 0;

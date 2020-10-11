@@ -34,8 +34,7 @@
 #include <algorithm>
 
 #include <core/json/json.h>
-
-#include <pico.h>
+#include <core/Log.h>
 
 namespace document
 {

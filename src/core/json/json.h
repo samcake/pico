@@ -1,6 +1,6 @@
-// Swapchain.h 
+// json.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - September 2020
 // 
 // MIT License
 //
@@ -26,36 +26,16 @@
 //
 #pragma once
 
-#include <core/api.h>
+// We are relying on Niels Lohmann modern json library.
+// https://github.com/nlohmann/json
+//
+// simply embbed the one header file library and alias the main type.
+//
 
-#include "gpu.h"
+#include "nlohmann/json.hpp"
 
-namespace pico {
+namespace core {
+    using json = nlohmann::json;
 
-    struct VISUALIZATION_API SwapchainInit {
-        uint32_t width;
-        uint32_t height;
-
-        
-#ifdef _WINDOWS
-        HWND hWnd;
-#endif
-        // No depth buffer by default
-        bool     depthBuffer{ false };
-    };
-
-    class VISUALIZATION_API Swapchain {
-    protected:
-        // Swapchain is created from the device
-        friend class Device;
-        Swapchain();
-
-    public:
-        ~Swapchain();
-
-        SwapchainInit _init;
-
-        uint8_t _currentIndex;
-        uint8_t currentIndex() const;
-    };
+    json generate_json_from(const std::string& fielname);
 }

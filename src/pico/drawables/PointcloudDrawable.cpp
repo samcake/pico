@@ -41,7 +41,7 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
-#include <content/pointcloud.h>
+#include <document/pointcloud.h>
 
 #include "PointCloud_vert.h"
 #include "PointCloud_frag.h"

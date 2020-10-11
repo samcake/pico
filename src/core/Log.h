@@ -1,6 +1,6 @@
-// Forward.h
+// Log.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - September 2020
 // 
 // MIT License
 //
@@ -26,20 +26,13 @@
 //
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <string>
-#include "dllmain.h"
+#include <iostream>
+#define picoLog() ::core::_log(__FILE__, __LINE__, __FUNCTION__)
+#define picoAssert(t) ::core::_assert((t), __FILE__, __LINE__, __FUNCTION__)
 
-#ifdef _WINDOWS
-#ifdef PICO_SUPPORT_MFC
-#include "stdafx.h"
-#else
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#endif
-#endif
+namespace core {
 
-namespace pico {
+    std::ostream& _log(const char* file, int line, const char* functionName);
+    void _assert(bool test, const char* file, int line, const char* functionName);
+
 }

@@ -1,6 +1,6 @@
-// Swapchain.h 
+// Log.cpp 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - September 2020
 // 
 // MIT License
 //
@@ -24,38 +24,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Log.h"
 
-#include <core/api.h>
 
-#include "gpu.h"
+std::ostream& core::_log(const char* file, int line, const char* functionName) {
+    return std::clog << file << " - " << line << " - " << functionName << " : ";
+}
 
-namespace pico {
-
-    struct VISUALIZATION_API SwapchainInit {
-        uint32_t width;
-        uint32_t height;
-
-        
-#ifdef _WINDOWS
-        HWND hWnd;
-#endif
-        // No depth buffer by default
-        bool     depthBuffer{ false };
-    };
-
-    class VISUALIZATION_API Swapchain {
-    protected:
-        // Swapchain is created from the device
-        friend class Device;
-        Swapchain();
-
-    public:
-        ~Swapchain();
-
-        SwapchainInit _init;
-
-        uint8_t _currentIndex;
-        uint8_t currentIndex() const;
-    };
+void core::_assert(bool test, const char* file, int line, const char* functionName) {
+    if (!test) {
+        _log(file, line, functionName);
+    }
 }

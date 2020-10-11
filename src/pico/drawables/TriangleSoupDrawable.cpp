@@ -41,7 +41,7 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
-#include <content/TriangleSoup.h>
+#include <document/TriangleSoup.h>
 
 #include "TriangleSoup_vert.h"
 #include "TriangleSoup_frag.h"
@@ -121,7 +121,7 @@ namespace pico
             core::mat4x3 transform;
             uint32_t numVertices{ 0 };
             uint32_t numIndices{ 0 };
-            float A;
+            uint32_t stride{ 0 };
             float B;
         };
 

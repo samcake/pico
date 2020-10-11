@@ -3,27 +3,13 @@
 
 #ifdef PICO_DLL_LIB
 
-# ifdef CORE_EXPORTS
-#  define CORE_API __declspec(dllexport)
-# else
-#  define CORE_API __declspec(dllimport)
-# endif
-
-# ifdef DOCUMENT_EXPORTS
-#  define DOCUMENT_API __declspec(dllexport)
-# else
-#  define DOCUMENT_API __declspec(dllimport)
-# endif
-
-# ifdef VISUALIZATION_EXPORTS
+# ifdef PICO_EXPORTS
 #  define VISUALIZATION_API __declspec(dllexport)
 # else
 #  define VISUALIZATION_API __declspec(dllimport)
 # endif
 
 #else 
-# define CORE_API 
-# define DOCUMENT_API 
 # define VISUALIZATION_API 
 #endif
 

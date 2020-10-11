@@ -26,12 +26,11 @@
 //
 #pragma once
 
-#include <Forward.h>
-
+#include <string>
 #include <vector>
-
+#include <memory>
 #include <core/math/LinearAlgebra.h>
-
+#include "dllmain.h"
 
 namespace document
 {

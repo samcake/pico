@@ -1,4 +1,4 @@
-// Transform.h 
+// Transform.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,16 +24,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Transform.h"
 
-#include "Forward.h"
-#include <core/math/LinearAlgebra.h>
-
-namespace pico {
-    class Transform {
-    public:
-        Transform() {}
-        ~Transform() {}
-
-    };
-}

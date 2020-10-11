@@ -6,4 +6,4 @@ target_compile_features(pico_01 PRIVATE cxx_std_17)
 # Set include path for pico.h
 target_include_directories(pico_01 PRIVATE ../../src)
 
-target_link_libraries(pico_01 pico)
+target_link_libraries(pico_01 pico uix)

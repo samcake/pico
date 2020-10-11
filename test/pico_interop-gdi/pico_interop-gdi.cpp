@@ -27,11 +27,11 @@
 
 #include <chrono>
 
-#include <pico/pico.h>
+#include <core/api.h>
+
 #include <pico/gpu/Device.h>
 #include <pico/gpu/Batch.h>
 #include <pico/gpu/Swapchain.h>
-#include <pico/window/Window.h>
 #include <pico/render/Renderer.h>
 
 #include <pico/gpu/Pipeline.h>
@@ -39,6 +39,8 @@
 #include <pico/gpu/Descriptor.h>
 #include <pico/gpu/Shader.h>
 #include <pico/gpu/gpu.h>
+
+#include <uix/Window.h>
 
 #pragma comment(lib, "msimg32.lib")
 
@@ -187,8 +189,8 @@ int main(int argc, char *argv[])
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the pico api
-    pico::ApiInit pico_init{ };
-    auto result = pico::api::create(pico_init);
+    core::ApiInit pico_init{ };
+    auto result = core::api::create(pico_init);
 
     if (!result) {
         std::clog << "Pico api failed to create ?" << std::endl;
@@ -208,9 +210,9 @@ int main(int argc, char *argv[])
 
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
-    auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
-    auto window = pico::Window::createWindow(windowInit);
+    auto windowHandler = new uix::WindowHandlerDelegate();
+    uix::WindowInit windowInit { windowHandler };
+    auto window = uix::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
@@ -372,7 +374,7 @@ int main(int argc, char *argv[])
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer, gdcRenderer](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer, gdcRenderer](const uix::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -409,8 +411,7 @@ int main(int argc, char *argv[])
 
     }
 
-    pico::api::destroy();
-    std::clog << "Pico api destroyed" << std::endl;
+    core::api::destroy();
 
      return 0;
 }

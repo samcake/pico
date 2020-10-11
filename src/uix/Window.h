@@ -30,10 +30,12 @@
 #include <vector>
 
 #include <core/math/LinearAlgebra.h>
+#include <core/api.h>
 
-#include "Forward.h"
+#include "dllmain.h"
 
-namespace pico {
+
+namespace uix {
 
     //--------------------------------------------------------------------------------------
     class Window;
@@ -205,30 +207,30 @@ public:
 
 };
 
-class WindowHandlerDelegate : public pico::WindowHandler {
+class WindowHandlerDelegate : public uix::WindowHandler {
 public:
-    std::function<void(const pico::ResizeEvent&)> _onResizeDelegate;
-    std::function<void(const pico::PaintEvent&)> _onPaintDelegate;
-    std::function<void(const pico::MouseEvent&)> _onMouseDelegate;
-    std::function<void(const pico::KeyboardEvent&)> _onKeyboardDelegate;
-    std::function<void(const pico::DropFilesEvent&)> _onDropFilesDelegate;
+    std::function<void(const uix::ResizeEvent&)> _onResizeDelegate;
+    std::function<void(const uix::PaintEvent&)> _onPaintDelegate;
+    std::function<void(const uix::MouseEvent&)> _onMouseDelegate;
+    std::function<void(const uix::KeyboardEvent&)> _onKeyboardDelegate;
+    std::function<void(const uix::DropFilesEvent&)> _onDropFilesDelegate;
 
     WindowHandlerDelegate() {
     }
 
-    void onResize(const pico::ResizeEvent& e) override {
+    void onResize(const uix::ResizeEvent& e) override {
         if (_onResizeDelegate) _onResizeDelegate(e);
     }
-    void onPaint(const pico::PaintEvent& e) override {
+    void onPaint(const uix::PaintEvent& e) override {
         if (_onPaintDelegate) _onPaintDelegate(e);
     }
-    void onMouse(const pico::MouseEvent& e) override {
+    void onMouse(const uix::MouseEvent& e) override {
         if (_onMouseDelegate) _onMouseDelegate(e);
     }
-    void onKeyboard(const pico::KeyboardEvent& e) override {
+    void onKeyboard(const uix::KeyboardEvent& e) override {
         if (_onKeyboardDelegate) _onKeyboardDelegate(e);
     }
-    void onDropFiles(const pico::DropFilesEvent& e) override {
+    void onDropFiles(const uix::DropFilesEvent& e) override {
         if (_onDropFilesDelegate) _onDropFilesDelegate(e);
     }
 };
