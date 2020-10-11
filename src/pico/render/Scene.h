@@ -28,7 +28,7 @@
 
 #include <vector>
 #include <unordered_map>
-
+#include <iostream>
 #include <core/math/LinearAlgebra.h>
 
 #include "Renderer.h"
