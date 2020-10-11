@@ -26,7 +26,7 @@
 //
 #pragma once
 
-#include "gpu/gpu.h"
+#include "../gpu/gpu.h"
 
 namespace pico {
 
