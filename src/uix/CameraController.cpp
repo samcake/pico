@@ -26,15 +26,15 @@
 //
 #include "CameraController.h"
 
-#include "render/Camera.h"
-#include "gpu/Device.h"
-#include "gpu/Resource.h"
+#include <pico/render/Camera.h>
+#include <pico/gpu/Device.h>
+#include <pico/gpu/Resource.h>
 #include "Window.h"
 
-using namespace pico;
+using namespace uix;
 
 
-CameraController::CameraController(const CameraPointer& cam) : _cam(cam) {
+CameraController::CameraController(const pico::CameraPointer& cam) : _cam(cam) {
 
 }
 

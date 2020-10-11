@@ -26,8 +26,9 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include <memory>
 #include <core/math/LinearAlgebra.h>
+#include "dllmain.h"
 
 namespace core {
     struct mat4x3;

@@ -26,7 +26,9 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include "dllmain.h"
+
+#include <memory>
 
 namespace core {
     struct mat4x3;

@@ -1,4 +1,4 @@
-// pico.h 
+// CameraController.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,40 +26,45 @@
 //
 #pragma once
 
-#include "Forward.h"
+#include <chrono>
+#include <pico/render/render.h>
 
-#include <iostream>
-#define picoLog() ::pico::api::log(__FILE__, __LINE__, __FUNCTION__)
-#define picoAssert(t) ::pico::api::_assert((t), __FILE__, __LINE__, __FUNCTION__)
+namespace uix {
 
-namespace pico {
-    // Desc struct creating the api
-    struct ApiInit {
-    };
+    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
 
-    // Singleton Api
-    class VISUALIZATION_API api {
+    struct KeyboardEvent;
+    struct MouseEvent;
+    struct ResizeEvent;
+    class CameraController {
+
+        pico::CameraPointer _cam;
     public:
-        ~api();
-        static bool create(const ApiInit& init);
-        static void destroy();
-        static std::ostream& log(const char* file, int line, const char* functionName);
-        static void _assert(bool test, const char* file, int line, const char* functionName);
+        CameraController(const pico::CameraPointer& cam);
 
+        struct ControlData {
+            float _translateFront{ 0 };
+            float _translateBack{ 0 };
 
-#ifdef _WINDOWS
-        static HMODULE getResourceHandle();
-        static std::string loadTextResources(unsigned short resource_id);
-#endif
+            float _translateLeft{ 0 };
+            float _translateRight{ 0 };
 
-    private:
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        static std::unique_ptr<api> _instance;
-#pragma warning(pop)
-        ApiInit _init;
+            float _rotateLeft{ 0 };
+            float _rotateRight{ 0 };
 
-    };
+            float _zoomIn{ 0 };
+            float _zoomOut{ 0 };
+        };
+
+        ControlData _controlData;
+
+        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+
+        void update(std::chrono::milliseconds& duration);
+
+        bool onKeyboard(const KeyboardEvent& e);
+        bool onMouse(const MouseEvent& e);
+        bool onResize(const ResizeEvent& e);
+
+        };
 }
-
-

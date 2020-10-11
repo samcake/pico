@@ -34,4 +34,4 @@ target_compile_features(pico_five PRIVATE cxx_std_17)
 # Set include path for pico.h
 target_include_directories(pico_five PRIVATE ../../src ${SHADER_OUTPUT_DIR})
 
-target_link_libraries(pico_five pico)
+target_link_libraries(pico_five pico uix)

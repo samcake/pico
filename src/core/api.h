@@ -1,4 +1,4 @@
-// CameraController.h 
+// api.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,54 @@
 //
 #pragma once
 
-#include <chrono>
-#include <render/render.h>
+#include <memory>
+#include <string>
+#include "dllmain.h"
 
-namespace pico {
+#ifdef _WINDOWS
+#ifdef PICO_SUPPORT_MFC
+#include "win32/stdafx.h"
+#else
+#define NOMINMAX
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+#endif
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+#define PICO_API_INSTANCE
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+namespace core {
 
-        CameraPointer _cam;
+#ifdef PICO_API_INSTANCE
+    // Desc struct creating the api
+    struct ApiInit {
+    };
+#endif
+
+    // Singleton Api
+    class CORE_API api {
+
+#ifdef PICO_API_INSTANCE
+    private:
+        static std::unique_ptr<api> _instance;
+        ApiInit _init; 
     public:
-        CameraController(const CameraPointer& cam);
+        ~api();
+        static bool create(const ApiInit& init);
+        static void destroy();
+#endif
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+    public:
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+#ifdef _WINDOWS
+#ifdef PICO_SUPPORT_MFC
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+        static HMODULE getResourceHandle();
+        static std::string loadTextResources(unsigned short resource_id);
+#endif
+#endif
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+    };
 }
+
+

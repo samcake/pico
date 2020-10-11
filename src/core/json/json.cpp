@@ -24,16 +24,11 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "json.h"
 
-// We are relying on Niels Lohmann modern json library.
-// https://github.com/nlohmann/json
-//
-// simply embbed the one header file library and alias the main type.
-//
+using namespace core;
 
-#include "nlohmann/json.hpp"
 
-namespace core {
-    using json = nlohmann::json;
+json core::generate_json_from(const std::string& fielname) {
+    return json("{ \"some_json\": 3 }");    
 }

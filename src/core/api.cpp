@@ -1,4 +1,4 @@
-// pico.cpp
+// api.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,22 +24,15 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "pico.h"
+#include "api.h"
 
-using namespace pico;
+#include "Log.h"
+
+using namespace core;
+
+#ifdef PICO_API_INSTANCE
 
 std::unique_ptr<api> api::_instance;
-
-
-std::ostream& api::log(const char* file, int line, const char* functionName) {
-    return std::clog << file << " - " << line << " - " << functionName << " : ";
-}
-
-void api::_assert(bool test, const char* file, int line, const char* functionName) {
-    if (!test) {
-        api::log(file, line, functionName);
-    }
-}
 
 api::~api() {
     picoLog() << "pico api is destoyed, bye!\n";
@@ -63,6 +56,8 @@ void api::destroy() {
         _instance.reset();
     }
 }
+
+#endif
 
 #ifdef _WINDOWS
 #ifdef PICO_SUPPORT_MFC

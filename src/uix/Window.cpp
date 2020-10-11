@@ -29,7 +29,7 @@
 #include <map>
 #include <iostream>
 
-using namespace pico;
+using namespace uix;
 
 #ifdef WIN32
 
@@ -163,8 +163,8 @@ public:
                                         | (wparam & MK_SHIFT ? MouseState::MOUSE_SHIFT : 0)
                                         | (wparam & MK_LBUTTON ? MouseState::MOUSE_LBUTTON : 0)
                                         | (wparam & MK_RBUTTON ? MouseState::MOUSE_RBUTTON : 0)
-                                        | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0))
-                                        | MouseState::MOUSE_WHEEL };
+                                        | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0)
+                                        | MouseState::MOUSE_WHEEL) };
            _ownerWindow->onMouse(e);
         } break;
         case WM_MOUSEMOVE: {
@@ -178,8 +178,8 @@ public:
                             | (wparam & MK_SHIFT ? MouseState::MOUSE_SHIFT : 0)
                             | (wparam & MK_LBUTTON ? MouseState::MOUSE_LBUTTON : 0)
                             | (wparam & MK_RBUTTON ? MouseState::MOUSE_RBUTTON : 0)
-                            | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0)  ) 
-                            | MouseState::MOUSE_MOVE };
+                            | (wparam & MK_MBUTTON ? MouseState::MOUSE_MBUTTON : 0)
+                            | MouseState::MOUSE_MOVE ) };
             _lastMouseEventPos = newPos;
             _ownerWindow->onMouse(e);
             return 0;

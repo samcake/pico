@@ -26,12 +26,15 @@
 //
 
 #include <chrono>
+#include <iostream>
 
-#include <pico/pico.h>
+#include <core/api.h>
+
 #include <pico/gpu/Device.h>
 #include <pico/gpu/Swapchain.h>
-#include <pico/window/Window.h>
 #include <pico/render/Renderer.h>
+
+#include <uix/Window.h>
 
 //--------------------------------------------------------------------------------------
 // pico 1: Clear a swapchain
@@ -47,8 +50,8 @@ int main(int argc, char *argv[])
     HINSTANCE hInstance = GetModuleHandle(NULL);
 
     // Create the pico api
-    pico::ApiInit pico_init{ };
-    auto result = pico::api::create(pico_init);
+    core::ApiInit pico_init{ };
+    auto result = core::api::create(pico_init);
 
     if (!result) {
         std::clog << "Pico api failed to create ?" << std::endl;
@@ -77,16 +80,16 @@ int main(int argc, char *argv[])
 
     // We need a window where to present, let s use the pico::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
-    auto windowHandler = new pico::WindowHandlerDelegate();
-    pico::WindowInit windowInit { windowHandler };
-    auto window = pico::Window::createWindow(windowInit);
+    auto windowHandler = new uix::WindowHandlerDelegate();
+    uix::WindowInit windowInit { windowHandler };
+    auto window = uix::Window::createWindow(windowInit);
 
     pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer](const pico::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
         // Measuring framerate
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -121,7 +124,7 @@ int main(int argc, char *argv[])
 
     }
 
-    pico::api::destroy();
+    core::api::destroy();
     std::clog << "Pico api destroyed" << std::endl;
 
      return 0;

@@ -26,9 +26,11 @@
 //
 #pragma once
 
-#include "forward.h"
-
+#include <cstdint>
+#include <memory>
+#include <string>
 #include <array>
+#include "../dllmain.h" // pick dllmain relative to this file
 
 namespace pico {
 

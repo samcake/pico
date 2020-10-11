@@ -27,8 +27,8 @@
 #pragma once
 
 #include <mutex>
-
 #include <core/math/LinearAlgebra.h>
+
 #include "render.h"
 
 

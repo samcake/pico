@@ -29,8 +29,10 @@
 #include <vector>
 
 #include <core/math/LinearAlgebra.h>
-#include "gpu/StreamLayout.h"
+
 #include "render.h"
+
+#include "gpu/StreamLayout.h"
 
 
 namespace pico {

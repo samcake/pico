@@ -26,10 +26,9 @@
 //
 #pragma once
 
-#include "pico.h"
-#include "gpu.h"
-
 #include <array>
+#include <core/log.h>
+#include "gpu.h"
 
 namespace pico {
 
