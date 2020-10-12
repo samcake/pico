@@ -1,4 +1,4 @@
-// CameraController.h 
+// Pipeline.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,48 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include "gpu.h"
+#include "StreamLayout.h"
 
-namespace uix {
+namespace graphics {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+    struct VISUALIZATION_API PipelineStateInit {
+        ShaderPointer program;
+        StreamLayout streamLayout;
+        PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
+        DescriptorSetLayoutPointer descriptorSetLayout;
+        bool depth { false };
+        bool blend { false };
+    };
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+    class VISUALIZATION_API PipelineState {
+    protected:
+        // PipelineState is created from the device
+        friend class Device;
+        PipelineState();
 
-        graphics::CameraPointer _cam;
+        PipelineStateInit _init;
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        virtual ~PipelineState();
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+        ShaderPointer _program;
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+        DescriptorSetLayoutPointer getDescriptorSetLayout() const;
+    };
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+    struct VISUALIZATION_API SamplerInit {
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
+    };
 
-        ControlData _controlData;
+    class VISUALIZATION_API Sampler {
+    protected:
+        // Sampler is created from the device
+        friend class Device;
+        Sampler();
 
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+    public:
+        virtual ~Sampler();
 
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+        SamplerInit _init;
+    };
 }

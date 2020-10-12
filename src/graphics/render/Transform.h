@@ -1,4 +1,4 @@
-// CameraController.h 
+// Transform.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,15 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include <core/math/LinearAlgebra.h>
+#include "dllmain.h"
 
-namespace uix {
-
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
-
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
-
-        graphics::CameraPointer _cam;
+namespace graphics {
+    class Transform {
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        Transform() {}
+        ~Transform() {}
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
-
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
-
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+        core::mat4x3 _matRTS;
+    };
 }

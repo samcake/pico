@@ -1,4 +1,4 @@
-// CameraController.h 
+// Resource.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,47 +24,38 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Resource.h"
 
-#include <chrono>
-#include <graphics/render/render.h>
+using namespace graphics;
 
-namespace uix {
+Resource::Resource() {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+}
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+Resource::~Resource() {
 
-        graphics::CameraPointer _cam;
-    public:
-        CameraController(const graphics::CameraPointer& cam);
+}
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+Buffer::Buffer() :
+	_init{},
+	_bufferSize(0),
+	_cpuMappedAddress(nullptr)
+{
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+}
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+Buffer::~Buffer() {
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
+}
 
-        ControlData _controlData;
+Texture::Texture() :
+	_init{},
+	_bufferSize(0),
+	_cpuMappedAddress(nullptr)
+{
 
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+}
 
-        void update(std::chrono::milliseconds& duration);
+Texture::~Texture() {
 
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
 }

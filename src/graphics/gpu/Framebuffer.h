@@ -1,4 +1,4 @@
-// CameraController.h 
+// Framebuffer.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,28 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include "gpu.h"
+ 
+namespace graphics {
 
-namespace uix {
+    struct FramebufferInit {
+        uint32_t width;
+        uint32_t height;
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+        
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+    };
 
-        graphics::CameraPointer _cam;
+    class Framebuffer {
+    protected:
+        // Framebuffer is created from the device
+        friend class Device;
+        Framebuffer();
+
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        ~Framebuffer();
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
-
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
-
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+        uint8_t _currentIndex;
+        uint8_t currentIndex() const;
+    };
 }

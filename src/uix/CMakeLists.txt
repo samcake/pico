@@ -19,10 +19,10 @@ add_library (uix
 
 target_link_libraries(uix
     ${UIX_LIBRARIES}
-    pico core
+    graphics core
 )
 
-add_dependencies(uix pico)
+add_dependencies(uix graphics core)
 
 target_include_directories(uix PUBLIC "..")
 target_compile_features(uix PRIVATE cxx_std_17)

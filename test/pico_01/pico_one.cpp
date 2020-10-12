@@ -30,9 +30,9 @@
 
 #include <core/api.h>
 
-#include <pico/gpu/Device.h>
-#include <pico/gpu/Swapchain.h>
-#include <pico/render/Renderer.h>
+#include <graphics/gpu/Device.h>
+#include <graphics/gpu/Swapchain.h>
+#include <graphics/render/Renderer.h>
 
 #include <uix/Window.h>
 
@@ -68,13 +68,13 @@ int main(int argc, char *argv[])
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::Device::createDevice(deviceInit);
+    graphics::DeviceInit deviceInit {};
+    auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Next, a renderer built on this device
     // the default renderer without any further configuration will do
     //  a clear color of the swapchain passed in the render call
-    auto renderer = std::make_shared<pico::Renderer>(gpuDevice, nullptr);
+    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, nullptr);
 
     // Presentation creation
 
@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

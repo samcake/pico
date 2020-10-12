@@ -29,16 +29,16 @@
 
 #include <core/api.h>
 
-#include <pico/gpu/Device.h>
-#include <pico/gpu/Batch.h>
-#include <pico/gpu/Swapchain.h>
-#include <pico/render/Renderer.h>
+#include <graphics/gpu/Device.h>
+#include <graphics/gpu/Batch.h>
+#include <graphics/gpu/Swapchain.h>
+#include <graphics/render/Renderer.h>
 
-#include <pico/gpu/Pipeline.h>
-#include <pico/gpu/Resource.h>
-#include <pico/gpu/Descriptor.h>
-#include <pico/gpu/Shader.h>
-#include <pico/gpu/gpu.h>
+#include <graphics/gpu/Pipeline.h>
+#include <graphics/gpu/Resource.h>
+#include <graphics/gpu/Descriptor.h>
+#include <graphics/gpu/Shader.h>
+#include <graphics/gpu/gpu.h>
 
 #include <uix/Window.h>
 
@@ -68,10 +68,10 @@ struct GDCRenderer {
 
     std::vector<uint8_t> pixels;
 
-    pico::BufferPointer pixelBuffer;
+    graphics::BufferPointer pixelBuffer;
 
 
-    void resize(const pico::DevicePointer& device, HDC srcgdc, uint32_t width, uint32_t height) {
+    void resize(const graphics::DevicePointer& device, HDC srcgdc, uint32_t width, uint32_t height) {
         if (pixelBuffer) {
             pixelBuffer.reset();
         }
@@ -123,7 +123,7 @@ struct GDCRenderer {
 
         pixels.resize(dwBmpSize);
 
-        pico::BufferInit bufferInit{};
+        graphics::BufferInit bufferInit{};
         bufferInit.bufferSize = dwBmpSize;
         bufferInit.hostVisible = true;
         pixelBuffer = device->createBuffer(bufferInit);
@@ -202,29 +202,29 @@ int main(int argc, char *argv[])
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit { "D3D12" };
-    auto gpuDevice = pico::Device::createDevice(deviceInit);
+    graphics::DeviceInit deviceInit { "D3D12" };
+    auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
  
     // Presentation creation
 
-    // We need a window where to present, let s use the pico::Window for convenience
+    // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Let's try to do something in a DC:
     auto gdcRenderer = std::make_shared<GDCRenderer>();
     gdcRenderer->resize(gpuDevice, GetDC((HWND)window->nativeWindow()), window->width(), window->height());
 
-    pico::TextureInit textureInit { window->width(), window->height() };
+    graphics::TextureInit textureInit { window->width(), window->height() };
     auto textureForGDI = gpuDevice->createTexture(textureInit);
 
-    pico::SamplerInit samplerInit {};
+    graphics::SamplerInit samplerInit {};
     auto sampler = gpuDevice->createSampler(samplerInit);
 
 
@@ -242,8 +242,8 @@ int main(int argc, char *argv[])
     vertexData[4 * 2 + 0] += 0.5f;
     vertexData[4 * 3 + 0] += 0.5f;
 
-    pico::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
+    graphics::BufferInit vertexBufferInit{};
+    vertexBufferInit.usage = graphics::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
     vertexBufferInit.vertexStride = sizeof(float) * 4;
@@ -254,8 +254,8 @@ int main(int argc, char *argv[])
         0, 2, 1,
         0, 2, 3
     };
-    pico::BufferInit indexBufferInit{};
-    indexBufferInit.usage = pico::ResourceUsage::INDEX_BUFFER;
+    graphics::BufferInit indexBufferInit{};
+    indexBufferInit.usage = graphics::ResourceUsage::INDEX_BUFFER;
     indexBufferInit.hostVisible = true;
     indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
@@ -263,58 +263,58 @@ int main(int argc, char *argv[])
 
 
     // Declare the vertex format
-    pico::AttribArray<1> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC4, 0 }} };
-    pico::AttribBufferViewArray<1> bufferViews;
-    auto vertexLayout = pico::StreamLayout::build(attribs, bufferViews);
+    graphics::AttribArray<1> attribs{ {{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC4, 0 }} };
+    graphics::AttribBufferViewArray<1> bufferViews;
+    auto vertexLayout = graphics::StreamLayout::build(attribs, bufferViews);
 
 
     // Let's describe the pipeline Descriptors layout
-    pico::DescriptorLayouts descriptorLayouts{
-        { pico::DescriptorType::RESOURCE_TEXTURE, pico::ShaderStage::PIXEL, 0, 1},
-        { pico::DescriptorType::SAMPLER, pico::ShaderStage::PIXEL, 0, 1},
+    graphics::DescriptorLayouts descriptorLayouts{
+        { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 0, 1},
+        { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
     };
 
-    pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
+    graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
     auto descriptorSetLayout = gpuDevice->createDescriptorSetLayout(descriptorSetLayoutInit);
 
     // And a Pipeline
-    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
-    pico::ShaderPointer vertexShader = gpuDevice->createShader(vertexShaderInit);
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
+    graphics::ShaderPointer vertexShader = gpuDevice->createShader(vertexShaderInit);
 
-    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
-    pico::ShaderPointer pixelShader = gpuDevice->createShader(pixelShaderInit);
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", "./pixel.hlsl" };
+    graphics::ShaderPointer pixelShader = gpuDevice->createShader(pixelShaderInit);
 
-    pico::ProgramInit programInit{ vertexShader, pixelShader };
-    pico::ShaderPointer programShader = gpuDevice->createProgram(programInit);
+    graphics::ProgramInit programInit{ vertexShader, pixelShader };
+    graphics::ShaderPointer programShader = gpuDevice->createProgram(programInit);
 
-    pico::PipelineStateInit pipelineInit{
+    graphics::PipelineStateInit pipelineInit{
         programShader,
         vertexLayout,
-        pico::PrimitiveTopology::TRIANGLE,
+        graphics::PrimitiveTopology::TRIANGLE,
         descriptorSetLayout
     };
-    pico::PipelineStatePointer pipeline = gpuDevice->createPipelineState(pipelineInit);
+    graphics::PipelineStatePointer pipeline = gpuDevice->createPipelineState(pipelineInit);
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a texture and sampler
-    pico::DescriptorSetInit descriptorSetInit{
+    graphics::DescriptorSetInit descriptorSetInit{
         descriptorSetLayout
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
 
-    pico::DescriptorObject texDescriptorObject;
+    graphics::DescriptorObject texDescriptorObject;
     texDescriptorObject._textures.push_back(textureForGDI);
-    pico::DescriptorObject samplerDescriptorObject;
+    graphics::DescriptorObject samplerDescriptorObject;
     samplerDescriptorObject._samplers.push_back(sampler);
-    pico::DescriptorObjects descriptorObjects = {
+    graphics::DescriptorObjects descriptorObjects = {
         texDescriptorObject, samplerDescriptorObject
     };
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
     // And now a render callback where we describe the rendering sequence
-    pico::RenderCallback renderCallback = [&, gdcRenderer, textureForGDI](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&, gdcRenderer, textureForGDI](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
         core::vec4 viewportRect{ 0.0f, 0.0f, 640.0f, 480.f };
 
         auto currentIndex = swapchain->currentIndex();
@@ -322,24 +322,24 @@ int main(int argc, char *argv[])
         batch->begin(currentIndex);
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::PRESENT,
-            pico::ResourceState::RENDER_TARGET,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::PRESENT,
+            graphics::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
         time = modf(time, &intPart);
-        // pico::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
+        // graphics::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
         batch->beginPass(swapchain, currentIndex);
 
-        batch->resourceBarrierTransition(pico::ResourceBarrierFlag::NONE, pico::ResourceState::IMAGE_SHADER_RESOURCE, pico::ResourceState::COPY_DEST, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::IMAGE_SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
         batch->uploadTexture(textureForGDI, gdcRenderer->pixelBuffer);
-        batch->resourceBarrierTransition(pico::ResourceBarrierFlag::NONE, pico::ResourceState::COPY_DEST, pico::ResourceState::IMAGE_SHADER_RESOURCE, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::IMAGE_SHADER_RESOURCE, textureForGDI);
     
 
         batch->setPipeline(pipeline);
@@ -356,9 +356,9 @@ int main(int argc, char *argv[])
         batch->endPass();
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::RENDER_TARGET,
-            pico::ResourceState::PRESENT,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::RENDER_TARGET,
+            graphics::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
         batch->end();
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 
 
     // Next, a renderer built on this device which will use this renderCallback
-    auto renderer = std::make_shared<pico::Renderer>(gpuDevice, renderCallback);
+    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback);
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
