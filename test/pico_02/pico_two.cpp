@@ -29,14 +29,14 @@
 
 #include <core/api.h>
 
-#include <pico/gpu/Device.h>
-#include <pico/gpu/Resource.h>
-#include <pico/gpu/Shader.h>
-#include <pico/gpu/Pipeline.h>
-#include <pico/gpu/Batch.h>
-#include <pico/gpu/Swapchain.h>
-#include <pico/gpu/gpu.h>
-#include <pico/render/Renderer.h>
+#include <graphics/gpu/Device.h>
+#include <graphics/gpu/Resource.h>
+#include <graphics/gpu/Shader.h>
+#include <graphics/gpu/Pipeline.h>
+#include <graphics/gpu/Batch.h>
+#include <graphics/gpu/Swapchain.h>
+#include <graphics/gpu/gpu.h>
+#include <graphics/render/Renderer.h>
 
 #include <uix/Window.h>
 
@@ -98,22 +98,22 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 }
 )HLSL");
 
-pico::PipelineStatePointer createPipelineState(const pico::DevicePointer& device, pico::StreamLayout streamLayout ) {
+graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout streamLayout ) {
 
-    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
-    pico::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
-
-
-    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
-    pico::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
-
-    pico::ProgramInit programInit { vertexShader, pixelShader };
-    pico::ShaderPointer programShader = device->createProgram(programInit);
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
+    graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
 
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
+    graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
-    pico::PipelineStateInit pipelineInit { programShader,  streamLayout, pico::PrimitiveTopology::TRIANGLE };
-    pico::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
+    graphics::ProgramInit programInit { vertexShader, pixelShader };
+    graphics::ShaderPointer programShader = device->createProgram(programInit);
+
+
+
+    graphics::PipelineStateInit pipelineInit { programShader,  streamLayout, graphics::PrimitiveTopology::TRIANGLE };
+    graphics::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
     return pipeline;
 }
@@ -136,8 +136,8 @@ int main(int argc, char *argv[])
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::Device::createDevice(deviceInit);
+    graphics::DeviceInit deviceInit {};
+    auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Content creation
 
@@ -155,8 +155,8 @@ int main(int argc, char *argv[])
     vertexData[4 * 2 + 0] += 0.5f;
     vertexData[4 * 3 + 0] += 0.5f;
 
-    pico::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
+    graphics::BufferInit vertexBufferInit{};
+    vertexBufferInit.usage = graphics::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
     vertexBufferInit.vertexStride = sizeof(float) * 4;
@@ -167,8 +167,8 @@ int main(int argc, char *argv[])
         0, 2, 1,
         0, 2, 3
     };
-    pico::BufferInit indexBufferInit{};
-    indexBufferInit.usage = pico::ResourceUsage::INDEX_BUFFER;
+    graphics::BufferInit indexBufferInit{};
+    indexBufferInit.usage = graphics::ResourceUsage::INDEX_BUFFER;
     indexBufferInit.hostVisible = true;
     indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
@@ -176,16 +176,16 @@ int main(int argc, char *argv[])
 
 
     // Declare the vertex format
-    pico::AttribArray<1> attribs {{{ pico::AttribSemantic::A, pico::AttribFormat::VEC4, 0 }}};
-    pico::AttribBufferViewArray<1> bufferViews;
-    auto vertexLayout = pico::StreamLayout::build(attribs, bufferViews);
+    graphics::AttribArray<1> attribs {{{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC4, 0 }}};
+    graphics::AttribBufferViewArray<1> bufferViews;
+    auto vertexLayout = graphics::StreamLayout::build(attribs, bufferViews);
 
     // And a Pipeline
-    pico::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
+    graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
 
 
     // And now a render callback where we describe the rendering sequence
-    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
         core::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
 
         auto currentIndex = swapchain->currentIndex();
@@ -193,16 +193,16 @@ int main(int argc, char *argv[])
         batch->begin(currentIndex);
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::PRESENT,
-            pico::ResourceState::RENDER_TARGET,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::PRESENT,
+            graphics::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
         time = modf(time, &intPart);
-       // pico::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
+       // graphics::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
         batch->clear(swapchain, currentIndex, clearColor);
 
@@ -221,9 +221,9 @@ int main(int argc, char *argv[])
         batch->endPass();
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::RENDER_TARGET,
-            pico::ResourceState::PRESENT,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::RENDER_TARGET,
+            graphics::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
         batch->end();
@@ -235,18 +235,18 @@ int main(int argc, char *argv[])
 
 
     // Next, a renderer built on this device which will use this renderCallback
-    auto renderer = std::make_shared<pico::Renderer>(gpuDevice, renderCallback);
+    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback);
 
 
     // Presentation creation
 
-    // We need a window where to present, let s use the pico::Window for convenience
+    // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    pico::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

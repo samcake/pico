@@ -27,12 +27,16 @@
 #pragma once
 
 #include <iostream>
-#define picoLog() ::core::_log(__FILE__, __LINE__, __FUNCTION__)
-#define picoAssert(t) ::core::_assert((t), __FILE__, __LINE__, __FUNCTION__)
+#include "dllmain.h"
+
+#define picoLog() ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__)
+#define picoAssert(t) ::core::Log::_assert((t), __FILE__, __LINE__, __FUNCTION__)
 
 namespace core {
-
-    std::ostream& _log(const char* file, int line, const char* functionName);
-    void _assert(bool test, const char* file, int line, const char* functionName);
+    class CORE_API Log {
+        public:
+        static std::ostream& _log(const char* file, int line, const char* functionName);
+        static void _assert(bool test, const char* file, int line, const char* functionName);
+    };
 
 }

@@ -1,4 +1,4 @@
-// CameraController.h 
+// Drawable.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,47 +24,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Drawable.h"
 
-#include <chrono>
-#include <graphics/render/render.h>
+using namespace graphics;
 
-namespace uix {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
-
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
-
-        graphics::CameraPointer _cam;
-    public:
-        CameraController(const graphics::CameraPointer& cam);
-
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
-
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
-
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+void DrawcallObject::draw(const CameraPointer& camera,
+    const SwapchainPointer& swapchain,
+    const DevicePointer& device,
+    const BatchPointer& batch) {
+    if (_drawCallback) {
+        _drawCallback(_transform, camera, swapchain, device, batch);
+    }
 }

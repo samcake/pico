@@ -1,6 +1,6 @@
-// CameraController.h 
+// render.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - June 2020
 // 
 // MIT License
 //
@@ -26,45 +26,32 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include "../gpu/gpu.h"
 
-namespace uix {
+namespace graphics {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+    // Render types
+    class Scene;
+    using ScenePointer = std::shared_ptr<Scene>;
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+    class Camera;
+    using CameraPointer = std::shared_ptr<Camera>;
 
-        graphics::CameraPointer _cam;
-    public:
-        CameraController(const graphics::CameraPointer& cam);
+    class Renderer;
+    using RendererPointer = std::shared_ptr<Renderer>;
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+    class Viewport;
+    using ViewportPointer = std::shared_ptr<Viewport>;
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+    class Mesh;
+    using MeshPointer = std::shared_ptr<Mesh>;
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+    class PointCloud;
+    using PointCloudPointer = std::shared_ptr<PointCloud>;
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
+    class DrawcallObject;
+    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
 
-        ControlData _controlData;
 
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
 }
+

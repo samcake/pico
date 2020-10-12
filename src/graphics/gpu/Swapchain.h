@@ -1,4 +1,4 @@
-// CameraController.h 
+// Swapchain.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,36 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include <core/api.h>
 
-namespace uix {
+#include "gpu.h"
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+namespace graphics {
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+    struct VISUALIZATION_API SwapchainInit {
+        uint32_t width;
+        uint32_t height;
 
-        graphics::CameraPointer _cam;
+        
+#ifdef _WINDOWS
+        HWND hWnd;
+#endif
+        // No depth buffer by default
+        bool     depthBuffer{ false };
+    };
+
+    class VISUALIZATION_API Swapchain {
+    protected:
+        // Swapchain is created from the device
+        friend class Device;
+        Swapchain();
+
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        ~Swapchain();
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+        SwapchainInit _init;
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
-
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+        uint8_t _currentIndex;
+        uint8_t currentIndex() const;
+    };
 }

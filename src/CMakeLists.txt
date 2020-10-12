@@ -1,4 +1,4 @@
 add_subdirectory(core)
 add_subdirectory(document)
-add_subdirectory(pico)
+add_subdirectory(graphics)
 add_subdirectory(uix)

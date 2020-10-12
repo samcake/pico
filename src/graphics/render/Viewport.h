@@ -1,4 +1,4 @@
-// CameraController.h 
+// Viewport.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,35 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include "render.h"
 
-namespace uix {
+#include <core/Realtime.h>
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
-
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
-
-        graphics::CameraPointer _cam;
+namespace graphics {
+    class VISUALIZATION_API Viewport {
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device);
+        ~Viewport();
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+        void present(const SwapchainPointer& swapchain);
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+        core::FrameTimer::Sample lastFrameTimerSample() const;
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+    protected:
+        void _renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch);
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
+        void renderScene(const CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch);
 
-        ControlData _controlData;
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        ScenePointer _scene;
+        CameraPointer _camera;
+        DevicePointer _device;
+        RendererPointer _renderer;
 
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+        // Measuring framerate
+        core::FrameTimer _frameTimer;
+#pragma warning(pop)
 
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+    };
 }

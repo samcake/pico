@@ -27,6 +27,7 @@
 #include "PointCloud.h"
 
 #include <filesystem>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 

@@ -1,4 +1,4 @@
-// CameraController.h 
+// Shader.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,38 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include <string>
+#include "gpu.h"
 
-namespace uix {
+namespace graphics {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+    struct VISUALIZATION_API ShaderInit {
+        ShaderType type;
+        std::string entryPoint;
+        std::string url;
+        std::string source;
+    };
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
+    struct VISUALIZATION_API ProgramInit {
+        ShaderPointer vertexShader;
+        ShaderPointer pixelShader;
+    };
 
-        graphics::CameraPointer _cam;
+    class VISUALIZATION_API Shader {
+    protected:
+        // Shader is created from the device
+        friend class Device;
+        Shader();
     public:
-        CameraController(const graphics::CameraPointer& cam);
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+        virtual ~Shader();
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
+        ShaderPointer getVertexShader() const { return _programDesc.vertexShader; }
+        ShaderPointer getPixelShader() const { return _programDesc.pixelShader; }
 
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+    protected:
+        ShaderInit _shaderDesc;
+        ProgramInit _programDesc;
+    };
 }

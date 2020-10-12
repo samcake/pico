@@ -27,12 +27,12 @@
 #include "Log.h"
 
 
-std::ostream& core::_log(const char* file, int line, const char* functionName) {
+std::ostream& core::Log::_log(const char* file, int line, const char* functionName) {
     return std::clog << file << " - " << line << " - " << functionName << " : ";
 }
 
-void core::_assert(bool test, const char* file, int line, const char* functionName) {
+void core::Log::_assert(bool test, const char* file, int line, const char* functionName) {
     if (!test) {
-        _log(file, line, functionName);
+        Log::_log(file, line, functionName);
     }
 }

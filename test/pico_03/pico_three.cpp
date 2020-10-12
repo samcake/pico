@@ -29,16 +29,16 @@
 
 #include <core/api.h>
 
-#include <pico/gpu/Device.h>
-#include <pico/gpu/Resource.h>
-#include <pico/gpu/Shader.h>
-#include <pico/gpu/Descriptor.h>
-#include <pico/gpu/Pipeline.h>
-#include <pico/gpu/Batch.h>
-#include <pico/gpu/Swapchain.h>
+#include <graphics/gpu/Device.h>
+#include <graphics/gpu/Resource.h>
+#include <graphics/gpu/Shader.h>
+#include <graphics/gpu/Descriptor.h>
+#include <graphics/gpu/Pipeline.h>
+#include <graphics/gpu/Batch.h>
+#include <graphics/gpu/Swapchain.h>
 
-#include <pico/render/Renderer.h>
-#include <pico/render/Mesh.h>
+#include <graphics/render/Renderer.h>
+#include <graphics/render/Mesh.h>
 
 #include <document/PointCloud.h>
 
@@ -67,10 +67,10 @@ const std::string vertexShaderSource = std::string(R"HLSL(
 
 cbuffer UniformBlock0 : register(b0)
 {
-    //pico::vec3 _eye{ 0.0f };                float _focal { 0.036f };
-    //pico::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
-    //pico::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio { 16.f / 9.f };
-    //pico::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.0f };
+    //graphics::vec3 _eye{ 0.0f };                float _focal { 0.036f };
+    //graphics::vec3 _right { 1.f, 0.f, 0.f};     float _sensorHeight { 0.056f };
+    //graphics::vec3 _up { 0.f, 1.f, 0.f };       float _aspectRatio { 16.f / 9.f };
+    //graphics::vec3 _back { 0.f, 0.f, -1.f };    float _far { 10.0f };
 
     float4 eye_focal;
     float4 right_sensorHeight;
@@ -152,25 +152,25 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 }
 )HLSL");
 
-pico::PipelineStatePointer createPipelineState(const pico::DevicePointer& device, pico::StreamLayout vertexLayout, const pico::DescriptorSetLayoutPointer& descriptorSetLayout) {
+graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout vertexLayout, const graphics::DescriptorSetLayoutPointer& descriptorSetLayout) {
 
-    pico::ShaderInit vertexShaderInit{ pico::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
-    pico::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
+    graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
 
-    pico::ShaderInit pixelShaderInit{ pico::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
-    pico::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
+    graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
-    pico::ProgramInit programInit{ vertexShader, pixelShader };
-    pico::ShaderPointer programShader = device->createProgram(programInit);
+    graphics::ProgramInit programInit{ vertexShader, pixelShader };
+    graphics::ShaderPointer programShader = device->createProgram(programInit);
 
-    pico::PipelineStateInit pipelineInit{
+    graphics::PipelineStateInit pipelineInit{
         programShader,
         vertexLayout,
-        pico::PrimitiveTopology::POINT,
+        graphics::PrimitiveTopology::POINT,
         descriptorSetLayout
     };
-    pico::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
+    graphics::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 
     return pipeline;
 }
@@ -195,8 +195,8 @@ int main(int argc, char *argv[])
     }
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::Device::createDevice(deviceInit);
+    graphics::DeviceInit deviceInit {};
+    auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Content creation
 
@@ -208,20 +208,20 @@ int main(int argc, char *argv[])
     // Create a Mesh from the point cloud data
 
     // Declare the vertex format == PointCloud::Point
-    pico::AttribArray<2> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
-    pico::AttribBufferViewArray<1> bufferViews{ {0} };
-    auto vertexFormat = pico::StreamLayout::build(attribs, bufferViews);
+    graphics::AttribArray<2> attribs{ {{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC3, 0 }, {graphics::AttribSemantic::C, graphics::AttribFormat::CVEC4, 0 }} };
+    graphics::AttribBufferViewArray<1> bufferViews{ {0} };
+    auto vertexFormat = graphics::StreamLayout::build(attribs, bufferViews);
 
     // Create the Mesh for real
-    pico::MeshPointer mesh = pico::Mesh::createFromPointArray(vertexFormat, (uint32_t)pointCloud->_points.size(), (const uint8_t*)pointCloud->_points.data());
+    graphics::MeshPointer mesh = graphics::Mesh::createFromPointArray(vertexFormat, (uint32_t)pointCloud->_points.size(), (const uint8_t*)pointCloud->_points.data());
     
     // get the bounding sphere of the mesh
     core::vec4 sceneSphere = mesh->_bounds.toSphere();
     sceneSphere.w *= 2.0f;
 
     // Let's allocate buffer to hold the point cloud mesh
-    pico::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = pico::ResourceUsage::VERTEX_BUFFER;
+    graphics::BufferInit vertexBufferInit{};
+    vertexBufferInit.usage = graphics::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
     vertexBufferInit.bufferSize = mesh->_vertexStream._buffers[0]->getSize();
     vertexBufferInit.vertexStride = mesh->_vertexStream._streamLayout.evalBufferViewByteStride(0);
@@ -232,20 +232,20 @@ int main(int argc, char *argv[])
     auto numVertices = mesh->getNumVertices();
 
     // Let's describe the pipeline Descriptors layout
-    pico::DescriptorLayouts descriptorLayouts {
-        { pico::DescriptorType::UNIFORM_BUFFER, pico::ShaderStage::VERTEX, 0, 1}
+    graphics::DescriptorLayouts descriptorLayouts {
+        { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}
     };
 
-    pico::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
+    graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
     auto descriptorSetLayout = gpuDevice->createDescriptorSetLayout(descriptorSetLayoutInit);
 
     // And a Pipeline
-    pico::PipelineStatePointer pipeline = createPipelineState(gpuDevice, mesh->_vertexStream._streamLayout, descriptorSetLayout);
+    graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, mesh->_vertexStream._streamLayout, descriptorSetLayout);
 
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a uniform buffer in it
-    pico::DescriptorSetInit descriptorSetInit{
+    graphics::DescriptorSetInit descriptorSetInit{
         descriptorSetLayout
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
@@ -269,8 +269,8 @@ int main(int argc, char *argv[])
     // move the eye the s size of the scene backward
     cameraData._eye = core::vec3(sceneSphere.xyz()) + cameraData._back * sceneSphere.w;
 
-    pico::BufferInit uboInit;
-    uboInit.usage = pico::ResourceUsage::UNIFORM_BUFFER;
+    graphics::BufferInit uboInit;
+    uboInit.usage = graphics::ResourceUsage::UNIFORM_BUFFER;
     uboInit.bufferSize = sizeof(CameraUB);
     uboInit.hostVisible = true;
     auto cameraUBO = gpuDevice->createBuffer(uboInit);
@@ -279,15 +279,15 @@ int main(int argc, char *argv[])
     // Assign the UBO just created as the resource of the descriptorSet
     // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
 
-    pico::DescriptorObject uboDescriptorObject;
+    graphics::DescriptorObject uboDescriptorObject;
     uboDescriptorObject._uniformBuffers.push_back( cameraUBO );
-    pico::DescriptorObjects descriptorObjects = {
+    graphics::DescriptorObjects descriptorObjects = {
         uboDescriptorObject,
     };
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
     
     // And now a render callback where we describe the rendering sequence
-    pico::RenderCallback renderCallback = [&](const pico::CameraPointer& camera, const pico::SwapchainPointer& swapchain, const pico::DevicePointer& device, const pico::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
@@ -304,9 +304,9 @@ int main(int argc, char *argv[])
         batch->begin(currentIndex);
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::PRESENT,
-            pico::ResourceState::RENDER_TARGET,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::PRESENT,
+            graphics::ResourceState::RENDER_TARGET,
             swapchain, currentIndex, -1);
 
         core::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
@@ -328,9 +328,9 @@ int main(int argc, char *argv[])
         batch->endPass();
 
         batch->resourceBarrierTransition(
-            pico::ResourceBarrierFlag::NONE,
-            pico::ResourceState::RENDER_TARGET,
-            pico::ResourceState::PRESENT,
+            graphics::ResourceBarrierFlag::NONE,
+            graphics::ResourceState::RENDER_TARGET,
+            graphics::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
         batch->end();
@@ -342,18 +342,18 @@ int main(int argc, char *argv[])
 
 
     // Next, a renderer built on this device
-    auto renderer = std::make_shared<pico::Renderer>(gpuDevice, renderCallback);
+    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback);
 
 
     // Presentation creation
 
-    // We need a window where to present, let s use the pico::Window for convenience
+    // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    pico::SwapchainInit swapchainInit { (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, (HWND) window->nativeWindow(), true };
+    graphics::SwapchainInit swapchainInit { (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

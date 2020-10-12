@@ -1,4 +1,4 @@
-// CameraController.h 
+// Renderer.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -26,45 +26,27 @@
 //
 #pragma once
 
-#include <chrono>
-#include <graphics/render/render.h>
+#include "render.h"
+#include <functional>
 
-namespace uix {
+namespace graphics {
 
-    // Camera Controller connects standard inputs (keyboard and mouse) to drive the camera
+    using RenderCallback = std::function<void(const CameraPointer & camera, const SwapchainPointer & swapchain, const DevicePointer & device, const BatchPointer & batch)>;
 
-    struct KeyboardEvent;
-    struct MouseEvent;
-    struct ResizeEvent;
-    class CameraController {
-
-        graphics::CameraPointer _cam;
+    class VISUALIZATION_API Renderer {
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        Renderer(const DevicePointer& device, RenderCallback callback);
+        ~Renderer();
 
-        struct ControlData {
-            float _translateFront{ 0 };
-            float _translateBack{ 0 };
+        void render(const CameraPointer& camera, const SwapchainPointer& swapchain);
 
-            float _translateLeft{ 0 };
-            float _translateRight{ 0 };
+    protected:
+#pragma warning(push)
+#pragma warning(disable: 4251)
+        DevicePointer _device;
+        BatchPointer _batch;
+        RenderCallback _callback;
 
-            float _rotateLeft{ 0 };
-            float _rotateRight{ 0 };
-
-            float _zoomIn{ 0 };
-            float _zoomOut{ 0 };
-        };
-
-        ControlData _controlData;
-
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
-
-        void update(std::chrono::milliseconds& duration);
-
-        bool onKeyboard(const KeyboardEvent& e);
-        bool onMouse(const MouseEvent& e);
-        bool onResize(const ResizeEvent& e);
-
-        };
+#pragma warning(pop)
+    };
 }

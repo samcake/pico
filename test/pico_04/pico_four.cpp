@@ -30,27 +30,27 @@
 
 #include <core/api.h>
 
-#include <pico/gpu/Device.h>
-#include <pico/gpu/Resource.h>
-#include <pico/gpu/Shader.h>
-#include <pico/gpu/Descriptor.h>
-#include <pico/gpu/Pipeline.h>
-#include <pico/gpu/Batch.h>
-#include <pico/gpu/Swapchain.h>
+#include <graphics/gpu/Device.h>
+#include <graphics/gpu/Resource.h>
+#include <graphics/gpu/Shader.h>
+#include <graphics/gpu/Descriptor.h>
+#include <graphics/gpu/Pipeline.h>
+#include <graphics/gpu/Batch.h>
+#include <graphics/gpu/Swapchain.h>
 
-#include <pico/render/Renderer.h>
-#include <pico/render/Camera.h>
-#include <pico/render/Mesh.h>
-#include <pico/render/Drawable.h>
-#include <pico/render/Scene.h>
-#include <pico/render/Viewport.h>
+#include <graphics/render/Renderer.h>
+#include <graphics/render/Camera.h>
+#include <graphics/render/Mesh.h>
+#include <graphics/render/Drawable.h>
+#include <graphics/render/Scene.h>
+#include <graphics/render/Viewport.h>
 
 #include <document/PointCloud.h>
-#include <pico/drawables/PointcloudDrawable.h>
+#include <graphics/drawables/PointcloudDrawable.h>
 
 
 #include <document/TriangleSoup.h>
-#include <pico/drawables/TriangleSoupDrawable.h>
+#include <graphics/drawables/TriangleSoupDrawable.h>
 
 #include <uix/Window.h>
 
@@ -99,33 +99,33 @@ int main(int argc, char *argv[])
     auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
     // First a device, aka the gpu api used by pico
-    pico::DeviceInit deviceInit {};
-    auto gpuDevice = pico::Device::createDevice(deviceInit);
+    graphics::DeviceInit deviceInit {};
+    auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<pico::Scene>();
+    auto scene = std::make_shared<graphics::Scene>();
   
     // A Camera to look at the scene
-    auto camera = std::make_shared<pico::Camera>();
+    auto camera = std::make_shared<graphics::Camera>();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
     // The viewport managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<pico::Viewport>(scene, camera, gpuDevice);
+    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice);
 
     // A point cloud drawable factory
-    auto pointCloudDrawableFactory = std::make_shared<pico::PointCloudDrawableFactory>();
+    auto pointCloudDrawableFactory = std::make_shared<graphics::PointCloudDrawableFactory>();
     pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the pointcloud
-    pico::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
+    graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
     pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
     auto pcitem = scene->createItem(pointCloudDrawable);
 
     // a drawable from the trianglesoup
-    auto triangleSoupDrawable = std::make_shared<pico::TriangleSoupDrawable>();
+    auto triangleSoupDrawable = std::make_shared<graphics::TriangleSoupDrawable>();
     triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
  //   auto tsitem = scene->createItem(triangleSoupDrawable);
 
@@ -155,14 +155,14 @@ int main(int argc, char *argv[])
 
     // Presentation creation
 
-    // We need a window where to present, let s use the pico::Window for convenience
+    // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
     uix::WindowInit windowInit { windowHandler, "Pico 4" };
     auto window = uix::Window::createWindow(windowInit);
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    pico::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
+    graphics::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
