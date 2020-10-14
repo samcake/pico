@@ -19,7 +19,7 @@ Each step of the way we will develop a new sample to explore and draft the next 
 introducing
 - gpu::Device
 - gpu::Swapchain
-- window::Window
+- uix::Window
 - render::Renderer
 
 ### pico 2: Draw a triangle
