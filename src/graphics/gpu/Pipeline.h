@@ -25,6 +25,7 @@
 // SOFTWARE.
 //
 #pragma once
+#include <core/FileWatcher.h>
 
 #include "gpu.h"
 #include "StreamLayout.h"
@@ -38,7 +39,11 @@ namespace graphics {
         DescriptorSetLayoutPointer descriptorSetLayout;
         bool depth { false };
         bool blend { false };
+
+        std::string watch_name;
     };
+
+    using PipelineRealizer = std::function<bool (PipelineState*)>;
 
     class VISUALIZATION_API PipelineState {
     protected:
@@ -47,12 +52,20 @@ namespace graphics {
         PipelineState();
 
         PipelineStateInit _init;
+
+        PipelineRealizer _pipelineRealizer;
     public:
         virtual ~PipelineState();
 
         ShaderPointer _program;
 
         DescriptorSetLayoutPointer getDescriptorSetLayout() const;
+
+
+        bool realize();
+
+        static void registerToWatcher(const PipelineStatePointer& pipeline, PipelineRealizer pipelineRealizer);
+
     };
 
     struct VISUALIZATION_API SamplerInit {
@@ -69,5 +82,26 @@ namespace graphics {
         virtual ~Sampler();
 
         SamplerInit _init;
+    };
+
+    class PipelineWatcher {
+    public:
+
+        PipelineWatcher();
+        ~PipelineWatcher();
+
+        std::unique_ptr< core::FileWatcher> _fileWatcher;
+        std::unordered_map<std::string, ShaderWeakPtr> _tokenToShaders;
+        std::unordered_multimap<std::string, std::string> _shaderToPrograms;
+        std::unordered_multimap<std::string, PipelineStateWeakPtr> _programToPipelines;
+
+        void add(const ShaderPointer& shader);
+        void add(const PipelineStatePointer& pipeline);
+
+        void notifyShaderRecompiled(const std::string& key);
+        void notifyProgramRelinked(const std::string& key);
+
+        static PipelineWatcher* get();
+        static std::unique_ptr<PipelineWatcher> _instance;
     };
 }

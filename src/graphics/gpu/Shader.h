@@ -27,15 +27,23 @@
 #pragma once
 
 #include <string>
+#include <functional>
+
 #include "gpu.h"
+
 
 namespace graphics {
 
+    using ShaderCompiler = std::function<bool(Shader*, const std::string&)>;
+    using ProgramLinker = std::function<bool (Shader*)>;
+
     struct VISUALIZATION_API ShaderInit {
-        ShaderType type;
+        ShaderType type { ShaderType::PROGRAM };
         std::string entryPoint;
         std::string url;
         std::string source;
+        
+        std::string watcher_file;
     };
 
     struct VISUALIZATION_API ProgramInit {
@@ -56,8 +64,27 @@ namespace graphics {
         ShaderPointer getVertexShader() const { return _programDesc.vertexShader; }
         ShaderPointer getPixelShader() const { return _programDesc.pixelShader; }
 
+        bool isProgram() const { return _shaderDesc.type == ShaderType::PROGRAM; }
+        
+        bool hasWatcher() const;
+
+        const ShaderInit& getShaderDesc() const { return _shaderDesc; }
+        const ProgramInit& getProgramDesc() const { return _programDesc; }
+
+        // shader needs a recompile with a new source
+        virtual bool recompile(const std::string& src);
+        
+        // program needs a relink
+        virtual bool relink();
+
     protected:
         ShaderInit _shaderDesc;
         ProgramInit _programDesc;
+
+        ShaderCompiler _shaderCompiler;
+        ProgramLinker _programLinker;
+
+        static void registerToWatcher(const ShaderPointer& shader, ShaderCompiler shaderCompiler, ProgramLinker programLinker = nullptr);
     };
+
 }

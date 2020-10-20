@@ -97,6 +97,16 @@ namespace graphics {
         void presentSwapchain(const SwapchainPointer& swapchain) override;
 
         void flush();
+
+        // Separate shader and pipeline state compilation as functions in order
+        // to be able to live edit the shaders
+        bool compileShader(Shader* shader, const std::string& src);
+        bool realizePipelineState(PipelineState* pipeline);
+
+        // When we modify d3d11 objects already in use, we need to garbage collect
+        // them to be destroyed at a later time
+        void garbageCollect(const ComPtr<ID3D12DeviceChild>& child);
+        std::list< ComPtr<ID3D12DeviceChild> > _garbageObjects;
     };
 
     class D3D12SwapchainBackend : public Swapchain {

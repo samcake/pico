@@ -347,4 +347,8 @@ void D3D12Backend::flush() {
 }
 
 
+void D3D12Backend::garbageCollect(const ComPtr<ID3D12DeviceChild>& child) {
+    _garbageObjects.push_back(child);
+}
+
 #endif

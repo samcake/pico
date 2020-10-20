@@ -40,12 +40,13 @@ D3D12PipelineStateBackend::~D3D12PipelineStateBackend() {
 
 }
 
-PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit & init) {
-    D3D12PipelineStateBackend* pso = nullptr;
-    if (init.program) {
+bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
+    D3D12PipelineStateBackend* pso = dynamic_cast<D3D12PipelineStateBackend*> (pipeline);
 
-        auto vertexShader = static_cast<D3D12ShaderBackend*> (init.program->getVertexShader().get());
-        auto pixelShader = static_cast<D3D12ShaderBackend*> (init.program->getPixelShader().get());
+    if (pso->_init.program) {
+
+        auto vertexShader = static_cast<D3D12ShaderBackend*> (pso->_init.program->getVertexShader().get());
+        auto pixelShader = static_cast<D3D12ShaderBackend*> (pso->_init.program->getPixelShader().get());
         ComPtr<ID3DBlob> vertexShaderBlob = vertexShader->_shaderBlob;
         ComPtr<ID3DBlob> pixelShaderBlob = pixelShader->_shaderBlob;
 
@@ -53,10 +54,13 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
         ComPtr<ID3D12PipelineState> pipelineState;
 
         // Create an empty root signature if none provided.
-        if (init.descriptorSetLayout) {
-            auto dxDescLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (init.descriptorSetLayout.get());
+        if (pso->_rootSignature) {
+            rootSignature = pso->_rootSignature;
+        } else if (pso->_init.descriptorSetLayout) {
+            auto dxDescLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (pso->_init.descriptorSetLayout.get());
             rootSignature = dxDescLayout->_rootSignature;
-        } else {
+        }
+        else {
             D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
             rootSignatureDesc.NumParameters = 0;
             rootSignatureDesc.pParameters = nullptr;
@@ -75,10 +79,10 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             const std::string SemanticToName[int(AttribSemantic::COUNT)] = { "POSITION", "NORMAL", "COLOR" };
             const DXGI_FORMAT AttribFormatToFormat[int(AttribFormat::COUNT)] = { DXGI_FORMAT_R32_UINT, DXGI_FORMAT_R32G32B32_FLOAT, DXGI_FORMAT_R32G32B32A32_FLOAT, DXGI_FORMAT_R8G8B8A8_UNORM };
 
-            std::vector< D3D12_INPUT_ELEMENT_DESC > inputElementDescs(init.streamLayout.numAttribs());
+            std::vector< D3D12_INPUT_ELEMENT_DESC > inputElementDescs(pso->_init.streamLayout.numAttribs());
             auto inputElement = inputElementDescs.data();
-            for (int a = 0; a < init.streamLayout.numAttribs(); a++) {
-                auto attrib = init.streamLayout.getAttrib(a);
+            for (int a = 0; a < pso->_init.streamLayout.numAttribs(); a++) {
+                auto attrib = pso->_init.streamLayout.getAttrib(a);
                 inputElement->SemanticName = SemanticToName[(int)attrib->_semantic].c_str();
                 inputElement->SemanticIndex = 0;
                 inputElement->Format = AttribFormatToFormat[(int)attrib->_format];
@@ -115,9 +119,10 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
 
             psoDesc.BlendState.IndependentBlendEnable = FALSE;
 
-            if (init.blend) {
+            if (pso->_init.blend) {
                 psoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-            } else {
+            }
+            else {
                 psoDesc.BlendState.RenderTarget[0].BlendEnable = FALSE;
             }
             psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
@@ -126,18 +131,19 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
             psoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
             psoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
             psoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-            
+
             psoDesc.BlendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
             psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
 
             psoDesc.BlendState.AlphaToCoverageEnable = FALSE;
 
-            if (init.depth) {
+            if (pso->_init.depth) {
                 psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
                 psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
                 psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
                 // ^ We re using Inverted Z so need to test to pass greater tahn because near is at 1 and far is at 0
-            } else {
+            }
+            else {
                 psoDesc.DepthStencilState.DepthEnable = FALSE; // disable depth
                 psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
                 psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
@@ -150,30 +156,59 @@ PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit &
  //           D3D12_DEPTH_STENCILOP_DESC BackFace;
 
             psoDesc.SampleMask = UINT_MAX;
-            psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)init.primitiveTopology];
+            psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)pso->_init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
-           // psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+            // psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
-            if (init.depth) {
+            if (pso->_init.depth) {
                 psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
-            } else {
+            }
+            else {
                 psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
             }
             ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
         }
 
-        pso = new D3D12PipelineStateBackend();
-        pso->_init = init;
-        pso->_program = init.program;
+        // update these
+        if (pso->_pipelineState) {
+            ComPtr<ID3D12DeviceChild> c;
+            pso->_pipelineState.As(&c);
+            garbageCollect(c);
+        }
         pso->_pipelineState = pipelineState;
-        pso->_rootSignature = rootSignature;
+        if (!pso->_rootSignature) {
+            pso->_rootSignature = rootSignature;
+        }
 
-        pso->_primitive_topology = D3D12BatchBackend::PrimitiveTopologies[(int)init.primitiveTopology];
+        pso->_primitive_topology = D3D12BatchBackend::PrimitiveTopologies[(int)pso->_init.primitiveTopology];
+
+        return true;
+    }
+    
+    return false;
+}
+
+PipelineStatePointer D3D12Backend::createPipelineState(const PipelineStateInit & init) {
+    auto pso = std::make_shared<D3D12PipelineStateBackend>();
+    pso->_init = init;
+    pso->_program = init.program;
+
+    if (realizePipelineState(pso.get())) {
+
+        if (pso->_program->hasWatcher()) {
+            auto pipelineRealizer = std::function([&](PipelineState* pipeline) -> bool {
+                return realizePipelineState(pipeline);
+            });
+
+            PipelineState::registerToWatcher(pso, pipelineRealizer);
+        }
+
+        return pso;
     }
 
-    return PipelineStatePointer(pso);
+    return nullptr;
 }
 
 
