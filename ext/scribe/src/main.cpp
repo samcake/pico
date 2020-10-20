@@ -311,6 +311,7 @@ int main (int argc, char** argv) {
     //    headerStringStream << "\tstatic gpu::Shader::Type getType() { return gpu::Shader::" << shaderTypeString[type] << "; }" << std::endl;
         headerStringStream << "\tstatic const std::string& getType() { return \"" << shaderTypeString[type] << "\"; }" << std::endl;
         headerStringStream << "\tstatic const std::string& getSource() { return _source; }" << std::endl;
+        headerStringStream << "\tstatic std::string getSourceFilename() { return \"" << srcFilename << "\"; }" << std::endl;
    //     headerStringStream << "\tstatic gpu::ShaderPointer getShader();" << std::endl;
         headerStringStream << "private:" << std::endl;
         headerStringStream << "\tstatic const std::string _source;" << std::endl;

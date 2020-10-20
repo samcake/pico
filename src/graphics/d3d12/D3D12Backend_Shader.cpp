@@ -50,9 +50,47 @@ D3D12ShaderBackend::~D3D12ShaderBackend() {
 
 }
 
+bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
+    if (!shader) {
+        return false;
+    }
+
+    std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
+
+    ID3DBlob* shaderBlob;
+    ID3DBlob* errorBlob;
+
+    HRESULT hr = D3DCompile(
+        source.c_str(),
+        source.size(),
+        shader->getShaderDesc().url.c_str(),
+        nullptr,
+        nullptr,
+        shader->getShaderDesc().entryPoint.c_str(),
+        target.c_str(),
+        0, 0,
+        &shaderBlob,
+        &errorBlob);
+
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            picoLog() << (char*)errorBlob->GetBufferPointer();
+            //   OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+            errorBlob->Release();
+        }
+
+        if (shaderBlob)
+            shaderBlob->Release();
+
+
+        return false;
+    }
+    dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderBlob = shaderBlob;
+    return true;
+}
+
 ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
 
-    
     std::string target(D3D12ShaderBackend::ShaderTypes[(int) init.type]);
     std::string source = init.source;
 
@@ -61,47 +99,20 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
         source = (std::stringstream() << file.rdbuf()).str();
     }
 
-    
-    if (!source.empty()) {
-        ID3DBlob* shaderBlob;
-        ID3DBlob* errorBlob;
-        
+    // Allocate the shader
+    auto shader = std::make_shared< D3D12ShaderBackend>();
+    shader->_shaderDesc = init;
 
-        HRESULT hr = D3DCompile(
-            source.c_str(),
-            source.size(),
-            init.url.c_str(),
-            nullptr,
-            nullptr,
-            init.entryPoint.c_str(),
-            target.c_str(),
-            0, 0,
-            &shaderBlob,
-            &errorBlob);
+    // and now compile
+    if ( D3D12Backend::compileShader(shader.get(), source) ) {
+        if (shader->hasWatcher()) {
+            auto shaderCompiler = std::function( [&] (Shader* sha, const std::string& src) -> bool {
+                return compileShader(sha, src);
+            });
 
-        if (FAILED(hr)) {
-            if (errorBlob) {
-                picoLog() << (char*)errorBlob->GetBufferPointer();
-             //   OutputDebugStringA((char*)errorBlob->GetBufferPointer());
-                errorBlob->Release();
-            }
-
-            if (shaderBlob)
-                shaderBlob->Release();
-
-
-            return ShaderPointer();
+            Shader::registerToWatcher(shader, shaderCompiler);
         }
-
-        auto shader = new D3D12ShaderBackend();
-
-        shader->_shaderDesc = init;
-        shader->_shaderBlob = shaderBlob;
-
-//        *blob = shaderBlob;
- //       shader->_shaderBlob = bytecodeBlob;
-
-        return ShaderPointer(shader);
+        return shader;
     }
 
     return ShaderPointer();
@@ -118,7 +129,16 @@ ShaderPointer D3D12Backend::createProgram(const ProgramInit& init) {
         program->_shaderDesc.type = ShaderType::PROGRAM;
     }
 
-    return ShaderPointer(program);
+    auto program_ptr = ShaderPointer(program);
+    if (program_ptr->hasWatcher()) {
+        auto programLinker = std::function([&](Shader* sha) -> bool {
+            return true;
+        });
+
+        Shader::registerToWatcher(program_ptr, nullptr, programLinker);
+    }
+
+    return program_ptr;
 }
 
 #endif

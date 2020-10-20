@@ -105,6 +105,7 @@ namespace graphics {
 
     class Shader;
     using ShaderPointer = std::shared_ptr<Shader>;
+    using ShaderWeakPtr = std::weak_ptr<Shader>;
     struct ShaderInit;
     struct ProgramInit;
 
@@ -118,6 +119,7 @@ namespace graphics {
 
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
+    using PipelineStateWeakPtr = std::weak_ptr<PipelineState>;
     struct PipelineStateInit;
 
     class Framebuffer;

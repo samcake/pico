@@ -12,7 +12,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
     if ((r2 >= 1.0)) discard;
     
-    //return IN.Color;
-  //  return float4(IN.Color.xyz, step(r2, 1.0));
+    //return IN.Color; 
+   // return float4(IN.Color.xyz, min(r2, 1.0));
     return float4(IN.Color.xyz, 1.0);
 }

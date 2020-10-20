@@ -25,6 +25,10 @@
 // SOFTWARE.
 //
 #include "Shader.h"
+#include <fstream>
+#include <sstream>
+
+#include "Pipeline.h"
 
 using namespace graphics;
 
@@ -39,3 +43,37 @@ Shader::~Shader() {
 
 }
 
+bool Shader::hasWatcher() const {
+    if (isProgram()) {
+        if (_programDesc.vertexShader && _programDesc.vertexShader->hasWatcher()) {
+             return true;
+        }
+        if (_programDesc.pixelShader && _programDesc.pixelShader->hasWatcher()) {
+            return true;
+        }
+        return false;
+    }
+    else {
+        return !_shaderDesc.watcher_file.empty();
+    }
+}
+
+void Shader::registerToWatcher(const ShaderPointer& shader, ShaderCompiler shaderCompile, ProgramLinker programLinker) {
+    shader->_shaderCompiler = shaderCompile;
+    shader->_programLinker = programLinker;
+    PipelineWatcher::get()->add(shader);
+}
+
+bool Shader::recompile(const std::string& src) {
+    if (_shaderCompiler) {
+        return _shaderCompiler(this, src);
+    }
+    return false;
+}
+
+bool Shader::relink() {
+    if (_programLinker) {
+        return _programLinker(this);
+    }
+    return false;
+}
