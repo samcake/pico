@@ -158,7 +158,9 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     descriptorSetLayout,
-                    true // enable depth
+                    RasterizerState(),
+                    true, // enable depth
+                    BlendState()
         };
         graphics::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
 

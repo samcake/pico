@@ -29,6 +29,9 @@
 
 #include "gpu.h"
 #include "StreamLayout.h"
+#include "Rasterizer.h"
+#include "DepthStencil.h"
+#include "Blend.h"
 
 namespace graphics {
 
@@ -37,8 +40,9 @@ namespace graphics {
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
         DescriptorSetLayoutPointer descriptorSetLayout;
-        bool depth { false };
-        bool blend { false };
+        RasterizerState rasterizer;
+        DepthStencilState depthStencil;
+        BlendState blend;
 
         std::string watch_name;
     };
