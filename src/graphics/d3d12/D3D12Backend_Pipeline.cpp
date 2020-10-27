@@ -101,59 +101,12 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             psoDesc.VS = { reinterpret_cast<UINT8*>(vertexShaderBlob.Get()->GetBufferPointer()), vertexShaderBlob.Get()->GetBufferSize() };
             psoDesc.PS = { reinterpret_cast<UINT8*>(pixelShaderBlob.Get()->GetBufferPointer()), pixelShaderBlob.Get()->GetBufferSize() };
 
+            D3D12PipelineStateBackend::fill_rasterizer_desc(pso->_init.rasterizer, psoDesc.RasterizerState);
+      
+            D3D12PipelineStateBackend::fill_depth_stencil_desc(pso->_init.depthStencil, psoDesc.DepthStencilState);
 
-            psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
-            psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
-            psoDesc.RasterizerState.FrontCounterClockwise = TRUE; // This is gltf convention front faces are CCW
-            psoDesc.RasterizerState.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-            psoDesc.RasterizerState.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-            psoDesc.RasterizerState.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-            psoDesc.RasterizerState.DepthClipEnable = TRUE;
-            psoDesc.RasterizerState.MultisampleEnable = FALSE;
-            psoDesc.RasterizerState.AntialiasedLineEnable = FALSE;
-            psoDesc.RasterizerState.ForcedSampleCount = 0;
-            psoDesc.RasterizerState.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+            D3D12PipelineStateBackend::fill_blend_desc(pso->_init.blend, psoDesc.BlendState);
 
-
-            psoDesc.BlendState.AlphaToCoverageEnable = FALSE;
-
-            psoDesc.BlendState.IndependentBlendEnable = FALSE;
-
-            if (pso->_init.blend) {
-                psoDesc.BlendState.RenderTarget[0].BlendEnable = TRUE;
-            }
-            else {
-                psoDesc.BlendState.RenderTarget[0].BlendEnable = FALSE;
-            }
-            psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-            psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-            psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-            psoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-            psoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-            psoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-
-            psoDesc.BlendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
-            psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-            psoDesc.BlendState.AlphaToCoverageEnable = FALSE;
-
-            if (pso->_init.depth) {
-                psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth
-                psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_GREATER;
-                // ^ We re using Inverted Z so need to test to pass greater tahn because near is at 1 and far is at 0
-            }
-            else {
-                psoDesc.DepthStencilState.DepthEnable = FALSE; // disable depth
-                psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-                psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-            }
-
-            psoDesc.DepthStencilState.StencilEnable = FALSE;
-            psoDesc.DepthStencilState.StencilReadMask = 0xFF;
-            psoDesc.DepthStencilState.StencilWriteMask = 0xFF;
-            //            D3D12_DEPTH_STENCILOP_DESC FrontFace;
- //           D3D12_DEPTH_STENCILOP_DESC BackFace;
 
             psoDesc.SampleMask = UINT_MAX;
             psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)pso->_init.primitiveTopology];
@@ -161,7 +114,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             // psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
             psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
             psoDesc.SampleDesc.Count = 1;
-            if (pso->_init.depth) {
+            if (pso->_init.depthStencil.depthTest.isEnabled()) {
                 psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
             }
             else {
@@ -238,6 +191,166 @@ SamplerPointer D3D12Backend::createSampler(const SamplerInit& init) {
     sampler->_samplerDesc.MaxLOD = D3D12_FLOAT32_MAX;
 
     return SamplerPointer(sampler);
+}
+
+void D3D12PipelineStateBackend::fill_rasterizer_desc(const RasterizerState& src, D3D12_RASTERIZER_DESC& dst) {
+
+    dst.FillMode = D3D12_FILL_MODE_SOLID;
+    const D3D12_FILL_MODE FillMode_to_d3d12[]{
+        D3D12_FILL_MODE_SOLID,
+        D3D12_FILL_MODE_WIREFRAME,
+        D3D12_FILL_MODE_WIREFRAME
+    };
+    dst.FillMode = FillMode_to_d3d12[(int8_t)src.fillMode];
+
+    const D3D12_CULL_MODE CullMode_to_d3d12[]{
+        D3D12_CULL_MODE_NONE,
+        D3D12_CULL_MODE_FRONT,
+        D3D12_CULL_MODE_BACK
+    };
+    dst.CullMode = CullMode_to_d3d12[(int8_t)src.cullMode];
+
+    dst.FrontCounterClockwise = !src.frontFaceClockwise; // This is gltf convention front faces are CCW
+
+    dst.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
+    dst.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
+    dst.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
+
+    dst.DepthClipEnable = src.depthClampEnable;
+    dst.MultisampleEnable = src.multisampleEnable;
+    dst.AntialiasedLineEnable = src.antialisedLineEnable;
+    dst.ForcedSampleCount = 0;
+
+    dst.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
+
+}
+
+void D3D12PipelineStateBackend::fill_depth_stencil_desc(const DepthStencilState& src, D3D12_DEPTH_STENCIL_DESC& dst) {
+
+
+    const D3D12_COMPARISON_FUNC ComparisonFunction_to_d3d12[]{
+        D3D12_COMPARISON_FUNC_NEVER,
+        D3D12_COMPARISON_FUNC_LESS,
+        D3D12_COMPARISON_FUNC_EQUAL,
+        D3D12_COMPARISON_FUNC_LESS_EQUAL,
+        D3D12_COMPARISON_FUNC_GREATER,
+        D3D12_COMPARISON_FUNC_NOT_EQUAL,
+        D3D12_COMPARISON_FUNC_GREATER_EQUAL,
+        D3D12_COMPARISON_FUNC_ALWAYS
+    };
+
+    if (src.depthTest.isEnabled()) {
+        dst.DepthEnable = TRUE; // enable depth
+        dst.DepthWriteMask = (src.depthTest.isWriteEnabled() ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO);
+        dst.DepthFunc = ComparisonFunction_to_d3d12[(int16_t)src.depthTest.getFunction()];//D3D12_COMPARISON_FUNC_GREATER;
+        // ^ We re using Inverted Z so need to test to pass greater tahn because near is at 1 and far is at 0
+    }
+    else {
+        dst.DepthEnable = FALSE; // disable depth
+        dst.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+        dst.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+    }
+
+    const D3D12_STENCIL_OP StencilOp_to_d3d12[]{
+        D3D12_STENCIL_OP_ZERO,
+        D3D12_STENCIL_OP_REPLACE,
+        D3D12_STENCIL_OP_INCR_SAT,
+        D3D12_STENCIL_OP_DECR_SAT,
+        D3D12_STENCIL_OP_INVERT,
+        D3D12_STENCIL_OP_INCR,
+        D3D12_STENCIL_OP_DECR,
+    };
+
+    if (src.stencilActivation.isEnabled()) {
+        dst.StencilEnable = TRUE;
+        // D3D12 has only one value for read and write mask regardless of the side
+        // let's use front
+        dst.StencilReadMask = src.stencilTestFront.getReadMask(); 
+        dst.StencilWriteMask = src.stencilActivation.getWriteMaskFront();
+
+        dst.FrontFace.StencilFunc = ComparisonFunction_to_d3d12[(int16_t)src.stencilTestFront.getFunction()];
+        dst.FrontFace.StencilFailOp = StencilOp_to_d3d12[(int16_t)src.stencilTestFront.getFailOp()];
+        dst.FrontFace.StencilDepthFailOp = StencilOp_to_d3d12[(int16_t)src.stencilTestFront.getDepthFailOp()];
+        dst.FrontFace.StencilPassOp = StencilOp_to_d3d12[(int16_t)src.stencilTestFront.getPassOp()];
+
+        dst.BackFace.StencilFunc = ComparisonFunction_to_d3d12[(int16_t)src.stencilTestBack.getFunction()];
+        dst.BackFace.StencilFailOp = StencilOp_to_d3d12[(int16_t)src.stencilTestBack.getFailOp()];
+        dst.BackFace.StencilDepthFailOp = StencilOp_to_d3d12[(int16_t)src.stencilTestBack.getDepthFailOp()];
+        dst.BackFace.StencilPassOp = StencilOp_to_d3d12[(int16_t)src.stencilTestBack.getPassOp()];
+    } else {
+        dst.StencilEnable = FALSE;
+        dst.StencilReadMask = 0xFF;
+        dst.StencilWriteMask = 0xFF;
+    }
+}
+
+void D3D12PipelineStateBackend::fill_blend_desc(const BlendState& src, D3D12_BLEND_DESC& dst) {
+    const D3D12_BLEND BlendArg_to_d3d12[] {
+        D3D12_BLEND_ZERO,
+        D3D12_BLEND_ONE,
+        D3D12_BLEND_SRC_COLOR,
+        D3D12_BLEND_INV_SRC_COLOR,
+        D3D12_BLEND_SRC_ALPHA,
+        D3D12_BLEND_INV_SRC_ALPHA,
+        D3D12_BLEND_DEST_ALPHA,
+        D3D12_BLEND_INV_DEST_ALPHA,
+        D3D12_BLEND_DEST_COLOR,
+        D3D12_BLEND_INV_DEST_COLOR,
+        D3D12_BLEND_SRC_ALPHA_SAT,
+        D3D12_BLEND_SRC1_COLOR, //D3D12_BLEND_BLEND_FACTOR,
+        D3D12_BLEND_INV_SRC1_COLOR, //D3D12_BLEND_INV_BLEND_FACTOR,
+        D3D12_BLEND_SRC1_ALPHA,
+        D3D12_BLEND_INV_SRC1_ALPHA
+    };
+
+    const D3D12_BLEND_OP BlendOp_to_d3d12[]{
+        D3D12_BLEND_OP_ADD,
+        D3D12_BLEND_OP_SUBTRACT,
+        D3D12_BLEND_OP_REV_SUBTRACT,
+        D3D12_BLEND_OP_MIN,
+        D3D12_BLEND_OP_MAX
+    };
+
+
+
+    if (src.blendFunc.isEnabled()) {
+        dst.RenderTarget[0].BlendEnable = TRUE;
+        dst.RenderTarget[0].SrcBlend = BlendArg_to_d3d12[(int16_t)src.blendFunc.getSourceColor()];
+        dst.RenderTarget[0].DestBlend = BlendArg_to_d3d12[(int16_t)src.blendFunc.getDestinationColor()];
+        dst.RenderTarget[0].BlendOp = BlendOp_to_d3d12[(int16_t)src.blendFunc.getOperationColor()];
+
+        dst.RenderTarget[0].SrcBlendAlpha = BlendArg_to_d3d12[(int16_t)src.blendFunc.getSourceAlpha()];
+        dst.RenderTarget[0].DestBlendAlpha = BlendArg_to_d3d12[(int16_t)src.blendFunc.getDestinationAlpha()];
+        dst.RenderTarget[0].BlendOpAlpha = BlendOp_to_d3d12[(int16_t)src.blendFunc.getOperationAlpha()];
+
+
+    } else {
+        dst.RenderTarget[0].BlendEnable = FALSE;
+        dst.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+        dst.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
+        dst.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+        dst.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+        dst.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+        dst.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+    }
+
+    dst.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+
+
+    // enum D3D12_COLOR_WRITE_ENABLE
+    // {
+    //     D3D12_COLOR_WRITE_ENABLE_RED = 1,
+    //     D3D12_COLOR_WRITE_ENABLE_GREEN = 2,
+    //     D3D12_COLOR_WRITE_ENABLE_BLUE = 4,
+    //     D3D12_COLOR_WRITE_ENABLE_ALPHA = 8,
+    //     D3D12_COLOR_WRITE_ENABLE_ALL = (((D3D12_COLOR_WRITE_ENABLE_RED | D3D12_COLOR_WRITE_ENABLE_GREEN) | D3D12_COLOR_WRITE_ENABLE_BLUE) | D3D12_COLOR_WRITE_ENABLE_ALPHA)
+    // }
+    // same bitfields meanings for the graphics::color_mask enum
+    dst.RenderTarget[0].RenderTargetWriteMask = src.colorWriteMask;
+
+
+    dst.AlphaToCoverageEnable = FALSE;
+
 }
 
 

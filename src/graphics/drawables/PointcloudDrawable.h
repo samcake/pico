@@ -30,9 +30,6 @@
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
 
-namespace core {
-    struct mat4x3;
-}
 namespace document {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;

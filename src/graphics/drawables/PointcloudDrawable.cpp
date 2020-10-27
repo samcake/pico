@@ -108,7 +108,11 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     descriptorSetLayout,
-                    true // enable depth
+                    RasterizerState(),
+                    true, // enable depth
+                    { graphics::BlendFunction(true,
+                        graphics::BlendArg::SRC_ALPHA, graphics::BlendOp::ADD, graphics::BlendArg::INV_SRC_ALPHA,
+                        graphics::BlendArg::ONE, graphics::BlendOp::ADD, graphics::BlendArg::ZERO) }
         };
         _pipeline = device->createPipelineState(pipelineInit);
 

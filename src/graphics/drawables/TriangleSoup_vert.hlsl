@@ -104,7 +104,7 @@ cbuffer UniformBlock1 : register(b1) {
     int _numVertices;
     int _numIndices;
     int spareA;
-    int spareB;
+    float _triangleScale;
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
@@ -157,7 +157,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
 
     // Transform
     float3 position = faceVerts[tvidx].xyz;
-    position += 0.2f * (barycenter - position);
+    position += _triangleScale * (barycenter - position);
 
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);

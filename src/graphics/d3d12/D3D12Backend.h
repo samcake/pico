@@ -240,6 +240,10 @@ namespace graphics {
         ComPtr<ID3D12RootSignature> _rootSignature;
         ComPtr<ID3D12PipelineState> _pipelineState;
         D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
+
+        static void fill_rasterizer_desc(const RasterizerState& src, D3D12_RASTERIZER_DESC& dst);
+        static void fill_depth_stencil_desc(const DepthStencilState& src, D3D12_DEPTH_STENCIL_DESC& dst);
+        static void fill_blend_desc(const BlendState& src, D3D12_BLEND_DESC& dst);
     };
 
     class D3D12DescriptorSetLayoutBackend : public DescriptorSetLayout {

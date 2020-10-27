@@ -50,15 +50,65 @@
 namespace graphics
 {
 
-    TriangleSoupDrawable::TriangleSoupDrawable() {
+    TriangleSoupDrawableFactory::TriangleSoupDrawableFactory() :
+        _sharedUniforms(std::make_shared<TriangleSoupDrawableUniforms>()) {
 
     }
-    TriangleSoupDrawable::~TriangleSoupDrawable() {
+    TriangleSoupDrawableFactory::~TriangleSoupDrawableFactory() {
 
     }
-       
-    DrawcallObjectPointer TriangleSoupDrawable::allocateDocumentDrawcallObject(const graphics::DevicePointer& device, const graphics::CameraPointer& camera, const document::TriangleSoupPointer& triangleSoup)
-    {
+
+    // Custom data uniforms
+    struct TSObjectData {
+        core::mat4x3 transform;
+        uint32_t numVertices{ 0 };
+        uint32_t numIndices{ 0 };
+        uint32_t stride{ 0 };
+        float triangleScale { 0.1f };
+    };
+
+    void TriangleSoupDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+
+        // Let's describe the pipeline Descriptors layout
+        graphics::DescriptorLayouts descriptorLayouts{
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(TSObjectData) >> 2},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
+        };
+
+        graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
+        auto descriptorSetLayout = device->createDescriptorSetLayout(descriptorSetLayoutInit);
+
+        // And a Pipeline
+
+        // Load shaders (as stored in the resources)
+        auto shader_vertex_src = TriangleSoup_vert::getSource();
+        auto shader_pixel_src = TriangleSoup_frag::getSource();
+
+        // test: create shader
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, TriangleSoup_vert::getSourceFilename() };
+        graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, TriangleSoup_frag::getSourceFilename() };
+        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+
+        graphics::ProgramInit programInit{ vertexShader, pixelShader };
+        graphics::ShaderPointer programShader = device->createProgram(programInit);
+
+        graphics::PipelineStateInit pipelineInit{
+                    programShader,
+                    StreamLayout(),
+                    graphics::PrimitiveTopology::TRIANGLE,
+                    descriptorSetLayout,
+                    RasterizerState(),
+                    true, // enable depth
+                    BlendState()
+        };
+        _pipeline = device->createPipelineState(pipelineInit);
+    }
+
+    graphics::TriangleSoupDrawable* TriangleSoupDrawableFactory::createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
         if (!triangleSoup) {
             return nullptr;
         }
@@ -69,11 +119,11 @@ namespace graphics
         //pico::AttribArray<3> attribs{ {{ pico::AttribSemantic::A, pico::AttribFormat::VEC3, 0 }, { pico::AttribSemantic::B, pico::AttribFormat::VEC3, 0 }, {pico::AttribSemantic::C, pico::AttribFormat::CVEC4, 0 }} };
         AttribArray<2> attribs{ {{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC3, 0 }, {graphics::AttribSemantic::C, graphics::AttribFormat::CVEC4, 0 }} };
         AttribBufferViewArray<1> bufferViews{ {{0, (uint32_t)triangleSoup->_points.size() }} };
-        auto vertexFormat = graphics::StreamLayout::build<2,1>(attribs, bufferViews);
+        auto vertexFormat = graphics::StreamLayout::build<2, 1>(attribs, bufferViews);
 
         // Create the Mesh for real
         graphics::MeshPointer mesh = graphics::Mesh::createFromIndexedTriangleArray(vertexFormat, (uint32_t)triangleSoup->_points.size(), (const uint8_t*)triangleSoup->_points.data(),
-                triangleSoup->_indices.size(), triangleSoup->_indices.data());
+            triangleSoup->_indices.size(), triangleSoup->_indices.data());
 
         // Let's allocate buffer to hold the triangle soup mesh
   /*      pico::BufferInit vertexBufferInit{};
@@ -99,7 +149,7 @@ namespace graphics
 
         auto vbresourceBuffer = device->createBuffer(vbresourceBufferInit);
         memcpy(vbresourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vbresourceBufferInit.bufferSize);
-    
+
 
         auto numIndices = mesh->_indexStream.getNumElements();
         auto indexBufferSize = mesh->_indexStream._streamLayout.streamAttribSize(0) * numIndices;
@@ -116,56 +166,26 @@ namespace graphics
         auto ibresourceBuffer = device->createBuffer(ibresourceBufferInit);
         memcpy(ibresourceBuffer->_cpuMappedAddress, mesh->_indexStream._buffers[0]->_data.data(), ibresourceBufferInit.bufferSize);
 
-        // Custom data uniforms
-        struct ObjectData {
-            core::mat4x3 transform;
-            uint32_t numVertices{ 0 };
-            uint32_t numIndices{ 0 };
-            uint32_t stride{ 0 };
-            float B;
-        };
 
+        auto triangleSoupDrawable = new TriangleSoupDrawable();
+        triangleSoupDrawable->_vertexBuffer = vbresourceBuffer;
+        triangleSoupDrawable->_indexBuffer = ibresourceBuffer;
+        triangleSoupDrawable->_bounds = mesh->_bounds;
+        triangleSoupDrawable->_transform = triangleSoup->_transform;
 
-        // Let's describe the pipeline Descriptors layout
-        graphics::DescriptorLayouts descriptorLayouts{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(ObjectData) >> 2},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
-        };
+        // Create the triangle soup drawable using the shared uniforms of the factory
+        triangleSoupDrawable->_uniforms = _sharedUniforms;
 
-        graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
-        auto descriptorSetLayout = device->createDescriptorSetLayout(descriptorSetLayoutInit);
+        return triangleSoupDrawable;
+    }
 
-        // And a Pipeline
-
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = TriangleSoup_vert::getSource();
-        auto shader_pixel_src = TriangleSoup_frag::getSource();
-
-        // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src };
-        graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
-
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src };
-        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
-
-        graphics::ProgramInit programInit{ vertexShader, pixelShader };
-        graphics::ShaderPointer programShader = device->createProgram(programInit);
-
-        graphics::PipelineStateInit pipelineInit{
-                    programShader,
-                    StreamLayout(),
-                    graphics::PrimitiveTopology::TRIANGLE,
-                    descriptorSetLayout,
-                    true // enable depth
-        };
-        graphics::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
-
+    graphics::DrawcallObjectPointer TriangleSoupDrawableFactory::allocateDrawcallObject(const graphics::DevicePointer& device,
+        const graphics::CameraPointer& camera, const graphics::TriangleSoupDrawablePointer& triangleSoup)
+    {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
-            descriptorSetLayout
+            _pipeline->getDescriptorSetLayout()
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
@@ -174,35 +194,50 @@ namespace graphics
         graphics::DescriptorObject uboDescriptorObject;
         uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
         graphics::DescriptorObject vb_rboDescriptorObject;
-        vb_rboDescriptorObject._buffers.push_back(vbresourceBuffer);
+        vb_rboDescriptorObject._buffers.push_back(triangleSoup->getVertexBuffer());
         graphics::DescriptorObject ib_rboDescriptorObject;
-        ib_rboDescriptorObject._buffers.push_back(ibresourceBuffer);
+        ib_rboDescriptorObject._buffers.push_back(triangleSoup->getIndexBuffer());
         graphics::DescriptorObjects descriptorObjects = {
             uboDescriptorObject, vb_rboDescriptorObject, ib_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
+
+        auto numVertices = triangleSoup->getVertexBuffer()->getNumElements();
+        auto numIndices = triangleSoup->getIndexBuffer()->getNumElements();
+        auto vertexStride = triangleSoup->getVertexBuffer()->_init.structStride;
+
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [pipeline, descriptorSet, numVertices, numIndices, vertexStride](const core::mat4x3& transform, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+        graphics::DrawObjectCallback drawCallback = [triangleSoup, descriptorSet, numVertices, numIndices, vertexStride, this](const core::mat4x3& transform, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+            batch->setPipeline(this->_pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
+            //       batch->bindVertexBuffers(1, &vertexBuffer);
             batch->bindDescriptorSet(descriptorSet);
 
-            ObjectData odata{ transform, numVertices, numIndices, vertexStride };
-            batch->bindPushUniform(1, sizeof(ObjectData), (const uint8_t*)&odata);
+            auto uniforms = triangleSoup->getUniforms();
+            TSObjectData odata{ transform, numVertices, numIndices, vertexStride, uniforms->triangleScale };
+            batch->bindPushUniform(1, sizeof(TSObjectData), (const uint8_t*)&odata);
 
             batch->draw(numIndices, 0);
         };
         auto drawcall = new graphics::DrawcallObject(drawCallback);
-        drawcall->_bounds = mesh->_bounds;
+        drawcall->_bounds = triangleSoup->_bounds;
         drawcall->_transform = triangleSoup->_transform;
-        _drawcall = graphics::DrawcallObjectPointer(drawcall);
+        triangleSoup->_drawcall = graphics::DrawcallObjectPointer(drawcall);
 
-        return _drawcall;
+        return triangleSoup->_drawcall;
     }
 
+
+    TriangleSoupDrawable::TriangleSoupDrawable() {
+
+    }
+    TriangleSoupDrawable::~TriangleSoupDrawable() {
+
+    }
+       
     graphics::DrawcallObjectPointer TriangleSoupDrawable::getDrawable() const {
         return _drawcall;
     }

@@ -94,7 +94,6 @@ int main(int argc, char *argv[])
     }
 
     // Some content, why not a pointcloud ?
-  //  auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
     auto pointCloud = document::PointCloud::createFromJSON(cloudPointFile);
     auto triangleSoup = document::TriangleSoup::createFromPLY(triangleSoupFile);
 
@@ -120,14 +119,18 @@ int main(int argc, char *argv[])
     pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the pointcloud
-    graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
-    auto pcitem = scene->createItem(pointCloudDrawable);
+ //   graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
+//    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
+//    auto pcitem = scene->createItem(pointCloudDrawable);
+
+    // A triangel soup drawable factory
+    auto triangleSoupDrawableFactory = std::make_shared<graphics::TriangleSoupDrawableFactory>();
+    triangleSoupDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the trianglesoup
-    auto triangleSoupDrawable = std::make_shared<graphics::TriangleSoupDrawable>();
-    triangleSoupDrawable->allocateDocumentDrawcallObject(gpuDevice, camera, triangleSoup);
- //   auto tsitem = scene->createItem(triangleSoupDrawable);
+    graphics::TriangleSoupDrawablePointer triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
+    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, camera, triangleSoupDrawable);
+    auto tsitem = scene->createItem(triangleSoupDrawable);
 
     // Content creation
     float doAnimate = 1.0f;
