@@ -43,7 +43,8 @@ introducing:
 - render::Scene
 - render::Camera
 - render::Viewport
-- drawable::PointcloudDrawable
+- drawable::PointCloudDrawable
+- drawable::TriangleSoupDrawable
 
 ## Credits, Inspiration & References
 - Hai Nguyen (chaoticbob) vulkan and D3d12 unifying abstraction https://github.com/chaoticbob/tinyrenderers
