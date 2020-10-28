@@ -52,6 +52,9 @@
 #include <document/TriangleSoup.h>
 #include <graphics/drawables/TriangleSoupDrawable.h>
 
+#include <graphics/drawables/GizmoDrawable.h>
+
+
 #include <uix/Window.h>
 
 #include <vector>
@@ -131,6 +134,16 @@ int main(int argc, char *argv[])
     graphics::TriangleSoupDrawablePointer triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
     triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, camera, triangleSoupDrawable);
     auto tsitem = scene->createItem(triangleSoupDrawable);
+
+    // A gizmo drawable factory
+    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
+    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a drawable from the trianglesoup
+    graphics::GizmoDrawablePointer gizmoDrawable(gizmoDrawableFactory->createGizmoDrawable(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, camera, gizmoDrawable);
+    auto gitem = scene->createItem(gizmoDrawable);
+
 
     // Content creation
     float doAnimate = 1.0f;
