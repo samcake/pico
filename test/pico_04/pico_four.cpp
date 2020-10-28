@@ -119,9 +119,9 @@ int main(int argc, char *argv[])
     pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the pointcloud
- //   graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-//    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
-//    auto pcitem = scene->createItem(pointCloudDrawable);
+    graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
+    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
+    auto pcitem = scene->createItem(pointCloudDrawable);
 
     // A triangel soup drawable factory
     auto triangleSoupDrawableFactory = std::make_shared<graphics::TriangleSoupDrawableFactory>();
