@@ -92,6 +92,10 @@ struct Transform {
     float3 up() { return float3(_right_upX.w, _upYZ_backXY.xy); }
     float3 back() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
 
+    float3 axeX() { return _right_upX.xyz; }
+    float3 axeY() { return float3(_right_upX.w, _upYZ_backXY.xy); }
+    float3 axeZ() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
+
     float3 invX() { return float3(_right_upX.x, _right_upX.w, _upYZ_backXY.z); }
     float3 invY() { return float3(_right_upX.y, _upYZ_backXY.x, _upYZ_backXY.w); }
     float3 invZ() { return float3(_right_upX.z, _upYZ_backXY.y, _backZ_ori.x); }
@@ -100,7 +104,7 @@ struct Transform {
 };
 
 cbuffer UniformBlock1 : register(b1) {
-    Transform _model;
+    int   _nodeID;
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
@@ -108,6 +112,30 @@ float3 worldFromObjectSpace(Transform model, float3 objPos) {
     // TranslationInv
     return  rotatedPos + model.ori();
 }
+
+float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
+    return float3(dot(model.axeX(), worldDir), dot(model.axeY(), worldDir), dot(model.axeZ(), worldDir));
+}
+float3 objectFromWorldSpace(Transform model, float3 worldPos) {
+    float3 centeredPos = worldPos - model.ori();
+    return float3(dot(model.axeX(), centeredPos), dot(model.axeY(), centeredPos), dot(model.axeZ(), centeredPos));
+}
+
+StructuredBuffer<Transform>  tree_transforms : register(t0);
+
+Transform node_getTransform(int nodeID) {
+    return tree_transforms[2 * nodeID];
+}
+Transform node_getWorldTransform(int nodeID) {
+    return tree_transforms[2 * nodeID + 1];
+}
+
+StructuredBuffer<int4>  tree_nodes : register(t1);
+
+int4 node_getNode(int nodeID) {
+    return tree_nodes[nodeID];
+}
+
 
 struct VertexPosColor
 {
@@ -122,21 +150,34 @@ struct VertexShaderOutput
     float4 Position : SV_Position;
 };
 
-VertexShaderOutput main(uint vid : SV_VertexID)
+VertexShaderOutput main(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
 
+    uint vid = ivid % 8;
+    uint nodeid = ivid / 8;
     uint pid = vid % 2;
     uint aid = vid / 2;
 
     float3 position = float(pid) * float3(float(aid == 0), float(aid == 1), float(aid == 2));
+
+    Transform _model = node_getWorldTransform(nodeid);
+    Transform _modelLocal = node_getTransform(nodeid);
+        
+    if (aid == 3) {
+        position = float(pid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.ori());
+    }
 
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
     OUT.Position = clipPos;
+
     OUT.Color = float4(float(aid == 0), float(aid == 1), float(aid == 2), 1.0f);
+    if (aid == 3) {
+        OUT.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
+    }
 
     return OUT;
 }

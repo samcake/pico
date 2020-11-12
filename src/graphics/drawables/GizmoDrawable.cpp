@@ -58,7 +58,7 @@ namespace graphics
 
     // Custom data uniforms
     struct GizmoObjectData {
-        core::mat4x3 transform;
+        uint32_t nodeID{0};
         uint32_t numVertices{ 0 };
         uint32_t numIndices{ 0 };
         uint32_t stride{ 0 };
@@ -71,6 +71,7 @@ namespace graphics
         graphics::DescriptorLayouts descriptorLayouts{
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(GizmoObjectData) >> 2},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, 
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -107,8 +108,6 @@ namespace graphics
     graphics::GizmoDrawable* GizmoDrawableFactory::createGizmoDrawable(const graphics::DevicePointer& device) {
 
         auto gizmoDrawable = new GizmoDrawable();
-        gizmoDrawable->_bounds._maxPos = core::vec3(1.0f);
-        gizmoDrawable->_bounds._minPos = core::vec3(-1.0f);
 
         // Create the triangle soup drawable using the shared uniforms of the factory
         gizmoDrawable->_uniforms = _sharedUniforms;
@@ -117,7 +116,9 @@ namespace graphics
     }
 
     graphics::DrawcallObjectPointer GizmoDrawableFactory::allocateDrawcallObject(const graphics::DevicePointer& device,
-        const graphics::CameraPointer& camera, const graphics::GizmoDrawablePointer& gizmo)
+        const graphics::TransformTreeGPUPointer& transform,
+        const graphics::CameraPointer& camera,
+        const graphics::GizmoDrawablePointer& gizmo)
     {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
@@ -130,8 +131,11 @@ namespace graphics
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
         graphics::DescriptorObject uboDescriptorObject;
         uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        graphics::DescriptorObject rboDescriptorObject;
+        rboDescriptorObject._buffers.push_back(transform->_transforms_buffer);
         graphics::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject
+            uboDescriptorObject,
+            rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -144,14 +148,12 @@ namespace graphics
             batch->bindDescriptorSet(descriptorSet);
 
             auto uniforms = gizmo->getUniforms();
-            GizmoObjectData odata{ transform, 0, 0, 0, uniforms->triangleScale };
+            GizmoObjectData odata{ gizmo->nodes.size(), 0, 0, 0, uniforms->triangleScale };
             batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-            batch->draw(6, 0);
+            batch->draw(gizmo->nodes.size() * 8, 0);
         };
         auto drawcall = new graphics::DrawcallObject(drawCallback);
-        drawcall->_bounds = gizmo->_bounds;
-        drawcall->_transform = gizmo->_transform;
         gizmo->_drawcall = graphics::DrawcallObjectPointer(drawcall);
 
         return gizmo->_drawcall;
@@ -164,7 +166,9 @@ namespace graphics
     GizmoDrawable::~GizmoDrawable() {
 
     }
-       
+    void GizmoDrawable::setNode(graphics::NodeID node) const {
+        _nodeID = node;
+    }
     graphics::DrawcallObjectPointer GizmoDrawable::getDrawable() const {
         return _drawcall;
     }

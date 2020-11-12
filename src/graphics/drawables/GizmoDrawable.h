@@ -30,11 +30,15 @@
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
 
+#include <render/Scene.h>
+
 namespace graphics {
     class DrawcallObject;
     using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
+    class TransformTreeGPU;
+    using TransformTreeGPUPointer = std::shared_ptr<TransformTreeGPU>;
     class Camera;
     using CameraPointer = std::shared_ptr<Camera>;
     class Buffer;
@@ -62,7 +66,7 @@ namespace graphics {
         graphics::GizmoDrawable* createGizmoDrawable(const graphics::DevicePointer& device);
 
         // Create Drawcall object drawing the GizmoDrawable in the rendering context
-        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::CameraPointer& camera,
+        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::TransformTreeGPUPointer& transform, const graphics::CameraPointer& camera,
             const graphics::GizmoDrawablePointer& pointcloudDrawable);
 
         // Read / write shared uniforms
@@ -86,6 +90,10 @@ namespace graphics {
         ~GizmoDrawable();
         
         graphics::DrawcallObjectPointer getDrawable() const;
+        void setNode(graphics::NodeID node) const;
+        graphics::NodeID getNode() const { return _nodeID; }
+
+        std::vector<NodeID> nodes; 
 
         void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
@@ -93,10 +101,9 @@ namespace graphics {
     protected:
         friend class GizmoDrawableFactory;
 
+        mutable graphics::NodeID _nodeID { 0 };
         GizmoDrawableUniformsPointer _uniforms;
         graphics::DrawcallObjectPointer _drawcall;
-        core::mat4x3 _transform;
-        core::Bounds _bounds;
     };
 
 

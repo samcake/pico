@@ -32,9 +32,12 @@
 #include <core/math/LinearAlgebra.h>
 
 #include "Renderer.h"
+#include "render/Transform.h"
 
 namespace graphics {
   
+    using NodeID = TransformTree::NodeID;
+    const static NodeID INVALID_NODE_ID {TransformTree::INVALID_ID};
 
     template <typename T> void log(const T& x, std::ostream& out, size_t position) {
         out << std::string(position, ' ') << std::endl;
@@ -43,7 +46,9 @@ namespace graphics {
     template <typename T> DrawcallObjectPointer item_getDrawable(const T& x) {
         return x->getDrawable();
     }
-
+    template <typename T> void item_setNode(const T& x, NodeID node) {
+        return x->setNode(node);
+    }
     using ItemID = uint32_t;
 
     class VISUALIZATION_API Item {
@@ -77,11 +82,15 @@ namespace graphics {
         bool isVisible() const { return _self->isVisible(); }
         void setVisible(bool visible) { _self->setVisible(visible); }
 
+        void setNode(NodeID nodeID) { _nodeID = nodeID; _self->_setNode(nodeID); }
+        NodeID getNode() const { return _nodeID; }
+
     private:
         struct Concept{
             virtual ~Concept() = default;
             virtual void _log(std::ostream& out, size_t position) const = 0;
             virtual DrawcallObjectPointer _getDrawable() const = 0;
+            virtual void _setNode(NodeID node) const = 0;
 
             bool isVisible() const { return _isVisible; }
             void setVisible(bool visible) const { _isVisible = visible; }
@@ -96,13 +105,15 @@ namespace graphics {
              DrawcallObjectPointer _getDrawable() const override {
                  return item_getDrawable(_data);
              }
+             void _setNode(NodeID node) const override {
+                 item_setNode(_data, node);
+             }
              T _data;
         };
         uint32_t _index { INVALID_ITEM_ID };
-#pragma warning(push)
-#pragma warning(disable: 4251)
+        NodeID _nodeID { INVALID_NODE_ID };
+
         std::shared_ptr<const Concept> _self;
-#pragma warning(pop)
     };
     using Items = std::vector<Item>;
     using IDToIndices = std::unordered_map<ItemID, uint32_t>;
@@ -112,6 +123,7 @@ namespace graphics {
     public:
         Scene();
         ~Scene();
+
 
         template <typename T>
         Item createItem(T& x, ItemID userID = Item::INVALID_ITEM_ID) {
@@ -127,12 +139,21 @@ namespace graphics {
         const Item& getValidItemAt(uint32_t startIndex) const;
 
         const core::Bounds& getBounds() const { return _bounds; }
+
+
+        // Nodes
+        NodeID createNode(const core::mat4x3& rts, NodeID parent);
+        void deleteNode(NodeID nodeId);
+
+        void attachNode(NodeID child, NodeID parent);
+        void detachNode(NodeID child);
+
+        TransformTreeGPUPointer _transformTree;
+
     protected:
-#pragma warning(push)
-#pragma warning(disable: 4251)
+
         Items _items;
         IDToIndices _idToIndices;
-#pragma warning(pop)
 
         core::Bounds _bounds;
 

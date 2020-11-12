@@ -237,7 +237,10 @@ namespace graphics
     TriangleSoupDrawable::~TriangleSoupDrawable() {
 
     }
-       
+    void TriangleSoupDrawable::setNode(graphics::NodeID node) const {
+
+    }
+
     graphics::DrawcallObjectPointer TriangleSoupDrawable::getDrawable() const {
         return _drawcall;
     }

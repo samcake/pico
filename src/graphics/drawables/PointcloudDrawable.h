@@ -29,6 +29,7 @@
 #include <memory>
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
+#include <render/Scene.h>
 
 namespace document {
     class PointCloud;
@@ -110,6 +111,8 @@ namespace graphics {
     public:
         PointCloudDrawable();
         ~PointCloudDrawable();
+
+        void setNode(graphics::NodeID node) const;
 
         graphics::DrawcallObjectPointer getDrawable() const;
 

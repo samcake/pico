@@ -29,6 +29,7 @@
 #include <memory>
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
+#include <render/Scene.h>
 
 namespace document {
     class TriangleSoup;
@@ -88,7 +89,9 @@ namespace graphics {
     public:
         TriangleSoupDrawable();
         ~TriangleSoupDrawable();
-        
+ 
+        void setNode(graphics::NodeID node) const;
+
         graphics::DrawcallObjectPointer getDrawable() const;
 
         void swapUniforms(const TriangleSoupDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }

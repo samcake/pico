@@ -233,7 +233,7 @@ namespace core
                      yuv.x + 2.032f * yuv.y);
     }
 
-    // Matrix: 3 raws . 4 columns
+    // Matrix: 4 columns 3 rows 
     struct mat4x3 {
         vec3 _columns[4]{ {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f} };
         float* data() { return _columns[0].data(); }
@@ -246,7 +246,47 @@ namespace core
             _columns[2] = (c2);
             _columns[3] = (c3);
         }
+
+        vec4 row_0() const { return { _columns[0].x, _columns[1].x, _columns[2].x, _columns[3].x }; }
+        vec4 row_1() const { return { _columns[0].y, _columns[1].y, _columns[2].y, _columns[3].y }; }
+        vec4 row_2() const { return { _columns[0].z, _columns[1].z, _columns[2].z, _columns[3].z }; }
+
+        const vec3& x() const { return _columns[0]; }
+        const vec3& y() const { return _columns[1]; }
+        const vec3& z() const { return _columns[2]; }
+
+        vec3 row_x() const { return { _columns[0].x, _columns[1].x, _columns[2].x}; }
+        vec3 row_y() const { return { _columns[0].y, _columns[1].y, _columns[2].y }; }
+        vec3 row_z() const { return { _columns[0].z, _columns[1].z, _columns[2].z }; }
+
+        const vec3& o() const { return _columns[3]; }
+
+
+        static mat4x3 translation(const vec3& t) {
+            mat4x3 mt;
+            mt._columns[3] = t;
+            return mt;
+        }
     };
+
+    inline mat4x3 mul(const mat4x3& a, const mat4x3& b) {
+        auto a_row_0 = a.row_x();
+        auto a_row_1 = a.row_y();
+        auto a_row_2 = a.row_z();
+
+        return {{ dot(a_row_0, b.x()),
+                  dot(a_row_1, b.x()),
+                  dot(a_row_2, b.x()) },
+                        { dot(a_row_0, b.y()),
+                          dot(a_row_1, b.y()),
+                          dot(a_row_2, b.y()) },
+                                { dot(a_row_0, b.z()),
+                                  dot(a_row_1, b.z()),
+                                  dot(a_row_2, b.z()) },
+                                        { dot(a_row_0, b.o()) + a.o().x,
+                                          dot(a_row_1, b.o()) + a.o().y,
+                                          dot(a_row_2, b.o()) + a.o().z }};
+    }
 
     // Matrix: 3 raws . 4 columns
     struct mat4 {

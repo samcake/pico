@@ -221,7 +221,9 @@ namespace graphics
     PointCloudDrawable::~PointCloudDrawable() {
 
     }
+    void PointCloudDrawable::setNode(graphics::NodeID node) const {
 
+    }
     graphics::DrawcallObjectPointer PointCloudDrawable::getDrawable() const {
         return _drawcall;
     }

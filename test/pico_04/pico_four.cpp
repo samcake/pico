@@ -106,6 +106,7 @@ int main(int argc, char *argv[])
 
     // Second a Scene
     auto scene = std::make_shared<graphics::Scene>();
+    scene->_transformTree->resizeBuffers(gpuDevice, 100);
   
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
@@ -139,11 +140,23 @@ int main(int argc, char *argv[])
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
 
-    // a drawable from the trianglesoup
+    // a gizmo drawable to draw the transforms
     graphics::GizmoDrawablePointer gizmoDrawable(gizmoDrawableFactory->createGizmoDrawable(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, camera, gizmoDrawable);
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene->_transformTree, camera, gizmoDrawable);
     auto gitem = scene->createItem(gizmoDrawable);
 
+    auto rnode = scene->createNode(core::mat4x3::translation(core::vec3(4.0f, 0.0f, 0.0f)), -1);
+
+    auto bnode = scene->createNode(core::mat4x3::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode);
+
+    auto cnode = scene->createNode(core::mat4x3::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode);
+
+    auto dnode = scene->createNode(core::mat4x3::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode);
+ 
+    gizmoDrawable->nodes.push_back(rnode);
+    gizmoDrawable->nodes.push_back(bnode);
+    gizmoDrawable->nodes.push_back(cnode);
+    gizmoDrawable->nodes.push_back(dnode);
 
     // Content creation
     float doAnimate = 1.0f;
@@ -183,7 +196,7 @@ int main(int argc, char *argv[])
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, viewport, window, camera](const uix::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([swapchain, viewport, window, camera, scene, rnode, bnode, cnode, dnode](const uix::PaintEvent& e) {
         // Measuring framerate
         static core::FrameTimer::Sample frameSample;
         auto currentSample = viewport->lastFrameTimerSample();
@@ -196,7 +209,45 @@ int main(int argc, char *argv[])
                                     : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
             window->setTitle(title);
         }
- 
+        auto t = acos(-1.0f) * (currentSample._frameNum / 300.0f);
+
+        // Move something
+        scene->_transformTree->editTransform(rnode, [t] (core::mat4x3& rts) -> bool {
+            auto ori = rts._columns[3];
+            core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(t), 0.0f, sin(t)));
+            rts = rotor.toMat4x3();
+            rts._columns[3] = ori;
+            return true;
+        });
+        scene->_transformTree->editTransform(bnode, [t](core::mat4x3& rts) -> bool {
+            
+            
+            return true;
+        });
+        scene->_transformTree->editTransform(cnode, [t](core::mat4x3& rts) -> bool {
+            auto ori = rts._columns[3];
+
+            core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
+            rts = rotor.toMat4x3();
+
+            rts._columns[3] = ori;
+
+            return true;
+        });
+        scene->_transformTree->editTransform(dnode, [t](core::mat4x3& rts) -> bool {
+            auto ori = rts._columns[3];
+
+            core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
+            rts = rotor.toMat4x3();
+
+            rts._columns[3] = ori;
+
+            return true;
+        });
+
+
+        scene->_transformTree->updateTransforms();
+
         // Render!
         viewport->present(swapchain);
     });

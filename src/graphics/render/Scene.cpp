@@ -31,7 +31,7 @@ namespace graphics {
 Item Item::null;
 
 Scene::Scene() {
-
+    _transformTree = std::make_shared<TransformTreeGPU>();
 }
 
 Scene::~Scene() {
@@ -100,6 +100,22 @@ const Item& Scene::getValidItemAt(uint32_t startIndex) const {
     return Item::null;
 }
 
+// Nodes
+NodeID Scene::createNode(const core::mat4x3& rts, NodeID parent) {
+    return _transformTree->createNode(rts, parent);
+}
+
+void Scene::deleteNode(NodeID nodeId) {
+    _transformTree->deleteNode(nodeId);
+}
+
+void Scene::attachNode(NodeID child, NodeID parent) {
+    _transformTree->attachNode(child, parent);
+}
+
+void Scene::detachNode(NodeID child) {
+    _transformTree->detachNode(child);
 }
 
 
+}
