@@ -89,7 +89,7 @@ namespace graphics {
         graphics::PointCloudDrawable* createPointCloudDrawable(const graphics::DevicePointer& device, const document::PointCloudPointer& pointcloud);
 
         // Create Drawcall object drawing the PointCloudDrawable in the rendering context
-        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::CameraPointer& camera,
+        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::TransformTreeGPUPointer& transform, const graphics::CameraPointer& camera,
                const graphics::PointCloudDrawablePointer& pointcloudDrawable);
     
         // Read / write shared uniforms

@@ -63,7 +63,17 @@ namespace core
         vec3 operator-() const { return vec3(-x, -y, -z); }
 
         float operator[](int i) const { return data()[i]; }
+
+        const static vec3 X;
+        const static vec3 Y;
+        const static vec3 Z;
     };
+
+
+    inline const vec3 vec3::X{ 1.0f, 0, 0 };
+    inline const vec3 vec3::Y{ 0, 1.0f, 0 };
+    inline const vec3 vec3::Z{ 0, 0, 1.0f };
+
     struct vec4 {
         float x, y, z, w;
         float* data() { return &x; }
@@ -96,6 +106,21 @@ namespace core
         ucvec4 operator-(const ucvec4& a) const { return ucvec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         ucvec4 operator*(uint8_t s) const { return ucvec4(x * s, y * s, z * s, w * s); }
         ucvec4 operator-() const { return ucvec4(-x, -y, -z, -w); }
+    };
+    struct ivec4 {
+        int32_t x, y, z, w;
+        int32_t* data() { return &x; }
+        const int32_t* data() const { return &x; }
+
+        ivec4() : x(0), y(0), z(0), w(0) {}
+        ivec4(int32_t _x) : x(_x), y(_x), z(_x), w(_x) {}
+        ivec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y), z(_z), w(_w) {}
+        ivec4& operator=(const ivec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        ivec4 operator+(const ivec4& a) const { return ivec4(x + a.x, y + a.y, z + a.z, w + a.w); }
+        ivec4 operator-(const ivec4& a) const { return ivec4(x - a.x, y - a.y, z - a.z, w - a.w); }
+        ivec4 operator*(int32_t s) const { return ivec4(x * s, y * s, z * s, w * s); }
+        ivec4 operator-() const { return ivec4(-x, -y, -z, -w); }
     };
 
     // Abs
@@ -235,7 +260,7 @@ namespace core
 
     // Matrix: 4 columns 3 rows 
     struct mat4x3 {
-        vec3 _columns[4]{ {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f} };
+        vec3 _columns[4]{ vec3::X, vec3::Y, vec3::Z, vec3() };
         float* data() { return _columns[0].data(); }
         const float* data() const { return _columns[0].data(); }
 
@@ -259,34 +284,8 @@ namespace core
         vec3 row_y() const { return { _columns[0].y, _columns[1].y, _columns[2].y }; }
         vec3 row_z() const { return { _columns[0].z, _columns[1].z, _columns[2].z }; }
 
-        const vec3& o() const { return _columns[3]; }
-
-
-        static mat4x3 translation(const vec3& t) {
-            mat4x3 mt;
-            mt._columns[3] = t;
-            return mt;
-        }
+        const vec3& w() const { return _columns[3]; }
     };
-
-    inline mat4x3 mul(const mat4x3& a, const mat4x3& b) {
-        auto a_row_0 = a.row_x();
-        auto a_row_1 = a.row_y();
-        auto a_row_2 = a.row_z();
-
-        return {{ dot(a_row_0, b.x()),
-                  dot(a_row_1, b.x()),
-                  dot(a_row_2, b.x()) },
-                        { dot(a_row_0, b.y()),
-                          dot(a_row_1, b.y()),
-                          dot(a_row_2, b.y()) },
-                                { dot(a_row_0, b.z()),
-                                  dot(a_row_1, b.z()),
-                                  dot(a_row_2, b.z()) },
-                                        { dot(a_row_0, b.o()) + a.o().x,
-                                          dot(a_row_1, b.o()) + a.o().y,
-                                          dot(a_row_2, b.o()) + a.o().z }};
-    }
 
     // Matrix: 3 raws . 4 columns
     struct mat4 {
@@ -379,8 +378,9 @@ namespace core
         void normalize();
         rotor3 normal() const;
 
-        // convert to matrix
-        mat4x3 toMat4x3() const;
+        vec3 rotate_X() const;
+        vec3 rotate_Y() const;
+        vec3 rotate_Z() const;
     };
 
     // default ctor
@@ -465,7 +465,6 @@ namespace core
         return (*this) * r * (*this).reverse();
     }
 
-
     // Equivalent to conjugate
     inline rotor3 rotor3::reverse() const {
         return rotor3(a, -b.xy, -b.xz, -b.yz);
@@ -490,18 +489,79 @@ namespace core
         return r;
     }
 
-    // convert to matrix
-    // non-optimized
-    inline mat4x3 rotor3::toMat4x3() const {
-        vec3 v0 = rotate(vec3(1.0f, 0, 0));
-        vec3 v1 = rotate(vec3(0, 1.0f, 0));
-        vec3 v2 = rotate(vec3(0, 0, 1.0f));
-        return mat4x3(v0, v1, v2, vec3(0.0f));
+    inline vec3 rotor3::rotate_X() const {
+        return rotate(vec3::X);
+    }
+    inline vec3 rotor3::rotate_Y() const {
+        return rotate(vec3::Y);
+    }
+    inline vec3 rotor3::rotate_Z() const {
+        return rotate(vec3::Z);
     }
 
     // geometric product (for reference), produces twice the angle, negative direction
     inline rotor3 geo(const vec3& a, const vec3& b) {
         return rotor3(dot(a, b), wedge(a, b));
+    }
+
+
+    // convert Translation T vec3 and Rotation R rotor3 to matrix
+    // non-optimized
+    inline mat4x3& translation(mat4x3& mat, const vec3& t) {
+        mat._columns[3] = t;
+        return mat;
+    }
+    inline mat4x3 translation(const vec3& t) {
+        return translation(mat4x3(), t);
+    }
+    inline mat4x3& rotation(mat4x3& mat, const rotor3& r) {
+        mat._columns[0] = r.rotate_X();
+        mat._columns[1] = r.rotate_Y();
+        mat._columns[2] = r.rotate_Z();
+        return mat;
+    }
+    inline mat4x3 rotation(const rotor3& r) {
+        return rotation(mat4x3(), r);
+    }
+    inline mat4x3& translation_rotation(mat4x3& mat, const vec3& t, const rotor3& r) {
+        return rotation(translation(mat, t), r);
+    }
+    inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
+        return translation_rotation(mat4x3(), t, r);
+    }
+
+
+    inline vec3 rotateFrom(const mat4x3& mat, const vec3& d) {
+        return vec3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));
+    }
+    inline vec3 rotateTo(const mat4x3& mat, const vec3& d) {
+        return vec3(dot(mat.x(), d), dot(mat.y(), d), dot(mat.z(), d));
+    }
+
+    inline vec3 transformTo(const mat4x3& mat, const vec3& p) {
+        return rotateTo(mat, p) + mat.w();
+    }
+    inline vec3 transformFrom(const mat4x3& mat, const vec3& p) {
+        return rotateFrom(mat, p - mat.w());
+    }
+
+    inline mat4x3 mul(const mat4x3& a, const mat4x3& b) {
+        auto a_row_0 = a.row_x();
+        auto a_row_1 = a.row_y();
+        auto a_row_2 = a.row_z();
+
+        return { { dot(a_row_0, b.x()),
+                  dot(a_row_1, b.x()),
+                  dot(a_row_2, b.x()) },
+                        { dot(a_row_0, b.y()),
+                          dot(a_row_1, b.y()),
+                          dot(a_row_2, b.y()) },
+                                { dot(a_row_0, b.z()),
+                                  dot(a_row_1, b.z()),
+                                  dot(a_row_2, b.z()) },
+                                        { dot(a_row_0, b.w()) + a.w().x,
+                                          dot(a_row_1, b.w()) + a.w().y,
+                                          dot(a_row_2, b.w()) + a.w().z } };
     }
 }
 

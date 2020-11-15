@@ -129,18 +129,18 @@ namespace graphics
 
         // Assign the Camera UBO just created as the resource of the descriptorSet
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-        graphics::DescriptorObject uboDescriptorObject;
-        uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
-        graphics::DescriptorObject rboDescriptorObject;
-        rboDescriptorObject._buffers.push_back(transform->_transforms_buffer);
+        graphics::DescriptorObject camera_uboDescriptorObject;
+        camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        graphics::DescriptorObject transform_rboDescriptorObject;
+        transform_rboDescriptorObject._buffers.push_back(transform->_transforms_buffer);
         graphics::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject,
-            rboDescriptorObject
+            camera_uboDescriptorObject,
+            transform_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [gizmo, descriptorSet, this](const core::mat4x3& transform, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+        graphics::DrawObjectCallback drawCallback = [gizmo, descriptorSet, this](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
             batch->setPipeline(this->_pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
@@ -148,7 +148,7 @@ namespace graphics
             batch->bindDescriptorSet(descriptorSet);
 
             auto uniforms = gizmo->getUniforms();
-            GizmoObjectData odata{ gizmo->nodes.size(), 0, 0, 0, uniforms->triangleScale };
+            GizmoObjectData odata{ node, 0, 0, 0, uniforms->triangleScale };
             batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
             batch->draw(gizmo->nodes.size() * 8, 0);

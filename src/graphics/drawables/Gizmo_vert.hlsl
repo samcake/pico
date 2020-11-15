@@ -1,16 +1,40 @@
 #define mat43 float4x3
 
-struct View {
+//
+// Transform API
+//
+struct Transform {
     float4 _right_upX;
     float4 _upYZ_backXY;
-    float4 _backZ_eye;
+    float4 _backZ_ori;
 
-    float3 right() { return _right_upX.xyz; }
-    float3 up() { return float3(_right_upX.w, _upYZ_backXY.xy); }
-    float3 back() { return float3(_upYZ_backXY.zw, _backZ_eye.x); }
-    float3 eye() { return _backZ_eye.yzw; }
+    float3 row_x() { return float3(_right_upX.x, _right_upX.w, _upYZ_backXY.z); }
+    float3 row_y() { return float3(_right_upX.y, _upYZ_backXY.x, _upYZ_backXY.w); }
+    float3 row_z() { return float3(_right_upX.z, _upYZ_backXY.y, _backZ_ori.x); }
+
+    float3 col_x() { return _right_upX.xyz; }
+    float3 col_y() { return float3(_right_upX.w, _upYZ_backXY.xy); }
+    float3 col_z() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
+    float3 col_w() { return _backZ_ori.yzw; }
 };
 
+float3 rotateFrom(const Transform mat, const float3 d) {
+    return float3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));
+}
+float3 rotateTo(const Transform mat, const float3 d) {
+    return float3(dot(mat.col_x(), d), dot(mat.col_y(), d), dot(mat.col_z(), d));
+}
+
+float3 transformTo(const Transform mat, const float3 p) {
+    return rotateTo(mat, p - mat.col_w());
+}
+float3 transformFrom(const Transform mat, const float3 p) {
+    return rotateFrom(mat, p) + mat.col_w();
+}
+
+//
+// Projection API
+// 
 struct Projection {
     float4 _aspectRatio_sensorHeight_focal_far;
     float4 _ortho_enabled_height_near_far;
@@ -54,73 +78,37 @@ float4 orthoClipFromEyeSpace(float aspectRatio, float sensorHeight, float pnear,
 float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
     if (proj.isOrtho()) {
         return orthoClipFromEyeSpace(proj.aspectRatio(), proj.orthoHeight(), proj.orthoNear(), proj.orthoFar(), eyePos);
-    } else {
+    }
+    else {
         return clipFromEyeSpace(proj.aspectRatio(), proj.sensorHeight(), proj.focal(), proj.persFar(), eyePos);
     }
 }
 
+// Camera buffer
 cbuffer UniformBlock0 : register(b0) {
     //float4x3 _view;
-    View _view;
+    Transform _view;
     Projection _projection;
     float4 _viewport;
 };
 
 
-float3 eyeFromWorldSpace(float3 right, float3 up, float3 back, float3 eye, float3 worldPos) {
-    // TranslationInv
-    float3 eyeCenteredPos = worldPos - eye;
-    return eyeCenteredPos;
-    // RotationInv
-    return float3(dot(right, eyeCenteredPos), dot(up, eyeCenteredPos), dot(back, eyeCenteredPos));
-}
-
-float3 eyeFromWorldSpace(View view, float3 worldPos) {
-    // TranslationInv
-    float3 eyeCenteredPos = worldPos - view.eye();
-    //  return eyeCenteredPos;
-      // RotationInv
-    return float3(dot(view.right(), eyeCenteredPos), dot(view.up(), eyeCenteredPos), dot(view.back(), eyeCenteredPos));
-}
-
-struct Transform {
-    float4 _right_upX;
-    float4 _upYZ_backXY;
-    float4 _backZ_ori;
-
-    float3 right() { return _right_upX.xyz; }
-    float3 up() { return float3(_right_upX.w, _upYZ_backXY.xy); }
-    float3 back() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
-
-    float3 axeX() { return _right_upX.xyz; }
-    float3 axeY() { return float3(_right_upX.w, _upYZ_backXY.xy); }
-    float3 axeZ() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
-
-    float3 invX() { return float3(_right_upX.x, _right_upX.w, _upYZ_backXY.z); }
-    float3 invY() { return float3(_right_upX.y, _upYZ_backXY.x, _upYZ_backXY.w); }
-    float3 invZ() { return float3(_right_upX.z, _upYZ_backXY.y, _backZ_ori.x); }
-
-    float3 ori() { return _backZ_ori.yzw; }
-};
-
-cbuffer UniformBlock1 : register(b1) {
-    int   _nodeID;
+float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
+    return transformTo(view, worldPos);
 }
 
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
-    float3 rotatedPos = float3(dot(model.invX(), objPos), dot(model.invY(), objPos), dot(model.invZ(), objPos));
-    // TranslationInv
-    return  rotatedPos + model.ori();
+    return transformFrom(model, objPos);
 }
 
 float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
-    return float3(dot(model.axeX(), worldDir), dot(model.axeY(), worldDir), dot(model.axeZ(), worldDir));
-}
-float3 objectFromWorldSpace(Transform model, float3 worldPos) {
-    float3 centeredPos = worldPos - model.ori();
-    return float3(dot(model.axeX(), centeredPos), dot(model.axeY(), centeredPos), dot(model.axeZ(), centeredPos));
+    return rotateTo(model, worldDir);
 }
 
+
+//
+// Transform Tree
+//
 StructuredBuffer<Transform>  tree_transforms : register(t0);
 
 Transform node_getTransform(int nodeID) {
@@ -130,10 +118,8 @@ Transform node_getWorldTransform(int nodeID) {
     return tree_transforms[2 * nodeID + 1];
 }
 
-StructuredBuffer<int4>  tree_nodes : register(t1);
-
-int4 node_getNode(int nodeID) {
-    return tree_nodes[nodeID];
+cbuffer UniformBlock1 : register(b1) {
+    int   _nodeID;
 }
 
 
@@ -165,7 +151,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     Transform _modelLocal = node_getTransform(nodeid);
         
     if (aid == 3) {
-        position = float(pid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.ori());
+        position = float(pid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
     }
 
     position = worldFromObjectSpace(_model, position);

@@ -46,9 +46,7 @@ namespace graphics {
     template <typename T> DrawcallObjectPointer item_getDrawable(const T& x) {
         return x->getDrawable();
     }
-    template <typename T> void item_setNode(const T& x, NodeID node) {
-        return x->setNode(node);
-    }
+
     using ItemID = uint32_t;
 
     class VISUALIZATION_API Item {
@@ -59,8 +57,7 @@ namespace graphics {
         static Item null;
 
         template <typename T> Item(uint32_t index, T x):
-            _index(index),
-            _self(std::make_shared<Model<T>>(std::move(x))) {
+            _self(std::make_shared<Model<T>>(index, std::move(x))) {
         }
 
         friend void log(const Item& x, std::ostream& out, size_t position) {
@@ -77,41 +74,46 @@ namespace graphics {
 
         bool isValid() const { return (_self != nullptr); }
 
-        uint32_t getIndex() const { return _index; }
+        uint32_t getIndex() const { return  _self->getIndex(); }
 
         bool isVisible() const { return _self->isVisible(); }
         void setVisible(bool visible) { _self->setVisible(visible); }
 
-        void setNode(NodeID nodeID) { _nodeID = nodeID; _self->_setNode(nodeID); }
-        NodeID getNode() const { return _nodeID; }
+        void setNode(NodeID nodeID) { _self->setNode(nodeID); }
+        NodeID getNode() const { return _self->getNode(); }
 
     private:
         struct Concept{
+            Concept(uint32_t index) : _index(index) {}
             virtual ~Concept() = default;
             virtual void _log(std::ostream& out, size_t position) const = 0;
             virtual DrawcallObjectPointer _getDrawable() const = 0;
-            virtual void _setNode(NodeID node) const = 0;
+
+            uint32_t getIndex() const { return _index; }
+
+            void setNode(NodeID node) const { _nodeID = node; }
+            NodeID getNode() const { return _nodeID; }
 
             bool isVisible() const { return _isVisible; }
             void setVisible(bool visible) const { _isVisible = visible; }
-            
+
+            const uint32_t _index;
+            mutable NodeID _nodeID{ INVALID_NODE_ID };
             mutable bool _isVisible { true };
         };
         template <typename T> struct Model final : Concept {
-            Model(T x) : _data(std::move(x)) {}
+             Model(uint32_t index, T x) : Concept(index), _data(std::move(x)) {}
+
              void _log(std::ostream& out, size_t position) const override {
                 log(_data, out, position);
              }
+
              DrawcallObjectPointer _getDrawable() const override {
                  return item_getDrawable(_data);
              }
-             void _setNode(NodeID node) const override {
-                 item_setNode(_data, node);
-             }
+            
              T _data;
         };
-        uint32_t _index { INVALID_ITEM_ID };
-        NodeID _nodeID { INVALID_NODE_ID };
 
         std::shared_ptr<const Concept> _self;
     };

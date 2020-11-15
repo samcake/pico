@@ -29,11 +29,13 @@
 using namespace graphics;
 
 
-void DrawcallObject::draw(const CameraPointer& camera,
+void DrawcallObject::draw(
+    const NodeID node,
+    const CameraPointer& camera,
     const SwapchainPointer& swapchain,
     const DevicePointer& device,
     const BatchPointer& batch) {
     if (_drawCallback) {
-        _drawCallback(_transform, camera, swapchain, device, batch);
+        _drawCallback(node, camera, swapchain, device, batch);
     }
 }

@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 
     // a drawable from the pointcloud
     graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
+    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, scene->_transformTree, camera, pointCloudDrawable);
     auto pcitem = scene->createItem(pointCloudDrawable);
 
     // A triangel soup drawable factory
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 
     // a drawable from the trianglesoup
     graphics::TriangleSoupDrawablePointer triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
-    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, camera, triangleSoupDrawable);
+    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, scene->_transformTree, camera, triangleSoupDrawable);
     auto tsitem = scene->createItem(triangleSoupDrawable);
 
     // A gizmo drawable factory
@@ -145,18 +145,27 @@ int main(int argc, char *argv[])
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene->_transformTree, camera, gizmoDrawable);
     auto gitem = scene->createItem(gizmoDrawable);
 
-    auto rnode = scene->createNode(core::mat4x3::translation(core::vec3(4.0f, 0.0f, 0.0f)), -1);
+    auto node0 = scene->createNode(core::mat4x3(), -1);
+   
+     auto rnode = scene->createNode(core::translation(core::vec3(4.0f, 0.0f, 0.0f)), node0);
 
-    auto bnode = scene->createNode(core::mat4x3::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode);
+    auto bnode = scene->createNode(core::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode);
 
-    auto cnode = scene->createNode(core::mat4x3::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode);
+    auto cnode = scene->createNode(core::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode);
 
-    auto dnode = scene->createNode(core::mat4x3::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode);
+    auto dnode = scene->createNode(core::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode);
  
     gizmoDrawable->nodes.push_back(rnode);
     gizmoDrawable->nodes.push_back(bnode);
     gizmoDrawable->nodes.push_back(cnode);
     gizmoDrawable->nodes.push_back(dnode);
+
+    auto pcitem2 = scene->createItem(pointCloudDrawable);
+
+    tsitem.setNode(bnode);
+    pcitem.setNode(node0);
+    pcitem2.setNode(dnode);
+
 
     // Content creation
     float doAnimate = 1.0f;
@@ -213,10 +222,8 @@ int main(int argc, char *argv[])
 
         // Move something
         scene->_transformTree->editTransform(rnode, [t] (core::mat4x3& rts) -> bool {
-            auto ori = rts._columns[3];
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(t), 0.0f, sin(t)));
-            rts = rotor.toMat4x3();
-            rts._columns[3] = ori;
+            core::rotation(rts, rotor);
             return true;
         });
         scene->_transformTree->editTransform(bnode, [t](core::mat4x3& rts) -> bool {
@@ -225,23 +232,13 @@ int main(int argc, char *argv[])
             return true;
         });
         scene->_transformTree->editTransform(cnode, [t](core::mat4x3& rts) -> bool {
-            auto ori = rts._columns[3];
-
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
-            rts = rotor.toMat4x3();
-
-            rts._columns[3] = ori;
-
+            core::rotation(rts, rotor);
             return true;
         });
         scene->_transformTree->editTransform(dnode, [t](core::mat4x3& rts) -> bool {
-            auto ori = rts._columns[3];
-
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
-            rts = rotor.toMat4x3();
-
-            rts._columns[3] = ori;
-
+            core::rotation(rts, rotor);
             return true;
         });
 

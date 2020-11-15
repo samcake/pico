@@ -31,10 +31,12 @@
 #include <core/math/LinearAlgebra.h>
 
 #include "Renderer.h"
+#include "Scene.h"
 
 namespace graphics {
 
-    using DrawObjectCallback = std::function<void(const core::mat4x3& transform,
+    using DrawObjectCallback = std::function<void(
+        const NodeID node,
         const CameraPointer& camera,
         const SwapchainPointer& swapchain,
         const DevicePointer& device,
@@ -48,14 +50,13 @@ namespace graphics {
 #pragma warning(disable: 4251)
         DrawObjectCallback _drawCallback;
         core::Bounds _bounds;
-        core::mat4x3 _transform;
 
 #pragma warning(pop)
 
         DrawcallObject() : _drawCallback(nullptr) {}
         DrawcallObject(DrawObjectCallback callback) : _drawCallback(callback) {}
 
-        void draw(const CameraPointer& camera,
+        void draw(const NodeID node, const CameraPointer& camera,
             const SwapchainPointer& swapchain,
             const DevicePointer& device,
             const BatchPointer& batch);
