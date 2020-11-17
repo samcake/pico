@@ -118,6 +118,67 @@ Transform node_getWorldTransform(int nodeID) {
     return tree_transforms[2 * nodeID + 1];
 }
 
+struct Box {
+    float3 _center;
+    float3 _size; 
+
+    float3 getCorner(int i) {
+        return _center + _size * float3( -1.0 + 2.0 * float((i) & 0x01), -1.0 + 2.0 * float((i >> 1) & 0x01), -1.0 + 2.0 * float((i >> 2) & 0x01));
+        // 0:  - - - 
+        // 1:  + - -
+        // 2:  - + -
+        // 3:  + + -
+        // 4:  - - +
+        // 5:  + - +
+        // 6:  - + +
+        // 7:  + + +
+    }
+
+    int2 getEdge(int i) {
+        // 0: 0 1
+        // 1: 2 3
+        // 2: 4 5
+        // 3: 6 7
+
+        // 4: 0 2
+        // 5: 1 3
+        // 6: 4 6
+        // 7: 5 7
+ 
+        // 8: 0 4
+        // 9: 1 5
+        //10: 2 6
+        //11: 3 7
+
+        if (i < 4) {
+            return int2(i * 2, i * 2 + 1);
+        } else if (i < 6) {
+            i -= 4;
+            return int2(i, i + 2);
+        } else if (i < 8) {
+            i -= 2;
+            return int2(i, i + 2);
+        } else {
+            i -= 8;
+            return int2(i, i + 4);
+        }
+    }
+};
+
+struct NodeBound {
+    Box _box;
+    float spareA;
+    float spareB;
+    float4 _world_sphere;
+};
+
+StructuredBuffer<NodeBound>  tree_bounds : register(t1);
+
+Box node_getLocalBox(int nodeID) {
+    return tree_bounds[nodeID]._box; //getBox();
+}
+
+
 cbuffer UniformBlock1 : register(b1) {
     int   _nodeID;
 }
@@ -140,18 +201,35 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
 
-    uint vid = ivid % 8;
-    uint nodeid = ivid / 8;
-    uint pid = vid % 2;
-    uint aid = vid / 2;
+    const int transform_num_edges = 3;
+    const int node_num_edges = 1;
+    const int box_num_edges = 12;
+    const int num_edges = transform_num_edges + node_num_edges + box_num_edges;
 
-    float3 position = float(pid) * float3(float(aid == 0), float(aid == 1), float(aid == 2));
+    uint vid = ivid % (2 * num_edges);
+    uint nodeid = ivid / (2 * num_edges);
+    uint svid = vid % 2;
+    uint lid = vid / 2;
+
+    float3 position = float3(0.0, 0.0, 0.0);
+    float3 color = float3(1.0, 1.0, 1.0);
 
     Transform _model = node_getWorldTransform(nodeid);
     Transform _modelLocal = node_getTransform(nodeid);
-        
-    if (aid == 3) {
-        position = float(pid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
+    Box _box = node_getLocalBox(nodeid);
+
+    if (lid < (transform_num_edges)) {
+        position = float(svid) * float3(float(lid == 0), float(lid == 1), float(lid == 2));
+        color = float3(float(lid == 0), float(lid == 1), float(lid == 2));
+    }
+    else if (lid < (transform_num_edges + node_num_edges)) {
+        position = float(svid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
+    }
+    else {
+        lid -= (transform_num_edges + node_num_edges);
+        int2 edge = _box.getEdge(lid);
+        position = _box.getCorner(edge[svid]);
+        color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
     }
 
     position = worldFromObjectSpace(_model, position);
@@ -159,12 +237,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
     OUT.Position = clipPos;
-
-    OUT.Color = float4(float(aid == 0), float(aid == 1), float(aid == 2), 1.0f);
-    if (aid == 3) {
-        OUT.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-    }
-
+    OUT.Color = float4(color, 1.0f);
+ 
     return OUT;
 }
 

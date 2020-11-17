@@ -26,6 +26,8 @@
 //
 #include "Scene.h"
 
+#include "Drawable.h"
+
 namespace graphics {
 
 Item Item::null;
@@ -101,8 +103,8 @@ const Item& Scene::getValidItemAt(uint32_t startIndex) const {
 }
 
 // Nodes
-NodeID Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-    return _transformTree->createNode(rts, parent);
+Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
+    return Node(_transformTree, _transformTree->createNode(rts, parent));
 }
 
 void Scene::deleteNode(NodeID nodeId) {
@@ -117,5 +119,13 @@ void Scene::detachNode(NodeID child) {
     _transformTree->detachNode(child);
 }
 
+void Item::Concept::setNode(Node node) const {
+    _nodeID = node.id();
+
+    node.tree()->editBound(node.id(), [&](core::aabox3& box) {
+        box = _getDrawable()->_bounds.toBox();
+        return true;
+        });
+}
 
 }

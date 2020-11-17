@@ -39,6 +39,21 @@ namespace graphics {
     using NodeID = TransformTree::NodeID;
     const static NodeID INVALID_NODE_ID {TransformTree::INVALID_ID};
 
+    class VISUALIZATION_API Node {
+        Node() { } // invalid
+        friend class Scene;
+        Node(TransformTreeGPUPointer transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
+
+        TransformTreeGPUPointer _transformTree;
+        NodeID _index;
+    public:
+
+        Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
+
+        TransformTreeGPUPointer tree() const { return _transformTree; }
+        NodeID id() const { return _index; }
+    };
+
     template <typename T> void log(const T& x, std::ostream& out, size_t position) {
         out << std::string(position, ' ') << std::endl;
     }
@@ -79,7 +94,7 @@ namespace graphics {
         bool isVisible() const { return _self->isVisible(); }
         void setVisible(bool visible) { _self->setVisible(visible); }
 
-        void setNode(NodeID nodeID) { _self->setNode(nodeID); }
+        void setNode(Node node) { _self->setNode(node); }
         NodeID getNode() const { return _self->getNode(); }
 
     private:
@@ -91,7 +106,7 @@ namespace graphics {
 
             uint32_t getIndex() const { return _index; }
 
-            void setNode(NodeID node) const { _nodeID = node; }
+            void setNode(Node node) const;
             NodeID getNode() const { return _nodeID; }
 
             bool isVisible() const { return _isVisible; }
@@ -121,6 +136,7 @@ namespace graphics {
     using IDToIndices = std::unordered_map<ItemID, uint32_t>;
 
 
+
     class VISUALIZATION_API Scene {
     public:
         Scene();
@@ -144,7 +160,7 @@ namespace graphics {
 
 
         // Nodes
-        NodeID createNode(const core::mat4x3& rts, NodeID parent);
+        Node createNode(const core::mat4x3& rts, NodeID parent);
         void deleteNode(NodeID nodeId);
 
         void attachNode(NodeID child, NodeID parent);

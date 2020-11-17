@@ -34,20 +34,6 @@
 
 #include <gpu/gpu.h>
 
-namespace core {
-    class aabox3 {
-        public:
-        vec3 center{ 0.0f };
-        vec3 half_size{ 1.0f };
-
-        aabox3() {};
-        aabox3(const vec3& center) : center(center) {};
-        aabox3(const vec3& center, const vec3& half_size) : center(center), half_size(half_size) {};
-        
-        vec4 toSphere() const { return vec4(center, length(half_size)); }
-    };
-}
-
 namespace graphics {
     class Transform {
     public:
@@ -87,8 +73,10 @@ namespace graphics {
         void updateChildrenTransforms(NodeID parent, NodeIDs& touched);
 
    //     void editBox(NodeID nodeId, std::function<bool (core::aabox3& box)> editor);
-        
-        
+
+        void editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor);
+        NodeIDs updateBounds();
+
         void attachNode(NodeID child, NodeID parent);
         void detachNode(NodeID child);
 
@@ -106,6 +94,12 @@ namespace graphics {
         std::vector<NodeID> _touchedBounds;
     };
 
+    struct GPUNodeBound {
+        core::aabox3 _local_box;
+        float  _spareA;
+        float  _spareB;
+        core::vec4 _world_sphere;
+    };
 
     class TransformTreeGPU {
         public:
@@ -133,6 +127,10 @@ namespace graphics {
         void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
 
         void updateTransforms();
+
+        void editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor);
+
+        void updateBounds();
 
    };
 

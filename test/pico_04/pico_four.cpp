@@ -147,25 +147,31 @@ int main(int argc, char *argv[])
 
     auto node0 = scene->createNode(core::mat4x3(), -1);
    
-     auto rnode = scene->createNode(core::translation(core::vec3(4.0f, 0.0f, 0.0f)), node0);
+     auto rnode = scene->createNode(core::translation(core::vec3(4.0f, 0.0f, 0.0f)), node0.id());
 
-    auto bnode = scene->createNode(core::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode);
+    auto bnode = scene->createNode(core::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode.id());
 
-    auto cnode = scene->createNode(core::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode);
+    auto cnode = scene->createNode(core::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode.id());
 
-    auto dnode = scene->createNode(core::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode);
- 
-    gizmoDrawable->nodes.push_back(rnode);
-    gizmoDrawable->nodes.push_back(bnode);
-    gizmoDrawable->nodes.push_back(cnode);
-    gizmoDrawable->nodes.push_back(dnode);
+    auto dnode = scene->createNode(core::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode.id());
+
+    auto enode = scene->createNode(core::translation(core::vec3(0.0f, 1.0f, 4.0f)), rnode.id());
+
+
+    gizmoDrawable->nodes.push_back(node0.id());
+    gizmoDrawable->nodes.push_back(rnode.id());
+    gizmoDrawable->nodes.push_back(bnode.id());
+    gizmoDrawable->nodes.push_back(cnode.id());
+    gizmoDrawable->nodes.push_back(dnode.id());
+    gizmoDrawable->nodes.push_back(enode.id());
 
     auto pcitem2 = scene->createItem(pointCloudDrawable);
+    auto tsitem2 = scene->createItem(triangleSoupDrawable);
 
-    tsitem.setNode(bnode);
+    tsitem.setNode(enode);
     pcitem.setNode(node0);
-    pcitem2.setNode(dnode);
-
+// pcitem2.setNode(dnode);
+    tsitem2.setNode(dnode);
 
     // Content creation
     float doAnimate = 1.0f;
@@ -221,22 +227,22 @@ int main(int argc, char *argv[])
         auto t = acos(-1.0f) * (currentSample._frameNum / 300.0f);
 
         // Move something
-        scene->_transformTree->editTransform(rnode, [t] (core::mat4x3& rts) -> bool {
+        scene->_transformTree->editTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(t), 0.0f, sin(t)));
             core::rotation(rts, rotor);
             return true;
         });
-        scene->_transformTree->editTransform(bnode, [t](core::mat4x3& rts) -> bool {
+        scene->_transformTree->editTransform(bnode.id(), [t](core::mat4x3& rts) -> bool {
             
             
             return true;
         });
-        scene->_transformTree->editTransform(cnode, [t](core::mat4x3& rts) -> bool {
+        scene->_transformTree->editTransform(cnode.id(), [t](core::mat4x3& rts) -> bool {
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
             core::rotation(rts, rotor);
             return true;
         });
-        scene->_transformTree->editTransform(dnode, [t](core::mat4x3& rts) -> bool {
+        scene->_transformTree->editTransform(dnode.id(), [t](core::mat4x3& rts) -> bool {
             core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
             core::rotation(rts, rotor);
             return true;

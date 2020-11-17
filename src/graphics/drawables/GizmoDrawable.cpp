@@ -71,7 +71,8 @@ namespace graphics
         graphics::DescriptorLayouts descriptorLayouts{
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(GizmoObjectData) >> 2},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, 
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -133,9 +134,12 @@ namespace graphics
         camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
         graphics::DescriptorObject transform_rboDescriptorObject;
         transform_rboDescriptorObject._buffers.push_back(transform->_transforms_buffer);
+        graphics::DescriptorObject bound_rboDescriptorObject;
+        bound_rboDescriptorObject._buffers.push_back(transform->_bounds_buffer);
         graphics::DescriptorObjects descriptorObjects = {
             camera_uboDescriptorObject,
-            transform_rboDescriptorObject
+            transform_rboDescriptorObject,
+            bound_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -151,7 +155,7 @@ namespace graphics
             GizmoObjectData odata{ node, 0, 0, 0, uniforms->triangleScale };
             batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-            batch->draw(gizmo->nodes.size() * 8, 0);
+            batch->draw(gizmo->nodes.size() * 2 * (3 + 1 + 12), 0);
         };
         auto drawcall = new graphics::DrawcallObject(drawCallback);
         gizmo->_drawcall = graphics::DrawcallObjectPointer(drawcall);

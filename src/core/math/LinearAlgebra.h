@@ -309,6 +309,21 @@ namespace core
     };
 
 
+    struct aabox3 {
+        vec3 center{ 0.0f };
+        vec3 half_size{ 1.0f };
+
+        aabox3() {};
+        aabox3(const vec3& center) : center(center) {};
+        aabox3(const vec3& center, const vec3& half_size) : center(center), half_size(half_size) {};
+
+        vec4 toSphere() const { return vec4(center, length(half_size)); }
+
+        static aabox3 fromMinMax(const vec3& minPos, const vec3& maxPos) {
+             return aabox3((minPos + maxPos) *  0.5, (maxPos - minPos) * 0.5);
+        }
+    };
+
     struct Bounds {
         vec3 _minPos{ 0.0f };
         vec3 _maxPos{ 0.0f };
@@ -322,6 +337,10 @@ namespace core
             vec3 center = (_maxPos + _minPos) * 0.5;
             float radius = 0.5f * length(_maxPos - _minPos);
             return vec4(center, radius);
+        }
+
+        aabox3 toBox() {
+            return aabox3::fromMinMax(_minPos, _maxPos);
         }
     };
 

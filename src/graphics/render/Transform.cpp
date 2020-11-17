@@ -184,6 +184,17 @@ void TransformTree::updateChildrenTransforms(NodeID parentId, NodeIDs& touched) 
 }
 
 
+void TransformTree::editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor) {
+    if (editor(_nodeBoxes[nodeId])) {
+        _touchedBounds.push_back(nodeId);
+    }
+}
+
+TransformTree::NodeIDs TransformTree::updateBounds() {
+
+    return _touchedBounds;
+}
+
 TransformTreeGPU::TransformTreeGPU() {
 
 
@@ -224,10 +235,10 @@ void TransformTreeGPU::resizeBuffers(const DevicePointer& device, uint32_t  numE
         graphics::BufferInit bounds_buffer_init{};
         bounds_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
         bounds_buffer_init.hostVisible = true;
-        bounds_buffer_init.bufferSize = capacity * sizeof(vec4);
+        bounds_buffer_init.bufferSize = capacity * sizeof(GPUNodeBound);
         bounds_buffer_init.firstElement = 0;
         bounds_buffer_init.numElements = capacity;
-        bounds_buffer_init.structStride = sizeof(vec4);
+        bounds_buffer_init.structStride = sizeof(GPUNodeBound);
 
         _bounds_buffer = device->createBuffer(bounds_buffer_init);
 
@@ -275,6 +286,28 @@ void TransformTreeGPU::updateTransforms() {
     
         for (const auto& id : touched_ids) {
             gpu_transforms[2 * id + 1] = _tree._worldTransforms[id];
+        }
+    }
+}
+
+
+void TransformTreeGPU::editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor) {
+    auto gpu_bounds = reinterpret_cast<GPUNodeBound*>(_bounds_buffer->_cpuMappedAddress);
+
+    _tree.editBound(nodeId, [gpu_bounds, editor, nodeId](core::aabox3& box) {
+        editor(box);
+        gpu_bounds[nodeId]._local_box = box;
+        return true;
+    });
+}
+
+void TransformTreeGPU::updateBounds() {
+    auto touched_ids = _tree.updateBounds();
+    if (!touched_ids.empty()) {
+        auto gpu_bounds = reinterpret_cast<GPUNodeBound*>(_bounds_buffer->_cpuMappedAddress);
+
+        for (const auto& id : touched_ids) {
+            gpu_bounds[id]._world_sphere = _tree._worlSpheres[id];
         }
     }
 }
