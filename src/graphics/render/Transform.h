@@ -47,7 +47,7 @@ namespace graphics {
     using TransformTreePtr = std::shared_ptr<TransformTree>;
 
 
-    class TransformTree {
+    class VISUALIZATION_API TransformTree {
     public:
         using NodeID = core::IndexTable::Index;
         using NodeIDs = core::IndexTable::Indices;
@@ -65,17 +65,12 @@ namespace graphics {
             Node() {}
         };
 
-        NodeID allocate(const core::mat4x3& rts, const core::aabox3& box, NodeID parent = 0);
+        NodeID allocate(const core::mat4x3& rts, NodeID parent = 0);
         void free(NodeID nodeId);
         
         void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
         NodeIDs updateTransforms();
         void updateChildrenTransforms(NodeID parent, NodeIDs& touched);
-
-   //     void editBox(NodeID nodeId, std::function<bool (core::aabox3& box)> editor);
-
-        void editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor);
-        NodeIDs updateBounds();
 
         void attachNode(NodeID child, NodeID parent);
         void detachNode(NodeID child);
@@ -83,57 +78,53 @@ namespace graphics {
 
         core::IndexTable _indexTable;
         std::vector<Node> _treeNodes;
-
         std::vector<core::mat4x3> _nodeTransforms;
-        std::vector<core::aabox3> _nodeBoxes;
-
         std::vector<core::mat4x3> _worldTransforms;
-        std::vector<core::vec4> _worlSpheres;
 
         std::vector<NodeID> _touchedTransforms;
-        std::vector<NodeID> _touchedBounds;
     };
 
-    struct GPUNodeBound {
-        core::aabox3 _local_box;
-        float  _spareA;
-        float  _spareB;
-        core::vec4 _world_sphere;
-    };
+    using NodeID = TransformTree::NodeID;
+    const static NodeID INVALID_NODE_ID{ TransformTree::INVALID_ID };
 
-    class TransformTreeGPU {
+    class VISUALIZATION_API NodeStore {
         public:
-        using NodeID = TransformTree::NodeID;
 
         TransformTree _tree;
 
         uint32_t  _num_buffers_elements{0};
         BufferPointer _nodes_buffer;
         BufferPointer _transforms_buffer;
-        BufferPointer _bounds_buffer;
 
-        TransformTreeGPU();
-        ~TransformTreeGPU();
+        NodeStore() {}
+        ~NodeStore() {}
 
         void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
 
         NodeID createNode(const core::mat4x3& rts, NodeID parent);
         void deleteNode(NodeID nodeId);
-
         void attachNode(NodeID child, NodeID parent);
         void detachNode(NodeID child);
 
-
         void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
-
         void updateTransforms();
+    };
 
-        void editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor);
+    class VISUALIZATION_API Node {
+        Node() { } // invalid
+        friend class Scene;
+        Node(const NodeStore* transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
 
-        void updateBounds();
+        mutable const NodeStore* _transformTree { nullptr };
+        const NodeID _index { 0 };
+    public:
 
-   };
+        Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
 
-   using TransformTreeGPUPointer = std::shared_ptr<TransformTreeGPU>;
+        const NodeStore* tree() const { return _transformTree; }
+        NodeID id() const { return _index; }
+    };
+
+
 }
 

@@ -165,19 +165,39 @@ struct Box {
     }
 };
 
-struct NodeBound {
+Box worldFromObjectSpace(Transform model, Box objBox) {
+    Box wb;
+    wb._center = transformFrom(model, objBox._center);
+    wb._size.x = dot(abs(model.row_x()), objBox._size);
+    wb._size.y = dot(abs(model.row_y()), objBox._size);
+    wb._size.z = dot(abs(model.row_z()), objBox._size);
+    return wb;
+}
+
+struct DrawableBound {
     Box _box;
     float spareA;
     float spareB;
-    float4 _world_sphere;
 };
 
-StructuredBuffer<NodeBound>  tree_bounds : register(t1);
+StructuredBuffer<DrawableBound>  drawable_bounds : register(t1);
 
-Box node_getLocalBox(int nodeID) {
-    return tree_bounds[nodeID]._box; //getBox();
+Box drawable_getLocalBox(int drawableID) {
+    return drawable_bounds[drawableID]._box; //getBox();
 }
 
+struct ItemInfo {
+    uint  nodeID;
+    uint  drawableID;
+    float spareA;
+    float spareB;
+};
+
+StructuredBuffer<ItemInfo>  item_infos : register(t2);
+
+ItemInfo item_getInfo(int itemID) {
+    return item_infos[itemID];
+}
 
 cbuffer UniformBlock1 : register(b1) {
     int   _nodeID;
@@ -204,35 +224,36 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     const int transform_num_edges = 3;
     const int node_num_edges = 1;
     const int box_num_edges = 12;
-    const int num_edges = transform_num_edges + node_num_edges + box_num_edges;
+    const int num_edges = box_num_edges + box_num_edges;
 
     uint vid = ivid % (2 * num_edges);
-    uint nodeid = ivid / (2 * num_edges);
+    uint itemid = ivid / (2 * num_edges);
     uint svid = vid % 2;
     uint lid = vid / 2;
 
     float3 position = float3(0.0, 0.0, 0.0);
     float3 color = float3(1.0, 1.0, 1.0);
 
-    Transform _model = node_getWorldTransform(nodeid);
-    Transform _modelLocal = node_getTransform(nodeid);
-    Box _box = node_getLocalBox(nodeid);
+    ItemInfo _item = item_getInfo(itemid);
+    Transform _model = node_getWorldTransform(_item.nodeID);
+    Box _box = drawable_getLocalBox(_item.drawableID);
 
-    if (lid < (transform_num_edges)) {
-        position = float(svid) * float3(float(lid == 0), float(lid == 1), float(lid == 2));
-        color = float3(float(lid == 0), float(lid == 1), float(lid == 2));
-    }
-    else if (lid < (transform_num_edges + node_num_edges)) {
-        position = float(svid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
-    }
-    else {
-        lid -= (transform_num_edges + node_num_edges);
+    if (lid < (box_num_edges)) {
+        //lid -= 0;
         int2 edge = _box.getEdge(lid);
         position = _box.getCorner(edge[svid]);
         color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
+        position = worldFromObjectSpace(_model, position);
+    }
+    else {
+        Box _world_box = worldFromObjectSpace(_model, _box);
+    
+        lid -= box_num_edges;
+        int2 edge = _box.getEdge(lid);
+        position = _world_box.getCorner(edge[svid]);
+        color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
     }
 
-    position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

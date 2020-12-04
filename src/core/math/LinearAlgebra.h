@@ -136,8 +136,26 @@ namespace core
     }
 
     // Max Min
-    inline float max(float a, float b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }
+    inline float max(float a, float b) { return (a > b ? a : b); }
+    inline vec2 min(const vec2& a, const vec2& b) {
+         return vec2(min(a.x, b.x), min(a.y, b.y));
+    }
+    inline vec2 max(const vec2& a, const vec2& b) {
+        return vec2(max(a.x, b.x), max(a.y, b.y));
+    }
+    inline vec3 min(const vec3& a, const vec3& b) {
+        return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+    }
+    inline vec3 max(const vec3& a, const vec3& b) {
+        return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+    }
+    inline vec4 min(const vec4& a, const vec4& b) {
+        return vec4(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w));
+    }
+    inline vec4 max(const vec4& a, const vec4& b) {
+        return vec4(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w));
+    }
 
     static const float FLOAT_EPSILON { 0.0001f };
 
@@ -322,6 +340,14 @@ namespace core
         static aabox3 fromMinMax(const vec3& minPos, const vec3& maxPos) {
              return aabox3((minPos + maxPos) *  0.5, (maxPos - minPos) * 0.5);
         }
+
+        vec3 minPos() const { return center - half_size; }
+        vec3 maxPos() const { return center + half_size; }
+
+
+        static aabox3 fromBound(const aabox3& a, const aabox3& b) {
+            return fromMinMax(min(a.minPos(), b.minPos()), max(a.maxPos(), b.maxPos()));
+        }
     };
 
     struct Bounds {
@@ -339,11 +365,10 @@ namespace core
             return vec4(center, radius);
         }
 
-        aabox3 toBox() {
+        aabox3 toBox() const {
             return aabox3::fromMinMax(_minPos, _maxPos);
         }
     };
-
 
 
 
@@ -558,10 +583,30 @@ namespace core
     }
 
     inline vec3 transformTo(const mat4x3& mat, const vec3& p) {
-        return rotateTo(mat, p) + mat.w();
+        return rotateTo(mat, p - mat.w());
     }
     inline vec3 transformFrom(const mat4x3& mat, const vec3& p) {
-        return rotateFrom(mat, p - mat.w());
+        return rotateFrom(mat, p) + mat.w();
+    }
+
+    inline vec4 sphere_transformTo(const mat4x3& mat, const vec4& s) {
+        return vec4(transformTo(mat, s.xyz()), s.w);
+    }
+    inline vec4 sphere_transformFrom(const mat4x3& mat, const vec4& s) {
+        return vec4(transformFrom(mat, s.xyz()), s.w);
+    }
+
+    inline aabox3 aabox_transformTo(const mat4x3& mat, const aabox3& b) {
+        // not good yet
+        return aabox3(transformTo(mat, b.center), rotateTo(mat, b.half_size));
+    }
+    inline aabox3 aabox_transformFrom(const mat4x3& mat, const aabox3& b) {
+        return aabox3(
+            transformFrom(mat, b.center),
+            vec3(dot(abs(mat.row_x()), b.half_size),
+                 dot(abs(mat.row_y()), b.half_size),
+                 dot(abs(mat.row_z()), b.half_size))
+        );
     }
 
     inline mat4x3 mul(const mat4x3& a, const mat4x3& b) {

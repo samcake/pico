@@ -38,40 +38,42 @@ CameraController::CameraController(const graphics::CameraPointer& cam) : _cam(ca
 
 }
 
-void CameraController::update(std::chrono::milliseconds& duration) {
+void CameraController::update(std::chrono::microseconds& duration) {
     // copy the control data and excute on this
     ControlData data = _controlData;
     updateCameraFromController(data, duration);
 }
 
 void CameraController::updateCameraFromController(CameraController::ControlData& control,
-    std::chrono::milliseconds& duration) {
+    std::chrono::microseconds& duration) {
 
     if (!_cam) return;
 
-    float time = core::min(0.2f, (0.001f * duration.count()));
+    float time = core::min(0.2f, (0.000001f * duration.count()));
 
-    float translationSpeed = 2.0f;
-    float rotationSpeed = 0.5f;
+    float translationSpeed = 50.0f;
+    float rotationSpeed = 30.0f;
 
     auto view = _cam->getView();
+    bool view_changed = false;
     auto projection = _cam->getProjection();
+    bool projection_changed = false;
 
-    core::vec3 back = view.back();
-    core::vec3 right = view.right();
-    core::vec3 up = view.up();
+    if (control._translateFront || control._translateBack || control._translateRight - control._translateLeft) {
+        auto deltaLong = -(control._translateFront - control._translateBack) * translationSpeed * time;
+        auto deltaLat = (control._translateRight - control._translateLeft) * translationSpeed * time;
 
-    core::vec3 translation{ 0.0f };
-    translation = translation + back * -(control._translateFront - control._translateBack) * translationSpeed * time;
-    translation = translation + right * (control._translateRight - control._translateLeft) * translationSpeed * time;
-
-    view.setEye(view.eye() + translation);
-
+        if (deltaLat) {
+            _cam->pan(deltaLat, 0);
+        }
+        if (deltaLong) {
+            _cam->dolly(deltaLong);
+        }
+    }
     
     float rotation = - (control._rotateLeft - control._rotateRight) * rotationSpeed * time;
     if (rotation != 0) {
-        core::vec3 rotatedRight = right + back * rotation;
-        view.setOrientationFromRightUp(rotatedRight, up);
+        _cam->orbit(_controlData._boomLength, rotation, 0);
     }
 
     float focalChange = -(control._zoomOut - control._zoomIn) * 0.1f * time;
@@ -79,8 +81,10 @@ void CameraController::updateCameraFromController(CameraController::ControlData&
         projection.setFocal(projection._focal + focalChange);
     }
 
-    _cam->setView(view);
-    _cam->setProjection(projection);
+
+    if (projection_changed) {
+        _cam->setProjection(projection);
+    }
 
     // fade out
     float fadeOut = 0.1f * time;
@@ -140,25 +144,61 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
         }
     }
 
-    if (e.key == Key::KEY_I) {
-        if (e.state) {
-            _controlData._zoomIn = 1.0f;
-        } else {
-            _controlData._zoomIn = 0.0f;
-        }
-    }
-    if (e.key == Key::KEY_O) {
-        if (e.state) {
-            _controlData._zoomOut = 1.0f;
-        } else {
-            _controlData._zoomOut = 0.0f;
-        }
-    }
-
     return false;
 }
 
 bool CameraController::onMouse(const MouseEvent& e) {
+
+    if (e.state & uix::MOUSE_MOVE) {
+        if (e.state & uix::MOUSE_LBUTTON) {
+        }
+        if (e.state & uix::MOUSE_MBUTTON) {
+            if (_cam->isOrtho()) {
+            }
+            else {
+            }
+        }
+        if (e.state & uix::MOUSE_RBUTTON) {
+            if (e.state & uix::MOUSE_CONTROL) {
+                float panScale = _controlData._boomLength * 0.001f;
+                if (_cam->isOrtho()) {
+                    panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
+                }
+                else {
+                }
+                _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
+            }
+            else {
+                float orbitScale = 0.01f;
+                _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+            }
+        }
+    }
+    else if (e.state & uix::MOUSE_WHEEL) {
+        if (e.state & uix::MOUSE_CONTROL) {
+            if (_cam->isOrtho()) {
+                float dollyScale = 0.08f;
+                float orbitLengthDelta = (e.wheel * dollyScale) * _controlData._boomLength;
+                _controlData._boomLength = _cam->boom(_controlData._boomLength, orbitLengthDelta);
+            }
+            else {
+                float zoomScale = 0.1f;
+                _cam->setFocal(_cam->getFocal() * (1.0f + e.wheel * zoomScale));
+            }
+        }
+        else {
+            if (_cam->isOrtho()) {
+                float zoomScale = 0.1f;
+                _cam->setOrthoHeight(_cam->getOrthoHeight() * (1.0f + e.wheel * zoomScale));
+            }
+            else {
+                float dollyScale = 0.08f;
+                float orbitLengthDelta = (e.wheel * dollyScale) * _controlData._boomLength;
+                _controlData._boomLength = _cam->boom(_controlData._boomLength, orbitLengthDelta);
+            }
+        }
+    }
+
     return false;
 }
 
@@ -172,4 +212,9 @@ bool CameraController::onResize(const ResizeEvent& e) {
     }
 
     return false;
+}
+
+float CameraController::zoomTo(const core::vec4& sphere) {
+    _controlData._boomLength = _cam->zoomTo(sphere);
+    return _controlData._boomLength;
 }

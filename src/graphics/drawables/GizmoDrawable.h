@@ -31,10 +31,9 @@
 #include "dllmain.h"
 
 #include <render/Scene.h>
+#include <render/Drawable.h>
 
 namespace graphics {
-    class DrawcallObject;
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
     class TransformTreeGPU;
@@ -46,11 +45,12 @@ namespace graphics {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class GizmoDrawable;
-    using GizmoDrawablePointer = std::shared_ptr<GizmoDrawable>;
+    class NodeGizmo;
+    class ItemGizmo;
 
     struct VISUALIZATION_API GizmoDrawableUniforms {
         float triangleScale{ 0.05f };
+        int numNodes{ 0 };
     };
     using GizmoDrawableUniformsPointer = std::shared_ptr<GizmoDrawableUniforms>;
 
@@ -63,11 +63,20 @@ namespace graphics {
         void allocateGPUShared(const graphics::DevicePointer& device);
 
         // Create GizmoDrawable for a given Gizmo document, building the gpu vertex buffer
-        graphics::GizmoDrawable* createGizmoDrawable(const graphics::DevicePointer& device);
+        graphics::NodeGizmo* createNodeGizmo(const graphics::DevicePointer& device);
+        graphics::ItemGizmo* createItemGizmo(const graphics::DevicePointer& device);
 
         // Create Drawcall object drawing the GizmoDrawable in the rendering context
-        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::TransformTreeGPUPointer& transform, const graphics::CameraPointer& camera,
-            const graphics::GizmoDrawablePointer& pointcloudDrawable);
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            const graphics::ScenePointer& scene,
+            const graphics::CameraPointer& camera,
+            graphics::NodeGizmo& gizmo);
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            const graphics::ScenePointer& scene,
+            const graphics::CameraPointer& camera,
+            graphics::ItemGizmo& gizmo);
 
         // Read / write shared uniforms
         const GizmoDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -75,35 +84,44 @@ namespace graphics {
 
     protected:
         GizmoDrawableUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _pipeline;
+        graphics::PipelineStatePointer _nodePipeline;
+        graphics::PipelineStatePointer _itemPipeline;
     };
     using GizmoDrawableFactoryPointer = std::shared_ptr< GizmoDrawableFactory>;
 
 
-    /*
-    const pico::DrawcallObjectPointer& getDrawable(const GizmoDrawable& x) {
-        return x.getDrawable();
-    }*/
-    class VISUALIZATION_API GizmoDrawable {
+    class VISUALIZATION_API NodeGizmo {
     public:
-        GizmoDrawable();
-        ~GizmoDrawable();
-        
-        graphics::DrawcallObjectPointer getDrawable() const;
-        void setNode(graphics::NodeID node) const;
-        graphics::NodeID getNode() const { return _nodeID; }
-
         std::vector<NodeID> nodes; 
 
         void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
 
+        core::aabox3 getBound() const { return core::aabox3(); }
+        DrawObjectCallback getDrawcall() const { return _drawcall; }
+
     protected:
         friend class GizmoDrawableFactory;
 
-        mutable graphics::NodeID _nodeID { 0 };
         GizmoDrawableUniformsPointer _uniforms;
-        graphics::DrawcallObjectPointer _drawcall;
+        DrawObjectCallback _drawcall;
+    };
+
+    class VISUALIZATION_API ItemGizmo {
+    public:
+        std::vector<ItemID> items;
+
+        void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+
+        core::aabox3 getBound() const { return core::aabox3(); }
+        DrawObjectCallback getDrawcall() const { return _drawcall; }
+
+    protected:
+        friend class GizmoDrawableFactory;
+
+        GizmoDrawableUniformsPointer _uniforms;
+        DrawObjectCallback _drawcall;
     };
 
 

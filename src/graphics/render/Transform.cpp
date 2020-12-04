@@ -33,7 +33,7 @@ using namespace core;
 using namespace graphics;
 
 
-TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, const core::aabox3& box, NodeID parent) {
+TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, NodeID parent) {
 
     NodeID new_node_id = _indexTable.allocate();
     bool allocated = new_node_id == (_indexTable.getNumAllocatedElements() - 1);
@@ -41,15 +41,11 @@ TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, const cor
     if (allocated) {
         _treeNodes.push_back(Node());
         _nodeTransforms.push_back(rts);
-        _nodeBoxes.push_back(box);
         _worldTransforms.push_back(rts);
-        _worlSpheres.push_back(box.toSphere());
     } else {
         _treeNodes[new_node_id] = Node();
         _nodeTransforms[new_node_id] = rts;
-        _nodeBoxes[new_node_id] = box;
         _worldTransforms[new_node_id] = rts;
-        _worlSpheres[new_node_id] = box.toSphere();
     }
 
     attachNode(new_node_id, parent);
@@ -62,9 +58,7 @@ void TransformTree::free(NodeID nodeId) {
 
     _treeNodes[nodeId] = Node();
     _nodeTransforms[nodeId] = core::mat4x3();
-    _nodeBoxes[nodeId] = core::aabox3();
     _worldTransforms[nodeId] = core::mat4x3();
-    _worlSpheres[nodeId] = core::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
@@ -84,8 +78,6 @@ void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
 
         parent_node.children_head = node_id;
         parent_node.num_children++;
-
-        _touchedBounds.push_back(parent_id);
     }
 
     _touchedTransforms.push_back(node_id);
@@ -102,7 +94,6 @@ void TransformTree::detachNode(NodeID node_id) {
         return;
     }
     auto& parent_node = _treeNodes[the_node.parent];
-    _touchedBounds.push_back(the_node.parent);
 
     auto left_sybling_id = parent_node.children_head;
     if (left_sybling_id == node_id) {
@@ -174,38 +165,19 @@ void TransformTree::updateChildrenTransforms(NodeID parentId, NodeIDs& touched) 
         const auto& child = _treeNodes[child_id];
         if (child.num_children > 0) {
             children.push_back(child_id);
+        } else {
         }
+
         child_id = child.sybling;
     }
 
     for (auto& id : children) {
         updateChildrenTransforms(id, touched);
+
     }
 }
 
-
-void TransformTree::editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor) {
-    if (editor(_nodeBoxes[nodeId])) {
-        _touchedBounds.push_back(nodeId);
-    }
-}
-
-TransformTree::NodeIDs TransformTree::updateBounds() {
-
-    return _touchedBounds;
-}
-
-TransformTreeGPU::TransformTreeGPU() {
-
-
-}
-
-TransformTreeGPU::~TransformTreeGPU() {
-
-}
-
-
-void TransformTreeGPU::resizeBuffers(const DevicePointer& device, uint32_t  numElements) {
+void NodeStore::resizeBuffers(const DevicePointer& device, uint32_t  numElements) {
 
     if (_num_buffers_elements < numElements) {
         auto capacity = (numElements);
@@ -231,83 +203,46 @@ void TransformTreeGPU::resizeBuffers(const DevicePointer& device, uint32_t  numE
 
         _transforms_buffer = device->createBuffer(transforms_buffer_init);
 
-
-        graphics::BufferInit bounds_buffer_init{};
-        bounds_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        bounds_buffer_init.hostVisible = true;
-        bounds_buffer_init.bufferSize = capacity * sizeof(GPUNodeBound);
-        bounds_buffer_init.firstElement = 0;
-        bounds_buffer_init.numElements = capacity;
-        bounds_buffer_init.structStride = sizeof(GPUNodeBound);
-
-        _bounds_buffer = device->createBuffer(bounds_buffer_init);
-
+        _num_buffers_elements = capacity;
     }
 }
 
 
-TransformTree::NodeID TransformTreeGPU::createNode(const core::mat4x3& rts, NodeID parent) {
-    auto nodeId = _tree.allocate(rts, core::aabox3(), parent);
+NodeID NodeStore::createNode(const core::mat4x3& rts, NodeID parent) {
+    auto nodeId = _tree.allocate(rts, parent);
     
-    reinterpret_cast<TransformTree::Node*>(_nodes_buffer->_cpuMappedAddress)[nodeId] = _tree._treeNodes[nodeId];
-    reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress)[2 * nodeId] = _tree._nodeTransforms[nodeId];
-   // reinterpret_cast<core::vec4*>(_bounds_buffer->_cpuMappedAddress)[nodeId] = _tree._nodeBoxes[nodeId];
+    if (nodeId < _num_buffers_elements) {
+        reinterpret_cast<TransformTree::Node*>(_nodes_buffer->_cpuMappedAddress)[nodeId] = _tree._treeNodes[nodeId];
+        reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress)[2 * nodeId] = _tree._nodeTransforms[nodeId];
+    }
 
     return nodeId;
 }
 
-void TransformTreeGPU::deleteNode(NodeID nodeId) {
+void NodeStore::deleteNode(NodeID nodeId) {
     _tree.free(nodeId);
 }
 
-void TransformTreeGPU::attachNode(NodeID child, NodeID parent) {
+void NodeStore::attachNode(NodeID child, NodeID parent) {
     _tree.attachNode(child, parent);
 }
 
-void TransformTreeGPU::detachNode(NodeID child) {
+void NodeStore::detachNode(NodeID child) {
     _tree.detachNode(child);
 }
 
-void TransformTreeGPU::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {
-    auto gpu_transforms = reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress);
-
-    _tree.editTransform(nodeId, [gpu_transforms, editor, nodeId] (core::mat4x3& rts) {
-        editor(rts);
-        gpu_transforms[2 * nodeId] = rts;
-        return true;
-    });
-
+void NodeStore::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {
+    _tree.editTransform(nodeId, editor);
 }
 
-void TransformTreeGPU::updateTransforms() {    
+void NodeStore::updateTransforms() {
     auto touched_ids = _tree.updateTransforms();
     if (!touched_ids.empty()) {
         auto gpu_transforms = reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress);
     
         for (const auto& id : touched_ids) {
+            gpu_transforms[2 * id] = _tree._nodeTransforms[id];
             gpu_transforms[2 * id + 1] = _tree._worldTransforms[id];
-        }
-    }
-}
-
-
-void TransformTreeGPU::editBound(NodeID nodeId, std::function<bool(core::aabox3& bound)> editor) {
-    auto gpu_bounds = reinterpret_cast<GPUNodeBound*>(_bounds_buffer->_cpuMappedAddress);
-
-    _tree.editBound(nodeId, [gpu_bounds, editor, nodeId](core::aabox3& box) {
-        editor(box);
-        gpu_bounds[nodeId]._local_box = box;
-        return true;
-    });
-}
-
-void TransformTreeGPU::updateBounds() {
-    auto touched_ids = _tree.updateBounds();
-    if (!touched_ids.empty()) {
-        auto gpu_bounds = reinterpret_cast<GPUNodeBound*>(_bounds_buffer->_cpuMappedAddress);
-
-        for (const auto& id : touched_ids) {
-            gpu_bounds[id]._world_sphere = _tree._worlSpheres[id];
         }
     }
 }

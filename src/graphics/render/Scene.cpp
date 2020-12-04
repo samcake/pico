@@ -26,32 +26,37 @@
 //
 #include "Scene.h"
 
-#include "Drawable.h"
-
 namespace graphics {
 
-Item Item::null;
-
 Scene::Scene() {
-    _transformTree = std::make_shared<TransformTreeGPU>();
 }
 
 Scene::~Scene() {
     deleteAll();
 }
 
-Item Scene::_createItem(Item& newItem, ItemID userID) {
-    _items.emplace_back(newItem);
-    if (userID != Item::INVALID_ITEM_ID) {
-        _idToIndices[userID] = newItem.getIndex();
+Item Scene::createItem(ItemID userID) {
+
+   Item newItem = _items.createItem(this);
+
+    if (userID != INVALID_ITEM_ID) {
+        _idToIndices[userID] = newItem.id();
     }
  
-    return _items.back();
+    return newItem;
+}
+
+Item Scene::getItem(ItemID id) const {
+    return _items.getItem(id);
+}
+
+const Items& Scene::getItems() const {
+    return _items.getItems();
 }
 
 void Scene::deleteAll() {
     _idToIndices.clear();
-    _items.clear();
+    _items.freeAll();
 }
 
 // delete all user objects
@@ -61,71 +66,77 @@ void Scene::deleteAllItems() {
         deleteItem(indexIt->first);
 }
 
-Item Scene::deleteItem(ItemID id) {
+void Scene::deleteItem(UserID id) {
     auto indexIt = _idToIndices.find(id);
     if (indexIt != _idToIndices.end()) {
          auto removedItemIdx = indexIt->second;
          _idToIndices.erase(indexIt); // frmove from id to idx table
-
-         auto item = _items[removedItemIdx];
-        if (removedItemIdx + 1 == _items.size()) {
-            _items.pop_back();
-        } else {
-            _items[removedItemIdx] = Item();
-        }
-   
-        return item;
+    
+        _items.free(removedItemIdx);
     }
-    return Item();
 }
 
 
-Item Scene::getItemFromID(ItemID id) const {
+Item Scene::getItemFromID(UserID id) const {
     auto indexIt = _idToIndices.find(id);
     if (indexIt != _idToIndices.end()) {
          return getItems()[indexIt->second];
     }
-    return Item();
-}
-
-const Item& Scene::getValidItemAt(uint32_t startIndex) const {
-    if (startIndex < _items.size()) {
-        do {
-            const auto* item = _items.data() + startIndex;
-            if (item->isValid()) {
-                return (*item);
-            }
-            startIndex++;
-        }
-        while (startIndex < _items.size());
-    }
     return Item::null;
 }
 
+Item Scene::getValidItemAt(uint32_t startIndex) const {
+    return _items.getValidItemAt(startIndex);
+}
+
 // Nodes
+Node Scene::getNode(NodeID nodeId) const {
+    return Node(&_nodes, nodeId);
+}
+
 Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-    return Node(_transformTree, _transformTree->createNode(rts, parent));
+    return Node(&_nodes, _nodes.createNode(rts, parent));
 }
 
 void Scene::deleteNode(NodeID nodeId) {
-    _transformTree->deleteNode(nodeId);
+    _nodes.deleteNode(nodeId);
 }
 
 void Scene::attachNode(NodeID child, NodeID parent) {
-    _transformTree->attachNode(child, parent);
+    _nodes.attachNode(child, parent);
 }
 
 void Scene::detachNode(NodeID child) {
-    _transformTree->detachNode(child);
+    _nodes.detachNode(child);
 }
 
-void Item::Concept::setNode(Node node) const {
-    _nodeID = node.id();
+// Drawables
+Drawable Scene::getDrawable(DrawableID drawableId) const {
+    return _drawables.getDrawable(drawableId);
+}
 
-    node.tree()->editBound(node.id(), [&](core::aabox3& box) {
-        box = _getDrawable()->_bounds.toBox();
-        return true;
-        });
+
+void Scene::updateBounds() {
+
+    core::aabox3 b;
+    const auto& itemInfos = _items._itemInfos;
+    const auto& transforms = _nodes._tree._worldTransforms;
+    const auto& bounds = _drawables._bounds;
+    int i = 0;
+    for (const auto& info : itemInfos) {
+        if (info._nodeID != INVALID_NODE_ID && info._drawableID != INVALID_DRAWABLE_ID) {
+            auto ibw = core::aabox_transformFrom(transforms[info._nodeID], bounds[info._drawableID]._local_box);
+            if (i == 0) {
+                b = ibw;
+            } else {
+                b = core::aabox3::fromBound(b, ibw);
+            } 
+            i++;
+        }
+    }
+    _bounds._midPos = b.center;
+    _bounds._minPos = b.minPos();
+    _bounds._maxPos = b.maxPos();
 }
 
 }

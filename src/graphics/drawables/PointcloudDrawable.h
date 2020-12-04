@@ -30,14 +30,13 @@
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
 #include <render/Scene.h>
+#include <render/Drawable.h>
 
 namespace document {
     class PointCloud;
     using PointCloudPointer = std::shared_ptr<PointCloud>;
 }
 namespace graphics {
-    class DrawcallObject;
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
     class Camera;
@@ -89,8 +88,8 @@ namespace graphics {
         graphics::PointCloudDrawable* createPointCloudDrawable(const graphics::DevicePointer& device, const document::PointCloudPointer& pointcloud);
 
         // Create Drawcall object drawing the PointCloudDrawable in the rendering context
-        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::TransformTreeGPUPointer& transform, const graphics::CameraPointer& camera,
-               const graphics::PointCloudDrawablePointer& pointcloudDrawable);
+        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, const graphics::CameraPointer& camera,
+               graphics::PointCloudDrawable& pointcloudDrawable);
     
         // Read / write shared uniforms
         const PointCloudDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -102,33 +101,28 @@ namespace graphics {
     };
     using PointCloudDrawableFactoryPointer = std::shared_ptr< PointCloudDrawableFactory>;
     
-    /*
-    PointCloudDrawable is a render item payload.
-    const graphics::DrawcallObjectPointer& getDrawable(const PointCloudDrawable& x) {
-        return x.getDrawable();
-    }*/
+
     class VISUALIZATION_API PointCloudDrawable {
     public:
         PointCloudDrawable();
         ~PointCloudDrawable();
-
-        void setNode(graphics::NodeID node) const;
-
-        graphics::DrawcallObjectPointer getDrawable() const;
 
         void swapUniforms(const PointCloudDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const PointCloudDrawableUniformsPointer& getUniforms() const { return _uniforms; }
 
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }
 
+        core::aabox3 getBound() const { return _bounds.toBox(); }
+        DrawObjectCallback getDrawcall() const { return _drawcall; }
+
     protected:
         friend class PointCloudDrawableFactory;
 
         PointCloudDrawableUniformsPointer _uniforms;
-        graphics::DrawcallObjectPointer _drawcall;
         graphics::BufferPointer _vertexBuffer;
         core::mat4x3 _transform;
         core::Bounds _bounds;
+        DrawObjectCallback _drawcall;
     };
 
 

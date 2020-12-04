@@ -45,13 +45,5 @@ namespace graphics {
 
     class Mesh;
     using MeshPointer = std::shared_ptr<Mesh>;
-
-    class PointCloud;
-    using PointCloudPointer = std::shared_ptr<PointCloud>;
-
-    class DrawcallObject;
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
-
-
 }
 
