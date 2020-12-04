@@ -52,7 +52,11 @@
 #include <document/TriangleSoup.h>
 #include <graphics/drawables/TriangleSoupDrawable.h>
 
+#include <graphics/drawables/GizmoDrawable.h>
+
+
 #include <uix/Window.h>
+#include <uix/CameraController.h>
 
 #include <vector>
 
@@ -63,6 +67,7 @@
 // render::Camera
 // render::Viewport
 // drawable::PointcloudDrawable
+// uix::CameraController
 //--------------------------------------------------------------------------------------
 
 //--------------------------------------------------------------------------------------
@@ -103,6 +108,9 @@ int main(int argc, char *argv[])
 
     // Second a Scene
     auto scene = std::make_shared<graphics::Scene>();
+    scene->_items.resizeBuffers(gpuDevice, 100);
+    scene->_nodes.resizeBuffers(gpuDevice, 100);
+    scene->_drawables.resizeBuffers(gpuDevice, 100);
   
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
@@ -119,35 +127,83 @@ int main(int argc, char *argv[])
     pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the pointcloud
- //   graphics::PointCloudDrawablePointer pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-//    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, camera, pointCloudDrawable);
-//    auto pcitem = scene->createItem(pointCloudDrawable);
+    graphics::PointCloudDrawable* pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
+    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *pointCloudDrawable);
+    auto pcdrawable = scene->createDrawable(*pointCloudDrawable);
 
     // A triangel soup drawable factory
     auto triangleSoupDrawableFactory = std::make_shared<graphics::TriangleSoupDrawableFactory>();
     triangleSoupDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a drawable from the trianglesoup
-    graphics::TriangleSoupDrawablePointer triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
-    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, camera, triangleSoupDrawable);
-    auto tsitem = scene->createItem(triangleSoupDrawable);
+    graphics::TriangleSoupDrawable* triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
+    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *triangleSoupDrawable);
+    auto tsdrawable = scene->createDrawable(*triangleSoupDrawable);
 
+    // A gizmo drawable factory
+    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
+    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
+
+
+    // Some nodes to layout the scene and animate objects
+    auto node0 = scene->createNode(core::mat4x3(), -1);
+ 
+    auto rnode = scene->createNode(core::translation(core::vec3(4.0f, 0.0f, 0.0f)), node0.id());
+
+    auto bnode = scene->createNode(core::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode.id());
+
+    auto cnode = scene->createNode(core::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode.id());
+
+    auto dnode = scene->createNode(core::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode.id());
+
+    auto enode = scene->createNode(core::translation(core::vec3(0.0f, 1.0f, 4.0f)), rnode.id());
+
+
+    // a gizmo drawable to draw the transforms
+    auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable.as<graphics::NodeGizmo>());
+    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(5);
+
+    auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(5);
+
+    // Some items unique instaces of the drawable and the specified nodes
+    auto pcitem = scene->createItem();
+    pcitem.setDrawable(pcdrawable);
+    pcitem.setNode(node0);
+
+    auto tsitem = scene->createItem();
+    tsitem.setDrawable(tsdrawable);
+    tsitem.setNode(enode);
+
+    auto pcitem2 = scene->createItem();
+    pcitem2.setDrawable(pcdrawable);
+    pcitem2.setNode(cnode);
+
+    auto tsitem2 = scene->createItem();
+    tsitem2.setDrawable(tsdrawable);
+    tsitem2.setNode(dnode);
+
+
+    auto gzitem_item = scene->createItem();
+    gzitem_item.setDrawable(gzdrawable_item);
+    auto gzitem = scene->createItem();
+    gzitem.setDrawable(gzdrawable);
+
+    scene->_nodes.updateTransforms();
+
+
+    scene->updateBounds();
+    core::vec4 sceneSphere = scene->getBounds().toSphere();
+    
     // Content creation
-    float doAnimate = 1.0f;
+    float doAnimate = 0.0f;
 
-    core::vec4 sceneSphere(0.0f, 0.0f, 0.0f, 10.0f);
-    {
-        auto item = scene->getValidItemAt(0);
-        if (item.isValid()) {
-            // Configure the Camera to look at the scene
-            auto bounds = item.getDrawable()->_bounds;
-            auto cloudCenter = bounds.midPos();
-            auto cloudHalfSize = (bounds.maxPos() - bounds.minPos());
-            auto cloudHalfDiag = sqrt(core::dot(cloudHalfSize, cloudHalfSize));
-            sceneSphere = core::vec4(cloudCenter, cloudHalfDiag);
-        }
-    }
-    float cameraOrbitLength = camera->zoomTo(sceneSphere);
+
+    // For user input, we can use a CameraController which will provide a standard manipulation of the camera from keyboard and mouse
+    auto camControl = std::make_shared< uix::CameraController >(camera);
+    float cameraOrbitLength = camControl->zoomTo(sceneSphere);
     camera->setFar(cameraOrbitLength * 100.0f);
     
  
@@ -168,9 +224,10 @@ int main(int argc, char *argv[])
     graphics::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
+
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, viewport, window, camera](const uix::PaintEvent& e) {
+    windowHandler->_onPaintDelegate = ([&](const uix::PaintEvent& e) {
         // Measuring framerate
         static core::FrameTimer::Sample frameSample;
         auto currentSample = viewport->lastFrameTimerSample();
@@ -183,7 +240,34 @@ int main(int argc, char *argv[])
                                     : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
             window->setTitle(title);
         }
- 
+        auto t = acos(-1.0f) * (currentSample._frameNum / 300.0f);
+
+        if (doAnimate) {
+            // Move something
+            scene->_nodes.editTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
+                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(t), 0.0f, sin(t)));
+                core::rotation(rts, rotor);
+                return true;
+            });
+            scene->_nodes.editTransform(bnode.id(), [t](core::mat4x3& rts) -> bool {
+                return true;
+            });
+            scene->_nodes.editTransform(cnode.id(), [t](core::mat4x3& rts) -> bool {
+                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
+                core::rotation(rts, rotor);
+                return true;
+            });
+            scene->_nodes.editTransform(dnode.id(), [t](core::mat4x3& rts) -> bool {
+                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
+                core::rotation(rts, rotor);
+                return true;
+            });
+        }
+
+        scene->_items.syncBuffer();
+        scene->_nodes.updateTransforms();
+        camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+
         // Render!
         viewport->present(swapchain);
     });
@@ -195,14 +279,7 @@ int main(int argc, char *argv[])
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
         }
 
-        // aspect ratio changes with a resize always
-        // viewport resolution, only once the resize is over
-        if (!e.over) {
-            camera->setAspectRatio(e.width / (float)e.height);
-        }
-        else {
-            camera->setViewport(e.width, e.height, true);
-        }
+        camControl->onResize(e);
     };
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
@@ -254,11 +331,19 @@ int main(int argc, char *argv[])
         }
 
         if (zoomToScene) {
-            cameraOrbitLength = camera->zoomTo(sceneSphere);
+            camControl->zoomTo(sceneSphere);
+        }
+        if (camControl->onKeyboard(e)) {
+            return;
         }
     };
 
     windowHandler->_onMouseDelegate = [&](const uix::MouseEvent& e) {
+
+        if (camControl->onMouse(e)) {
+            return;
+        }
+
         if (e.state & uix::MOUSE_MOVE) {
             if (e.state & uix::MOUSE_LBUTTON) {
                 if (pointCloudDrawableFactory) {
@@ -290,39 +375,6 @@ int main(int argc, char *argv[])
                 if (camera->isOrtho()) {
                 } else {
                     camera->setFocal(camera->getProjectionHeight()* (ny* ny* ny));
-                }
-            }
-            if (e.state & uix::MOUSE_RBUTTON) {
-                if (e.state & uix::MOUSE_CONTROL) {
-                    float panScale = cameraOrbitLength * 0.001f;
-                    if (camera->isOrtho()) {
-                        panScale = camera->getOrthoHeight() / camera->getViewportHeight();
-                    } else {
-                    }    
-                    camera->pan(-e.delta.x * panScale, e.delta.y * panScale);
-                } else {
-                    float orbitScale = 0.01f;
-                    camera->orbit(cameraOrbitLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
-                }
-            }
-        } else if (e.state & uix::MOUSE_WHEEL) {
-            if (e.state & uix::MOUSE_CONTROL) {
-                if (camera->isOrtho()) {
-                    float dollyScale = 0.08f;
-                    float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
-                    cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
-                } else {
-                    float zoomScale = 0.1f;
-                    camera->setFocal(camera->getFocal() * (1.0f +  e.wheel * zoomScale));
-                }
-            } else {
-                if (camera->isOrtho()) {
-                    float zoomScale = 0.1f;
-                    camera->setOrthoHeight(camera->getOrthoHeight() * (1.0f + e.wheel * zoomScale));
-                } else {
-                    float dollyScale = 0.08f;
-                    float orbitLengthDelta = (e.wheel * dollyScale) * cameraOrbitLength;
-                    cameraOrbitLength = camera->boom(cameraOrbitLength, orbitLengthDelta);
                 }
             }
         }

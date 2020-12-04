@@ -27,6 +27,7 @@
 #pragma once
 
 #include <chrono>
+#include <core/math/LinearAlgebra.h>
 #include <graphics/render/render.h>
 
 namespace uix {
@@ -54,17 +55,21 @@ namespace uix {
 
             float _zoomIn{ 0 };
             float _zoomOut{ 0 };
+
+            float _boomLength{ 1.0f };
         };
 
         ControlData _controlData;
 
-        void updateCameraFromController(ControlData& control, std::chrono::milliseconds& duration);
+        void updateCameraFromController(ControlData& control, std::chrono::microseconds& duration);
 
-        void update(std::chrono::milliseconds& duration);
+        void update(std::chrono::microseconds& duration);
 
         bool onKeyboard(const KeyboardEvent& e);
         bool onMouse(const MouseEvent& e);
         bool onResize(const ResizeEvent& e);
 
-        };
+        float zoomTo(const core::vec4& sphere);
+
+    };
 }

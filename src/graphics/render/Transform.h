@@ -26,8 +26,13 @@
 //
 #pragma once
 
+#include <functional>
 #include <core/math/LinearAlgebra.h>
+#include <core/stl/IndexTable.h>
+
 #include "dllmain.h"
+
+#include <gpu/gpu.h>
 
 namespace graphics {
     class Transform {
@@ -37,4 +42,89 @@ namespace graphics {
 
         core::mat4x3 _matRTS;
     };
+
+    class TransformTree;
+    using TransformTreePtr = std::shared_ptr<TransformTree>;
+
+
+    class VISUALIZATION_API TransformTree {
+    public:
+        using NodeID = core::IndexTable::Index;
+        using NodeIDs = core::IndexTable::Indices;
+        static const NodeID INVALID_ID = core::IndexTable::INVALID_INDEX;
+        static const NodeID ROOT_ID = 0;
+
+        struct Node {
+            NodeID parent{ INVALID_ID };
+            NodeID sybling{ INVALID_ID };
+            NodeID children_head{ INVALID_ID };
+            uint16_t num_children{ 0 };
+            uint16_t spare{ 0 };
+
+            Node(NodeID p): parent(p) {}
+            Node() {}
+        };
+
+        NodeID allocate(const core::mat4x3& rts, NodeID parent = 0);
+        void free(NodeID nodeId);
+        
+        void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
+        NodeIDs updateTransforms();
+        void updateChildrenTransforms(NodeID parent, NodeIDs& touched);
+
+        void attachNode(NodeID child, NodeID parent);
+        void detachNode(NodeID child);
+
+
+        core::IndexTable _indexTable;
+        std::vector<Node> _treeNodes;
+        std::vector<core::mat4x3> _nodeTransforms;
+        std::vector<core::mat4x3> _worldTransforms;
+
+        std::vector<NodeID> _touchedTransforms;
+    };
+
+    using NodeID = TransformTree::NodeID;
+    const static NodeID INVALID_NODE_ID{ TransformTree::INVALID_ID };
+
+    class VISUALIZATION_API NodeStore {
+        public:
+
+        TransformTree _tree;
+
+        uint32_t  _num_buffers_elements{0};
+        BufferPointer _nodes_buffer;
+        BufferPointer _transforms_buffer;
+
+        NodeStore() {}
+        ~NodeStore() {}
+
+        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
+
+        NodeID createNode(const core::mat4x3& rts, NodeID parent);
+        void deleteNode(NodeID nodeId);
+        void attachNode(NodeID child, NodeID parent);
+        void detachNode(NodeID child);
+
+        void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
+        void updateTransforms();
+    };
+
+    class VISUALIZATION_API Node {
+        Node() { } // invalid
+        friend class Scene;
+        Node(const NodeStore* transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
+
+        mutable const NodeStore* _transformTree { nullptr };
+        const NodeID _index { 0 };
+    public:
+
+        Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
+
+        const NodeStore* tree() const { return _transformTree; }
+        NodeID id() const { return _index; }
+    };
+
+
 }
+

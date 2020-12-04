@@ -4,6 +4,7 @@
 #---------------------------------------------
 
 file(GLOB CORE_HEADERS
+    "stl/*.h"
     "math/*.h"
     "json/*.h"
     "*.h"
@@ -11,6 +12,7 @@ file(GLOB CORE_HEADERS
 
 file(GLOB CORE_SOURCES
     "*.cpp"
+    "stl/*.cpp"
     "json/*.cpp"
 )
 
@@ -28,6 +30,7 @@ target_include_directories(core PUBLIC ".." PRIVATE "." )
 
 target_compile_features(core PRIVATE cxx_std_17)
 
+source_group(core\\stl REGULAR_EXPRESSION stl/*)
 source_group(core\\math REGULAR_EXPRESSION math/*)
 source_group(core\\json REGULAR_EXPRESSION json/*)
 source_group(core REGULAR_EXPRESSION ./*)

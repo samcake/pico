@@ -29,14 +29,14 @@
 #include <memory>
 #include <core/math/LinearAlgebra.h>
 #include "dllmain.h"
+#include <render/Scene.h>
+#include <render/Drawable.h>
 
 namespace document {
     class TriangleSoup;
     using TriangleSoupPointer = std::shared_ptr<TriangleSoup>;
 }
 namespace graphics {
-    class DrawcallObject;
-    using DrawcallObjectPointer = std::shared_ptr<DrawcallObject>;
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
     class Camera;
@@ -66,8 +66,8 @@ namespace graphics {
         graphics::TriangleSoupDrawable* createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
 
         // Create Drawcall object drawing the TriangleSoupDrawable in the rendering context
-        graphics::DrawcallObjectPointer allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::CameraPointer& camera,
-            const graphics::TriangleSoupDrawablePointer& pointcloudDrawable);
+        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, const graphics::CameraPointer& camera,
+            graphics::TriangleSoupDrawable& pointcloudDrawable);
 
         // Read / write shared uniforms
         const TriangleSoupDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -88,8 +88,6 @@ namespace graphics {
     public:
         TriangleSoupDrawable();
         ~TriangleSoupDrawable();
-        
-        graphics::DrawcallObjectPointer getDrawable() const;
 
         void swapUniforms(const TriangleSoupDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const TriangleSoupDrawableUniformsPointer& getUniforms() const { return _uniforms; }
@@ -97,16 +95,18 @@ namespace graphics {
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }
         graphics::BufferPointer getIndexBuffer() const { return _indexBuffer; }
 
+        core::aabox3 getBound() const { return _bounds.toBox(); }
+        DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
         friend class TriangleSoupDrawableFactory;
 
         TriangleSoupDrawableUniformsPointer _uniforms;
-        graphics::DrawcallObjectPointer _drawcall;
         graphics::BufferPointer _vertexBuffer;
         graphics::BufferPointer _indexBuffer;
-        core::mat4x3 _transform;
         core::Bounds _bounds;
+        DrawObjectCallback _drawcall;
+
     };
 
 

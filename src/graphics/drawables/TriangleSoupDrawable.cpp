@@ -60,7 +60,7 @@ namespace graphics
 
     // Custom data uniforms
     struct TSObjectData {
-        core::mat4x3 transform;
+        core::ivec4 instance { 0 };
         uint32_t numVertices{ 0 };
         uint32_t numIndices{ 0 };
         uint32_t stride{ 0 };
@@ -75,6 +75,8 @@ namespace graphics
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(TSObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
+
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -171,7 +173,6 @@ namespace graphics
         triangleSoupDrawable->_vertexBuffer = vbresourceBuffer;
         triangleSoupDrawable->_indexBuffer = ibresourceBuffer;
         triangleSoupDrawable->_bounds = mesh->_bounds;
-        triangleSoupDrawable->_transform = triangleSoup->_transform;
 
         // Create the triangle soup drawable using the shared uniforms of the factory
         triangleSoupDrawable->_uniforms = _sharedUniforms;
@@ -179,8 +180,11 @@ namespace graphics
         return triangleSoupDrawable;
     }
 
-    graphics::DrawcallObjectPointer TriangleSoupDrawableFactory::allocateDrawcallObject(const graphics::DevicePointer& device,
-        const graphics::CameraPointer& camera, const graphics::TriangleSoupDrawablePointer& triangleSoup)
+    void TriangleSoupDrawableFactory::allocateDrawcallObject(
+        const graphics::DevicePointer& device,
+        const graphics::ScenePointer& scene,
+        const graphics::CameraPointer& camera,
+        graphics::TriangleSoupDrawable& triangleSoup)
     {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
@@ -191,43 +195,49 @@ namespace graphics
 
         // Assign the Camera UBO just created as the resource of the descriptorSet
         // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-        graphics::DescriptorObject uboDescriptorObject;
-        uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        graphics::DescriptorObject camera_uboDescriptorObject;
+        camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
+        graphics::DescriptorObject transform_rboDescriptorObject;
+        transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
         graphics::DescriptorObject vb_rboDescriptorObject;
-        vb_rboDescriptorObject._buffers.push_back(triangleSoup->getVertexBuffer());
+        vb_rboDescriptorObject._buffers.push_back(triangleSoup.getVertexBuffer());
         graphics::DescriptorObject ib_rboDescriptorObject;
-        ib_rboDescriptorObject._buffers.push_back(triangleSoup->getIndexBuffer());
+        ib_rboDescriptorObject._buffers.push_back(triangleSoup.getIndexBuffer());
         graphics::DescriptorObjects descriptorObjects = {
-            uboDescriptorObject, vb_rboDescriptorObject, ib_rboDescriptorObject
+            camera_uboDescriptorObject, transform_rboDescriptorObject, vb_rboDescriptorObject, ib_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
-        auto numVertices = triangleSoup->getVertexBuffer()->getNumElements();
-        auto numIndices = triangleSoup->getIndexBuffer()->getNumElements();
-        auto vertexStride = triangleSoup->getVertexBuffer()->_init.structStride;
+        auto numVertices = triangleSoup.getVertexBuffer()->getNumElements();
+        auto numIndices = triangleSoup.getIndexBuffer()->getNumElements();
+        auto vertexStride = triangleSoup.getVertexBuffer()->_init.structStride;
+
+        auto ptriangleSoup = &triangleSoup;
+        auto pipeline = this->_pipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [triangleSoup, descriptorSet, numVertices, numIndices, vertexStride, this](const core::mat4x3& transform, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(this->_pipeline);
+        graphics::DrawObjectCallback drawCallback = [ptriangleSoup, descriptorSet, numVertices, numIndices, vertexStride, pipeline](
+            const NodeID node,
+            const graphics::CameraPointer& camera, 
+            const graphics::SwapchainPointer& swapchain, 
+            const graphics::DevicePointer& device, 
+            const graphics::BatchPointer& batch) {
+            batch->setPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
             //       batch->bindVertexBuffers(1, &vertexBuffer);
             batch->bindDescriptorSet(descriptorSet);
 
-            auto uniforms = triangleSoup->getUniforms();
-            TSObjectData odata{ transform, numVertices, numIndices, vertexStride, uniforms->triangleScale };
+            auto uniforms = ptriangleSoup->getUniforms();
+            TSObjectData odata{ { (int32_t)node }, numVertices, numIndices, vertexStride, uniforms->triangleScale };
             batch->bindPushUniform(1, sizeof(TSObjectData), (const uint8_t*)&odata);
 
             batch->draw(numIndices, 0);
         };
-        auto drawcall = new graphics::DrawcallObject(drawCallback);
-        drawcall->_bounds = triangleSoup->_bounds;
-        drawcall->_transform = triangleSoup->_transform;
-        triangleSoup->_drawcall = graphics::DrawcallObjectPointer(drawcall);
+        triangleSoup._drawcall = drawCallback;
 
-        return triangleSoup->_drawcall;
     }
 
 
@@ -236,10 +246,6 @@ namespace graphics
     }
     TriangleSoupDrawable::~TriangleSoupDrawable() {
 
-    }
-       
-    graphics::DrawcallObjectPointer TriangleSoupDrawable::getDrawable() const {
-        return _drawcall;
     }
 
 } // !namespace graphics

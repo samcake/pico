@@ -1,6 +1,6 @@
-// render.h 
+// IndexTable.cpp
 //
-// Sam Gateau - June 2020
+// Sam Gateau - October 2020
 // 
 // MIT License
 //
@@ -24,26 +24,5 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
-
-#include "../gpu/gpu.h"
-
-namespace graphics {
-
-    // Render types
-    class Scene;
-    using ScenePointer = std::shared_ptr<Scene>;
-
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-
-    class Renderer;
-    using RendererPointer = std::shared_ptr<Renderer>;
-
-    class Viewport;
-    using ViewportPointer = std::shared_ptr<Viewport>;
-
-    class Mesh;
-    using MeshPointer = std::shared_ptr<Mesh>;
-}
+#include "IndexTable.h"
 

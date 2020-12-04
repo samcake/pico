@@ -105,6 +105,7 @@ float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
     return rotateTo(model, worldDir);
 }
 
+
 //
 // Transform Tree
 //
@@ -117,79 +118,148 @@ Transform node_getWorldTransform(int nodeID) {
     return tree_transforms[2 * nodeID + 1];
 }
 
-//
-// Instance
-//
-cbuffer UniformBlock1 : register(b1) {
-    int4 _instance;
-    int _numVertices;
-    int _numIndices;
-    int spareA;
-    float _triangleScale;
-}
+struct Box {
+    float3 _center;
+    float3 _size; 
 
-struct PointPosColor {
-    float x;
-    float y;
-    float z;
-    uint  color;
+    float3 getCorner(int i) {
+        return _center + _size * float3( -1.0 + 2.0 * float((i) & 0x01), -1.0 + 2.0 * float((i >> 1) & 0x01), -1.0 + 2.0 * float((i >> 2) & 0x01));
+        // 0:  - - - 
+        // 1:  + - -
+        // 2:  - + -
+        // 3:  + + -
+        // 4:  - - +
+        // 5:  + - +
+        // 6:  - + +
+        // 7:  + + +
+    }
+
+    int2 getEdge(int i) {
+        // 0: 0 1
+        // 1: 2 3
+        // 2: 4 5
+        // 3: 6 7
+
+        // 4: 0 2
+        // 5: 1 3
+        // 6: 4 6
+        // 7: 5 7
+ 
+        // 8: 0 4
+        // 9: 1 5
+        //10: 2 6
+        //11: 3 7
+
+        if (i < 4) {
+            return int2(i * 2, i * 2 + 1);
+        } else if (i < 6) {
+            i -= 4;
+            return int2(i, i + 2);
+        } else if (i < 8) {
+            i -= 2;
+            return int2(i, i + 2);
+        } else {
+            i -= 8;
+            return int2(i, i + 4);
+        }
+    }
 };
 
-StructuredBuffer<PointPosColor>  VerticesIn : register(t1);
-Buffer<uint>  IndicesIn : register(t2);
+Box worldFromObjectSpace(Transform model, Box objBox) {
+    Box wb;
+    wb._center = transformFrom(model, objBox._center);
+    wb._size.x = dot(abs(model.row_x()), objBox._size);
+    wb._size.y = dot(abs(model.row_y()), objBox._size);
+    wb._size.z = dot(abs(model.row_z()), objBox._size);
+    return wb;
+}
+
+struct DrawableBound {
+    Box _box;
+    float spareA;
+    float spareB;
+};
+
+StructuredBuffer<DrawableBound>  drawable_bounds : register(t1);
+
+Box drawable_getLocalBox(int drawableID) {
+    return drawable_bounds[drawableID]._box; //getBox();
+}
+
+struct ItemInfo {
+    uint  nodeID;
+    uint  drawableID;
+    float spareA;
+    float spareB;
+};
+
+StructuredBuffer<ItemInfo>  item_infos : register(t2);
+
+ItemInfo item_getInfo(int itemID) {
+    return item_infos[itemID];
+}
+
+cbuffer UniformBlock1 : register(b1) {
+    int   _nodeID;
+}
+
+
+struct VertexPosColor
+{
+    float3 Position : POSITION;
+    //  float3 Normal : NORMAL;
+    float4 Color : COLOR;
+};
 
 struct VertexShaderOutput
 {
     float4 Color    : COLOR;
-    float3 Normal   : NORMAL;
     float4 Position : SV_Position;
 };
 
-VertexShaderOutput main(uint vidx : SV_VertexID) {
+VertexShaderOutput main(uint ivid : SV_VertexID)
+{
+    VertexShaderOutput OUT;
 
-    uint tidx = vidx / 3;
-    uint tvidx = vidx % 3;
+    const int transform_num_edges = 3;
+    const int node_num_edges = 1;
+    const int box_num_edges = 12;
+    const int num_edges = box_num_edges + box_num_edges;
 
-    // Fetch Face indices
-    uint3 fvid = uint3(IndicesIn[tidx * 3], IndicesIn[tidx * 3 + 1], IndicesIn[tidx * 3 + 2]);
-    uint vid = fvid[tvidx];
+    uint vid = ivid % (2 * num_edges);
+    uint itemid = ivid / (2 * num_edges);
+    uint svid = vid % 2;
+    uint lid = vid / 2;
 
-    // Fetch Face vertices
-    float4 faceVerts[3];
-    for (int i = 0; i < 3; i++) {
-        uint vi = fvid[i];
-        faceVerts[i] = float4(VerticesIn[vi].x, VerticesIn[vi].y, VerticesIn[vi].z, asfloat(VerticesIn[vi].color));
+    float3 position = float3(0.0, 0.0, 0.0);
+    float3 color = float3(1.0, 1.0, 1.0);
+
+    ItemInfo _item = item_getInfo(itemid);
+    Transform _model = node_getWorldTransform(_item.nodeID);
+    Box _box = drawable_getLocalBox(_item.drawableID);
+
+    if (lid < (box_num_edges)) {
+        //lid -= 0;
+        int2 edge = _box.getEdge(lid);
+        position = _box.getCorner(edge[svid]);
+        color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
+        position = worldFromObjectSpace(_model, position);
+    }
+    else {
+        Box _world_box = worldFromObjectSpace(_model, _box);
+    
+        lid -= box_num_edges;
+        int2 edge = _box.getEdge(lid);
+        position = _world_box.getCorner(edge[svid]);
+        color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
     }
 
-    // Generate normal
-    float3 faceEdge0 = faceVerts[1].xyz - faceVerts[0].xyz;
-    float3 faceEdge1 = faceVerts[2].xyz - faceVerts[0].xyz;
-    float3 normal = normalize(cross(faceEdge0, faceEdge1));
- 
-    // Barycenter 
-    float3 barycenter = (faceVerts[0].xyz + faceVerts[1].xyz + faceVerts[2].xyz) / 3.0f;
-
-    // Transform
-    float3 position = faceVerts[tvidx].xyz;
-    position += _triangleScale * (barycenter - position);
-
-    Transform _model = node_getWorldTransform(_instance.x);
-
-
-    position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
-    uint color = asuint(faceVerts[tvidx].w);
-    const float INT8_TO_NF = 1.0 / 255.0;
-    float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
-    float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
-    float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
-
-    VertexShaderOutput OUT;
     OUT.Position = clipPos;
-    OUT.Normal = normal;
-    OUT.Color = float4(r, g, b, 1.0f);
-
+    OUT.Color = float4(color, 1.0f);
+ 
     return OUT;
 }
+

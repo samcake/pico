@@ -63,7 +63,17 @@ namespace core
         vec3 operator-() const { return vec3(-x, -y, -z); }
 
         float operator[](int i) const { return data()[i]; }
+
+        const static vec3 X;
+        const static vec3 Y;
+        const static vec3 Z;
     };
+
+
+    inline const vec3 vec3::X{ 1.0f, 0, 0 };
+    inline const vec3 vec3::Y{ 0, 1.0f, 0 };
+    inline const vec3 vec3::Z{ 0, 0, 1.0f };
+
     struct vec4 {
         float x, y, z, w;
         float* data() { return &x; }
@@ -97,6 +107,21 @@ namespace core
         ucvec4 operator*(uint8_t s) const { return ucvec4(x * s, y * s, z * s, w * s); }
         ucvec4 operator-() const { return ucvec4(-x, -y, -z, -w); }
     };
+    struct ivec4 {
+        int32_t x, y, z, w;
+        int32_t* data() { return &x; }
+        const int32_t* data() const { return &x; }
+
+        ivec4() : x(0), y(0), z(0), w(0) {}
+        ivec4(int32_t _x) : x(_x), y(_x), z(_x), w(_x) {}
+        ivec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y), z(_z), w(_w) {}
+        ivec4& operator=(const ivec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        ivec4 operator+(const ivec4& a) const { return ivec4(x + a.x, y + a.y, z + a.z, w + a.w); }
+        ivec4 operator-(const ivec4& a) const { return ivec4(x - a.x, y - a.y, z - a.z, w - a.w); }
+        ivec4 operator*(int32_t s) const { return ivec4(x * s, y * s, z * s, w * s); }
+        ivec4 operator-() const { return ivec4(-x, -y, -z, -w); }
+    };
 
     // Abs
     inline float abs(float v) { return (v > 0.0f ? v : -v); }
@@ -111,8 +136,26 @@ namespace core
     }
 
     // Max Min
-    inline float max(float a, float b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }
+    inline float max(float a, float b) { return (a > b ? a : b); }
+    inline vec2 min(const vec2& a, const vec2& b) {
+         return vec2(min(a.x, b.x), min(a.y, b.y));
+    }
+    inline vec2 max(const vec2& a, const vec2& b) {
+        return vec2(max(a.x, b.x), max(a.y, b.y));
+    }
+    inline vec3 min(const vec3& a, const vec3& b) {
+        return vec3(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z));
+    }
+    inline vec3 max(const vec3& a, const vec3& b) {
+        return vec3(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z));
+    }
+    inline vec4 min(const vec4& a, const vec4& b) {
+        return vec4(min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w));
+    }
+    inline vec4 max(const vec4& a, const vec4& b) {
+        return vec4(max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w));
+    }
 
     static const float FLOAT_EPSILON { 0.0001f };
 
@@ -233,9 +276,9 @@ namespace core
                      yuv.x + 2.032f * yuv.y);
     }
 
-    // Matrix: 3 raws . 4 columns
+    // Matrix: 4 columns 3 rows 
     struct mat4x3 {
-        vec3 _columns[4]{ {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f, 0.0f} };
+        vec3 _columns[4]{ vec3::X, vec3::Y, vec3::Z, vec3() };
         float* data() { return _columns[0].data(); }
         const float* data() const { return _columns[0].data(); }
 
@@ -246,6 +289,20 @@ namespace core
             _columns[2] = (c2);
             _columns[3] = (c3);
         }
+
+        vec4 row_0() const { return { _columns[0].x, _columns[1].x, _columns[2].x, _columns[3].x }; }
+        vec4 row_1() const { return { _columns[0].y, _columns[1].y, _columns[2].y, _columns[3].y }; }
+        vec4 row_2() const { return { _columns[0].z, _columns[1].z, _columns[2].z, _columns[3].z }; }
+
+        const vec3& x() const { return _columns[0]; }
+        const vec3& y() const { return _columns[1]; }
+        const vec3& z() const { return _columns[2]; }
+
+        vec3 row_x() const { return { _columns[0].x, _columns[1].x, _columns[2].x}; }
+        vec3 row_y() const { return { _columns[0].y, _columns[1].y, _columns[2].y }; }
+        vec3 row_z() const { return { _columns[0].z, _columns[1].z, _columns[2].z }; }
+
+        const vec3& w() const { return _columns[3]; }
     };
 
     // Matrix: 3 raws . 4 columns
@@ -270,6 +327,29 @@ namespace core
     };
 
 
+    struct aabox3 {
+        vec3 center{ 0.0f };
+        vec3 half_size{ 1.0f };
+
+        aabox3() {};
+        aabox3(const vec3& center) : center(center) {};
+        aabox3(const vec3& center, const vec3& half_size) : center(center), half_size(half_size) {};
+
+        vec4 toSphere() const { return vec4(center, length(half_size)); }
+
+        static aabox3 fromMinMax(const vec3& minPos, const vec3& maxPos) {
+             return aabox3((minPos + maxPos) *  0.5, (maxPos - minPos) * 0.5);
+        }
+
+        vec3 minPos() const { return center - half_size; }
+        vec3 maxPos() const { return center + half_size; }
+
+
+        static aabox3 fromBound(const aabox3& a, const aabox3& b) {
+            return fromMinMax(min(a.minPos(), b.minPos()), max(a.maxPos(), b.maxPos()));
+        }
+    };
+
     struct Bounds {
         vec3 _minPos{ 0.0f };
         vec3 _maxPos{ 0.0f };
@@ -284,8 +364,11 @@ namespace core
             float radius = 0.5f * length(_maxPos - _minPos);
             return vec4(center, radius);
         }
-    };
 
+        aabox3 toBox() const {
+            return aabox3::fromMinMax(_minPos, _maxPos);
+        }
+    };
 
 
 
@@ -339,8 +422,9 @@ namespace core
         void normalize();
         rotor3 normal() const;
 
-        // convert to matrix
-        mat4x3 toMat4x3() const;
+        vec3 rotate_X() const;
+        vec3 rotate_Y() const;
+        vec3 rotate_Z() const;
     };
 
     // default ctor
@@ -425,7 +509,6 @@ namespace core
         return (*this) * r * (*this).reverse();
     }
 
-
     // Equivalent to conjugate
     inline rotor3 rotor3::reverse() const {
         return rotor3(a, -b.xy, -b.xz, -b.yz);
@@ -450,18 +533,99 @@ namespace core
         return r;
     }
 
-    // convert to matrix
-    // non-optimized
-    inline mat4x3 rotor3::toMat4x3() const {
-        vec3 v0 = rotate(vec3(1.0f, 0, 0));
-        vec3 v1 = rotate(vec3(0, 1.0f, 0));
-        vec3 v2 = rotate(vec3(0, 0, 1.0f));
-        return mat4x3(v0, v1, v2, vec3(0.0f));
+    inline vec3 rotor3::rotate_X() const {
+        return rotate(vec3::X);
+    }
+    inline vec3 rotor3::rotate_Y() const {
+        return rotate(vec3::Y);
+    }
+    inline vec3 rotor3::rotate_Z() const {
+        return rotate(vec3::Z);
     }
 
     // geometric product (for reference), produces twice the angle, negative direction
     inline rotor3 geo(const vec3& a, const vec3& b) {
         return rotor3(dot(a, b), wedge(a, b));
+    }
+
+
+    // convert Translation T vec3 and Rotation R rotor3 to matrix
+    // non-optimized
+    inline mat4x3& translation(mat4x3& mat, const vec3& t) {
+        mat._columns[3] = t;
+        return mat;
+    }
+    inline mat4x3 translation(const vec3& t) {
+        return translation(mat4x3(), t);
+    }
+    inline mat4x3& rotation(mat4x3& mat, const rotor3& r) {
+        mat._columns[0] = r.rotate_X();
+        mat._columns[1] = r.rotate_Y();
+        mat._columns[2] = r.rotate_Z();
+        return mat;
+    }
+    inline mat4x3 rotation(const rotor3& r) {
+        return rotation(mat4x3(), r);
+    }
+    inline mat4x3& translation_rotation(mat4x3& mat, const vec3& t, const rotor3& r) {
+        return rotation(translation(mat, t), r);
+    }
+    inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
+        return translation_rotation(mat4x3(), t, r);
+    }
+
+
+    inline vec3 rotateFrom(const mat4x3& mat, const vec3& d) {
+        return vec3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));
+    }
+    inline vec3 rotateTo(const mat4x3& mat, const vec3& d) {
+        return vec3(dot(mat.x(), d), dot(mat.y(), d), dot(mat.z(), d));
+    }
+
+    inline vec3 transformTo(const mat4x3& mat, const vec3& p) {
+        return rotateTo(mat, p - mat.w());
+    }
+    inline vec3 transformFrom(const mat4x3& mat, const vec3& p) {
+        return rotateFrom(mat, p) + mat.w();
+    }
+
+    inline vec4 sphere_transformTo(const mat4x3& mat, const vec4& s) {
+        return vec4(transformTo(mat, s.xyz()), s.w);
+    }
+    inline vec4 sphere_transformFrom(const mat4x3& mat, const vec4& s) {
+        return vec4(transformFrom(mat, s.xyz()), s.w);
+    }
+
+    inline aabox3 aabox_transformTo(const mat4x3& mat, const aabox3& b) {
+        // not good yet
+        return aabox3(transformTo(mat, b.center), rotateTo(mat, b.half_size));
+    }
+    inline aabox3 aabox_transformFrom(const mat4x3& mat, const aabox3& b) {
+        return aabox3(
+            transformFrom(mat, b.center),
+            vec3(dot(abs(mat.row_x()), b.half_size),
+                 dot(abs(mat.row_y()), b.half_size),
+                 dot(abs(mat.row_z()), b.half_size))
+        );
+    }
+
+    inline mat4x3 mul(const mat4x3& a, const mat4x3& b) {
+        auto a_row_0 = a.row_x();
+        auto a_row_1 = a.row_y();
+        auto a_row_2 = a.row_z();
+
+        return { { dot(a_row_0, b.x()),
+                  dot(a_row_1, b.x()),
+                  dot(a_row_2, b.x()) },
+                        { dot(a_row_0, b.y()),
+                          dot(a_row_1, b.y()),
+                          dot(a_row_2, b.y()) },
+                                { dot(a_row_0, b.z()),
+                                  dot(a_row_1, b.z()),
+                                  dot(a_row_2, b.z()) },
+                                        { dot(a_row_0, b.w()) + a.w().x,
+                                          dot(a_row_1, b.w()) + a.w().y,
+                                          dot(a_row_2, b.w()) + a.w().z } };
     }
 }
 

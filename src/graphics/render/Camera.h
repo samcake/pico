@@ -72,7 +72,7 @@ namespace graphics {
 
         
         static core::vec3 worldFromEyeSpaceDir(const core::vec3& right, const core::vec3& up, const core::vec3& eyeDir) {
-            return eyeDir * eyeDir.x + up * eyeDir.y + cross(right, up) * eyeDir.z;
+            return core::vec3(dot(right, eyeDir), dot(up,  eyeDir), dot(cross(right, up), eyeDir));
         }
         static core::vec3 worldFromEyeSpace(const core::vec3& eye, const core::vec3& right, const core::vec3& up, const core::vec3& eyePos) {
             return worldFromEyeSpaceDir(right, up, eyePos) + eye;

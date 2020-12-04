@@ -85,6 +85,7 @@ namespace graphics {
 
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
+    using DeviceWeakPtr = std::weak_ptr<Device>;
     struct DeviceInit;
 
     class Batch;
