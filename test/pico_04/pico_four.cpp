@@ -54,6 +54,8 @@
 
 #include <graphics/drawables/GizmoDrawable.h>
 
+#include <graphics/drawables/PrimitiveDrawable.h>
+
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -162,11 +164,11 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable.as<graphics::NodeGizmo>());
-    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(5);
+    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(6);
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(5);
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(6);
 
     // Some items unique instaces of the drawable and the specified nodes
     auto pcitem = scene->createItem();
@@ -185,11 +187,31 @@ int main(int argc, char *argv[])
     tsitem2.setDrawable(tsdrawable);
     tsitem2.setNode(dnode);
 
+    
+
 
     auto gzitem_item = scene->createItem();
     gzitem_item.setDrawable(gzdrawable_item);
     auto gzitem = scene->createItem();
     gzitem.setDrawable(gzdrawable);
+
+
+
+    
+    // A Primitive drawable factory
+    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
+    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a Primitive
+    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
+    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
+    
+    auto p_node = scene->createNode(core::translation(core::vec3(-4.0f, 1.0f, 4.0f)), node0.id());
+    auto p_item = scene->createItem();
+    p_item.setNode(p_node);
+    p_item.setDrawable(p_drawable);
+
+
 
     scene->_nodes.updateTransforms();
 
