@@ -118,6 +118,7 @@ namespace graphics {
         mutable const NodeStore* _transformTree { nullptr };
         const NodeID _index { 0 };
     public:
+        static const Node null;
 
         Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
 

@@ -35,9 +35,9 @@ Scene::~Scene() {
     deleteAll();
 }
 
-Item Scene::createItem(ItemID userID) {
+Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
 
-   Item newItem = _items.createItem(this);
+   Item newItem = _items.createItem(this, node, drawable);
 
     if (userID != INVALID_ITEM_ID) {
         _idToIndices[userID] = newItem.id();

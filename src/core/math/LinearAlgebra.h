@@ -573,7 +573,14 @@ namespace core
     inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
         return translation_rotation(mat4x3(), t, r);
     }
+    inline mat4x3& rotate(mat4x3& mat, const rotor3& r) {
+        mat._columns[0] = r.rotate(mat._columns[0]);
+        mat._columns[1] = r.rotate(mat._columns[1]);
+        mat._columns[2] = r.rotate(mat._columns[2]);
+        return mat;
+    }
 
+    
 
     inline vec3 rotateFrom(const mat4x3& mat, const vec3& d) {
         return vec3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));

@@ -59,10 +59,10 @@ namespace graphics {
         void setVisible(bool visible) { _self->setVisible(visible); }
         bool isVisible() const { return _self->isVisible(); }
 
-        void setNode(Node node) { _self->setNode(node); }
+     //   void setNode(Node node) { _self->setNode(node); }
         NodeID getNode() const { return _self->getNode(); }
 
-        void setDrawable(Drawable drawable) { _self->setDrawable(drawable); }
+      //  void setDrawable(Drawable drawable) { _self->setDrawable(drawable); }
         DrawableID getDrawable() const { return _self->getDrawable(); }
 
         core::aabox3 fetchWorldBound() const { return _self->fetchWorldBound(); }
@@ -115,7 +115,7 @@ namespace graphics {
             uint32_t spareB;
         };
 
-        Item createItem(const Scene* scene, NodeID node = INVALID_NODE_ID, DrawableID drawable = INVALID_DRAWABLE_ID);
+        Item createItem(const Scene* scene, Node node, Drawable drawable);
         void free(ItemID index);
         void freeAll();
 

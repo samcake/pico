@@ -356,7 +356,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
     }
 
     auto dxDescriptorSetLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (dxDescriptorSet->_init._layout.get());
-    picoAssert(objects.size() == dxDescriptorSet->_dxHeapOffsets.size());
+   // picoAssert(objects.size() == dxDescriptorSet->_dxHeapOffsets.size());
 
     uint32_t objectId = 0;
     for (uint32_t i = 0; i < dxDescriptorSet->_dxHeapOffsets.size(); ++i) {

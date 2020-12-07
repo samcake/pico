@@ -54,6 +54,8 @@
 
 #include <graphics/drawables/GizmoDrawable.h>
 
+#include <graphics/drawables/PrimitiveDrawable.h>
+
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -108,9 +110,9 @@ int main(int argc, char *argv[])
 
     // Second a Scene
     auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 100);
-    scene->_nodes.resizeBuffers(gpuDevice, 100);
-    scene->_drawables.resizeBuffers(gpuDevice, 100);
+    scene->_items.resizeBuffers(gpuDevice, 200);
+    scene->_nodes.resizeBuffers(gpuDevice, 200);
+    scene->_drawables.resizeBuffers(gpuDevice, 200);
   
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
@@ -159,37 +161,58 @@ int main(int argc, char *argv[])
     auto enode = scene->createNode(core::translation(core::vec3(0.0f, 1.0f, 4.0f)), rnode.id());
 
 
+    // Some items unique instaces of the drawable and the specified nodes
+    auto pcitem = scene->createItem(node0, pcdrawable);
+
+    auto tsitem = scene->createItem(enode, tsdrawable);
+
+    auto pcitem2 = scene->createItem(cnode, pcdrawable);
+
+    auto tsitem2 = scene->createItem(dnode, tsdrawable);
+
+
+
+
+    
+    // A Primitive drawable factory
+    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
+    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a Primitive
+    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
+    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
+    p_drawable.as<graphics::PrimitiveDrawable>()._size = {1.0, 2.0, 0.7 };
+
+    std::vector<graphics::NodeID> prim_nodes;
+    int width = 10;
+    for (int i = 0; i < width * width; ++i) {
+        float t = acos(-1.0f) * i / float(width * width);
+        auto p_node = scene->createNode(
+            core::translation_rotation(
+                core::vec3(-4.0f * (i % width), -1.0f, 4.0f * (i / width)),
+                core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
+            ),
+            node0.id());
+        auto p_item = scene->createItem(p_node, p_drawable);
+        prim_nodes.push_back(p_node.id());
+    }
+
+
+
     // a gizmo drawable to draw the transforms
     auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable.as<graphics::NodeGizmo>());
-    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(5);
+    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(6);
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(5);
-
-    // Some items unique instaces of the drawable and the specified nodes
-    auto pcitem = scene->createItem();
-    pcitem.setDrawable(pcdrawable);
-    pcitem.setNode(node0);
-
-    auto tsitem = scene->createItem();
-    tsitem.setDrawable(tsdrawable);
-    tsitem.setNode(enode);
-
-    auto pcitem2 = scene->createItem();
-    pcitem2.setDrawable(pcdrawable);
-    pcitem2.setNode(cnode);
-
-    auto tsitem2 = scene->createItem();
-    tsitem2.setDrawable(tsdrawable);
-    tsitem2.setNode(dnode);
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
 
 
-    auto gzitem_item = scene->createItem();
-    gzitem_item.setDrawable(gzdrawable_item);
-    auto gzitem = scene->createItem();
-    gzitem.setDrawable(gzdrawable);
+    auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
+    auto gzitem = scene->createItem(graphics::Node::null, gzdrawable);
+
+
 
     scene->_nodes.updateTransforms();
 
@@ -262,6 +285,14 @@ int main(int argc, char *argv[])
                 core::rotation(rts, rotor);
                 return true;
             });
+
+            for (auto prim_node : prim_nodes) {
+                scene->_nodes.editTransform(prim_node, [t](core::mat4x3& rts) -> bool {
+                    core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.005 * t), 0.0f, sin(0.005 * t)));
+                    core::rotate(rts, rotor);
+                    return true;
+                });
+            }
         }
 
         scene->_items.syncBuffer();

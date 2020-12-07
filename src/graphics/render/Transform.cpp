@@ -246,3 +246,6 @@ void NodeStore::updateTransforms() {
         }
     }
 }
+
+const Node Node::null {};
+

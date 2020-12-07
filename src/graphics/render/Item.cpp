@@ -81,8 +81,8 @@ namespace graphics {
         return item;
     }
 
-    Item ItemStore::createItem(const Scene* scene, NodeID node, DrawableID drawable) {
-        return allocate(scene, node, drawable);
+    Item ItemStore::createItem(const Scene* scene, Node node, Drawable drawable) {
+        return allocate(scene, node.id(), drawable.id());
     }
 
     void ItemStore::free(ItemID index) {
