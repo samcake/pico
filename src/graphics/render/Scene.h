@@ -48,7 +48,7 @@ namespace graphics {
         ItemStore _items;
         Item getItem(ItemID id) const;
         
-        Item createItem(UserID userID = INVALID_ITEM_ID);
+        Item createItem(Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
 
         void deleteAllItems();  // delete all user objects
         void deleteAll();

@@ -91,7 +91,7 @@ namespace graphics
         graphics::PipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
-                    graphics::PrimitiveTopology::LINE,
+                    graphics::PrimitiveTopology::TRIANGLE,
                     descriptorSetLayout,
                     RasterizerState(),
                     true, // enable depth
@@ -142,10 +142,11 @@ namespace graphics
 
             batch->bindDescriptorSet(descriptorSet);
 
-            PrimitiveObjectData odata{ node, prim_->_size.x, prim_->_size.y, prim_->_size.z };
+            PrimitiveObjectData odata{ node, prim_->_size.x * 0.5f, prim_->_size.y * 0.5f, prim_->_size.z * 0.5f };
             batch->bindPushUniform(1, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
-            batch->draw(2 * 12, 0);
+            // A box is 6 faces * 2 trianglestrip * 4 verts + -1
+            batch->draw(6 * 2 * 3, 0);
         };
         prim._drawcall = drawCallback;
     }

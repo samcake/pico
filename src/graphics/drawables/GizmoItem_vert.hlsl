@@ -150,18 +150,23 @@ struct Box {
         //10: 2 6
         //11: 3 7
 
-        if (i < 4) {
-            return int2(i * 2, i * 2 + 1);
-        } else if (i < 6) {
-            i -= 4;
-            return int2(i, i + 2);
-        } else if (i < 8) {
-            i -= 2;
-            return int2(i, i + 2);
-        } else {
-            i -= 8;
-            return int2(i, i + 4);
-        }
+        const int2 EDGES[12] = {
+            int2(0, 1),
+            int2(2, 3),
+            int2(4, 5),
+            int2(6, 7),
+
+            int2(0, 2),
+            int2(1, 3),
+            int2(4, 6),
+            int2(5, 7),
+
+            int2(0, 4),
+            int2(1, 5),
+            int2(2, 6),
+            int2(3, 7)
+        };
+        return EDGES[i];
     }
 };
 
