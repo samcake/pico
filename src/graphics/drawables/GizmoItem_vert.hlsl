@@ -205,9 +205,13 @@ ItemInfo item_getInfo(int itemID) {
 }
 
 cbuffer UniformBlock1 : register(b1) {
-    int   _nodeID;
+    int _nodeID;
+    int _flags;
+    int _spareA;
+    int _spareB;
 }
-
+static const int SHOW_LOCAL_BOUND = 0x00000004;
+static const int SHOW_WORLD_BOUND = 0x00000008;
 
 struct VertexPosColor
 {
@@ -229,7 +233,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     const int transform_num_edges = 3;
     const int node_num_edges = 1;
     const int box_num_edges = 12;
-    const int num_edges = box_num_edges + box_num_edges;
+    const int num_edges = (_flags & SHOW_LOCAL_BOUND) * box_num_edges + (_flags & SHOW_WORLD_BOUND) * box_num_edges;
 
     uint vid = ivid % (2 * num_edges);
     uint itemid = ivid / (2 * num_edges);
@@ -243,7 +247,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     Transform _model = node_getWorldTransform(_item.nodeID);
     Box _box = drawable_getLocalBox(_item.drawableID);
 
-    if (lid < (box_num_edges)) {
+    if ((_flags & SHOW_LOCAL_BOUND) && lid < (box_num_edges)) {
         //lid -= 0;
         int2 edge = _box.getEdge(lid);
         position = _box.getCorner(edge[svid]);

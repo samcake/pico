@@ -119,9 +119,16 @@ Transform node_getWorldTransform(int nodeID) {
 }
 
 cbuffer UniformBlock1 : register(b1) {
-    int   _nodeID;
+    int  _nodeID;
+    int  _flags;
+    int _spareA;
+    int _spareB;
 }
 
+static const int SHOW_TRANSFORM = 0x00000001;
+static const int SHOW_BRANCH = 0x00000002;
+static const int SHOW_LOCAL_BOUND = 0x00000004;
+static const int SHOW_WORLD_BOUND = 0x00000008;
 
 struct VertexPosColor
 {
@@ -142,7 +149,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 
     const int transform_num_edges = 3;
     const int node_num_edges = 1;
-    const int num_edges = transform_num_edges + node_num_edges;
+    const int num_edges = (_flags & SHOW_TRANSFORM) * transform_num_edges + (_flags & SHOW_BRANCH) * node_num_edges;
 
     uint vid = ivid % (2 * num_edges);
     uint nodeid = ivid / (2 * num_edges);
@@ -155,11 +162,11 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     Transform _model = node_getWorldTransform(nodeid);
     Transform _modelLocal = node_getTransform(nodeid);
 
-    if (lid < (transform_num_edges)) {
+    if ((_flags & SHOW_TRANSFORM) && lid < (transform_num_edges)) {
         position = float(svid) * float3(float(lid == 0), float(lid == 1), float(lid == 2));
         color = float3(float(lid == 0), float(lid == 1), float(lid == 2));
     }
-    else if (lid < (transform_num_edges + node_num_edges)) {
+    else {
         position = float(svid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
     }
 

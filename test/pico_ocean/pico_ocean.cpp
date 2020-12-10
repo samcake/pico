@@ -87,9 +87,9 @@ int main(int argc, char *argv[])
 
     // Second a Scene
     auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 20000);
-    scene->_nodes.resizeBuffers(gpuDevice, 20000);
-    scene->_drawables.resizeBuffers(gpuDevice, 20000);
+    scene->_items.resizeBuffers(gpuDevice, 250000);
+    scene->_nodes.resizeBuffers(gpuDevice, 250000);
+    scene->_drawables.resizeBuffers(gpuDevice, 250000);
   
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
@@ -111,10 +111,11 @@ int main(int argc, char *argv[])
     // a Primitive
     auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
     primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
-    p_drawable.as<graphics::PrimitiveDrawable>()._size = { 1.0, 2.0, 0.7 };
+    p_drawable.as<graphics::PrimitiveDrawable>()._size = { 0.2, 0.2, 0.2 };
 
 
-    generateSpectra(scene, node0, p_drawable, 75);
+    auto ocean_resolution = 200;
+    generateSpectra(scene, node0, p_drawable, ocean_resolution);
 
 
     // A gizmo drawable factory
@@ -122,11 +123,12 @@ int main(int argc, char *argv[])
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a gizmo drawable to draw the transforms
- /*   auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable.as<graphics::NodeGizmo>());
-    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(6);
-    auto gzitem = scene->createItem(graphics::Node::null, gzdrawable);
-*/
+    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_node.as<graphics::NodeGizmo>());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(ocean_resolution * ocean_resolution);
+    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
+    gzitem_node.setVisible(false);
+
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
@@ -207,6 +209,9 @@ int main(int argc, char *argv[])
             doAnimate = (doAnimate == 0.f ? 1.0f : 0.0f);
         }
 
+        if (e.state && e.key == uix::KEY_N) {
+            gzitem_node.setVisible(!gzitem_node.isVisible());
+        }
         if (e.state && e.key == uix::KEY_B) {
             gzitem_item.setVisible(!gzitem_item.isVisible());
         }

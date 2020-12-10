@@ -120,7 +120,7 @@ T BilinearInterpolation(float x, float y, int width, int height, T* values) {
 }
 constexpr float PATCH_SIZE = 256.0f;
 //constexpr float PATCH_SIZE = 50.0f;
-constexpr float WIND_SPEED = 4.5f;
+constexpr float WIND_SPEED = 10.5f;
 constexpr float GRAVITY = 9.81f;
 constexpr float CHOPPINESS = 1.2f;
 const core::vec2 WIND_DIRECTION = core::normalize(core::vec2(-1, -1));
@@ -143,7 +143,7 @@ public:
     template <typename T>
     T GetRemappedValues(float x, float y, T* values) {
     //    return 0.000048F * BilinearInterpolation(100.f * x, 100.f * y, _resolution, _resolution, values);
-        return  BilinearInterpolation(x * PATCH_SIZE, y * PATCH_SIZE, _resolution, _resolution, values);
+        return  BilinearInterpolation(_resolution * x / PATCH_SIZE, _resolution * y / PATCH_SIZE, _resolution, _resolution, values);
     }
 
     core::vec2 GetChoppinessDisplacement(float x, float y) {
@@ -183,9 +183,11 @@ public:
                 float p = sqrtf(PhillipsSpectrumCoefs(k) / 2);
 
                 int index = i * _resolution + j;
-                _spectrum0[index] = std::complex(RandomGaussian() * p, RandomGaussian() * p);
+                _spectrum0[index] = complexf(RandomGaussian() * p, RandomGaussian() * p);
                 _angular_speeds[index] = sqrt(GRAVITY * core::length(k));
             }
+
+        UpdateHeights(0);
     }
 
     void UpdateHeights(float t) {
@@ -193,8 +195,8 @@ public:
             for (int y = 0; y < _resolution; y++) {
                 int i = y + x * _resolution;
                 float wt = _angular_speeds[i] * t;
-                std::complex h = _spectrum0[i];
-                std::complex<float> h1;
+                complexf h = _spectrum0[i];
+                complexf h1;
                 if (y == 0 && x == 0)
                     h1 = _spectrum0[_resolution * _resolution - 1];
                 else if (y == 0)
@@ -205,9 +207,9 @@ public:
                     h1 = _spectrum0[(_resolution - y) + (_resolution - x) * _resolution];
 
                 core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
-                std::complex spec = h * expI(wt) + std::conj(h1) * expI(-wt);
+                complexf spec = h * expI(wt) + std::conj(h1) * expI(-wt);
                 _spectrum[i] = spec;
-                _choppinesses[i] = std::complex(k.y, -k.x) * spec;
+                _choppinesses[i] = complexf(k.y, -k.x) * spec;
             }
         }
 
@@ -223,10 +225,10 @@ public:
             }
     }
 
-    std::vector<std::complex<float>> _spectrum0;
-    std::vector<std::complex<float>> _spectrum;
-    std::vector<std::complex<float>> _choppinesses;
-    std::vector<std::complex<float>> _choppiness_displacements;
+    std::vector<complexf> _spectrum0;
+    std::vector<complexf> _spectrum;
+    std::vector<complexf> _choppinesses;
+    std::vector<complexf> _choppiness_displacements;
     std::vector<float> _heights;
     std::vector<float> _angular_speeds;
     uint32_t _resolution{ 0};
@@ -250,7 +252,7 @@ void generateSpectra(graphics::ScenePointer& scene, graphics::Node& root, graphi
 
     for (int i = 0; i < width * width; ++i) {
         float t = acos(-1.0f) * i / float(width * width);
-        auto p = core::vec3(-offset * (i % width), 0.0f, offset * (i / width));
+        auto p = core::vec3(offset * (i % width), 0.0f, offset * (i / width));
 
         p.y = locean->GetHeight(p.x, p.z);
 
@@ -273,7 +275,10 @@ void updateHeights(float t) {
     for (auto prim_node : prim_nodes) {
 
         lscene->_nodes.editTransform(prim_node, [&](core::mat4x3& rts) -> bool {
+            
             auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
+        //    auto h = 2.0f * sin(10.0f * t + 3 * ocean::M_PI * (rts._columns[3].z ) / (ocean::PATCH_SIZE));// * cos(rts._columns[3].x + t);
+        //    auto h = 0.4f * core::max(rts._columns[3].x, rts._columns[3].z) * sin(t);
             rts._columns[3].y = h     * 1.0f;
             return true;
             });
