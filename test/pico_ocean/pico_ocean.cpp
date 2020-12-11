@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
     p_drawable.as<graphics::PrimitiveDrawable>()._size = { 0.2, 0.2, 0.2 };
 
 
-    auto ocean_resolution = 200;
+    auto ocean_resolution = 50;
     generateSpectra(scene, node0, p_drawable, ocean_resolution);
 
 

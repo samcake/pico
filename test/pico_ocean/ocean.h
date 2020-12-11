@@ -9,13 +9,58 @@ namespace ocean {
 
 
     const float M_PI = acosf(-1.0f);
-    using complexf = std::complex<float>;
-    complexf expI(float theta) {
+//    using complexf = std::complex<float>;
+
+    struct complexf {
+        float real;
+        float imag;
+
+        complexf() : real(0), imag(0) {}
+        complexf(float real, float imag) : real(real), imag(imag) {}
+
+        inline complexf operator+(const complexf& c) const {
+            return complexf(real + c.real,
+                imag + c.imag);
+        }
+
+        inline complexf operator-(const complexf& c) const {
+            return complexf(real - c.real,
+                imag - c.imag);
+        }
+
+        inline complexf operator*(float a) const {
+            return complexf(real * a,
+                imag * a);
+        }
+
+        inline complexf operator/(float a) const {
+            return complexf(real / a, imag / a);
+        }
+
+        inline complexf operator*(const complexf& c) const {
+            return complexf(real * c.real - imag * c.imag,
+                real * c.imag + c.real * imag);
+        }
+    };
+
+    inline complexf operator*(float a, const complexf& c) {
+        return complexf(c.real * a, c.imag * a);
+    }
+
+    inline complexf conj(const complexf& c) {
+        return complexf(c.real, -c.imag);
+    }
+
+    inline complexf expI(float theta) {
         return complexf(cosf(theta), sinf(theta));
     }
 
-    void CooleyTukey(int N, int s, int q, int d, complexf* x) {
-        int m = N / 2;
+  /*  complexf expI(float theta) {
+        return complexf(cosf(theta), sinf(theta));
+    }
+*/
+    void CooleyTukey(int32_t N, int32_t s, int32_t q, int32_t d, complexf* x) {
+        int32_t m = N / 2;
         if (N > 1) {
             for (int p = 0; p < m; p++) {
                 complexf wp = expI(-p * 2 * M_PI / N);
@@ -34,34 +79,34 @@ namespace ocean {
         }
     }
 
-    void FourierTransform(int N, complexf* x) {
+    void FourierTransform(int32_t N, complexf* x) {
         CooleyTukey(N, 1, 0, 0, x);
     }
 
-    void InverseFourierTransform(int N, complexf* x) {
-        for (int p = 0; p < N; p++)
-            x[p] = std::conj(x[p]);
+    void InverseFourierTransform(int32_t N, complexf* x) {
+        for (int32_t p = 0; p < N; p++)
+            x[p] = conj(x[p]);
         FourierTransform(N, x);
-        for (int p = 0; p < N; p++)
-            x[p] = std::conj(x[p]);
+        for (int32_t p = 0; p < N; p++)
+            x[p] = conj(x[p]);
     }
 
-    void InverseFourierTransform2D(int N, complexf* c) {
+    void InverseFourierTransform2D(int32_t N, complexf* c) {
         std::vector<complexf> rows(N);
-        for (int y = 0; y < N; y++) {
-            for (int x = 0; x < N; x++)
+        for (int32_t y = 0; y < N; y++) {
+            for (int32_t x = 0; x < N; x++)
                 rows[x] = c[y + x * N];
             InverseFourierTransform(N, rows.data());
-            for (int x = 0; x < N; x++)
+            for (int32_t x = 0; x < N; x++)
                 c[y + x * N] = rows[x];
         }
 
         std::vector<complexf> columns(N);
-        for (int x = 0; x < N; x++) {
-            for (int y = 0; y < N; y++)
+        for (int32_t x = 0; x < N; x++) {
+            for (int32_t y = 0; y < N; y++)
                 columns[y] = c[y + x * N];
             InverseFourierTransform(N, columns.data());
-            for (int y = 0; y < N; y++)
+            for (int32_t y = 0; y < N; y++)
                 c[y + x * N] = columns[y];
         }
     }
@@ -101,11 +146,11 @@ T Mix(T x, T y, float a) {
 }
 
 template <typename T>
-T BilinearInterpolation(float x, float y, int width, int height, T* values) {
-    int xi1 = Mod(x, width);
-    int yi1 = Mod(y, height);
-    int xi2 = Mod(x + 1, width);
-    int yi2 = Mod(y + 1, height);
+T BilinearInterpolation(float x, float y, int32_t width, int32_t height, T* values) {
+    int32_t xi1 = Mod(x, width);
+    int32_t yi1 = Mod(y, height);
+    int32_t xi2 = Mod(x + 1, width);
+    int32_t yi2 = Mod(y + 1, height);
 
     T topLeft = values[yi1 + xi1 * width];
     T topRight = values[yi1 + xi2 * width];
@@ -118,9 +163,9 @@ T BilinearInterpolation(float x, float y, int width, int height, T* values) {
 
     return Mix(top, bottom, Fract(y));
 }
-constexpr float PATCH_SIZE = 256.0f;
-//constexpr float PATCH_SIZE = 50.0f;
-constexpr float WIND_SPEED = 10.5f;
+//constexpr float PATCH_SIZE = 256.0f;
+constexpr float PATCH_SIZE = 50.0f;
+constexpr float WIND_SPEED = 4.5f;
 constexpr float GRAVITY = 9.81f;
 constexpr float CHOPPINESS = 1.2f;
 const core::vec2 WIND_DIRECTION = core::normalize(core::vec2(-1, -1));
@@ -142,20 +187,20 @@ public:
 
     template <typename T>
     T GetRemappedValues(float x, float y, T* values) {
-    //    return 0.000048F * BilinearInterpolation(100.f * x, 100.f * y, _resolution, _resolution, values);
+     //   return 0.000048F * BilinearInterpolation(80.f * x, 80.f * y, _resolution, _resolution, values);
         return  BilinearInterpolation(_resolution * x / PATCH_SIZE, _resolution * y / PATCH_SIZE, _resolution, _resolution, values);
     }
 
     core::vec2 GetChoppinessDisplacement(float x, float y) {
         auto displacement = GetRemappedValues(x, y, _choppiness_displacements.data());
-        return core::vec2(displacement.real(), displacement.imag()) * CHOPPINESS;
+        return core::vec2(displacement.real, displacement.imag) * CHOPPINESS;
     }
 
 
     float GetHeight(float x, float y) {
-        core::vec2 horizontalDisplacement = GetChoppinessDisplacement(x, y);
-        x -= horizontalDisplacement.x;
-        y -= horizontalDisplacement.y;
+       // core::vec2 horizontalDisplacement = GetChoppinessDisplacement(x, y);
+      //  x -= horizontalDisplacement.x;
+      // y -= horizontalDisplacement.y;
         return GetRemappedValues(x, y, _heights.data());
     }
 
@@ -177,12 +222,12 @@ public:
     }
 
     void GenerateSpectra() {
-        for (int i = 0; i < _resolution; i++)
-            for (int j = 0; j < _resolution; j++) {
+        for (int32_t i = 0; i < _resolution; i++)
+            for (int32_t j = 0; j < _resolution; j++) {
                 core::vec2 k = core::vec2(_resolution - 2 * i, _resolution - 2 * j) * (M_PI / PATCH_SIZE);
                 float p = sqrtf(PhillipsSpectrumCoefs(k) / 2);
 
-                int index = i * _resolution + j;
+                int32_t index = i * _resolution + j;
                 _spectrum0[index] = complexf(RandomGaussian() * p, RandomGaussian() * p);
                 _angular_speeds[index] = sqrt(GRAVITY * core::length(k));
             }
@@ -191,12 +236,12 @@ public:
     }
 
     void UpdateHeights(float t) {
-        for (int x = 0; x < _resolution; x++) {
-            for (int y = 0; y < _resolution; y++) {
+        for (int32_t x = 0; x < _resolution; x++) {
+            for (int32_t y = 0; y < _resolution; y++) {
                 int i = y + x * _resolution;
                 float wt = _angular_speeds[i] * t;
                 complexf h = _spectrum0[i];
-                complexf h1;
+           /*     complexf h1;
                 if (y == 0 && x == 0)
                     h1 = _spectrum0[_resolution * _resolution - 1];
                 else if (y == 0)
@@ -205,23 +250,23 @@ public:
                     h1 = _spectrum0[_resolution - y + (_resolution - x - 1) * _resolution];
                 else
                     h1 = _spectrum0[(_resolution - y) + (_resolution - x) * _resolution];
-
-                core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
-                complexf spec = h * expI(wt) + std::conj(h1) * expI(-wt);
-                _spectrum[i] = spec;
-                _choppinesses[i] = complexf(k.y, -k.x) * spec;
-            }
+*/
+               //core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
+               complexf spec = h * expI(wt) + conj(h) * expI(-wt);
+               _spectrum[i] = spec;
+              //  _choppinesses[i] = complexf(k.y, -k.x) * spec;
+              }
         }
 
         InverseFourierTransform2D(_resolution, _spectrum.data());
-        InverseFourierTransform2D(_resolution, _choppinesses.data());
+  //      InverseFourierTransform2D(_resolution, _choppinesses.data());
 
-        for (int i = 0; i < _resolution; i++)
-            for (int j = 0; j < _resolution; j++) {
+        for (int32_t i = 0; i < _resolution; i++)
+            for (int32_t j = 0; j < _resolution; j++) {
                 float sign = ((i + j) % 2) ? -1 : 1;
                 int index = i * _resolution + j;
-                _heights[index] = sign * _spectrum[index].real();
-                _choppiness_displacements[index] = sign * _choppinesses[index];
+                _heights[index] = sign * _spectrum[index].real;
+         //       _choppiness_displacements[index] = sign * _choppinesses[index];
             }
     }
 
@@ -231,7 +276,7 @@ public:
     std::vector<complexf> _choppiness_displacements;
     std::vector<float> _heights;
     std::vector<float> _angular_speeds;
-    uint32_t _resolution{ 0};
+    int32_t _resolution{ 0};
 };
 }
 
@@ -250,36 +295,43 @@ void generateSpectra(graphics::ScenePointer& scene, graphics::Node& root, graphi
     int width = res;
     float offset = ocean::PATCH_SIZE / (float) width;
 
-    for (int i = 0; i < width * width; ++i) {
-        float t = acos(-1.0f) * i / float(width * width);
-        auto p = core::vec3(offset * (i % width), 0.0f, offset * (i / width));
+    for (int i = 0; i < width; ++i) {
+        for (int j = 0; j < width; ++j) {
+       // float t = acos(-1.0f) * i / float(width * width);
+        auto p = core::vec3(offset * (i), 0.0f, offset * (j));
 
-        p.y = locean->GetHeight(p.x, p.z);
+       // p.y = locean->GetHeight(p.x, p.z);
+        p.y = locean->_heights[i * width + j];
+      //  p.y = locean->_heights[i  + j * width];
 
         auto p_node = scene->createNode(
-            core::translation_rotation(
-                p,
-                core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
+            // core::translation_rotation(
+            core::translation(
+                p
+             //   ,core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
             ),
             root.id());
         auto p_item = scene->createItem(p_node, drawable);
         prim_nodes.push_back(p_node.id());
-    }
+    }}
 }
 
 void updateHeights(float t) {
 
     locean->UpdateHeights(t);
 
+    for (int i = 0; i < prim_nodes.size(); i++) {
 
-    for (auto prim_node : prim_nodes) {
+ //   for (auto prim_node : prim_nodes) {
 
-        lscene->_nodes.editTransform(prim_node, [&](core::mat4x3& rts) -> bool {
+   
+        lscene->_nodes.editTransform(prim_nodes[i], [&](core::mat4x3& rts) -> bool {
             
-            auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
+           // auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
+            auto h = locean->_heights[i]; //GetHeight(rts._columns[3].x, rts._columns[3].z);
         //    auto h = 2.0f * sin(10.0f * t + 3 * ocean::M_PI * (rts._columns[3].z ) / (ocean::PATCH_SIZE));// * cos(rts._columns[3].x + t);
         //    auto h = 0.4f * core::max(rts._columns[3].x, rts._columns[3].z) * sin(t);
-            rts._columns[3].y = h     * 1.0f;
+            rts._columns[3].y = h     * 1;
             return true;
             });
     }
