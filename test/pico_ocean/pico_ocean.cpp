@@ -104,19 +104,8 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
-    // A Primitive drawable factory
-    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
-    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
-
-    // a Primitive
-    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
-    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
-    p_drawable.as<graphics::PrimitiveDrawable>()._size = { 0.2, 0.2, 0.2 };
-
-
-    auto ocean_resolution = 200;
-    generateSpectra(scene, node0, p_drawable, ocean_resolution);
-
+    auto ocean_resolution = 512;
+    generateSpectra(ocean_resolution, gpuDevice, scene, camera, node0);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
