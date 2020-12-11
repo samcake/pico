@@ -4,6 +4,7 @@
 #include <math.h>
 #include <core/math/LinearAlgebra.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
+#include <graphics/drawables/HeightmapDrawable.h>
 
 namespace ocean {
 
@@ -285,15 +286,25 @@ ocean::Ocean* locean;
 std::vector<graphics::NodeID> prim_nodes;
 graphics::ScenePointer lscene;
 
-void generateSpectra(graphics::ScenePointer& scene, graphics::Node& root, graphics::Drawable& drawable, int res) {
+void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
     locean = new ocean::Ocean(res);
     locean->GenerateSpectra();
 
     lscene = scene;
 
-    int width = res;
+    int width = 0.05 * res;
     float offset = ocean::PATCH_SIZE / (float) width;
+/*
+
+    // A Primitive drawable factory
+    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
+    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
+    
+    // a Primitive
+    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
+    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
+    p_drawable.as<graphics::PrimitiveDrawable>()._size = { 0.2, 0.2, 0.2 };
 
     for (int i = 0; i < width; ++i) {
         for (int j = 0; j < width; ++j) {
@@ -311,9 +322,20 @@ void generateSpectra(graphics::ScenePointer& scene, graphics::Node& root, graphi
              //   ,core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
             ),
             root.id());
-        auto p_item = scene->createItem(p_node, drawable);
+  //      auto p_item = scene->createItem(p_node, drawable);
         prim_nodes.push_back(p_node.id());
-    }}
+    }
+*/
+
+    // A Heightmap drawable factory
+    auto HeightmapDrawableFactory = std::make_shared<graphics::HeightmapDrawableFactory>();
+    HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a Heightmap
+    auto h_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, {30, 40, 2.0f }));
+    HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, h_drawable.as<graphics::HeightmapDrawable>());
+
+    scene->createItem(root, h_drawable);
 }
 
 void updateHeights(float t) {
