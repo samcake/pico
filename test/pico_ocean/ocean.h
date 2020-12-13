@@ -168,8 +168,9 @@ T BilinearInterpolation(float x, float y, int32_t width, int32_t height, T* valu
 constexpr float PATCH_SIZE = 50.0f;
 constexpr float WIND_SPEED = 4.5f;
 constexpr float GRAVITY = 9.81f;
-constexpr float CHOPPINESS = 1.2f;
-const core::vec2 WIND_DIRECTION = core::normalize(core::vec2(-1, -1));
+//constexpr float CHOPPINESS = 1.2f;
+constexpr float CHOPPINESS = 0.f;
+const core::vec2 WIND_DIRECTION = core::normalize(core::vec2(-1, 0));
 
 class Ocean {
 public:
@@ -201,7 +202,7 @@ public:
     float GetHeight(float x, float y) {
        // core::vec2 horizontalDisplacement = GetChoppinessDisplacement(x, y);
       //  x -= horizontalDisplacement.x;
-      // y -= horizontalDisplacement.y;
+       // y -= horizontalDisplacement.y;
         return GetRemappedValues(x, y, _heights.data());
     }
 
@@ -225,7 +226,7 @@ public:
     void GenerateSpectra() {
         for (int32_t i = 0; i < _resolution; i++)
             for (int32_t j = 0; j < _resolution; j++) {
-                core::vec2 k = core::vec2(_resolution - 2 * i, _resolution - 2 * j) * (M_PI / PATCH_SIZE);
+                core::vec2 k = core::vec2(_resolution - 2 * i, _resolution - 2 * j) * (M_PI / (PATCH_SIZE) /* / ((float) _resolution)*/);
                 float p = sqrtf(PhillipsSpectrumCoefs(k) / 2);
 
                 int32_t index = i * _resolution + j;
@@ -285,6 +286,7 @@ public:
 ocean::Ocean* locean;
 std::vector<graphics::NodeID> prim_nodes;
 graphics::ScenePointer lscene;
+graphics::Drawable heightmap_drawable;
 
 void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
@@ -332,15 +334,28 @@ void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::Scen
     HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a Heightmap
-    auto h_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, {30, 40, 2.0f }));
-    HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, h_drawable.as<graphics::HeightmapDrawable>());
+    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, { uint32_t(res-1), uint32_t(res-1), 2.0f }));
+    HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
 
-    scene->createItem(root, h_drawable);
+    scene->createItem(root, heightmap_drawable);
 }
 
 void updateHeights(float t) {
 
     locean->UpdateHeights(t);
+
+    graphics::HeightmapDrawable& heightmap =  heightmap_drawable.as<graphics::HeightmapDrawable>();
+
+    auto buffer = heightmap.getHeightBuffer();
+    auto desc = heightmap.getDesc();
+
+    auto numElements = (desc.width + 1) * (desc.height + 1);
+
+    memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
+
+
+    
+
 
     for (int i = 0; i < prim_nodes.size(); i++) {
 

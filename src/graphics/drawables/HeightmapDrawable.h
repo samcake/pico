@@ -93,9 +93,14 @@ namespace graphics {
         core::aabox3 getBound() const { return core::aabox3(core::vec3(0.f), core::vec3(_heightmap.width, 2.0f, _heightmap.height) * 0.5f *_heightmap.spacing); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
+        graphics::BufferPointer getHeightBuffer() const { return _heightBuffer; }
+
+        const Heightmap& getDesc() const { return _heightmap; }
+
     protected:
         friend class HeightmapDrawableFactory;
         Heightmap _heightmap;
+        graphics::BufferPointer _heightBuffer;
         HeightmapDrawableUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };

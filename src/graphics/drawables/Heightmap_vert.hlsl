@@ -127,6 +127,15 @@ cbuffer UniformBlock1 : register(b1) {
 
 
 
+// Heightmap
+//
+StructuredBuffer<float>  heightmap_buffer : register(t1);
+
+float getHeight(float x, float z) {
+
+    return heightmap_buffer[0];
+}
+
 struct VertexPosColor
 {
     float3 Position : POSITION;
@@ -159,7 +168,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float3 position = float3((svid - offset.x), 0.0, (strip_id + ovid - offset.z)) * _spacing;
     float3 color = float3(float(strip_vert_id) / float(numVertPerStrip), float(strip_id) / float(_height), 1.0);
 
-    position.y = 4.0f * sin(3.14  * position.x / (offset.x));
+    position.y = heightmap_buffer[(strip_id + ovid) * _width + svid];//getHeight(position.x, position.z);
 
     Transform _model = node_getWorldTransform(_nodeID);
 

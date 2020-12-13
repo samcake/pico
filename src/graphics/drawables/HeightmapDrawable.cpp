@@ -71,6 +71,7 @@ namespace graphics
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(HeightmapObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -97,7 +98,7 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        pipelineInit.rasterizer.fillMode = graphics::FillMode::LINE;
+      //  pipelineInit.rasterizer.fillMode = graphics::FillMode::LINE;
         _HeightmapPipeline = device->createPipelineState(pipelineInit);
     }
 
@@ -105,6 +106,20 @@ namespace graphics
         auto HeightmapDrawable = new graphics::HeightmapDrawable();
         HeightmapDrawable->_heightmap = heightmap;
         HeightmapDrawable->_uniforms = _sharedUniforms;
+
+        auto numHeights = (heightmap.width + 1)* (heightmap.height + 1);
+
+        graphics::BufferInit hbresourceBufferInit{};
+        hbresourceBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+        hbresourceBufferInit.hostVisible = true;
+        hbresourceBufferInit.bufferSize = numHeights * sizeof(float);
+        hbresourceBufferInit.firstElement = 0;
+        hbresourceBufferInit.numElements = numHeights;
+        hbresourceBufferInit.structStride = sizeof(float);
+
+        HeightmapDrawable->_heightBuffer = device->createBuffer(hbresourceBufferInit);
+        // memcpy(HeightmapDrawable->_heightBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vbresourceBufferInit.bufferSize);
+
         return HeightmapDrawable;
     }
 
@@ -127,9 +142,13 @@ namespace graphics
         camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
         graphics::DescriptorObject transform_rboDescriptorObject;
         transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
+        graphics::DescriptorObject heightmap_rboDescriptorObject;
+        heightmap_rboDescriptorObject._buffers.push_back(drawable.getHeightBuffer());
+
         graphics::DescriptorObjects descriptorObjects = {
             camera_uboDescriptorObject,
-            transform_rboDescriptorObject
+            transform_rboDescriptorObject,
+            heightmap_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
