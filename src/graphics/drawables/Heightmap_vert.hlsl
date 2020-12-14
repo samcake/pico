@@ -168,20 +168,83 @@ float3 getHeight(float x, float y) {
     return res;
 }
 
+
+float4 evalTiledPosition(float2 p) {
+    float4 res;
+    // map to heightmap base region
+    float xf = p.x + (0.5 * _map_width * _map_spacing);
+    float yf = p.y + (0.5 * _map_height * _map_spacing);
+
+    float xtf = xf / float(_map_width * _map_spacing);
+    float ytf = yf / float(_map_height * _map_spacing);
+
+    int xt, yt;
+    res.x = modf(xtf, xt);
+    if (xtf < 0) {
+        res.x = 1.0f + res.x;
+        xt -= 1;
+    }
+    res.y = modf(ytf, yt);
+    if (ytf < 0) {
+        res.y = 1.0f + res.y;
+        yt -= 1;
+    }
+
+    res.z = xt;
+    res.w = yt;
+
+    /*if (!((xt == 0) && (yt == 0))) { // clamp height to heightmap region
+    }*/
+
+    return res;
+}
+
+float fetchHeight(int2 p) {
+    return 0.2 * heightmap_buffer[p.x + p.y * _map_width];
+}
+
+float getHeight(float2 p) {
+    int2 pi = int2(int(p.x * _map_width), int(p.y * _map_height));
+    return fetchHeight(pi);
+}
+
 float3 getNormal(float2 p) {
-    int xi = int(p.x * _map_width);
-    int yi = int(p.y * _map_height);
+    int2 pi = int2(int(p.x * _map_width), int(p.y * _map_height));
 
-    float h0 = heightmap_buffer[xi + yi * _map_width];
-    float hx = heightmap_buffer[xi + 1 + yi * _map_width];
-    float hy = heightmap_buffer[xi + (yi + 1) * _map_width];
-    float hxb = heightmap_buffer[xi - 1 + yi * _map_width];
-    float hyb = heightmap_buffer[xi + (yi - 1) * _map_width];
+    float h0 = fetchHeight(pi);
+    float hx = fetchHeight(int2(pi.x + 1, pi.y));
+    float hy = fetchHeight(int2(pi.x, pi.y + 1));
+    float hxb = fetchHeight(int2(pi.x - 1, pi.y));
+    float hyb = fetchHeight(int2(pi.x, pi.y - 1));
 
-    float3 vx = float3(_map_spacing, hx - h0, 0.0);
-    float3 vz = float3(0.0, hy - h0, _map_spacing);
+    float3 vx = float3( _map_spacing, hx - h0, 0.0);
+    float3 vz = float3(0.0, hy - h0,  _map_spacing);
 
     return normalize(cross(vz, vx));
+}
+
+float3 getSmoothNormal(float2 p) {
+    p *= float2(_map_width, _map_height);
+    int2 pi00;
+    float2 fp = modf(p, pi00);
+
+    int2 pi11 = int2((pi00.x + 1) % _map_width, (pi00.y + 1) % _map_height);
+    int2 pi10 = int2(pi11.x, pi00.y);
+    int2 pi01 = int2(pi00.x, pi11.y);
+
+    float h00 = fetchHeight(pi00);
+    float h11 = fetchHeight(pi11);
+    float h10 = fetchHeight(pi10);
+    float h01 = fetchHeight(pi01);
+
+
+    float3 vx0 = float3(_map_spacing, h10 - h00, 0.0);
+    float3 vz0 = float3(0.0, h01 - h00, _map_spacing);
+ 
+    float3 vx1 = float3(_map_spacing, h11 - h10, 0.0);
+    float3 vz1 = float3(0.0, h11 - h01, _map_spacing);
+ 
+    return normalize(cross(lerp(vz0, vz1, fp.x), lerp(vx0, vx1, fp.y)));
 }
 
 struct VertexPosColor
@@ -215,12 +278,13 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     const float3 offset = float3(_mesh_width, 0.0, _mesh_height) * 0.5f;
     float3 position = float3((svid - offset.x), 0.0, (strip_id + ovid - offset.z)) * _mesh_spacing;
 
+    float4 tilePos = evalTiledPosition(position.xz);
+    if (!(/*tilePos.z == 0.0f && */tilePos.w == 0.0f)) {
+        tilePos.xy = float2(-1.0f, -1.0f);
+    }
+    position.y = getHeight(tilePos.xy);
+    float3 normal = getSmoothNormal(tilePos.xy);
 
-    //position.y = heightmap_buffer[(strip_id + ovid) * _mesh_width + svid];
-    float3 heightmapFrag = getHeight(position.x, position.z);
-    position.y = heightmapFrag.z;
-
-    float3 normal = getNormal(heightmapFrag.xy);
  //   float3 color = float3(heightmapFrag.x, 0.0, heightmapFrag.y);
     float3 color = dot(normal, normalize(float3(-1.0f, 1.0f, -1.0f)));
    // float3 color = normal;

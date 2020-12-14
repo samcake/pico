@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
     auto ocean_resolution = 512;
-    generateSpectra(ocean_resolution, gpuDevice, scene, camera, node0);
+    generateSpectra(ocean_resolution, 1.0f, 1024, 1.0f, gpuDevice, scene, camera, node0);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();

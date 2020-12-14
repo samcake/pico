@@ -177,8 +177,9 @@ public:
     
     float PATCH_SIZE{ 50.0f };
 
-    Ocean(uint32_t resolution) {
+    Ocean(uint32_t resolution, float spacing) {
         _resolution = resolution;
+        
         _spectrum0.resize(resolution * resolution);
         _spectrum.resize(resolution * resolution);
         _choppinesses.resize(resolution * resolution);
@@ -268,10 +269,10 @@ public:
             for (int32_t j = 0; j < _resolution; j++) {
                 float sign = ((i + j) % 2) ? -1 : 1;
                 int index = i * _resolution + j;
-             //   _heights[index] = sign * _spectrum[index].real;
+                _heights[index] = sign * _spectrum[index].real;
          //       _choppiness_displacements[index] = sign * _choppinesses[index];
 
-                _heights[index] = 100.0  * sin(t + 3 * M_PI * i / (float) _resolution);
+             //   _heights[index] = 100.0  * sin(t + 3 * M_PI * i / (float) _resolution);
 
             }
     }
@@ -292,9 +293,9 @@ std::vector<graphics::NodeID> prim_nodes;
 graphics::ScenePointer lscene;
 graphics::Drawable heightmap_drawable;
 
-void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
+void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, float mesh_spacing, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
-    locean = new ocean::Ocean(res);
+    locean = new ocean::Ocean(map_res, map_spacing);
     locean->GenerateSpectra();
 
     lscene = scene;
@@ -304,7 +305,10 @@ void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::Scen
     HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a Heightmap
-    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, { uint32_t(res-1), uint32_t(res-1), 2.0f, 2 * uint32_t(res - 1), 2 * uint32_t(res - 1), 2.0f }));
+    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, {
+         map_res, map_res, map_spacing,
+         mesh_res, mesh_res, mesh_spacing
+       }));
     HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
 
     scene->createItem(root, heightmap_drawable);
