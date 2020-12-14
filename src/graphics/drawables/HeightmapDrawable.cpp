@@ -59,9 +59,14 @@ namespace graphics
     // Custom data uniforms
     struct HeightmapObjectData {
         uint32_t nodeID{0};
+
         uint32_t width{ 0 };
         uint32_t height{ 0 };
         float spacing{ 0 };
+
+        uint32_t mesh_width{ 0 };
+        uint32_t mesh_height{ 0 };
+        float mesh_spacing{ 0 };
     };
 
     void HeightmapDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
@@ -107,7 +112,7 @@ namespace graphics
         HeightmapDrawable->_heightmap = heightmap;
         HeightmapDrawable->_uniforms = _sharedUniforms;
 
-        auto numHeights = (heightmap.width + 1)* (heightmap.height + 1);
+        auto numHeights = heightmap.getMapNumElements();
 
         graphics::BufferInit hbresourceBufferInit{};
         hbresourceBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
@@ -163,11 +168,12 @@ namespace graphics
 
             batch->bindDescriptorSet(descriptorSet);
 
-            HeightmapObjectData odata{ node, heightmap->_heightmap.width,  heightmap->_heightmap.height, heightmap->_heightmap.spacing };
+            HeightmapObjectData odata{ node, heightmap->_heightmap.map_width,  heightmap->_heightmap.map_height, heightmap->_heightmap.map_spacing,
+                                       heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
             batch->bindPushUniform(1, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
 
-            // A hieghtmap is drawan with triangle strip patch of (2 * (width + 1) + 1) * (height) verts
-            batch->draw(((2 * (heightmap->_heightmap.width + 1) + 1) * heightmap->_heightmap.height) - 1, 0);
+            // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
+            batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
         };
         drawable._drawcall = drawCallback;
     }

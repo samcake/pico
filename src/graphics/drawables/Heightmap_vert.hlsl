@@ -120,9 +120,12 @@ Transform node_getWorldTransform(int nodeID) {
 
 cbuffer UniformBlock1 : register(b1) {
     int   _nodeID;
-    int  _width;
-    int  _height;
-    float _spacing;
+    int  _map_width;
+    int  _map_height;
+    float _map_spacing;
+    int  _mesh_width;
+    int  _mesh_height;
+    float _mesh_spacing;
 }
 
 
@@ -131,9 +134,54 @@ cbuffer UniformBlock1 : register(b1) {
 //
 StructuredBuffer<float>  heightmap_buffer : register(t1);
 
-float getHeight(float x, float z) {
+float3 getHeight(float x, float y) {
+    float3 res;
+    // map to heightmap base region
+    float xf = x + (0.5 * _map_width * _map_spacing);
+    float yf = y + (0.5 * _map_height * _map_spacing);
 
-    return heightmap_buffer[0];
+    float xtf = xf / float(_map_width * _map_spacing);
+    float ytf = yf / float(_map_height * _map_spacing);
+
+    int xt, yt;
+    res.x = modf(xtf, xt);
+    if (xtf < 0) {
+        res.x = 1.0f + res.x;
+        xt -= 1;
+    }
+    res.y = modf(ytf, yt);
+    if (ytf < 0) {
+        res.y = 1.0f + res.y;
+        yt -= 1;
+    }
+
+    int xi = int(res.x * _map_width);
+    int yi = int(res.y * _map_height);
+
+    if (!((xt == 0) && (yt == 0))) { // clamp height to heightmap region
+        xi = _map_width + 1;
+        yi = _map_height + 1 ;
+    }
+    res.z = heightmap_buffer[xi + yi * _map_width];
+
+
+    return res;
+}
+
+float3 getNormal(float2 p) {
+    int xi = int(p.x * _map_width);
+    int yi = int(p.y * _map_height);
+
+    float h0 = heightmap_buffer[xi + yi * _map_width];
+    float hx = heightmap_buffer[xi + 1 + yi * _map_width];
+    float hy = heightmap_buffer[xi + (yi + 1) * _map_width];
+    float hxb = heightmap_buffer[xi - 1 + yi * _map_width];
+    float hyb = heightmap_buffer[xi + (yi - 1) * _map_width];
+
+    float3 vx = float3(_map_spacing, hx - h0, 0.0);
+    float3 vz = float3(0.0, hy - h0, _map_spacing);
+
+    return normalize(cross(vz, vx));
 }
 
 struct VertexPosColor
@@ -153,7 +201,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
 
-    const int numVertPerWidth = 2 * (_width + 1);
+    const int numVertPerWidth = 2 * (_mesh_width + 1);
     const int numVertPerStrip = numVertPerWidth + 1;
     int strip_id = ivid / numVertPerStrip;
     int strip_odd = strip_id % 2;
@@ -162,13 +210,20 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     strip_vert_id = (strip_vert_id == numVertPerWidth ? numVertPerWidth - 1 : strip_vert_id);
     int svid = strip_vert_id / 2;
     int ovid = strip_vert_id % 2;
-    svid = (strip_odd ? _width - svid : svid);
+    svid = (strip_odd ? _mesh_width - svid : svid);
 
-    const float3 offset = float3(_width, 0.0, _height) * 0.5f;
-    float3 position = float3((svid - offset.x), 0.0, (strip_id + ovid - offset.z)) * _spacing;
-    float3 color = float3(float(strip_vert_id) / float(numVertPerStrip), float(strip_id) / float(_height), 1.0);
+    const float3 offset = float3(_mesh_width, 0.0, _mesh_height) * 0.5f;
+    float3 position = float3((svid - offset.x), 0.0, (strip_id + ovid - offset.z)) * _mesh_spacing;
 
-    position.y = heightmap_buffer[(strip_id + ovid) * _width + svid];//getHeight(position.x, position.z);
+
+    //position.y = heightmap_buffer[(strip_id + ovid) * _mesh_width + svid];
+    float3 heightmapFrag = getHeight(position.x, position.z);
+    position.y = heightmapFrag.z;
+
+    float3 normal = getNormal(heightmapFrag.xy);
+ //   float3 color = float3(heightmapFrag.x, 0.0, heightmapFrag.y);
+    float3 color = dot(normal, normalize(float3(-1.0f, 1.0f, -1.0f)));
+   // float3 color = normal;
 
     Transform _model = node_getWorldTransform(_nodeID);
 

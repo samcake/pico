@@ -46,9 +46,26 @@ namespace graphics {
     class HeightmapDrawable;
 
     struct Heightmap {
-        uint32_t width{ 1 };
-        uint32_t height{ 1 };
-        float    spacing{ 1.f };
+        uint32_t map_width{ 1 };
+        uint32_t map_height{ 1 };
+        float    map_spacing{ 1.f };
+
+        uint32_t getMapNumElementsX() const { return map_width + 1; }
+        uint32_t getMapNumElementsY() const { return map_height + 1; }
+        uint32_t getMapNumElements() const { return getMapNumElementsX() * getMapNumElementsY(); }
+
+        uint32_t mesh_resolutionX{ 1 };
+        uint32_t mesh_resolutionY{ 1 };
+        float    mesh_spacing{ 1.f };
+    
+        uint32_t getMeshNumVertsX() const { return mesh_resolutionX + 1; }
+        uint32_t getMeshNumVertsY() const { return mesh_resolutionY + 1; }
+        uint32_t getMeshNumVerts() const {  return getMeshNumVertsX() * getMeshNumVertsY(); }
+
+        uint32_t getMeshPerStripNumIndices() const { return (2 * mesh_resolutionX) + 1; }
+        uint32_t getMeshNumStrips() const { return mesh_resolutionY; }
+        uint32_t getMeshNumIndices() const { return getMeshNumStrips() * getMeshPerStripNumIndices() - 1; } // remove the last index of the last strip
+
     };
 
     struct VISUALIZATION_API HeightmapDrawableUniforms {
@@ -90,7 +107,7 @@ namespace graphics {
         void swapUniforms(const HeightmapDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const HeightmapDrawableUniformsPointer& getUniforms() const { return _uniforms; }
 
-        core::aabox3 getBound() const { return core::aabox3(core::vec3(0.f), core::vec3(_heightmap.width, 2.0f, _heightmap.height) * 0.5f *_heightmap.spacing); }
+        core::aabox3 getBound() const { return core::aabox3(core::vec3(0.f), core::vec3(_heightmap.map_width, 2.0f, _heightmap.map_height) * 0.5f *_heightmap.map_spacing); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
         graphics::BufferPointer getHeightBuffer() const { return _heightBuffer; }

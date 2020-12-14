@@ -164,17 +164,18 @@ T BilinearInterpolation(float x, float y, int32_t width, int32_t height, T* valu
 
     return Mix(top, bottom, Fract(y));
 }
-//constexpr float PATCH_SIZE = 256.0f;
-constexpr float PATCH_SIZE = 50.0f;
+
+
 constexpr float WIND_SPEED = 4.5f;
 constexpr float GRAVITY = 9.81f;
 //constexpr float CHOPPINESS = 1.2f;
-constexpr float CHOPPINESS = 0.f;
+constexpr float CHOPPINESS = 1.2f;
 const core::vec2 WIND_DIRECTION = core::normalize(core::vec2(-1, 0));
 
 class Ocean {
 public:
     
+    float PATCH_SIZE{ 50.0f };
 
     Ocean(uint32_t resolution) {
         _resolution = resolution;
@@ -243,7 +244,7 @@ public:
                 int i = y + x * _resolution;
                 float wt = _angular_speeds[i] * t;
                 complexf h = _spectrum0[i];
-           /*     complexf h1;
+                complexf h1;
                 if (y == 0 && x == 0)
                     h1 = _spectrum0[_resolution * _resolution - 1];
                 else if (y == 0)
@@ -252,7 +253,7 @@ public:
                     h1 = _spectrum0[_resolution - y + (_resolution - x - 1) * _resolution];
                 else
                     h1 = _spectrum0[(_resolution - y) + (_resolution - x) * _resolution];
-*/
+
                //core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
                complexf spec = h * expI(wt) + conj(h) * expI(-wt);
                _spectrum[i] = spec;
@@ -267,8 +268,11 @@ public:
             for (int32_t j = 0; j < _resolution; j++) {
                 float sign = ((i + j) % 2) ? -1 : 1;
                 int index = i * _resolution + j;
-                _heights[index] = sign * _spectrum[index].real;
+             //   _heights[index] = sign * _spectrum[index].real;
          //       _choppiness_displacements[index] = sign * _choppinesses[index];
+
+                _heights[index] = 100.0  * sin(t + 3 * M_PI * i / (float) _resolution);
+
             }
     }
 
@@ -295,46 +299,12 @@ void generateSpectra(int res, graphics::DevicePointer& gpuDevice, graphics::Scen
 
     lscene = scene;
 
-    int width = 0.05 * res;
-    float offset = ocean::PATCH_SIZE / (float) width;
-/*
-
-    // A Primitive drawable factory
-    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
-    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
-    
-    // a Primitive
-    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
-    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
-    p_drawable.as<graphics::PrimitiveDrawable>()._size = { 0.2, 0.2, 0.2 };
-
-    for (int i = 0; i < width; ++i) {
-        for (int j = 0; j < width; ++j) {
-       // float t = acos(-1.0f) * i / float(width * width);
-        auto p = core::vec3(offset * (i), 0.0f, offset * (j));
-
-       // p.y = locean->GetHeight(p.x, p.z);
-        p.y = locean->_heights[i * width + j];
-      //  p.y = locean->_heights[i  + j * width];
-
-        auto p_node = scene->createNode(
-            // core::translation_rotation(
-            core::translation(
-                p
-             //   ,core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
-            ),
-            root.id());
-  //      auto p_item = scene->createItem(p_node, drawable);
-        prim_nodes.push_back(p_node.id());
-    }
-*/
-
     // A Heightmap drawable factory
     auto HeightmapDrawableFactory = std::make_shared<graphics::HeightmapDrawableFactory>();
     HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a Heightmap
-    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, { uint32_t(res-1), uint32_t(res-1), 2.0f }));
+    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, { uint32_t(res-1), uint32_t(res-1), 2.0f, 2 * uint32_t(res - 1), 2 * uint32_t(res - 1), 2.0f }));
     HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
 
     scene->createItem(root, heightmap_drawable);
@@ -349,7 +319,7 @@ void updateHeights(float t) {
     auto buffer = heightmap.getHeightBuffer();
     auto desc = heightmap.getDesc();
 
-    auto numElements = (desc.width + 1) * (desc.height + 1);
+    auto numElements = desc.getMapNumElements();
 
     memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
 
