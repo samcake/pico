@@ -200,7 +200,8 @@ float4 evalTiledPosition(float2 p) {
 }
 
 float fetchHeight(int2 p) {
-    return 0.2 * heightmap_buffer[p.x + p.y * _map_width];
+   return 0.2 * heightmap_buffer[p.x + p.y * _map_width];
+   // return 10.0 * sin(p.x * 0.1) * cos(p.y * 0.2);
 }
 
 float getHeight(float2 p) {
@@ -257,6 +258,8 @@ struct VertexPosColor
 struct VertexShaderOutput
 {
     float4 Color    : COLOR;
+    float3 WPos : WPOS;
+    float3 Normal   : SPRITE;
     float4 Position : SV_Position;
 };
 
@@ -285,8 +288,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     position.y = getHeight(tilePos.xy);
     float3 normal = getSmoothNormal(tilePos.xy);
 
- //   float3 color = float3(heightmapFrag.x, 0.0, heightmapFrag.y);
-    float3 color = dot(normal, normalize(float3(-1.0f, 1.0f, -1.0f)));
+    float3 color = float3(tilePos.x, 0.0, tilePos.y);
+ //   float3 color = dot(normal, normalize(float3(-1.0f, 1.0f, -1.0f)));
    // float3 color = normal;
 
     Transform _model = node_getWorldTransform(_nodeID);
@@ -296,8 +299,10 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
     OUT.Position = clipPos;
+    OUT.WPos = position;
     OUT.Color = float4(color, 1.0f);
- 
+    OUT.Normal = normal;
+
     return OUT;
 }
 
