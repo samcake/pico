@@ -51,13 +51,13 @@ int main (int argc, char** argv) {
     enum Type {
         VERTEX = 0,
         FRAGMENT,
-        GEOMETRY,
+        COMPUTE,
     } type = VERTEX;
     static const char* shaderTypeString[] = {
-        "VERTEX", "PIXEL", "GEOMETRY"
+        "VERTEX", "PIXEL", "COMPUTE"
     };
     static const char* shaderCreateString[] = {
-        "Vertex", "Pixel", "Geometry"
+        "Vertex", "Pixel", "Compute"
     };
     std::string shaderStage{ "vert" };
 
@@ -141,9 +141,9 @@ int main (int argc, char** argv) {
                 if (inputs.back() == "frag") {
                     shaderStage = inputs.back();
                     type = FRAGMENT;
-                } else if (inputs.back() == "geom") {
+                } else if (inputs.back() == "comp") {
                     shaderStage = inputs.back();
-                    type = GEOMETRY;
+                    type = COMPUTE;
                 } else if (inputs.back() == "vert") {
                     shaderStage = inputs.back();
                     type = VERTEX;
@@ -245,8 +245,8 @@ int main (int argc, char** argv) {
         header += "#define GPU_PIXEL_SHADER\n";
         break;
 
-    case GEOMETRY:
-        header += "#define GPU_GEOMETRY_SHADER\n";
+    case COMPUTE:
+        header += "#define GPU_COMPUTE_SHADER\n";
         break;
     }
 

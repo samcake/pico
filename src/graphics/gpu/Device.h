@@ -56,7 +56,8 @@ namespace graphics {
 
         virtual SamplerPointer createSampler(const SamplerInit& init) = 0;
 
-        virtual PipelineStatePointer createPipelineState(const PipelineStateInit& init) = 0;
+        virtual PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) = 0;
+        virtual PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) = 0;
 
         virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
@@ -95,7 +96,8 @@ namespace graphics {
 
         SamplerPointer createSampler(const SamplerInit& init);
 
-        PipelineStatePointer createPipelineState(const PipelineStateInit& init);
+        PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init);
+        PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init);
 
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init);
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);

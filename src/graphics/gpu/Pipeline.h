@@ -35,7 +35,7 @@
 
 namespace graphics {
 
-    struct VISUALIZATION_API PipelineStateInit {
+    struct VISUALIZATION_API GraphicsPipelineStateInit {
         ShaderPointer program;
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
@@ -47,29 +47,46 @@ namespace graphics {
         std::string watch_name;
     };
 
+    struct VISUALIZATION_API ComputePipelineStateInit {
+        ShaderPointer program;
+        DescriptorSetLayoutPointer descriptorSetLayout;
+        
+        std::string watch_name;
+    };
+
     using PipelineRealizer = std::function<bool (PipelineState*)>;
 
     class VISUALIZATION_API PipelineState {
     protected:
         // PipelineState is created from the device
         friend class Device;
+        friend class PipelineWatcher;
         PipelineState();
 
-        PipelineStateInit _init;
+        PipelineType _type;
+
+
+
+        ShaderPointer _program;
+        DescriptorSetLayoutPointer _descriptorSetLayout;
 
         PipelineRealizer _pipelineRealizer;
+
+//        union {
+            GraphicsPipelineStateInit _graphics;
+            ComputePipelineStateInit _compute;
+  //      };       
+
     public:
         virtual ~PipelineState();
 
-        ShaderPointer _program;
-
+        PipelineType getType() const;
         DescriptorSetLayoutPointer getDescriptorSetLayout() const;
 
 
         bool realize();
 
         static void registerToWatcher(const PipelineStatePointer& pipeline, PipelineRealizer pipelineRealizer);
-
     };
 
     struct VISUALIZATION_API SamplerInit {

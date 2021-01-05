@@ -112,8 +112,8 @@ graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer
 
 
 
-    graphics::PipelineStateInit pipelineInit { programShader,  streamLayout, graphics::PrimitiveTopology::TRIANGLE };
-    graphics::PipelineStatePointer pipeline = device->createPipelineState(pipelineInit);
+    graphics::GraphicsPipelineStateInit pipelineInit { programShader,  streamLayout, graphics::PrimitiveTopology::TRIANGLE };
+    graphics::PipelineStatePointer pipeline = device->createGraphicsPipelineState(pipelineInit);
 
     return pipeline;
 }
@@ -208,7 +208,7 @@ int main(int argc, char *argv[])
 
         batch->beginPass(swapchain, currentIndex);
 
-        batch->setPipeline(pipeline);
+        batch->bindPipeline(pipeline);
 
         batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);

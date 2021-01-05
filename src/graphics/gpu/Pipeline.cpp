@@ -48,9 +48,12 @@ Sampler::~Sampler() {
 
 }
 
+PipelineType PipelineState::getType() const {
+    return _type;
+}
 
 DescriptorSetLayoutPointer PipelineState::getDescriptorSetLayout() const {
-    return _init.descriptorSetLayout;
+    return _descriptorSetLayout;
 }
 
 bool PipelineState::realize() {

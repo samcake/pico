@@ -88,7 +88,7 @@ namespace graphics
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);
 
-        graphics::PipelineStateInit pipelineInit{
+        graphics::GraphicsPipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
@@ -97,7 +97,7 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        _primitivePipeline = device->createPipelineState(pipelineInit);
+        _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
     graphics::PrimitiveDrawable* PrimitiveDrawableFactory::createPrimitive(const graphics::DevicePointer& device) {
@@ -136,11 +136,11 @@ namespace graphics
 
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+            batch->bindPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
-            batch->bindDescriptorSet(descriptorSet);
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             PrimitiveObjectData odata{ node, prim_->_size.x * 0.5f, prim_->_size.y * 0.5f, prim_->_size.z * 0.5f };
             batch->bindPushUniform(1, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);

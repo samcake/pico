@@ -114,7 +114,7 @@ namespace graphics
         graphics::ProgramInit programInit_item{ vertexShader_item, pixelShader };
         graphics::ShaderPointer programShader_item = device->createProgram(programInit_item);
 
-        graphics::PipelineStateInit pipelineInit_node{
+        graphics::GraphicsPipelineStateInit pipelineInit_node{
                     programShader_node,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
@@ -123,9 +123,9 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        _nodePipeline = device->createPipelineState(pipelineInit_node);
+        _nodePipeline = device->createGraphicsPipelineState(pipelineInit_node);
 
-        graphics::PipelineStateInit pipelineInit_item{
+        graphics::GraphicsPipelineStateInit pipelineInit_item{
                     programShader_item,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
@@ -134,7 +134,7 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        _itemPipeline = device->createPipelineState(pipelineInit_item);
+        _itemPipeline = device->createGraphicsPipelineState(pipelineInit_item);
     }
 
     graphics::NodeGizmo* GizmoDrawableFactory::createNodeGizmo(const graphics::DevicePointer& device) {
@@ -187,11 +187,11 @@ namespace graphics
 
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+            batch->bindPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
-            batch->bindDescriptorSet(descriptorSet);
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto flags = pgizmo->getUniforms()->buildFlags();
             GizmoObjectData odata{ node, flags, 0, 0};
@@ -240,11 +240,11 @@ namespace graphics
 
        // And now a render callback where we describe the rendering sequence
        graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-           batch->setPipeline(pipeline);
+           batch->bindPipeline(pipeline);
            batch->setViewport(camera->getViewportRect());
            batch->setScissor(camera->getViewportRect());
 
-           batch->bindDescriptorSet(descriptorSet);
+           batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
            auto flags = pgizmo->getUniforms()->buildFlags();
            GizmoObjectData odata{ node, flags, 0, 0 };

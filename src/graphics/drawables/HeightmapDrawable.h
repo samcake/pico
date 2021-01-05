@@ -97,6 +97,9 @@ namespace graphics {
     protected:
         HeightmapDrawableUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _HeightmapPipeline;
+
+        graphics::PipelineStatePointer _computePipeline;
+
     };
     using HeightmapDrawableFactoryPointer = std::shared_ptr< HeightmapDrawableFactory>;
 
@@ -120,6 +123,7 @@ namespace graphics {
         graphics::BufferPointer _heightBuffer;
         HeightmapDrawableUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
+
     };
 
 } // !namespace graphics

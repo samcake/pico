@@ -69,8 +69,8 @@ namespace graphics {
         virtual void setViewport(const core::vec4& viewport);
         virtual void setScissor(const core::vec4& scissor);
 
-        virtual void setPipeline(const PipelineStatePointer& pipeline);
-        virtual void bindDescriptorSet(const DescriptorSetPointer& descriptorSet);
+        virtual void bindPipeline(const PipelineStatePointer& pipeline);
+        virtual void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet);
         virtual void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data);
 
         virtual void bindIndexBuffer(const BufferPointer& buffer);
@@ -82,5 +82,6 @@ namespace graphics {
 
         virtual void uploadTexture(const TexturePointer& dest, const BufferPointer& src);
 
+        virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);
     };
 }

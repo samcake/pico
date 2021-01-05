@@ -90,11 +90,16 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     }
     break;
-  /*  case ResourceUsage::UNORDERED_ACCESS: {
+    case ResourceUsage::RESOURCE_BUFFER: {
+        res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        res_states |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    }
+    break;
+    case ResourceUsage::RW_RESOURCE_BUFFER: {
         res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
     break;
-    */}
+    }
 
     if (init.hostVisible) {
         // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
@@ -156,6 +161,20 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
             bufferBackend->_resourceBufferView.Buffer.StructureByteStride = 0;
             bufferBackend->_resourceBufferView.Format = DXGI_FORMAT_R32_TYPELESS;
             bufferBackend->_resourceBufferView.Buffer.Flags |= D3D12_BUFFER_SRV_FLAG_RAW;
+        }
+    }
+    break;
+    case ResourceUsage::RW_RESOURCE_BUFFER: {
+        bufferBackend->_rwResourceBufferView.Format = DXGI_FORMAT_UNKNOWN;
+        bufferBackend->_rwResourceBufferView.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+        bufferBackend->_rwResourceBufferView.Buffer.FirstElement = bufferBackend->_init.firstElement;
+        bufferBackend->_rwResourceBufferView.Buffer.NumElements = (UINT)(bufferBackend->_init.numElements);
+        bufferBackend->_rwResourceBufferView.Buffer.StructureByteStride = (UINT)(bufferBackend->_init.structStride);
+        bufferBackend->_rwResourceBufferView.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+        if (bufferBackend->_init.raw) {
+            bufferBackend->_rwResourceBufferView.Buffer.StructureByteStride = 0;
+            bufferBackend->_rwResourceBufferView.Format = DXGI_FORMAT_R32_TYPELESS;
+            bufferBackend->_rwResourceBufferView.Buffer.Flags |= D3D12_BUFFER_UAV_FLAG_RAW;
         }
     }
     break;

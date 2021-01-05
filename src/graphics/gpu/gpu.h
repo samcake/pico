@@ -65,6 +65,8 @@ namespace graphics {
         PROGRAM = 0,
         VERTEX,
         PIXEL,
+    
+        COMPUTE,
 
         COUNT,
     };
@@ -74,9 +76,17 @@ namespace graphics {
         PIXEL = 0x0100,
         ALL_GRAPHICS = 0x0101,
 
-        COUNT = 3,
+        COMPUTE = 0x1000,
+
+        COUNT = 4,
     };
 
+    enum class PipelineType : uint8_t {
+        GRAPHICS = 0,
+        COMPUTE,
+
+        COUNT,
+    };
 
     // GPU types
     class Swapchain;
@@ -121,7 +131,8 @@ namespace graphics {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
     using PipelineStateWeakPtr = std::weak_ptr<PipelineState>;
-    struct PipelineStateInit;
+    struct GraphicsPipelineStateInit;
+    struct ComputePipelineStateInit;
 
     class Framebuffer;
     using FramebufferPointer = std::shared_ptr<Framebuffer>;
@@ -134,6 +145,7 @@ namespace graphics {
         VERTEX_BUFFER,
         UNIFORM_BUFFER,
         RESOURCE_BUFFER,
+        RW_RESOURCE_BUFFER,
 
         COUNT,
     };
@@ -175,7 +187,7 @@ namespace graphics {
         SAMPLER,
         UNIFORM_BUFFER,            // CBV | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
         RESOURCE_BUFFER,        // SRV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-        STORAGE_BUFFER_UAV,        // UAV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
+        RW_RESOURCE_BUFFER,        // UAV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
         UNIFORM_TEXEL_BUFFER_SRV,  // SRV | VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
         STORAGE_TEXEL_BUFFER_UAV,  // UAV | VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
         RESOURCE_TEXTURE,               // SRV | VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE

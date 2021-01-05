@@ -191,7 +191,7 @@ void D3D12BatchBackend::setScissor(const core::vec4 & scissor) {
     _commandList->RSSetScissorRects(1, &dxRect);
 }
 
-void D3D12BatchBackend::setPipeline(const PipelineStatePointer& pipeline) {
+void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
 
     auto dxPso = dpso->_pipelineState;
@@ -203,7 +203,7 @@ void D3D12BatchBackend::setPipeline(const PipelineStatePointer& pipeline) {
     _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
 }
 
-void D3D12BatchBackend::bindDescriptorSet(const DescriptorSetPointer& descriptorSet) {
+void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {
     auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
 
     uint32_t descriptor_heap_count = 0;
@@ -227,8 +227,14 @@ void D3D12BatchBackend::bindDescriptorSet(const DescriptorSetPointer& descriptor
             continue;
         }
 
-        _commandList->SetGraphicsRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
-
+        switch (type) {
+            case PipelineType::GRAPHICS: {
+                _commandList->SetGraphicsRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
+            } break;
+            case PipelineType::COMPUTE: {
+                _commandList->SetComputeRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
+            } break;
+        }
 /*
         switch (p_descriptor_set->descriptors[i].type) {
         case tr_descriptor_type_sampler: {
@@ -338,5 +344,8 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPo
     // ANd one after
 }
 
+void D3D12BatchBackend::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {
+    _commandList->Dispatch(numThreadsX, numThreadsY, numThreadsZ);
+}
 
 #endif
