@@ -49,8 +49,19 @@ namespace graphics {
     class ItemGizmo;
 
     struct VISUALIZATION_API GizmoDrawableUniforms {
-        float triangleScale{ 0.05f };
         int numNodes{ 0 };
+        bool showTransform{ true };
+        bool showBranch{ false };
+        bool showLocalBound{ true };
+        bool showWorldBound{ false };
+
+        enum {
+            SHOW_TRANSFORM_BIT = 0x00000001,
+            SHOW_BRANCH_BIT = 0x00000002,
+            SHOW_LOCAL_BOUND_BIT = 0x00000004,
+            SHOW_WORLD_BOUND_BIT = 0x00000008,
+        };
+        uint32_t buildFlags();
     };
     using GizmoDrawableUniformsPointer = std::shared_ptr<GizmoDrawableUniforms>;
 

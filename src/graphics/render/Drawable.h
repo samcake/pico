@@ -58,7 +58,7 @@ namespace graphics {
     static const DrawableID INVALID_DRAWABLE_ID = core::IndexTable::INVALID_INDEX;
 
     class VISUALIZATION_API Drawable {
-        Drawable() { } // invalid
+      
 
         friend class DrawableStore;
 
@@ -67,6 +67,7 @@ namespace graphics {
         }
 
     public:
+        Drawable() { } // invalid
         static Drawable null;
 
         DrawableID id() const { return _self->_id; }

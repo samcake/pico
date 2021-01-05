@@ -79,7 +79,7 @@ target_include_directories(graphics PUBLIC "." PRIVATE "." ${SHADER_OUTPUT_DIR} 
 
 target_compile_features(graphics PRIVATE cxx_std_17)
 
-source_group(graphics\\shaders FILES ${GRAPHICS_SHADERS})
+# source_group(graphics\\shaders FILES ${GRAPHICS_SHADERS})
 source_group(graphics\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)
 
 source_group(graphics\\render REGULAR_EXPRESSION render/*)

@@ -60,11 +60,18 @@ namespace graphics
     // Custom data uniforms
     struct GizmoObjectData {
         uint32_t nodeID{0};
-        uint32_t numVertices{ 0 };
-        uint32_t numIndices{ 0 };
-        uint32_t stride{ 0 };
-        float triangleScale { 0.1f };
+        uint32_t flags{0};
+        uint32_t spareA{ 0 };
+        uint32_t spareB{0};
     };
+
+    uint32_t GizmoDrawableUniforms::buildFlags() {
+        return (uint32_t) 
+                  (showTransform) * SHOW_TRANSFORM_BIT 
+                | (showBranch) * SHOW_BRANCH_BIT
+                | (showLocalBound) * SHOW_LOCAL_BOUND_BIT
+                | (showWorldBound)  *SHOW_WORLD_BOUND_BIT;
+    }
 
     void GizmoDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
@@ -186,10 +193,11 @@ namespace graphics
 
             batch->bindDescriptorSet(descriptorSet);
 
-            GizmoObjectData odata{ node, 0, 0, 0, pgizmo->getUniforms()->triangleScale };
+            auto flags = pgizmo->getUniforms()->buildFlags();
+            GizmoObjectData odata{ node, flags, 0, 0};
             batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-            batch->draw(pgizmo->nodes.size() * 2 * (3 + 1), 0);
+            batch->draw(pgizmo->nodes.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawableUniforms::SHOW_BRANCH_BIT) * 1), 0);
         };
         gizmo._drawcall = drawCallback;
     }
@@ -238,10 +246,11 @@ namespace graphics
 
            batch->bindDescriptorSet(descriptorSet);
 
-           GizmoObjectData odata{ node, 0, 0, 0, pgizmo->getUniforms()->triangleScale };
+           auto flags = pgizmo->getUniforms()->buildFlags();
+           GizmoObjectData odata{ node, flags, 0, 0 };
            batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-           batch->draw(pgizmo->items.size() * 2 * (12 + 12), 0);
+           batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };
        gizmo._drawcall = drawCallback;
    }

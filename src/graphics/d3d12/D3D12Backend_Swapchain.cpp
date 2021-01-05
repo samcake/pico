@@ -78,12 +78,15 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     swapChainDesc.Width = width;
     swapChainDesc.Height = height;
     swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+   // swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
+   // swapChainDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc = { 1, 0 };
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     swapChainDesc.BufferCount = bufferCount;
     swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+//   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     // It is recommended to always allow tearing if tearing support is available.
     swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
@@ -130,7 +133,8 @@ bool CreateSwapchainRenderTargets(ComPtr<ID3D12Device2> device, D3D12SwapchainBa
     // Setup RTV descriptor to specify sRGB format.
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
     rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-   // rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+  //  rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+  //  rtvDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)

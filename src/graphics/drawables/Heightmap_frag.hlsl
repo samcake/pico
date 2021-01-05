@@ -1,4 +1,3 @@
-#define mat43 float4x3
 
 //
 // Transform API
@@ -31,6 +30,7 @@ float3 transformTo(const Transform mat, const float3 p) {
 float3 transformFrom(const Transform mat, const float3 p) {
     return rotateFrom(mat, p) + mat.col_w();
 }
+
 
 //
 // Projection API
@@ -84,6 +84,7 @@ float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
     }
 }
 
+
 // Camera buffer
 cbuffer UniformBlock0 : register(b0) {
     //float4x3 _view;
@@ -97,86 +98,68 @@ float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
     return transformTo(view, worldPos);
 }
 
-float3 worldFromObjectSpace(Transform model, float3 objPos) {
-    return transformFrom(model, objPos);
+float3 getLightDir() {
+    return normalize(float3(-1.f, 3.f, -1.f));
 }
 
-float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
-    return rotateTo(model, worldDir);
-}
-
-
-//
-// Transform Tree
-//
-StructuredBuffer<Transform>  tree_transforms : register(t0);
-
-Transform node_getTransform(int nodeID) {
-    return tree_transforms[2 * nodeID];
-}
-Transform node_getWorldTransform(int nodeID) {
-    return tree_transforms[2 * nodeID + 1];
-}
-
-cbuffer UniformBlock1 : register(b1) {
-    int  _nodeID;
-    int  _flags;
-    int _spareA;
-    int _spareB;
-}
-
-static const int SHOW_TRANSFORM = 0x00000001;
-static const int SHOW_BRANCH = 0x00000002;
-static const int SHOW_LOCAL_BOUND = 0x00000004;
-static const int SHOW_WORLD_BOUND = 0x00000008;
-
-struct VertexPosColor
-{
-    float3 Position : POSITION;
-    //  float3 Normal : NORMAL;
-    float4 Color : COLOR;
-};
-
-struct VertexShaderOutput
+struct PixelShaderInput
 {
     float4 Color    : COLOR;
-    float4 Position : SV_Position;
+    float3 WPos     : WPOS;
+    float3 Normal   : SPRITE;
 };
 
-VertexShaderOutput main(uint ivid : SV_VertexID)
-{
-    VertexShaderOutput OUT;
+float3 SkyColor(const float3 dir) {
+    float3 HORIZON_COLOR = float3(1.71, 1.31, 0.83);
+    float3 SKY_COLOR = float3(0.4, 0.75, 1);
+    float3 SUN_COLOR = float3(1.5, 1, 0.6);
+    float3 SUN_DIRECTION = getLightDir();
 
-    const int transform_num_edges = 3;
-    const int node_num_edges = 1;
-    const int num_edges = (_flags & SHOW_TRANSFORM) * transform_num_edges + (_flags & SHOW_BRANCH) * node_num_edges;
-
-    uint vid = ivid % (2 * num_edges);
-    uint nodeid = ivid / (2 * num_edges);
-    uint svid = vid % 2;
-    uint lid = vid / 2;
-
-    float3 position = float3(0.0, 0.0, 0.0);
-    float3 color = float3(1.0, 1.0, 1.0);
-
-    Transform _model = node_getWorldTransform(nodeid);
-    Transform _modelLocal = node_getTransform(nodeid);
-
-    if ((_flags & SHOW_TRANSFORM) && lid < (transform_num_edges)) {
-        position = float(svid) * float3(float(lid == 0), float(lid == 1), float(lid == 2));
-        color = float3(float(lid == 0), float(lid == 1), float(lid == 2));
-    }
-    else {
-        position = float(svid) * objectFromWorldSpaceDir(_modelLocal, -_modelLocal.col_w());
-    }
-
-    position = worldFromObjectSpace(_model, position);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
-
-    OUT.Position = clipPos;
-    OUT.Color = float4(color, 1.0f);
- 
-    return OUT;
+    float mixWeight = sqrt(abs(dir.z));
+    float3 sky = (1 - mixWeight) * HORIZON_COLOR + mixWeight * SKY_COLOR;
+    float3 sun = 4 * SUN_COLOR * pow(max(dot(SUN_DIRECTION, dir), 0), 1500);
+    return sky + sun;
 }
 
+float3 colorDiffuse(float3 base_color, float metallic) {
+    const dielectricSpecular = rgb(0.04, 0.04, 0.04);
+    const black = rgb(0, 0, 0);
+    float3 cdiff = lerp(base_color.rgb * (1 - dielectricSpecular.r), black, metallic);
+    return cdiff;
+}
+
+float3 fresnel(float v_dot_h, float3 f0) {
+    float base = (1.0 - v_dot_h);
+    return f0 + (float3(1.0) - f0) * (base *base * base * base * base);
+}
+
+float4 main(PixelShaderInput IN) : SV_Target
+{
+    float3 L = getLightDir();
+    float3 N = normalize(IN.Normal);
+    float3 E2F = IN.WPos - _view.col_w();
+    float E2Flen = length(E2F);
+    float3 R = normalize(E2F);
+
+    float3 diff_color = SkyColor(N);
+    float3 spec_color = SkyColor(reflect(-R, N));
+   // float3 color = float3(1.0, 1.0, 1.0);
+//   float3 color = SkyColor(L);
+
+    float base = 1.0 - surface.ldoth;
+    //float exponential = pow(base, 5.0);
+    float base2 = base * base;
+    float exponential = base * base2 * base2;
+    float fresnel(exponential)+fresnelScalar * (1.0 - exponential);
+
+   float ndotl = dot(N, L);
+   float3 color = ndotl * (diff_color);
+
+   color += fresnel * (spec_color);
+
+    float fog = (1.0f - max(0.f, pow(1 - E2Flen / 100.f, 1.2f)));
+ //   color = fog * color;
+
+    return float4(pow(color,  2.2), 1.0);
+  //  return float4(color, 1.0);
+}
