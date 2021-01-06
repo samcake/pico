@@ -195,7 +195,7 @@ namespace graphics
 
             auto flags = pgizmo->getUniforms()->buildFlags();
             GizmoObjectData odata{ node, flags, 0, 0};
-            batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
             batch->draw(pgizmo->nodes.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawableUniforms::SHOW_BRANCH_BIT) * 1), 0);
         };
@@ -248,7 +248,7 @@ namespace graphics
 
            auto flags = pgizmo->getUniforms()->buildFlags();
            GizmoObjectData odata{ node, flags, 0, 0 };
-           batch->bindPushUniform(1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+           batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
            batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };

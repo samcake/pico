@@ -212,7 +212,7 @@ namespace graphics
 
             auto uniforms = ppointcloud->getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
-            batch->bindPushUniform(1, sizeof(PCObjectData), (const uint8_t*) &odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(PCObjectData), (const uint8_t*) &odata);
 
             batch->draw(3 * numVertices, 0);
         };

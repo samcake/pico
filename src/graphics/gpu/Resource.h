@@ -40,7 +40,7 @@ namespace graphics {
 
 
     struct VISUALIZATION_API BufferInit {
-        ResourceUsage usage;
+        uint8_t usage;
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
         bool swapchainable {false};

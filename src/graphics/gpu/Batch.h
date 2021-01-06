@@ -71,7 +71,7 @@ namespace graphics {
 
         virtual void bindPipeline(const PipelineStatePointer& pipeline);
         virtual void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet);
-        virtual void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data);
+        virtual void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data);
 
         virtual void bindIndexBuffer(const BufferPointer& buffer);
         virtual void bindVertexBuffers(uint32_t num, const BufferPointer* buffers);

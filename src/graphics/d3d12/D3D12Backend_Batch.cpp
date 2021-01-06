@@ -197,10 +197,13 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
-    auto dxGRS = dpso->_rootSignature;
-    _commandList->SetGraphicsRootSignature(dxGRS.Get());
-
-    _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
+    auto dxRS = dpso->_rootSignature;
+    if (dpso->getType() == PipelineType::GRAPHICS) {
+        _commandList->SetGraphicsRootSignature(dxRS.Get());
+        _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
+    } else if (dpso->getType() == PipelineType::COMPUTE) {
+        _commandList->SetComputeRootSignature(dxRS.Get());
+    }
 }
 
 void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {
@@ -269,8 +272,15 @@ void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSet
     
 }
 
-void D3D12BatchBackend::bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) {
-    _commandList->SetGraphicsRoot32BitConstants(slot, size >> 2, data, 0);
+void D3D12BatchBackend::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {
+    switch (type) {
+    case PipelineType::GRAPHICS: {
+        _commandList->SetGraphicsRoot32BitConstants(slot, size >> 2, data, 0);
+    } break;
+    case PipelineType::COMPUTE: {
+        _commandList->SetComputeRoot32BitConstants(slot, size >> 2, data, 0);
+    } break;
+    }
 }
 
 

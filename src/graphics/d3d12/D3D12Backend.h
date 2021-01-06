@@ -162,7 +162,7 @@ namespace graphics {
 
         void bindPipeline(const PipelineStatePointer& pipeline) override;
         void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) override;
-        void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) override;
+        void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) override;
 
         void bindIndexBuffer(const BufferPointer& buffer) override;
         void bindVertexBuffers(uint32_t num, const BufferPointer* buffers) override;

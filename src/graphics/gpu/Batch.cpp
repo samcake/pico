@@ -60,7 +60,7 @@ void Batch::setScissor(const core::vec4& scissor) {}
 
 void Batch::bindPipeline(const PipelineStatePointer& pipeline) {}
 void Batch::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {}
-void Batch::bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) {}
+void Batch::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {}
 
 void Batch::bindIndexBuffer(const BufferPointer& buffer) {}
 void Batch::bindVertexBuffers(uint32_t num, const BufferPointer* buffers) {}

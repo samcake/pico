@@ -232,7 +232,7 @@ namespace graphics
 
             auto uniforms = ptriangleSoup->getUniforms();
             TSObjectData odata{ { (int32_t)node }, numVertices, numIndices, vertexStride, uniforms->triangleScale };
-            batch->bindPushUniform(1, sizeof(TSObjectData), (const uint8_t*)&odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(TSObjectData), (const uint8_t*)&odata);
 
             batch->draw(numIndices, 0);
         };

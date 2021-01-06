@@ -65,6 +65,8 @@ namespace graphics {
         ShaderPointer getPixelShader() const { return _programDesc.pixelShader; }
 
         bool isProgram() const { return _shaderDesc.type == ShaderType::PROGRAM; }
+
+        bool isCompute() const { return _shaderDesc.type == ShaderType::COMPUTE; }
         
         bool hasWatcher() const;
 

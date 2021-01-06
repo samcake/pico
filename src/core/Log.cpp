@@ -28,7 +28,8 @@
 
 
 std::ostream& core::Log::_log(const char* file, int line, const char* functionName) {
-    return std::clog << file << " - " << line << " - " << functionName << " : ";
+   // return std::clog << file << " - " << line << " - " << functionName << " : ";
+    return std::clog << /*file << " - " << line << " - " << */ functionName << " : ";
 }
 
 void core::Log::_assert(bool test, const char* file, int line, const char* functionName) {

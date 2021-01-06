@@ -140,14 +140,14 @@ namespace graphics {
 
 
     // Resource Types
-    enum class ResourceUsage {
-        INDEX_BUFFER = 0,
-        VERTEX_BUFFER,
-        UNIFORM_BUFFER,
-        RESOURCE_BUFFER,
-        RW_RESOURCE_BUFFER,
+    enum ResourceUsage : uint8_t {
+        INDEX_BUFFER = 0x01,
+        VERTEX_BUFFER = 0x02,
+        UNIFORM_BUFFER = 0x04,
+        RESOURCE_BUFFER = 0x08,
+        RW_RESOURCE_BUFFER = 0x10,
 
-        COUNT,
+        COUNT = 5,
     };
 
     enum class ResourceState {
@@ -158,7 +158,7 @@ namespace graphics {
         UNORDERED_ACCESS,
         DEPTH_WRITE,
         DEPTH_READ,
-        IMAGE_SHADER_RESOURCE,
+        SHADER_RESOURCE,
         STREAM_OUT,
         INDIRECT_ARGUMENT,
         COPY_DEST,

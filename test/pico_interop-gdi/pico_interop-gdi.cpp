@@ -337,9 +337,9 @@ int main(int argc, char *argv[])
 
         batch->beginPass(swapchain, currentIndex);
 
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::IMAGE_SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
         batch->uploadTexture(textureForGDI, gdcRenderer->pixelBuffer);
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::IMAGE_SHADER_RESOURCE, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
     
 
         batch->bindPipeline(pipeline);

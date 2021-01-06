@@ -329,7 +329,7 @@ void updateHeights(float t) {
 
     auto numElements = desc.getMapNumElements();
 
-    memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
+ //   memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
 
 
     
