@@ -11,7 +11,7 @@ cbuffer UniformBlock1 : register(b1) {
 }
 
 
-// Write up to 4 mip map levels.
+// Read previous state from 
 RWStructuredBuffer<float> out_buffer : register(u0);
 
 [numthreads(32, 32, 1)]

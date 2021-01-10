@@ -204,8 +204,8 @@ float4 main(PixelShaderInput IN) : SV_Target
     float metallic = 0.0;
     float roughness = 0.01;
     float roughness2 = roughness * roughness;
-    //float3 base_color = float3(1.0, 1.0, 1.0);
-    float3 base_color = float3(0.02, 0.02, 0.02); // water
+    float3 base_color = float3(1.0, 1.0, 1.0);
+   // float3 base_color = float3(0.02, 0.02, 0.02); // water
 
     float3 F0 = colorF0(base_color, metallic);
 
@@ -218,7 +218,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
     float4 spec_diff_lighting = evalShading(l_dot_h, v_dot_h, n_dot_l, n_dot_h, n_dot_v, roughness2, metallic, F0);
 
-    float3 color = spec_diff_lighting.w * diff_color + spec_diff_lighting.xyz * 1.0;
+    float3 color = spec_diff_lighting.w * base_color + spec_diff_lighting.xyz * 1.0;
 //    color *= 0.8 * base_color;
 
 //    float fog = (1.0f - max(0.f, pow(1 - E2Flen / 100.f, 1.2f)));
