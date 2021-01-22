@@ -287,13 +287,13 @@ int main(int argc, char *argv[])
     graphics::ProgramInit programInit{ vertexShader, pixelShader };
     graphics::ShaderPointer programShader = gpuDevice->createProgram(programInit);
 
-    graphics::PipelineStateInit pipelineInit{
+    graphics::GraphicsPipelineStateInit pipelineInit{
         programShader,
         vertexLayout,
         graphics::PrimitiveTopology::TRIANGLE,
         descriptorSetLayout
     };
-    graphics::PipelineStatePointer pipeline = gpuDevice->createPipelineState(pipelineInit);
+    graphics::PipelineStatePointer pipeline = gpuDevice->createGraphicsPipelineState(pipelineInit);
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a texture and sampler
@@ -337,13 +337,13 @@ int main(int argc, char *argv[])
 
         batch->beginPass(swapchain, currentIndex);
 
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::IMAGE_SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
         batch->uploadTexture(textureForGDI, gdcRenderer->pixelBuffer);
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::IMAGE_SHADER_RESOURCE, textureForGDI);
+        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
     
 
-        batch->setPipeline(pipeline);
-        batch->bindDescriptorSet(descriptorSet);
+        batch->bindPipeline(pipeline);
+        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
         batch->bindIndexBuffer(indexBuffer);
         batch->bindVertexBuffers(1, &vertexBuffer);

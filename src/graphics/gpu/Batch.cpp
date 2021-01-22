@@ -58,9 +58,9 @@ void Batch::resourceBarrierTransition(
 void Batch::setViewport(const core::vec4& viewport) {}
 void Batch::setScissor(const core::vec4& scissor) {}
 
-void Batch::setPipeline(const PipelineStatePointer& pipeline) {}
-void Batch::bindDescriptorSet(const DescriptorSetPointer& descriptorSet) {}
-void Batch::bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) {}
+void Batch::bindPipeline(const PipelineStatePointer& pipeline) {}
+void Batch::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {}
+void Batch::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {}
 
 void Batch::bindIndexBuffer(const BufferPointer& buffer) {}
 void Batch::bindVertexBuffers(uint32_t num, const BufferPointer* buffers) {}
@@ -70,4 +70,5 @@ void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
 void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
 
+void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}
 } // !using namespace graphics

@@ -98,7 +98,7 @@ namespace graphics
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);
 
-        graphics::PipelineStateInit pipelineInit{
+        graphics::GraphicsPipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
@@ -107,7 +107,7 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        _pipeline = device->createPipelineState(pipelineInit);
+        _pipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
     graphics::TriangleSoupDrawable* TriangleSoupDrawableFactory::createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
@@ -223,16 +223,16 @@ namespace graphics
             const graphics::SwapchainPointer& swapchain, 
             const graphics::DevicePointer& device, 
             const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+            batch->bindPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
             //       batch->bindVertexBuffers(1, &vertexBuffer);
-            batch->bindDescriptorSet(descriptorSet);
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto uniforms = ptriangleSoup->getUniforms();
             TSObjectData odata{ { (int32_t)node }, numVertices, numIndices, vertexStride, uniforms->triangleScale };
-            batch->bindPushUniform(1, sizeof(TSObjectData), (const uint8_t*)&odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(TSObjectData), (const uint8_t*)&odata);
 
             batch->draw(numIndices, 0);
         };

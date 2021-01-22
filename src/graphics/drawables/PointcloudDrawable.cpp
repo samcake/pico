@@ -104,7 +104,7 @@ namespace graphics
               };
               graphics::PipelineStatePointer pipeline0 = device->createPipelineState(pipelineInit0);
       */
-        graphics::PipelineStateInit pipelineInit{
+        graphics::GraphicsPipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
@@ -115,7 +115,7 @@ namespace graphics
                         graphics::BlendArg::SRC_ALPHA, graphics::BlendOp::ADD, graphics::BlendArg::INV_SRC_ALPHA,
                         graphics::BlendArg::ONE, graphics::BlendOp::ADD, graphics::BlendArg::ZERO) }
         };
-        _pipeline = device->createPipelineState(pipelineInit);
+        _pipeline = device->createGraphicsPipelineState(pipelineInit);
 
     }
 
@@ -203,16 +203,16 @@ namespace graphics
 
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+            batch->bindPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
 
      //       batch->bindVertexBuffers(1, &vertexBuffer);
-            batch->bindDescriptorSet(descriptorSet);
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto uniforms = ppointcloud->getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
-            batch->bindPushUniform(1, sizeof(PCObjectData), (const uint8_t*) &odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(PCObjectData), (const uint8_t*) &odata);
 
             batch->draw(3 * numVertices, 0);
         };

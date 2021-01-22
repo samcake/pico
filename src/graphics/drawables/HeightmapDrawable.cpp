@@ -43,6 +43,7 @@
 
 #include "Heightmap_vert.h"
 #include "Heightmap_frag.h"
+#include "Ocean_comp.h"
 
 //using namespace view3d;
 namespace graphics
@@ -94,7 +95,7 @@ namespace graphics
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);
 
-        graphics::PipelineStateInit pipelineInit{
+        graphics::GraphicsPipelineStateInit pipelineInit{
                     programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE_STRIP,
@@ -104,7 +105,28 @@ namespace graphics
                     BlendState()
         };
       //  pipelineInit.rasterizer.fillMode = graphics::FillMode::LINE;
-        _HeightmapPipeline = device->createPipelineState(pipelineInit);
+        _HeightmapPipeline = device->createGraphicsPipelineState(pipelineInit);
+
+
+        {
+            // Let's describe the Compute pipeline Descriptors layout
+            graphics::DescriptorLayouts computeDescriptorLayouts{
+                { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 1, sizeof(HeightmapObjectData) >> 2},
+                { graphics::DescriptorType::RW_RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 0, 1},
+            };
+            graphics::DescriptorSetLayoutInit compDescriptorSetLayoutInit{ computeDescriptorLayouts };
+            auto compDescriptorSetLayout = device->createDescriptorSetLayout(compDescriptorSetLayoutInit);
+
+            graphics::ShaderInit compShaderInit{ graphics::ShaderType::COMPUTE, "main", "", Ocean_comp::getSource(), Ocean_comp::getSourceFilename() };
+            graphics::ShaderPointer compShader = device->createShader(compShaderInit);
+
+            graphics::ComputePipelineStateInit computePipelineInit{
+                compShader,
+                compDescriptorSetLayout
+            };
+
+            _computePipeline = device->createComputePipelineState(computePipelineInit);
+        }
     }
 
     graphics::HeightmapDrawable* HeightmapDrawableFactory::createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap) {
@@ -115,8 +137,8 @@ namespace graphics
         auto numHeights = heightmap.getMapNumElements();
 
         graphics::BufferInit hbresourceBufferInit{};
-        hbresourceBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        hbresourceBufferInit.hostVisible = true;
+        hbresourceBufferInit.usage = (graphics::ResourceUsage::RESOURCE_BUFFER | graphics::ResourceUsage::RW_RESOURCE_BUFFER);
+   //     hbresourceBufferInit.hostVisible = true;
         hbresourceBufferInit.bufferSize = numHeights * sizeof(float);
         hbresourceBufferInit.firstElement = 0;
         hbresourceBufferInit.numElements = numHeights;
@@ -134,6 +156,21 @@ namespace graphics
         const graphics::CameraPointer& camera,
         graphics::HeightmapDrawable& drawable)
     {
+
+       // It s time to create a descriptorSet that matches the expected pipeline descriptor set
+       // then we will assign a uniform buffer in it
+       graphics::DescriptorSetInit compDescriptorSetInit{
+           _computePipeline->getDescriptorSetLayout()
+       };
+       auto compDescriptorSet = device->createDescriptorSet(compDescriptorSetInit);
+
+       graphics::DescriptorObject compute_wrboDescriptorObject;
+       compute_wrboDescriptorObject._buffers.push_back(drawable.getHeightBuffer());
+       graphics::DescriptorObjects compute_descriptorObjects = {
+            compute_wrboDescriptorObject
+       };
+       device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
+
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
@@ -158,19 +195,31 @@ namespace graphics
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
         auto heightmap = &drawable;
+        auto compute_pipeline = this->_computePipeline;
         auto pipeline = this->_HeightmapPipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [heightmap, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setPipeline(pipeline);
+        graphics::DrawObjectCallback drawCallback = [heightmap, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
-
-            batch->bindDescriptorSet(descriptorSet);
-
-            HeightmapObjectData odata{ node, heightmap->_heightmap.map_width,  heightmap->_heightmap.map_height, heightmap->_heightmap.map_spacing,
+    
+            static uint32_t frameNum = 0;
+            frameNum++;
+            HeightmapObjectData odata{ frameNum, heightmap->_heightmap.map_width,  heightmap->_heightmap.map_height, heightmap->_heightmap.map_spacing,
                                        heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
-            batch->bindPushUniform(1, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+
+            batch->bindPipeline(compute_pipeline);
+            batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
+            batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+            
+        //   batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
+            batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
+            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+
+            odata.nodeID = node;
+            batch->bindPipeline(pipeline);
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
 
             // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
             batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);

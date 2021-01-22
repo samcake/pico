@@ -33,7 +33,7 @@ using namespace graphics;
 D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) {
     uint64_t bufferSize = init.bufferSize;
     // Align the buffer size to multiples of 256
-   if (init.usage == ResourceUsage::UNIFORM_BUFFER) {
+   if (init.usage && ResourceUsage::UNIFORM_BUFFER) {
         auto numBlocks = ((uint32_t) init.bufferSize) / 256;
 
         bufferSize = (numBlocks + 1) * 256;
@@ -66,9 +66,9 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     desc.SampleDesc.Quality = 0;
     desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    //if ((init.usage & ResourceState::) || (p_buffer->usage & tr_buffer_usage_counter_uav)) {
-    //    desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-    //}
+    if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
+        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
 
     // Adjust for padding
     UINT64 padded_size = 0;
@@ -77,25 +77,28 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     desc.Width = padded_size;
 
     D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_COPY_DEST;
-    switch (init.usage) {
-    case ResourceUsage::VERTEX_BUFFER: {
+    if (init.usage & ResourceUsage::VERTEX_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     }
-    break;
-    case ResourceUsage::INDEX_BUFFER: {
+
+    if (init.usage & ResourceUsage::INDEX_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_INDEX_BUFFER;
     }
-    break;
-    case ResourceUsage::UNIFORM_BUFFER: {
+
+    if (init.usage & ResourceUsage::UNIFORM_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     }
-    break;
-  /*  case ResourceUsage::UNORDERED_ACCESS: {
+
+    if (init.usage & ResourceUsage::RESOURCE_BUFFER) {
+        res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        res_states |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    }
+
+    if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
     }
-    break;
-    */}
 
+    // Host visible is ok if not a RW_resouce
     if (init.hostVisible) {
         // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
         heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
@@ -122,29 +125,25 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         hres = dxResource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
     }
 
-    switch (init.usage) {
-    case ResourceUsage::VERTEX_BUFFER: {
+    if (init.usage & ResourceUsage::VERTEX_BUFFER) {
         bufferBackend->_vertexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_vertexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_vertexBufferView.StrideInBytes = init.vertexStride;
         // Format is filled out by tr_create_vertex_buffer
     }
-    break;
 
-    case ResourceUsage::UNIFORM_BUFFER: {
+    if (init.usage & ResourceUsage::UNIFORM_BUFFER) {
         bufferBackend->_uniformBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_uniformBufferView.SizeInBytes = (UINT)bufferSize;
     }
-    break;
 
-    case ResourceUsage::INDEX_BUFFER: {
+    if (init.usage & ResourceUsage::INDEX_BUFFER) {
         bufferBackend->_indexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
         bufferBackend->_indexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
     }
-    break;
 
-    case ResourceUsage::RESOURCE_BUFFER: {
+    if (init.usage & ResourceUsage::RESOURCE_BUFFER) {
         bufferBackend->_resourceBufferView.Format = DXGI_FORMAT_UNKNOWN;
         bufferBackend->_resourceBufferView.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
         bufferBackend->_resourceBufferView.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -158,7 +157,20 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
             bufferBackend->_resourceBufferView.Buffer.Flags |= D3D12_BUFFER_SRV_FLAG_RAW;
         }
     }
-    break;
+
+    if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
+        bufferBackend->_rwResourceBufferView.Format = DXGI_FORMAT_UNKNOWN;
+        bufferBackend->_rwResourceBufferView.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+        bufferBackend->_rwResourceBufferView.Buffer.FirstElement = bufferBackend->_init.firstElement;
+        bufferBackend->_rwResourceBufferView.Buffer.NumElements = (UINT)(bufferBackend->_init.numElements);
+        bufferBackend->_rwResourceBufferView.Buffer.StructureByteStride = (UINT)(bufferBackend->_init.structStride);
+        bufferBackend->_rwResourceBufferView.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+        bufferBackend->_rwResourceBufferView.Buffer.CounterOffsetInBytes = 0;
+        if (bufferBackend->_init.raw) {
+            bufferBackend->_rwResourceBufferView.Buffer.StructureByteStride = 0;
+            bufferBackend->_rwResourceBufferView.Format = DXGI_FORMAT_R32_TYPELESS;
+            bufferBackend->_rwResourceBufferView.Buffer.Flags |= D3D12_BUFFER_UAV_FLAG_RAW;
+        }
     }
 
     return bufferBackend;

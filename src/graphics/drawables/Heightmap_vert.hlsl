@@ -282,7 +282,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float3 position = float3((svid - offset.x), 0.0, (strip_id + ovid - offset.z)) * _mesh_spacing;
 
     float4 tilePos = evalTiledPosition(position.xz);
-    if (!(/*tilePos.z == 0.0f && */tilePos.w == 0.0f)) {
+    if (!(tilePos.z == 0.0f && tilePos.w == 0.0f)) {
         tilePos.xy = float2(-1.0f, -1.0f);
     }
     position.y = getHeight(tilePos.xy);

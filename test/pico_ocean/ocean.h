@@ -6,6 +6,8 @@
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/HeightmapDrawable.h>
 
+
+
 namespace ocean {
 
 
@@ -202,9 +204,9 @@ public:
 
 
     float GetHeight(float x, float y) {
-       // core::vec2 horizontalDisplacement = GetChoppinessDisplacement(x, y);
-      //  x -= horizontalDisplacement.x;
-       // y -= horizontalDisplacement.y;
+        core::vec2 horizontalDisplacement = GetChoppinessDisplacement(x, y);
+        x -= horizontalDisplacement.x;
+        y -= horizontalDisplacement.y;
         return GetRemappedValues(x, y, _heights.data());
     }
 
@@ -255,22 +257,22 @@ public:
                 else
                     h1 = _spectrum0[(_resolution - y) + (_resolution - x) * _resolution];
 
-               //core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
+               core::vec2 k = core::normalize(core::vec2(_resolution * .5f - x, _resolution * .5f - y));
                complexf spec = h * expI(wt) + conj(h) * expI(-wt);
                _spectrum[i] = spec;
-              //  _choppinesses[i] = complexf(k.y, -k.x) * spec;
+                _choppinesses[i] = complexf(k.y, -k.x) * spec;
               }
         }
 
         InverseFourierTransform2D(_resolution, _spectrum.data());
-  //      InverseFourierTransform2D(_resolution, _choppinesses.data());
+        InverseFourierTransform2D(_resolution, _choppinesses.data());
 
         for (int32_t i = 0; i < _resolution; i++)
             for (int32_t j = 0; j < _resolution; j++) {
                 float sign = ((i + j) % 2) ? -1 : 1;
                 int index = i * _resolution + j;
                 _heights[index] = sign * _spectrum[index].real;
-         //       _choppiness_displacements[index] = sign * _choppinesses[index];
+                _choppiness_displacements[index] = sign * _choppinesses[index];
 
              //   _heights[index] = 100.0  * sin(t + 3 * M_PI * i / (float) _resolution);
 
@@ -311,6 +313,8 @@ void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, flo
        }));
     HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
 
+
+
     scene->createItem(root, heightmap_drawable);
 }
 
@@ -325,7 +329,7 @@ void updateHeights(float t) {
 
     auto numElements = desc.getMapNumElements();
 
-    memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
+ //   memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
 
 
     
@@ -338,8 +342,8 @@ void updateHeights(float t) {
    
         lscene->_nodes.editTransform(prim_nodes[i], [&](core::mat4x3& rts) -> bool {
             
-           // auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
-            auto h = locean->_heights[i]; //GetHeight(rts._columns[3].x, rts._columns[3].z);
+            auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
+           // auto h = locean->_heights[i]; //GetHeight(rts._columns[3].x, rts._columns[3].z);
         //    auto h = 2.0f * sin(10.0f * t + 3 * ocean::M_PI * (rts._columns[3].z ) / (ocean::PATCH_SIZE));// * cos(rts._columns[3].x + t);
         //    auto h = 0.4f * core::max(rts._columns[3].x, rts._columns[3].z) * sin(t);
             rts._columns[3].y = h     * 1;

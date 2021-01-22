@@ -40,6 +40,7 @@ const std::string D3D12ShaderBackend::ShaderTypes[] = {
     "nope",
     "vs_5_1",
     "ps_5_1",
+    "cs_5_1"
 };
 
 D3D12ShaderBackend::D3D12ShaderBackend() {

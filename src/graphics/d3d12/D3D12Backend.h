@@ -87,7 +87,8 @@ namespace graphics {
 
         SamplerPointer createSampler(const SamplerInit& init) override;
 
-        PipelineStatePointer createPipelineState(const PipelineStateInit& init) override;
+        PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) override;
+        PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) override;
    
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) override;
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) override;
@@ -159,9 +160,9 @@ namespace graphics {
         void setViewport(const core::vec4& viewport) override;
         void setScissor(const core::vec4& scissor) override;
 
-        void setPipeline(const PipelineStatePointer& pipeline) override;
-        void bindDescriptorSet(const DescriptorSetPointer& descriptorSet) override;
-        void bindPushUniform(uint32_t slot, uint32_t size, const uint8_t* data) override;
+        void bindPipeline(const PipelineStatePointer& pipeline) override;
+        void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) override;
+        void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) override;
 
         void bindIndexBuffer(const BufferPointer& buffer) override;
         void bindVertexBuffers(uint32_t num, const BufferPointer* buffers) override;
@@ -170,6 +171,8 @@ namespace graphics {
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
 
         void uploadTexture(const TexturePointer& dest, const BufferPointer& src) override;
+
+        void dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) override;
 
         ComPtr<ID3D12GraphicsCommandList> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
@@ -197,6 +200,7 @@ namespace graphics {
         D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
         D3D12_INDEX_BUFFER_VIEW _indexBufferView;
         D3D12_SHADER_RESOURCE_VIEW_DESC _resourceBufferView;
+        D3D12_UNORDERED_ACCESS_VIEW_DESC _rwResourceBufferView;
     };
 
     class D3D12TextureBackend : public Texture {

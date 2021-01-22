@@ -48,9 +48,12 @@ Sampler::~Sampler() {
 
 }
 
+PipelineType PipelineState::getType() const {
+    return _type;
+}
 
 DescriptorSetLayoutPointer PipelineState::getDescriptorSetLayout() const {
-    return _init.descriptorSetLayout;
+    return _descriptorSetLayout;
 }
 
 bool PipelineState::realize() {
@@ -88,6 +91,12 @@ void PipelineWatcher::add(const ShaderPointer& shader) {
         if (!shader_token.empty()) {
             auto shaderWeakPtr = ShaderWeakPtr(shader);
             _tokenToShaders[shader_token] = shaderWeakPtr;
+
+            if (shader->isCompute()) {
+                std::string shader_as_program_token = std::to_string((uint64_t)shader.get());
+                _tokenToShaders[shader_as_program_token] = shaderWeakPtr;
+                _shaderToPrograms.emplace(shader_token, shader_as_program_token);
+            }
 
             _fileWatcher->watchFile(shader_token, [&, shaderWeakPtr](const std::string& k, core::FileStatus s) {
                 if (s == core::FileStatus::modified) {
@@ -156,11 +165,17 @@ void PipelineWatcher::notifyShaderRecompiled(const std::string& key) {
         auto program_wptr = _tokenToShaders[x.second];
         auto program = program_wptr.lock();
         if (program) {
-            if (program->relink()) {
-                picoLog() << "SUCCESS relinking program <" + x.second + ">\n";
+            if (program->isProgram()) {
+                if (program->relink()) {
+                    picoLog() << "SUCCESS relinking program <" + x.second + ">\n";
+                    notifyProgramRelinked(x.second);
+                } else {
+                    picoLog() << "FAIL relinking program <" + x.second + ">\n";
+                }
+            }
+            else if (program->isCompute()) {
+                picoLog() << "SUCCESS relinking compute program <" + x.second + ">\n";
                 notifyProgramRelinked(x.second);
-            } else {
-                picoLog() << "FAIL relinking program <" + x.second + ">\n";
             }
         }
     });

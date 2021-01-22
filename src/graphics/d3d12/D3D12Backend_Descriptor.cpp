@@ -65,7 +65,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         case DescriptorType::SAMPLER: sampler_count += count; break;
         case DescriptorType::UNIFORM_BUFFER: cbvsrvuav_count += count; break;
         case DescriptorType::RESOURCE_BUFFER: cbvsrvuav_count += count; break;
-        case DescriptorType::STORAGE_BUFFER_UAV: cbvsrvuav_count += count; break;
+        case DescriptorType::RW_RESOURCE_BUFFER: cbvsrvuav_count += count; break;
         case DescriptorType::RESOURCE_TEXTURE: cbvsrvuav_count += count; break;
         case DescriptorType::TEXTURE_UAV: cbvsrvuav_count += count; break;
         case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV: cbvsrvuav_count += count; break;
@@ -136,10 +136,10 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
             param_10->ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
             ++shader_stage_count;
         }
-   /*     if (shaderStage & ((int)ShaderStage::COMPUTE)) {
+        if (shaderStage & ((int)ShaderStage::COMPUTE)) {
             // Keep D3D12_SHADER_VISIBILITY_ALL for compute shaders
             ++shader_stage_count;
-        }*/
+        }
 
         // Go back to all shader stages if there's more than one stage
         if (shader_stage_count > 1) {
@@ -169,7 +169,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
             assign_range = true;
         }
                                                     break;
-        case DescriptorType::STORAGE_BUFFER_UAV:
+        case DescriptorType::RW_RESOURCE_BUFFER:
         case DescriptorType::STORAGE_TEXEL_BUFFER_UAV:
         case DescriptorType::TEXTURE_UAV: {
             range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
@@ -312,7 +312,7 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
 
             case DescriptorType::UNIFORM_BUFFER:
             case DescriptorType::RESOURCE_BUFFER:
-            case DescriptorType::STORAGE_BUFFER_UAV:
+            case DescriptorType::RW_RESOURCE_BUFFER:
             case DescriptorType::RESOURCE_TEXTURE:
             case DescriptorType::TEXTURE_UAV:
             case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV:
@@ -438,41 +438,48 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._buffers[j].get()));
-                auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffers[j].get());
+                auto dxBuffer = static_cast<D3D12BufferBackend*> (descriptorObject._buffers[j].get());
 
-                ID3D12Resource* resource = dxUbo->_resource.Get();
-                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxUbo->_resourceBufferView);
+                ID3D12Resource* resource = dxBuffer->_resource.Get();
+                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxBuffer->_resourceBufferView);
                 _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
                 cpuHandle.ptr += handle_inc_size;
             }
         }
         break;
 
-/*        case tr_descriptor_type_storage_buffer_uav:
-        case tr_descriptor_type_storage_texel_buffer_uav: {
-            assert(NULL != descriptor->buffers);
+        case DescriptorType::RW_RESOURCE_BUFFER:
+     //   case tr_descriptor_type_storage_texel_buffer_uav:
+        {
+            picoAssert(descriptorObject._buffers.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
-            for (uint32_t i = 0; i < descriptor->count; ++i) {
-                assert(NULL != descriptor->buffers[i]);
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-                ID3D12Resource* resource = descriptor->buffers[i]->dx_resource;
-                D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(descriptor->buffers[i]->dx_uav_view_desc);
-                if (descriptor->buffers[i]->counter_buffer != NULL) {
+            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+
+            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
+            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+
+            for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
+                picoAssert((descriptorObject._buffers[j].get()));
+                auto dxBuffer = static_cast<D3D12BufferBackend*> (descriptorObject._buffers[j].get());
+
+                ID3D12Resource* resource = dxBuffer->_resource.Get();
+                D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(dxBuffer->_rwResourceBufferView);
+            
+                /* if (descriptor->buffers[i]->counter_buffer != NULL) { // Not yet suported, uav with a counter
                     ID3D12Resource* counter_resource = descriptor->buffers[i]->counter_buffer->dx_resource;
                     p_renderer->dx_device->CreateUnorderedAccessView(resource, counter_resource, view_desc, handle);
+                } else*/ {
+                    _device->CreateUnorderedAccessView(resource, NULL, view_desc, cpuHandle);
                 }
-                else {
-                    p_renderer->dx_device->CreateUnorderedAccessView(resource, NULL, view_desc, handle);
-                }
-                handle.ptr += handle_inc_size;
+                cpuHandle.ptr += handle_inc_size;
             }
         }
                                                         break;
-
-*/
         case DescriptorType::RESOURCE_TEXTURE: {
             picoAssert(descriptorObject._textures.size() >= descriptorLayout._count);
 
