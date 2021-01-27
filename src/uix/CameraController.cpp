@@ -189,7 +189,13 @@ bool CameraController::onMouse(const MouseEvent& e) {
         else {
             if (_cam->isOrtho()) {
                 float zoomScale = 0.1f;
+                auto m_e1 = _cam->eyeSpaceFromImageSpace2D(e.pos.x, _cam->getViewport().height() - e.pos.y);
+
                 _cam->setOrthoHeight(_cam->getOrthoHeight() * (1.0f + e.wheel * zoomScale));
+
+                auto m_e2 = _cam->eyeSpaceFromImageSpace2D(e.pos.x, _cam->getViewport().height() - e.pos.y);
+                
+                _cam->pan(m_e1.x - m_e2.x, m_e1.y - m_e2.y);
             }
             else {
                 float dollyScale = 0.08f;

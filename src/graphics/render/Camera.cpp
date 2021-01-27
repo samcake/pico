@@ -413,3 +413,17 @@ void Camera::lookFrom(const core::vec3& lookDirection) {
     }
     setOrientationFromFrontUp(lookDirection, upAxis);
 }
+
+core::vec2 Camera::eyeSpaceFromImageSpace2D(float x, float y) const {
+    ReadLock();
+    const auto& vr = _camData._data._viewport._rect;
+    const auto& proj = _camData._data._projection;
+
+    auto m_nc = ViewportRect::normalizedSpaceFromImageSpace(vr, x, y);
+    if (proj.isOrtho()) {
+        return Projection::eyeFromClipSpace2D(proj._orthoHeight, proj._aspectRatio, m_nc);
+    }
+    else {
+        return Projection::eyeFromClipSpace2D(proj._height, proj._aspectRatio, m_nc);
+    }
+}

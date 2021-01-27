@@ -150,6 +150,10 @@ namespace graphics {
             _orthoFar = orthoFar;
         }
 
+        static core::vec2 eyeFromClipSpace2D(float sensorHeight, float aspectRatio, const core::vec2& clipPos) {
+            return core::vec2(clipPos.x * aspectRatio * sensorHeight * 0.5f, clipPos.y * sensorHeight * 0.5f);
+        }
+
         static core::vec3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, const core::vec2& clipPos) {
             return core::vec3(clipPos.x * aspectRatio * sensorHeight * 0.5f, clipPos.y * sensorHeight * 0.5f, -focal);
         }
@@ -194,8 +198,6 @@ namespace graphics {
             clipPos.y = eyePos.y * 2.0f / (sensorHeight);
             return clipPos;
         }
-
-        
     };
 
     struct VISUALIZATION_API ViewportRect {
@@ -221,6 +223,11 @@ namespace graphics {
         core::vec2 size() const { return core::vec2(_rect.z, _rect.w); }
         float width() const { return _rect.z; }
         float height() const { return _rect.w; }
+
+        static core::vec2 normalizedSpaceFromImageSpace(const core::vec4& viewport_rect, float x, float y) {
+            return core::vec2( (x - viewport_rect.x) / viewport_rect.z * 2.0f - 1.0f,  (y - viewport_rect.y) / viewport_rect.w * 2.0f - 1.0f );
+        }
+
     };
 
     struct VISUALIZATION_API CameraData {
@@ -331,5 +338,10 @@ namespace graphics {
         // the distance from the eye to the center of the sphere is returned
         float zoomTo(const core::vec4& sphere);
         void lookFrom(const core::vec3& lookDirection);
+
+        // convert between spaces
+
+        // from 2d pos in the image space of the viewport to the 2d pos in eye space in the clipping plane
+        core::vec2 eyeSpaceFromImageSpace2D(float x, float y) const;
     };
 }

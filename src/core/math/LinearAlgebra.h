@@ -136,6 +136,8 @@ namespace core
     }
 
     // Max Min
+    inline uint32_t min(uint32_t a, uint32_t b) { return (a < b ? a : b); }
+    inline uint32_t max(uint32_t a, uint32_t b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }
     inline float max(float a, float b) { return (a > b ? a : b); }
     inline vec2 min(const vec2& a, const vec2& b) {
