@@ -135,13 +135,14 @@ namespace model {
     class Mesh {
     public:
         std::string _name;
-
-        IndexArray _primitives;
+        Index _primitiveStart{ INVALID_INDEX };
+        uint32_t _primitiveCount{ 0 };
     };
     using MeshArray = std::vector<Mesh>;
 
     class Item {
     public:
+        Index _node{ INVALID_INDEX };
         Index _mesh{ INVALID_INDEX };
     };
     using ItemArray = std::vector<Item>;

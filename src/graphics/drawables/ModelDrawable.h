@@ -83,13 +83,29 @@ namespace graphics {
     };
     using ModelDrawableFactoryPointer = std::shared_ptr< ModelDrawableFactory>;
 
+    struct ModelItem {
+        uint32_t node{ (uint32_t)-1 };
+        uint32_t shape{ (uint32_t)-1 };
+    };
+
+    struct ModelShape {
+        uint32_t partOffset{ 0 };
+        uint32_t numParts{ 0 };
+    };
 
     struct ModelPart {
         uint32_t numIndices{ 0 };
         uint32_t indexOffset{ 0 };
         uint32_t numVertices{ 0 };
         uint32_t vertexOffset{ 0 };
+
+     //   uint32_t material{ (uint32_t) -1 }; not yet
     };
+
+    struct ModelMaterial {
+        core::vec4 color;
+    };
+
     class VISUALIZATION_API ModelDrawable {
     public:
 
@@ -103,12 +119,19 @@ namespace graphics {
         graphics::BufferPointer getIndexBuffer() const { return _indexBuffer; }
         graphics::BufferPointer getPartBuffer() const { return _partBuffer; }
 
-        
+        graphics::BufferPointer getMaterialBuffer() const { return _materialBuffer; }
+
+        std::vector<ModelItem> _localItems;
+
+        std::vector<core::mat4x3> _localNodeTransforms;
+        std::vector<uint32_t> _localNodeParents;
+
+        std::vector<ModelShape> _shapes;
         std::vector<ModelPart> _parts;
         std::vector<core::aabox3> _partAABBs;
 
-        
-        document::ModelPointer _srcModel;
+        // For each part, we create one drawable
+        DrawableIDs _partDrawables;
 
     protected:
         friend class ModelDrawableFactory;
@@ -116,6 +139,8 @@ namespace graphics {
         graphics::BufferPointer _vertexBuffer;
         graphics::BufferPointer _indexBuffer;
         graphics::BufferPointer _partBuffer;
+
+        graphics::BufferPointer _materialBuffer;
 
         graphics::DescriptorSetPointer  _descriptorSet;
 

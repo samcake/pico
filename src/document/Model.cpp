@@ -50,8 +50,10 @@ json check(const json& j, const std::string& k) {
     }
 }
 
-NodeArray parseNodes(const json& gltf_nodes) {
+std::tuple<NodeArray, ItemArray> parseNodes(const json& gltf_nodes) {
+    // gltf combine in the node both Node and Item concepts
     NodeArray nodes;
+    ItemArray items;
 
     if (gltf_nodes.is_array()) {
         for (const auto& n : gltf_nodes) {
@@ -111,20 +113,25 @@ NodeArray parseNodes(const json& gltf_nodes) {
             if (m.is_number()) {
                 node._index = m.get<Index>();
             }
-
             nodes.emplace_back(node);
         }
     }
     
     // Assign the parent fields by reparsing the nodes
+    // And build the items on that 2nd pass
     for (uint32_t i = 0; i < nodes.size(); ++i) {
         auto& n = nodes[i];
         for (auto c : n._children) {
             nodes[c]._parent = i;
         }
+
+        // build item
+        if (n._index != INVALID_INDEX) {
+            items.emplace_back(Item{i, n._index});
+        }
     }
 
-    return std::move(nodes);
+    return {std::move(nodes), std::move(items)};
 }
 
 struct GLBHeader {
@@ -320,6 +327,10 @@ std::tuple<MeshArray, PrimitiveArray> parseMeshes(const json& gltf_meshes) {
 
             const auto& gltf_p = check(m, "primitives");
             if (gltf_p.is_array()) {
+
+                mesh._primitiveStart = primitives.size();
+                mesh._primitiveCount = 0;
+
                 for (const auto& p : gltf_p) {
                     Primitive prim;
                 
@@ -348,7 +359,7 @@ std::tuple<MeshArray, PrimitiveArray> parseMeshes(const json& gltf_meshes) {
                     }
 
                     primitives.emplace_back(prim);
-                    mesh._primitives.emplace_back((Index) (primitives.size() - 1));
+                    mesh._primitiveCount ++;
                 }
             }
 
@@ -362,7 +373,9 @@ std::tuple<MeshArray, PrimitiveArray> parseMeshes(const json& gltf_meshes) {
 std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
     auto model = std::make_unique<Model>();
     
-    model->_nodes = parseNodes(check(gltf, "nodes"));
+    
+    std::tie( model->_nodes, model->_items) = parseNodes(check(gltf, "nodes"));
+    
 
     model->_buffers = parseBuffers(check(gltf, "buffers"), model_path_root);
     model->_bufferViews = parseBufferViews(check(gltf, "bufferViews"));

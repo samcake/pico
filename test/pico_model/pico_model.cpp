@@ -34,25 +34,14 @@
 
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Resource.h>
-#include <graphics/gpu/Shader.h>
-#include <graphics/gpu/Descriptor.h>
-#include <graphics/gpu/Pipeline.h>
-#include <graphics/gpu/Batch.h>
 #include <graphics/gpu/Swapchain.h>
 
-#include <graphics/render/Renderer.h>
 #include <graphics/render/Camera.h>
-#include <graphics/render/Mesh.h>
-#include <graphics/render/Drawable.h>
-#include <graphics/render/Scene.h>
 #include <graphics/render/Viewport.h>
 
-
 #include <graphics/drawables/GizmoDrawable.h>
-
 #include <graphics/drawables/PrimitiveDrawable.h>
-
-#include "terrain.h"
+#include <graphics/drawables/ModelDrawable.h>
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -60,45 +49,38 @@
 #include <vector>
 
 //--------------------------------------------------------------------------------------
-// pico terrain:
-// 
+// pico model:
+//  Explore the definition of a document::model created from loading a gltf file
+//  and its drawable counterpart, MOdelDrawable
 //--------------------------------------------------------------------------------------
 
-terrain::TerrainPointer lterrain;
-std::vector<graphics::NodeID> prim_nodes;
+document::ModelPointer lmodel;
 
-void generateTerrain(uint32_t map_res, float map_spacing, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
+void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
-   // std::string terrainFile("../asset/dem/san_francisco-e.DEM");
-    //std::string terrainFile("../asset/dem/grand_canyon-e.DEM");
-    //std::string terrainFile("../asset/dem/grand_canyon-w.DEM");
-   // std::string terrainFile("../asset/dem/9008_75m.dem");
-    //std::string terrainFile("../asset/dem/9502_75m.dem");
-    //std::string terrainFile("../asset/dem/8955_75m.dem");
-    std::string terrainFile("../asset/dem/8997_75m.dem");
+ //   std::string modelFile("../asset/gltf/toycar.gltf");
+ //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
+ //   std::string modelFile("../asset/gltf/Sponza.gltf");
+ //   std::string modelFile("../asset/gltf/WaterBottle.gltf");
+  // std::string modelFile("../asset/gltf/lantern.gltf");
+    std::string modelFile("../asset/gltf/buggy.gltf");
+    //  std::string modelFile("../asset/gltf/VC.gltf");
+    //  std::string modelFile("../asset/gltf/duck.gltf");
+  //  std::string modelFile("../asset/gltf/OrientationTest.gltf");
+  //  std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
     
-    lterrain = terrain::Terrain::createFromDEM(terrainFile);
-    //  lterrain = new terrain::Terrain(map_res, map_spacing);
+    lmodel = document::model::Model::createFromGLTF(modelFile);
 
+    auto modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
+    modelDrawableFactory->allocateGPUShared(gpuDevice);
 
-      // A Heightmap drawable factory
-    auto HeightmapDrawableFactory = std::make_shared<graphics::HeightmapDrawableFactory>();
-    HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
+    auto modelDrawablePtr = modelDrawableFactory->createModel(gpuDevice, lmodel);
+    modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
 
-    // a Heightmap
-    graphics::Drawable heightmap_drawable;
+    auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
 
-    map_res = lterrain->_resolution;
-    map_spacing = lterrain->_spacing;
+    modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
 
-    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, {
-         map_res, map_res, map_spacing,
-         map_res, map_res, map_spacing,
-         lterrain->_heights
-        }));
-    HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
-
-    scene->createItem(root, heightmap_drawable);
 }
 
 //--------------------------------------------------------------------------------------
@@ -139,8 +121,7 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
-    auto terrain_resolution = 512;
-    generateTerrain(terrain_resolution, 1.0f, gpuDevice, scene, camera, node0);
+     generateModel(gpuDevice, scene, camera, node0);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -168,7 +149,6 @@ int main(int argc, char *argv[])
     
     // Content creation
     float doAnimate = 0.0f;
-
 
     // For user input, we can use a CameraController which will provide a standard manipulation of the camera from keyboard and mouse
     auto camControl = std::make_shared< uix::CameraController >(camera);

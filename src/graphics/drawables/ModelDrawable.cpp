@@ -113,7 +113,30 @@ namespace graphics
 
     graphics::ModelDrawable* ModelDrawableFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model) {
 
-        // as loong as the vertex buffer is  less than 65535 the indices can be uint16
+        auto modelDrawable = new graphics::ModelDrawable();
+
+        // Define the local nodes used by the model with the original transforms and the parents
+        modelDrawable->_localNodeTransforms.reserve(model->_nodes.size());
+        modelDrawable->_localNodeParents.reserve(model->_nodes.size());
+        for (const auto& n : model->_nodes) {
+            modelDrawable->_localNodeTransforms.emplace_back(n._transform);
+            modelDrawable->_localNodeParents.emplace_back(n._parent);
+        }
+
+        // Define the items
+        modelDrawable->_localItems.reserve(model->_items.size());
+        for (const auto& si : model->_items) {
+            modelDrawable->_localItems.emplace_back(ModelItem{si._node, si._mesh});
+        }
+
+        // Define the shapes
+        modelDrawable->_shapes.reserve(model->_meshes.size());
+        for (const auto& m : model->_meshes) {
+            modelDrawable->_shapes.emplace_back(ModelShape{ m._primitiveStart, m._primitiveCount });
+        }
+
+        // Build the geometry vb, ib and pb
+        // as long as the vertex buffer is  less than 65535 the indices can be uint16
         std::vector<core::vec4> vertex_buffer;
         std::vector<uint16_t> index_buffer;
         std::vector<ModelPart> parts;
@@ -194,19 +217,17 @@ namespace graphics
         auto ibresourceBuffer = device->createBuffer(indexBufferInit);
         memcpy(ibresourceBuffer->_cpuMappedAddress, index_buffer.data(), indexBufferInit.bufferSize);
 
-        auto modelDrawable = new graphics::ModelDrawable();
         modelDrawable->_uniforms = _sharedUniforms;
         modelDrawable->_indexBuffer = ibresourceBuffer;
         modelDrawable->_vertexBuffer = vbresourceBuffer;
         modelDrawable->_partBuffer = pbuniformBuffer;
 
+        // Also need aversion of the parts and their bound on the cpu side
         modelDrawable->_parts = std::move(parts);
         modelDrawable->_partAABBs = std::move(partAABBs);
 
       //  modelDrawable->_bound = bound;
         modelDrawable->_bound = modelDrawable->_partAABBs[0];
-
-        modelDrawable->_srcModel = model;
 
         return modelDrawable;
     }
@@ -273,6 +294,39 @@ namespace graphics
        };
        model._drawcall = drawCallback;
 
+
+       // one drawable per part
+       DrawableIDs drawables;
+       for (int d = 0; d < model._partAABBs.size(); ++d) {
+           auto part = new ModelDrawablePart();
+           part->_bound = model._partAABBs[d];
+
+           // And now a render callback where we describe the rendering sequence
+           graphics::DrawObjectCallback drawCallback = [d, pmodel, descriptorSet, pipeline](
+               const NodeID node,
+               const graphics::CameraPointer& camera,
+               const graphics::SwapchainPointer& swapchain,
+               const graphics::DevicePointer& device,
+               const graphics::BatchPointer& batch) {
+                   batch->bindPipeline(pipeline);
+                   batch->setViewport(camera->getViewportRect());
+                   batch->setScissor(camera->getViewportRect());
+
+                   batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+
+                   ModelObjectData odata{ (int32_t)node, (int32_t)d, 0, 0 };
+                   batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                   batch->draw(pmodel->_parts[d].numIndices, 0);
+           };
+
+           part->_drawcall = drawCallback;
+
+           auto partDrawable = scene->createDrawable(*part);
+           drawables.emplace_back(partDrawable.id());
+       }
+
+       model._partDrawables = drawables;
+
     }
 
    graphics::ItemIDs ModelDrawableFactory::createModelParts(
@@ -281,68 +335,18 @@ namespace graphics
                     graphics::ModelDrawable& model) {
         
         auto rootNode = scene->createNode(core::mat4x3(), graphics::INVALID_NODE_ID);
-        auto rootNodeBase = rootNode.id();
 
-        std::vector<core::mat4x3> transforms;
-        NodeIDs parents;
-        transforms.reserve(model._srcModel->_nodes.size());
-        parents.reserve(model._srcModel->_nodes.size());
+        // Allocating the new instances of scene::nodes, one per local node
+        auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
 
-        for (const auto& n : model._srcModel->_nodes) {
-            transforms.emplace_back(n._transform);
-            parents.emplace_back(n._parent);
-        }
-        auto modelNodes = scene->createNodeBranch(rootNodeBase, transforms, parents);
-
-        auto pmodel = &model;
-        auto pipeline = this->_pipeline;
-        auto descriptorSet = model._descriptorSet;
-
-
-        // one drawable per part
-        DrawableIDs drawables;
-        for (int d = 0 ; d < model._partAABBs.size(); ++d) {
-            auto part = new ModelDrawablePart();
-            part->_bound = model._partAABBs[d];
-
-            // And now a render callback where we describe the rendering sequence
-            graphics::DrawObjectCallback drawCallback = [d, pmodel, descriptorSet, pipeline](
-                const NodeID node,
-                const graphics::CameraPointer& camera,
-                const graphics::SwapchainPointer& swapchain,
-                const graphics::DevicePointer& device,
-                const graphics::BatchPointer& batch) {
-                    batch->bindPipeline(pipeline);
-                    batch->setViewport(camera->getViewportRect());
-                    batch->setScissor(camera->getViewportRect());
-
-                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
-                    ModelObjectData odata{ (int32_t)node, (int32_t)d, 0, 0 };
-                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                    batch->draw(pmodel->_parts[d].numIndices, 0);
-            };
-
-            part->_drawcall = drawCallback;
-
-            auto partDrawable = scene->createDrawable(*part);
-            drawables.emplace_back(partDrawable.id());
-        }
-
-
-
+        // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
-        uint32_t i = 0;
-        for (const auto& n : model._srcModel->_nodes) {
-            if (n._index != document::model::INVALID_INDEX) {
-                const auto& m = model._srcModel->_meshes[n._index];
-                for (auto p : m._primitives) {
-                    items.emplace_back(scene->createItem(modelNodes[i], drawables[p]).id());
-                }
+        for (const auto& li : model._localItems) {
+            const auto& s = model._shapes[li.shape];
+            for (uint32_t si = 0; si < s.numParts; ++si) {
+                items.emplace_back(scene->createItem(modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
             }
-            ++i;
         }
-        
 
         return items; 
    }
