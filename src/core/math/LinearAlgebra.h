@@ -27,6 +27,7 @@
 #pragma once
 #include <stdint.h>
 #include <cmath>
+#include <utility>
 
 
 namespace core 
@@ -63,6 +64,7 @@ namespace core
         vec3 operator-() const { return vec3(-x, -y, -z); }
 
         float operator[](int i) const { return data()[i]; }
+        float& operator[](int i) { return data()[i]; }
 
         const static vec3 X;
         const static vec3 Y;
@@ -291,7 +293,7 @@ namespace core
             _columns[2] = (c2);
             _columns[3] = (c3);
         }
-
+        
         vec4 row_0() const { return { _columns[0].x, _columns[1].x, _columns[2].x, _columns[3].x }; }
         vec4 row_1() const { return { _columns[0].y, _columns[1].y, _columns[2].y, _columns[3].y }; }
         vec4 row_2() const { return { _columns[0].z, _columns[1].z, _columns[2].z, _columns[3].z }; }
@@ -558,7 +560,7 @@ namespace core
         return mat;
     }
     inline mat4x3 translation(const vec3& t) {
-        return translation(mat4x3(), t);
+        return std::move(translation(mat4x3(), t));
     }
     inline mat4x3& rotation(mat4x3& mat, const rotor3& r) {
         mat._columns[0] = r.rotate_X();
@@ -567,13 +569,13 @@ namespace core
         return mat;
     }
     inline mat4x3 rotation(const rotor3& r) {
-        return rotation(mat4x3(), r);
+        return std::move(rotation(mat4x3(), r));
     }
     inline mat4x3& translation_rotation(mat4x3& mat, const vec3& t, const rotor3& r) {
-        return rotation(translation(mat, t), r);
+        return translation(rotation(mat, r), t);
     }
     inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
-        return translation_rotation(mat4x3(), t, r);
+        return std::move(translation_rotation(mat4x3(), t, r));
     }
     inline mat4x3& rotate(mat4x3& mat, const rotor3& r) {
         mat._columns[0] = r.rotate(mat._columns[0]);

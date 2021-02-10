@@ -49,6 +49,7 @@ namespace graphics {
         Item getItem(ItemID id) const;
         
         Item createItem(Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
+        Item createItem(NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
 
         void deleteAllItems();  // delete all user objects
         void deleteAll();
@@ -63,6 +64,7 @@ namespace graphics {
         Node getNode(NodeID nodeId) const;
 
         Node createNode(const core::mat4x3& rts, NodeID parent);
+        NodeIDs createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentsOffsets);
         void deleteNode(NodeID nodeId);
 
         void attachNode(NodeID child, NodeID parent);

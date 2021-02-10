@@ -192,7 +192,8 @@ int main(int argc, char *argv[])
                 core::vec3(-4.0f * (i % width), -1.0f, 4.0f * (i / width)),
                 core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
             ),
-            node0.id());
+            rnode.id());
+           // node0.id());
         auto p_item = scene->createItem(p_node, p_drawable);
         prim_nodes.push_back(p_node.id());
     }
@@ -268,7 +269,7 @@ int main(int argc, char *argv[])
         if (doAnimate) {
             // Move something
             scene->_nodes.editTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
-                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(t), 0.0f, sin(t)));
+                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(-t), 0.0f, sin(-t)));
                 core::rotation(rts, rotor);
                 return true;
             });
@@ -286,13 +287,13 @@ int main(int argc, char *argv[])
                 return true;
             });
 
-            for (auto prim_node : prim_nodes) {
+          /*  for (auto prim_node : prim_nodes) {
                 scene->_nodes.editTransform(prim_node, [t](core::mat4x3& rts) -> bool {
                     core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.005 * t), 0.0f, sin(0.005 * t)));
                     core::rotate(rts, rotor);
                     return true;
                 });
-            }
+            }*/
         }
 
         scene->_items.syncBuffer();

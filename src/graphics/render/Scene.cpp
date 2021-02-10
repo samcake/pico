@@ -36,13 +36,17 @@ Scene::~Scene() {
 }
 
 Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
+    return createItem(node.id(), drawable.id(), userID);
+}
 
-   Item newItem = _items.createItem(this, node, drawable);
+Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
+
+    Item newItem = _items.createItem(this, node, drawable);
 
     if (userID != INVALID_ITEM_ID) {
         _idToIndices[userID] = newItem.id();
     }
- 
+
     return newItem;
 }
 
@@ -97,6 +101,11 @@ Node Scene::getNode(NodeID nodeId) const {
 Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
     return Node(&_nodes, _nodes.createNode(rts, parent));
 }
+
+NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
+    return _nodes.createNodeBranch(rootParent, rts, parentOffsets);
+}
+
 
 void Scene::deleteNode(NodeID nodeId) {
     _nodes.deleteNode(nodeId);

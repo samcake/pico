@@ -79,7 +79,6 @@ namespace graphics {
         virtual void draw(uint32_t numPrimitives, uint32_t startIndex);
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
-
         virtual void uploadTexture(const TexturePointer& dest, const BufferPointer& src);
 
         virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);

@@ -30,6 +30,8 @@
 
 #include <core/api.h>
 
+#include <document/Model.h>
+
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Resource.h>
 #include <graphics/gpu/Shader.h>
@@ -49,6 +51,7 @@
 #include <graphics/drawables/GizmoDrawable.h>
 
 #include <graphics/drawables/PrimitiveDrawable.h>
+#include <graphics/drawables/ModelDrawable.h>
 
 #include "terrain.h"
 
@@ -62,7 +65,35 @@
 // 
 //--------------------------------------------------------------------------------------
 
+document::ModelPointer lmodel;
 
+void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
+
+ //   std::string modelFile("../asset/gltf/toycar.gltf");
+ //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
+ //   std::string modelFile("../asset/gltf/Sponza.gltf");
+ //   std::string modelFile("../asset/gltf/WaterBottle.gltf");
+ //  std::string modelFile("../asset/gltf/lantern.gltf");
+    std::string modelFile("../asset/gltf/buggy.gltf");
+  //  std::string modelFile("../asset/gltf/duck.gltf");
+  //  std::string modelFile("../asset/gltf/OrientationTest.gltf");
+ //   std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
+    
+    lmodel = document::model::Model::createFromGLTF(modelFile);
+
+    auto modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
+    modelDrawableFactory->allocateGPUShared(gpuDevice);
+
+    auto modelDrawablePtr = modelDrawableFactory->createModel(gpuDevice, lmodel);
+    modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
+
+    auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
+
+    modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+
+ //   scene->createItem(root, modelDrawable);
+
+}
 
 terrain::TerrainPointer lterrain;
 std::vector<graphics::NodeID> prim_nodes;
@@ -139,8 +170,10 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
-    auto terrain_resolution = 512;
-    generateTerrain(terrain_resolution, 1.0f, gpuDevice, scene, camera, node0);
+     generateModel(gpuDevice, scene, camera, node0);
+
+//    auto terrain_resolution = 512;
+//    generateTerrain(terrain_resolution, 1.0f, gpuDevice, scene, camera, node0);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -149,14 +182,14 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(6);
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes._nodes_buffer->getNumElements());
     auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
     gzitem_node.setVisible(false);
 
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items._items_buffer->getNumElements());
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
 

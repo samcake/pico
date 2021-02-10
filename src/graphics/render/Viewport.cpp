@@ -115,14 +115,20 @@ void Viewport::renderScene(const graphics::CameraPointer& camera, const graphics
     for (int i = 1; i < _scene->getItems().size(); i++) {
         auto& item = _scene->getItems()[i];
         if (item.isValid() && item.isVisible()) {
-            _scene->_drawables.getDrawcall(item.getDrawable())(item.getNode(), camera, swapchain, device, batch);
+            auto drawable = item.getDrawable();
+            if (drawable != INVALID_DRAWABLE_ID) {
+                _scene->_drawables.getDrawcall(drawable)(item.getNode(), camera, swapchain, device, batch);
+            }
         }
     }
 
     if (_scene->getItems().size() > 0) {
         auto item0 = _scene->getItems()[0];
         if (item0.isValid() && item0.isVisible()) {
-            _scene->_drawables.getDrawcall(item0.getDrawable())(item0.getNode(), camera, swapchain, device, batch);
+            auto drawable = item0.getDrawable();
+            if (drawable != INVALID_DRAWABLE_ID) {
+                _scene->_drawables.getDrawcall(drawable)(item0.getNode(), camera, swapchain, device, batch);
+            }
         }
     }
 }

@@ -116,6 +116,7 @@ namespace graphics {
         };
 
         Item createItem(const Scene* scene, Node node, Drawable drawable);
+        Item createItem(const Scene* scene, NodeID node, DrawableID drawable);
         void free(ItemID index);
         void freeAll();
 
