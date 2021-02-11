@@ -370,6 +370,41 @@ std::tuple<MeshArray, PrimitiveArray> parseMeshes(const json& gltf_meshes) {
     return std::make_tuple(meshes, primitives);
 }
 
+MaterialArray parseMaterials(const json& gltf_materials) {
+    MaterialArray materials;
+
+    if (gltf_materials.is_array()) {
+        for (const auto& m : gltf_materials) {
+            Material material;
+
+            const auto& pbrMetallicRoughness = check(m, "pbrMetallicRoughness");
+            if (pbrMetallicRoughness.is_object()) {
+
+                const auto& color = check(pbrMetallicRoughness, "baseColorFactor");
+                if (color.is_array()) {
+                    for (int c = 0; c < color.size(); ++c)
+                        material._baseColor[c] = (*(color.begin() + c)).get<float>();
+                }
+
+                const auto& metallic = check(pbrMetallicRoughness, "metallicFactor");
+                if (metallic.is_number()) {
+                    material._metallicFactor = metallic.get<float>();
+                }
+
+
+                const auto& roughness = check(pbrMetallicRoughness, "roughnessFactor");
+                if (roughness.is_number()) {
+                    material._roughnessFactor = roughness.get<float>();
+                }
+            }
+
+            materials.emplace_back(material);
+        }
+    }
+
+    return materials;
+}
+
 std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
     auto model = std::make_unique<Model>();
     
@@ -383,6 +418,8 @@ std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path&
 
     model->_accessors = parseAccessors(check(gltf, "accessors"));
     std::tie( model->_meshes, model->_primitives) = parseMeshes(check(gltf, "meshes"));
+
+    model->_materials = parseMaterials(check(gltf, "materials"));
 
     return model;
 }

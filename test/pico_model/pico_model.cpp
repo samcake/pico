@@ -58,16 +58,16 @@ document::ModelPointer lmodel;
 
 void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
- //   std::string modelFile("../asset/gltf/toycar.gltf");
+    std::string modelFile("../asset/gltf/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
  //   std::string modelFile("../asset/gltf/Sponza.gltf");
  //   std::string modelFile("../asset/gltf/WaterBottle.gltf");
-  // std::string modelFile("../asset/gltf/lantern.gltf");
-    std::string modelFile("../asset/gltf/buggy.gltf");
+ //  std::string modelFile("../asset/gltf/lantern.gltf");
+   // std::string modelFile("../asset/gltf/buggy.gltf");
     //  std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
-  //  std::string modelFile("../asset/gltf/OrientationTest.gltf");
-  //  std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
+   // std::string modelFile("../asset/gltf/OrientationTest.gltf");
+  // std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
     
     lmodel = document::model::Model::createFromGLTF(modelFile);
 

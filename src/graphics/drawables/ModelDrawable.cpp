@@ -74,6 +74,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 4, 1},
 
         };
 
@@ -154,7 +155,7 @@ namespace graphics
             const auto& posView = model->_bufferViews[posAccess._bufferView];
             const auto& posBuffer = model->_buffers[posView._buffer];
 
-            ModelPart part{ indexAccess._elementCount, (uint32_t) index_buffer.size(), posAccess._elementCount, (uint32_t) vertex_buffer.size()};
+            ModelPart part{ indexAccess._elementCount, (uint32_t) index_buffer.size(), (uint32_t) vertex_buffer.size(), p._material};
             parts.emplace_back(part);
 
             auto indexStride = (indexView._byteStride ? indexView._byteStride : document::model::componentTypeSize(indexAccess._componentType));
@@ -229,6 +230,30 @@ namespace graphics
       //  modelDrawable->_bound = bound;
         modelDrawable->_bound = modelDrawable->_partAABBs[0];
 
+        // Materials
+        std::vector<ModelMaterial> materials;
+        for (const auto& m : model->_materials) {
+            ModelMaterial mm;
+            mm.color = m._baseColor;
+            mm.metallic = m._metallicFactor;
+            mm.roughness = m._roughnessFactor;
+            materials.emplace_back(mm);
+        }
+
+        // material buffer
+        BufferInit materialBufferInit;
+        materialBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+        materialBufferInit.bufferSize = materials.size() * sizeof(ModelMaterial);
+        materialBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
+        materialBufferInit.firstElement = 0;
+        materialBufferInit.numElements = materials.size();
+        materialBufferInit.structStride = sizeof(ModelMaterial);
+
+        auto mbresourceBuffer = device->createBuffer(materialBufferInit);
+        memcpy(mbresourceBuffer->_cpuMappedAddress, materials.data(), materialBufferInit.bufferSize);
+
+        modelDrawable->_materialBuffer = mbresourceBuffer;
+
         return modelDrawable;
     }
 
@@ -256,10 +281,17 @@ namespace graphics
        vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
        graphics::DescriptorObject ib_rboDescriptorObject;
        ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
-       graphics::DescriptorObject pb_uboDescriptorObject;
-       pb_uboDescriptorObject._buffers.push_back(model.getPartBuffer());
+       graphics::DescriptorObject pb_rboDescriptorObject;
+       pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
+       graphics::DescriptorObject mb_rboDescriptorObject;
+       mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
        graphics::DescriptorObjects descriptorObjects = {
-           camera_uboDescriptorObject, transform_rboDescriptorObject, vb_rboDescriptorObject, ib_rboDescriptorObject, pb_uboDescriptorObject
+            camera_uboDescriptorObject,
+            transform_rboDescriptorObject, 
+            vb_rboDescriptorObject, 
+            ib_rboDescriptorObject, 
+            pb_rboDescriptorObject,
+            mb_rboDescriptorObject
        };
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 

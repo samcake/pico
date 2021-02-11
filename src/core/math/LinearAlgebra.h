@@ -92,6 +92,9 @@ namespace core
         vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
         vec4 operator-() const { return vec4(-x, -y, -z, -w); }
 
+        float operator[](int i) const { return data()[i]; }
+        float& operator[](int i) { return data()[i]; }
+
         vec3 xyz() const { return vec3(x, y, z); }
     };
     struct ucvec4 {

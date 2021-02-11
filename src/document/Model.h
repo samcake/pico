@@ -140,6 +140,17 @@ namespace model {
     };
     using MeshArray = std::vector<Mesh>;
 
+
+    class Material {
+    public:
+        std::string _name;
+        core::vec4 _baseColor{ 0.5f, 0.5f, 0.5f, 1.0f };
+        float _metallicFactor{ 1.0f };
+        float _roughnessFactor{ 0.0f };
+    };
+    using MaterialArray = std::vector<Material>;
+
+
     class Item {
     public:
         Index _node{ INVALID_INDEX };
@@ -167,6 +178,7 @@ namespace model {
         PrimitiveArray _primitives;
         AccessorArray _accessors;
 
+        MaterialArray _materials;
     };
 }
     using Model = model::Model;

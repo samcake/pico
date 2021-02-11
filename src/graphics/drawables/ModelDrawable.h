@@ -96,14 +96,17 @@ namespace graphics {
     struct ModelPart {
         uint32_t numIndices{ 0 };
         uint32_t indexOffset{ 0 };
-        uint32_t numVertices{ 0 };
         uint32_t vertexOffset{ 0 };
 
-     //   uint32_t material{ (uint32_t) -1 }; not yet
+        uint32_t material{ (uint32_t) -1 };
     };
 
     struct ModelMaterial {
-        core::vec4 color;
+        core::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
+        float metallic{ 0.0f };
+        float roughness{0.0f };
+        float spareA;
+        float spareB;
     };
 
     class VISUALIZATION_API ModelDrawable {

@@ -140,8 +140,8 @@ Buffer<uint>  index_array : register(t2);
 struct Part {
     uint numIndices;
     uint indexOffset;
-    uint numVertices;
     uint vertexOffset;
+    uint material;
 };
 
 StructuredBuffer<Part>  part_array : register(t3);
@@ -150,18 +150,15 @@ struct Face {
     float4 v[3];
 };
 
-Face fetchFace(int partNum, int faceNum) {
-    // Fetch the part data
-    Part p = part_array[partNum];
-
+Face fetchFace(int indexOffset, int vertexOffset, int faceNum) {
     // Fetch Face indices
-    int faceIndexBase = part_array[partNum].indexOffset + faceNum * 3;
+    int faceIndexBase = indexOffset + faceNum * 3;
     uint3 fvid = uint3(index_array[faceIndexBase], index_array[faceIndexBase + 1], index_array[faceIndexBase + 2]);
 
     // Fetch Face vertices
     Face face;
     for (int i = 0; i < 3; i++) {
-        uint vi = part_array[partNum].vertexOffset + fvid[i];
+        uint vi = vertexOffset + fvid[i];
         face.v[i] = float4(vertex_array[vi].x, vertex_array[vi].y, vertex_array[vi].z, vertex_array[vi].w);
     }
 
@@ -177,17 +174,20 @@ cbuffer UniformBlock1 : register(b1) {
 
 struct VertexShaderOutput
 {
-    float4 Color    : COLOR;
     float3 Normal   : NORMAL;
+    float  Material : COLOR;
     float4 Position : SV_Position;
 };
 
 VertexShaderOutput main(uint vidx : SV_VertexID) {
 
+    // Fetch the part data
+    Part p = part_array[_partID];
+
     uint tidx = vidx / 3;
     uint tvidx = vidx % 3;
 
-    Face faceVerts = fetchFace(_partID, tidx);
+    Face faceVerts = fetchFace(p.indexOffset, p.vertexOffset, tidx);
 
     // Generate normal
     float3 faceEdge0 = faceVerts.v[1].xyz - faceVerts.v[0].xyz;
@@ -209,18 +209,17 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
 
     normal = worldFromObjectSpaceDir(_model, normal);
 
-    uint color = asuint(faceVerts.v[tvidx].w);
+  /*  uint color = asuint(p.material);
     const float INT8_TO_NF = 1.0 / 255.0;
     float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
     float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
     float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
-
+*/
     VertexShaderOutput OUT;
     OUT.Position = clipPos;
     OUT.Normal = normal;
-   // OUT.Color = float4(r, g, b, 1.0f);
-    OUT.Color = float4(1.0f, 1.0f, 1.0f, 1.0f);
-
+    OUT.Material = float(p.material);
+    
     return OUT;
 }
 
