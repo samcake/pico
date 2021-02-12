@@ -60,8 +60,9 @@ namespace graphics
     struct ModelObjectData {
         uint32_t nodeID{0};
         uint32_t partID{0};
-        float numIndices{ 0 };
-        float numVertices{ 0 };
+        uint32_t numNodes{ 0 };
+        uint32_t numParts{ 0 };
+        uint32_t numMaterials{ 0 };
     };
 
     void ModelDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
@@ -69,7 +70,7 @@ namespace graphics
         // Let's describe the pipeline Descriptors layout
         graphics::DescriptorLayouts descriptorLayouts{
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(ModelObjectData) >> 2},
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
@@ -299,30 +300,21 @@ namespace graphics
        auto numVertices = model.getVertexBuffer()->getNumElements();
        auto numIndices = model.getIndexBuffer()->getNumElements();
        auto vertexStride = model.getVertexBuffer()->_init.structStride;
+       auto numParts = model.getPartBuffer()->getNumElements();
+       auto numMaterials = model.getMaterialBuffer()->getNumElements();
 
-       auto pmodel = &model;
+       // NUmber of nodes in the model
+       auto numNodes = model._localNodeTransforms.size();
+
        auto pipeline = this->_pipeline;
 
        // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [pmodel, descriptorSet, numVertices, numIndices, vertexStride, pipeline](
+       graphics::DrawObjectCallback drawCallback = [](
            const NodeID node,
            const graphics::CameraPointer& camera,
            const graphics::SwapchainPointer& swapchain,
            const graphics::DevicePointer& device,
            const graphics::BatchPointer& batch) {
-               batch->bindPipeline(pipeline);
-               batch->setViewport(camera->getViewportRect());
-               batch->setScissor(camera->getViewportRect());
-
-               //       batch->bindVertexBuffers(1, &vertexBuffer);
-               batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
-               auto uniforms = pmodel->getUniforms();
-
-            
-               ModelObjectData odata{ (int32_t)node, (int32_t) 0, numIndices, numVertices };
-               batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-               batch->draw(pmodel->_parts[0].numIndices, 0);
        };
        model._drawcall = drawCallback;
 
@@ -333,8 +325,9 @@ namespace graphics
            auto part = new ModelDrawablePart();
            part->_bound = model._partAABBs[d];
 
+            auto partNumIndices = model._parts[d].numIndices;
            // And now a render callback where we describe the rendering sequence
-           graphics::DrawObjectCallback drawCallback = [d, pmodel, descriptorSet, pipeline](
+           graphics::DrawObjectCallback drawCallback = [d, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
                const NodeID node,
                const graphics::CameraPointer& camera,
                const graphics::SwapchainPointer& swapchain,
@@ -346,9 +339,9 @@ namespace graphics
 
                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-                   ModelObjectData odata{ (int32_t)node, (int32_t)d, 0, 0 };
+                   ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials };
                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                   batch->draw(pmodel->_parts[d].numIndices, 0);
+                   batch->draw(partNumIndices, 0);
            };
 
            part->_drawcall = drawCallback;

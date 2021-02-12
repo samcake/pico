@@ -168,8 +168,9 @@ Face fetchFace(int indexOffset, int vertexOffset, int faceNum) {
 cbuffer UniformBlock1 : register(b1) {
     int _nodeID;
     int _partID;
-    int _numIndices;
-    int _numVertices;
+    int _numNodes;
+    int _numParts;
+    int _numMaterials;
 }
 
 struct VertexShaderOutput
