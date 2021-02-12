@@ -54,12 +54,12 @@ Camera::~Camera() {
 #define ReadGPULock()
 #endif
 
-void Camera::setView(const View& view) {
+void Camera::setView(const core::View& view) {
     WriteLock();
     _camData._data._view = view;
 }
 
-View Camera::getView() const {
+core::View Camera::getView() const {
     ReadLock();
     return _camData._data._view;
 }
@@ -112,11 +112,11 @@ core::vec3 Camera::getFront() const {
 }
 
 
-void Camera::setProjection(const Projection& proj) {
+void Camera::setProjection(const core::Projection& proj) {
     WriteLock();
     _camData._data._projection = proj;
 }
-Projection Camera::getProjection() const {
+core::Projection Camera::getProjection() const {
     ReadLock();
     return _camData._data._projection;
 }
@@ -226,12 +226,12 @@ float Camera::getOrthoFar() const {
     return _camData._data._projection._orthoFar;
 }
 
-void Camera::setViewport(const ViewportRect& viewport) {
+void Camera::setViewport(const core::ViewportRect& viewport) {
     WriteLock();
     _camData._data._viewport = viewport;
 }
 
-ViewportRect Camera::getViewport() const {
+core::ViewportRect Camera::getViewport() const {
     ReadLock();
     return _camData._data._viewport;
 }
@@ -419,11 +419,11 @@ core::vec2 Camera::eyeSpaceFromImageSpace2D(float x, float y) const {
     const auto& vr = _camData._data._viewport._rect;
     const auto& proj = _camData._data._projection;
 
-    auto m_nc = ViewportRect::normalizedSpaceFromImageSpace(vr, x, y);
+    auto m_nc = core::ViewportRect::normalizedSpaceFromImageSpace(vr, x, y);
     if (proj.isOrtho()) {
-        return Projection::eyeFromClipSpace2D(proj._orthoHeight, proj._aspectRatio, m_nc);
+        return core::Projection::eyeFromClipSpace2D(proj._orthoHeight, proj._aspectRatio, m_nc);
     }
     else {
-        return Projection::eyeFromClipSpace2D(proj._height, proj._aspectRatio, m_nc);
+        return core::Projection::eyeFromClipSpace2D(proj._height, proj._aspectRatio, m_nc);
     }
 }

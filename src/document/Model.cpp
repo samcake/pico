@@ -398,56 +398,56 @@ AccessorArray parseAccessors(const json& gltf_accessors) {
 }
 
 std::tuple<MeshArray, PrimitiveArray> parseMeshes(const json& gltf_meshes) {
-    MeshArray meshes;
-    PrimitiveArray primitives;
+MeshArray meshes;
+PrimitiveArray primitives;
 
-    if (gltf_meshes.is_array()) {
-        for (const auto& m : gltf_meshes) {
-            Mesh mesh;
+if (gltf_meshes.is_array()) {
+    for (const auto& m : gltf_meshes) {
+        Mesh mesh;
 
-            const auto& gltf_p = check(m, "primitives");
-            if (gltf_p.is_array()) {
+        const auto& gltf_p = check(m, "primitives");
+        if (gltf_p.is_array()) {
 
-                mesh._primitiveStart = primitives.size();
-                mesh._primitiveCount = 0;
+            mesh._primitiveStart = primitives.size();
+            mesh._primitiveCount = 0;
 
-                for (const auto& p : gltf_p) {
-                    Primitive prim;
-                
-                    const auto& a = check(p, "attributes");
-                    if (a.is_object()) {
-                        
-                        const auto& pos = check(a, "POSITION");
-                        if (pos.is_number_integer()) {
-                            prim._positions = pos.get<uint32_t>();
-                        }
+            for (const auto& p : gltf_p) {
+                Primitive prim;
 
-                        const auto& nor = check(a, "NORMAL");
-                        if (nor.is_number_integer()) {
-                            prim._normals = nor.get<uint32_t>();
-                        }
+                const auto& a = check(p, "attributes");
+                if (a.is_object()) {
+
+                    const auto& pos = check(a, "POSITION");
+                    if (pos.is_number_integer()) {
+                        prim._positions = pos.get<uint32_t>();
                     }
 
-                    const auto& ind = check(p, "indices");
-                    if (ind.is_number_integer()) {
-                        prim._indices = ind.get<uint32_t>();
+                    const auto& nor = check(a, "NORMAL");
+                    if (nor.is_number_integer()) {
+                        prim._normals = nor.get<uint32_t>();
                     }
-
-                    const auto& mat = check(p, "material");
-                    if (mat.is_number_integer()) {
-                        prim._material = mat.get<uint32_t>();
-                    }
-
-                    primitives.emplace_back(prim);
-                    mesh._primitiveCount ++;
                 }
+
+                const auto& ind = check(p, "indices");
+                if (ind.is_number_integer()) {
+                    prim._indices = ind.get<uint32_t>();
+                }
+
+                const auto& mat = check(p, "material");
+                if (mat.is_number_integer()) {
+                    prim._material = mat.get<uint32_t>();
+                }
+
+                primitives.emplace_back(prim);
+                mesh._primitiveCount++;
             }
-
-            meshes.emplace_back(mesh);
         }
-    }
 
-    return std::make_tuple(meshes, primitives);
+        meshes.emplace_back(mesh);
+    }
+}
+
+return std::make_tuple(meshes, primitives);
 }
 
 MaterialArray parseMaterials(const json& gltf_materials) {
@@ -485,6 +485,75 @@ MaterialArray parseMaterials(const json& gltf_materials) {
     return materials;
 }
 
+CameraArray parseCameras(const json& gltf_cameras) {
+    CameraArray cameras;
+
+    if (gltf_cameras.is_array()) {
+        for (const auto& c : gltf_cameras) {
+            Camera cam;
+
+            const auto& name = check(c, "name");
+            if (name.is_string()) {
+                cam._name = name.get<std::string>();
+            }
+            const auto& type = check(c, "type");
+            const auto& type = check(c, "type");
+            if (type.is_string()) {
+                if (type.get<std::string>() == "orthographic") {
+                    cam._projection.setOrtho(true);
+                } else {
+                    cam._projection.setOrtho(false);
+                }
+            }
+
+            const auto& persp = check(c, "perspective");
+            if (persp.is_object()) {
+                const auto& ar = check(persp, "aspectRatio");
+                if (ar.is_number()) {
+                    cam._projection.setAspectRatio(ar.get<float>());
+                }
+                const auto& yfov = check(persp, "yfov");
+                if (yfov.is_number()) {
+                    cam._projection.setFov(yfov.get<float>());
+                }
+                const auto& zfar = check(persp, "zfar");
+                if (zfar.is_number()) {
+                    cam._projection.setFar(zfar.get<float>());
+                }
+                const auto& znear = check(persp, "znear");
+                if (znear.is_number()) {
+                    cam._projection.setNear(znear.get<float>());
+                }
+            }
+
+            const auto& ortho = check(c, "orthographic");
+            if (ortho.is_object()) {
+                const auto& ar = check(persp, "aspectRatio");
+                if (ar.is_number()) {
+                    cam._projection.setAspectRatio(ar.get<float>());
+                }
+                const auto& yfov = check(persp, "yfov");
+                if (yfov.is_number()) {
+                    cam._projection.setFov(yfov.get<float>());
+                }
+                const auto& zfar = check(persp, "zfar");
+                if (zfar.is_number()) {
+                    cam._projection.setFar(zfar.get<float>());
+                }
+                const auto& znear = check(persp, "znear");
+                if (znear.is_number()) {
+                    cam._projection.setNear(znear.get<float>());
+                }
+            }
+
+
+            cameras.emplace_back(cam);
+        }
+    }
+
+    return cameras;
+}
+
 std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
     auto model = std::make_unique<Model>();
     
@@ -500,6 +569,8 @@ std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path&
     std::tie( model->_meshes, model->_primitives) = parseMeshes(check(gltf, "meshes"));
 
     model->_materials = parseMaterials(check(gltf, "materials"));
+
+    model->_cameras = parseCameras(check(gltf, "cameras"));
 
     return model;
 }

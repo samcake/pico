@@ -30,6 +30,7 @@
 #include <vector>
 #include <memory>
 #include <core/math/LinearAlgebra.h>
+#include <core/math/CameraTransform.h>
 #include <document/dllmain.h>
 
 namespace document
@@ -151,6 +152,13 @@ namespace model {
     using MaterialArray = std::vector<Material>;
 
 
+    class Camera {
+    public:
+        std::string _name;
+        Projection _projection;
+    };
+    using CameraArray = std::vector<Camera>;
+
     class Item {
     public:
         Index _node{ INVALID_INDEX };
@@ -179,6 +187,8 @@ namespace model {
         AccessorArray _accessors;
 
         MaterialArray _materials;
+
+        CameraArray _cameras;
     };
 }
     using Model = model::Model;
