@@ -153,10 +153,13 @@ bool CameraController::onMouse(const MouseEvent& e) {
         if (e.state & uix::MOUSE_LBUTTON) {
         }
         if (e.state & uix::MOUSE_MBUTTON) {
+            float panScale = _controlData._boomLength * 0.001f;
             if (_cam->isOrtho()) {
+                panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
             }
             else {
             }
+            _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
         }
         if (e.state & uix::MOUSE_RBUTTON) {
             if (e.state & uix::MOUSE_CONTROL) {

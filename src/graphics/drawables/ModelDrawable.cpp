@@ -74,7 +74,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 3, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 4, 1},
 
         };
@@ -103,7 +103,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     descriptorSetLayout,
-                    RasterizerState(),
+                    RasterizerState().withCullBack(),
                     true, // enable depth
                     BlendState()
         };
@@ -228,9 +228,6 @@ namespace graphics
         modelDrawable->_parts = std::move(parts);
         modelDrawable->_partAABBs = std::move(partAABBs);
 
-      //  modelDrawable->_bound = bound;
-        modelDrawable->_bound = modelDrawable->_partAABBs[0];
-
         // Materials
         std::vector<ModelMaterial> materials;
         for (const auto& m : model->_materials) {
@@ -254,6 +251,27 @@ namespace graphics
         memcpy(mbresourceBuffer->_cpuMappedAddress, materials.data(), materialBufferInit.bufferSize);
 
         modelDrawable->_materialBuffer = mbresourceBuffer;
+
+        // Model local bound is the containing box for all the local items of the model
+        core::aabox3 model_aabb;
+        for (const auto& i : modelDrawable->_localItems) {
+            auto nodeIdx = i.node;
+            core::mat4x3 transform = modelDrawable->_localNodeTransforms[nodeIdx];
+            nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
+            while(nodeIdx != INVALID_NODE_ID) {
+                transform = core::mul(modelDrawable->_localNodeTransforms[nodeIdx], transform);
+                nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
+            }
+
+            const auto& s = modelDrawable->_shapes[i.shape];
+            core::aabox3 shape_aabb = modelDrawable->_partAABBs[s.partOffset];
+            for (int p = 1; p < s.numParts; ++p) {
+                shape_aabb = core::aabox3::fromBound(shape_aabb, modelDrawable->_partAABBs[p + s.partOffset]);
+            };
+            shape_aabb = core::aabox_transformFrom(transform, shape_aabb);
+            model_aabb = core::aabox3::fromBound(model_aabb, shape_aabb);
+        }
+        modelDrawable->_bound = model_aabb;
 
         return modelDrawable;
     }
@@ -309,15 +327,20 @@ namespace graphics
        auto pipeline = this->_pipeline;
 
        // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [](
+       graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline](
            const NodeID node,
            const graphics::CameraPointer& camera,
            const graphics::SwapchainPointer& swapchain,
            const graphics::DevicePointer& device,
            const graphics::BatchPointer& batch) {
+            batch->bindPipeline(pipeline);
+            batch->setViewport(camera->getViewportRect());
+            batch->setScissor(camera->getViewportRect());
+
+            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
        };
        model._drawcall = drawCallback;
-
+       model._drawableID = scene->createDrawable(model).id();
 
        // one drawable per part
        DrawableIDs drawables;
@@ -333,12 +356,12 @@ namespace graphics
                const graphics::SwapchainPointer& swapchain,
                const graphics::DevicePointer& device,
                const graphics::BatchPointer& batch) {
-                   batch->bindPipeline(pipeline);
+               /*    batch->bindPipeline(pipeline);
                    batch->setViewport(camera->getViewportRect());
                    batch->setScissor(camera->getViewportRect());
 
                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
+*/
                    ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials };
                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                    batch->draw(partNumIndices, 0);
@@ -358,14 +381,19 @@ namespace graphics
                     const graphics::NodeID root,
                     const graphics::ScenePointer& scene,
                     graphics::ModelDrawable& model) {
-        
-        auto rootNode = scene->createNode(core::mat4x3(), graphics::INVALID_NODE_ID);
+   
+        auto rootNode = scene->createNode(core::mat4x3(), root);
 
+        
         // Allocating the new instances of scene::nodes, one per local node
         auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
 
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
+        
+        // first item is the model drawable
+        items.emplace_back(scene->createItem(rootNode.id(), model._drawableID).id());
+
         for (const auto& li : model._localItems) {
             const auto& s = model._shapes[li.shape];
             for (uint32_t si = 0; si < s.numParts; ++si) {

@@ -63,12 +63,13 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
  //   std::string modelFile("../asset/gltf/Sponza.gltf");
  //   std::string modelFile("../asset/gltf/WaterBottle.gltf");
  //  std::string modelFile("../asset/gltf/lantern.gltf");
-  //  std::string modelFile("../asset/gltf/buggy.gltf");
+    std::string modelFile("../asset/gltf/buggy.gltf");
     //  std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
   // std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
-   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+//    std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+  //  std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
 
     
     
@@ -82,8 +83,11 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
 
     auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
 
-    modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+    for (int i = 0; i < 1; ++i) {
+        auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
 
+        modelDrawableFactory->createModelParts(node1.id(), scene, *modelDrawablePtr);
+    }
 }
 
 //--------------------------------------------------------------------------------------
@@ -121,11 +125,6 @@ int main(int argc, char *argv[])
     // The viewport managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice);
 
-    // Some nodes to layout the scene and animate objects
-    auto node0 = scene->createNode(core::mat4x3(), -1);
-
-     generateModel(gpuDevice, scene, camera, node0);
-
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
@@ -143,6 +142,14 @@ int main(int argc, char *argv[])
     gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items._items_buffer->getNumElements());
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
+
+
+
+    // Some nodes to layout the scene and animate objects
+    auto node0 = scene->createNode(core::mat4x3(), -1);
+
+    generateModel(gpuDevice, scene, camera, node0);
+
 
     scene->_nodes.updateTransforms();
 

@@ -136,6 +136,9 @@ namespace graphics {
         // For each part, we create one drawable
         DrawableIDs _partDrawables;
 
+        // Self DrawableID
+        DrawableID _drawableID;
+
     protected:
         friend class ModelDrawableFactory;
 

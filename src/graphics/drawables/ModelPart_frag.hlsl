@@ -28,6 +28,18 @@ struct Material {
 
 StructuredBuffer<Material>  material_array : register(t4);
 
+//
+// Model & Parts
+// 
+
+struct Part {
+    uint numIndices;
+    uint indexOffset;
+    uint vertexOffset;
+    uint material;
+};
+
+StructuredBuffer<Part>  part_array : register(t3);
 
 //
 // Main
@@ -44,11 +56,11 @@ cbuffer UniformBlock1 : register(b1) {
 
 struct PixelShaderInput{
     float3 Normal   : NORMAL;
-    float Material  : COLOR;
 };
 
 float4 main(PixelShaderInput IN) : SV_Target{
-    int matIdx = (IN.Material < 0.0 ? 0 : floor(IN.Material));
+    int matIdx = part_array[_partID].material;// < 0.0 ? 0 : floor(IN.Material));
+//    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));

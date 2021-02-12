@@ -176,7 +176,6 @@ cbuffer UniformBlock1 : register(b1) {
 struct VertexShaderOutput
 {
     float3 Normal   : NORMAL;
-    float  Material : COLOR;
     float4 Position : SV_Position;
 };
 
@@ -219,7 +218,6 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     VertexShaderOutput OUT;
     OUT.Position = clipPos;
     OUT.Normal = normal;
-    OUT.Material = float(p.material);
     
     return OUT;
 }
