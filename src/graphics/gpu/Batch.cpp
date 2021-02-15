@@ -25,6 +25,7 @@
 // SOFTWARE.
 //
 #include "Batch.h"
+#include "Resource.h"
 
 namespace graphics
 {
@@ -69,6 +70,18 @@ void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
 void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
+void Batch::uploadInitTexture(const DevicePointer& device, const TexturePointer& dest) {
+    // create a buffer, fill it with the data and then call uploadTexture
+    BufferInit bufferInit;
+    bufferInit.bufferSize = dest->_init.initData.size();
+    bufferInit.hostVisible = true;
+    
+    auto copyBuffer = device->createBuffer(bufferInit);
+
+    memcpy(copyBuffer->_cpuMappedAddress, dest->_init.initData.data(), dest->_init.initData.size());
+
+    uploadTexture(dest, copyBuffer);
+}
 
 void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}
 } // !using namespace graphics

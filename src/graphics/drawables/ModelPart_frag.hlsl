@@ -24,9 +24,13 @@ struct Material {
     float roughness;
     float spareA;
     float spareB;
+    uint4 textures;
 };
 
-StructuredBuffer<Material>  material_array : register(t4);
+StructuredBuffer<Material>  material_array : register(t5);
+
+Texture2D uTex0 : register(t0);
+SamplerState uSampler0 : register(s0);
 
 //
 // Model & Parts
@@ -36,10 +40,14 @@ struct Part {
     uint numIndices;
     uint indexOffset;
     uint vertexOffset;
+    uint attribOffset;
     uint material;
+    uint spareA;
+    uint spareB;
+    uint spareC;
 };
 
-StructuredBuffer<Part>  part_array : register(t3);
+StructuredBuffer<Part>  part_array : register(t1);
 
 //
 // Main
@@ -56,6 +64,7 @@ cbuffer UniformBlock1 : register(b1) {
 
 struct PixelShaderInput{
     float3 Normal   : NORMAL;
+    float2 Texcoord : TEXCOORD;
 };
 
 float4 main(PixelShaderInput IN) : SV_Target{
@@ -82,7 +91,11 @@ float4 main(PixelShaderInput IN) : SV_Target{
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
   //  baseColor = rainbowRGB(_partID, float(_numParts));
   //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
+  //  baseColor = float3(IN.Texcoord.x, 0.0f * IN.Texcoord.y, 0.0f);
 
+
+    baseColor = uTex0.Sample(uSampler0, IN.Texcoord.xy).xyz;
+ 
     float3 color = shading * baseColor;
     return float4(color, 1.0);
 }

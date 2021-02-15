@@ -109,25 +109,28 @@ std::tuple<NodeArray, ItemArray> parseNodes(const json& gltf_nodes) {
                 }
             }
 
+            // Create item(s) for mesh or camera or... refrenced by the node
+            auto nodeId = (Index) nodes.size();
+
             const auto& m = check(n, "mesh");
             if (m.is_number()) {
-                node._index = m.get<Index>();
+                items.emplace_back(Item{ nodeId,  m.get<Index>(), INVALID_INDEX });
             }
+
+            const auto& c = check(n, "camera");
+            if (c.is_number()) {
+                items.emplace_back(Item{ nodeId, INVALID_INDEX,  c.get<Index>() });
+            }
+
             nodes.emplace_back(node);
         }
     }
     
     // Assign the parent fields by reparsing the nodes
-    // And build the items on that 2nd pass
     for (uint32_t i = 0; i < nodes.size(); ++i) {
         auto& n = nodes[i];
         for (auto c : n._children) {
             nodes[c]._parent = i;
-        }
-
-        // build item
-        if (n._index != INVALID_INDEX) {
-            items.emplace_back(Item{i, n._index});
         }
     }
 
@@ -238,21 +241,34 @@ std::vector<uint8_t> base64_decode(std::string const& encoded_string) {
     return std::move(out);
 }
 
-std::tuple<std::string, std::vector<uint8_t>> parseURI(const uint64_t byteLength, const std::string& uri, const std::filesystem::path& model_path_root) {
-   std::string urim;  
+std::tuple<std::string, std::string, std::vector<uint8_t>> parseURI(const uint64_t byteLength, const std::string& uri, const std::filesystem::path& model_path_root) {
+   std::string urim;
+   std::string mime_type;
    std::vector<uint8_t> bytes;
 
-   const std::string embedded_header = "data:application/octet-stream;base64,";
-   if (uri.find(embedded_header) == 0) {
-       urim = embedded_header;
-       bytes = base64_decode(uri.substr(embedded_header.size()));  // cut mime string.
+   const std::string embedded_data_header = "data:";
+   if (uri.find(embedded_data_header) == 0) {
+       const std::string rawbuffer_header = "data:application/octet-stream;base64,";
+       const std::string jpeg_header = "data:image/jpeg;base64,";
+       if (uri.find(rawbuffer_header) == 0) {
+           urim = rawbuffer_header;
+           mime_type = "application/octet-stream";
+           bytes = base64_decode(uri.substr(rawbuffer_header.size()));  // cut mime string.
+       }
+       else if (uri.find(jpeg_header) == 0) {
+           urim = jpeg_header;
+           mime_type = "image/jpeg";
+           bytes = base64_decode(uri.substr(jpeg_header.size()));  // cut mime string.
+       }
+
    } else {
        urim = uri;
        auto glb_path = model_path_root / uri;
+       mime_type = "bin";
        bytes = parseBinary(byteLength, glb_path);
    }
    
-    return {std::move(urim), std::move(bytes)};
+    return {std::move(urim), std::move(mime_type), std::move(bytes)};
 }
 
 BufferArray parseBuffers(const json& gltf_buffers, const std::filesystem::path& model_path_root) {
@@ -269,8 +285,8 @@ BufferArray parseBuffers(const json& gltf_buffers, const std::filesystem::path& 
             const auto& uri = check(b, "uri");
             if (uri.is_string()) {
                 const auto& uri_string = uri.get<std::string>();
-
-                std::tie(buffer._uri, buffer._bytes) = parseURI(buffer._byteLength, uri_string, model_path_root);
+                std::string mime_type;
+                std::tie(buffer._uri, mime_type, buffer._bytes) = parseURI(buffer._byteLength, uri_string, model_path_root);
             }
 
             buffers.emplace_back(buffer);
@@ -426,6 +442,10 @@ if (gltf_meshes.is_array()) {
                     if (nor.is_number_integer()) {
                         prim._normals = nor.get<uint32_t>();
                     }
+                    const auto& tc0 = check(a, "TEXCOORD_0");
+                    if (tc0.is_number_integer()) {
+                        prim._texcoords = tc0.get<uint32_t>();
+                    }
                 }
 
                 const auto& ind = check(p, "indices");
@@ -457,6 +477,11 @@ MaterialArray parseMaterials(const json& gltf_materials) {
         for (const auto& m : gltf_materials) {
             Material material;
 
+            const auto& name = check(m, "name");
+            if (name.is_string()) {
+                material._name = name.get<std::string>();
+            }
+
             const auto& pbrMetallicRoughness = check(m, "pbrMetallicRoughness");
             if (pbrMetallicRoughness.is_object()) {
 
@@ -476,6 +501,12 @@ MaterialArray parseMaterials(const json& gltf_materials) {
                 if (roughness.is_number()) {
                     material._roughnessFactor = roughness.get<float>();
                 }
+
+                const auto& bct = check(pbrMetallicRoughness, "baseColorTexture");
+                if (bct.is_object() && bct.contains("index")) {
+                    material._baseColorTexture = bct["index"].get<Index>();
+                }
+                
             }
 
             materials.emplace_back(material);
@@ -483,6 +514,160 @@ MaterialArray parseMaterials(const json& gltf_materials) {
     }
 
     return materials;
+}
+
+
+std::tuple<ImageArray, ImageReferenceArray> parseImages(const json& gltf_images, const std::filesystem::path& model_path_root) {
+    ImageReferenceArray imageReferences;
+    ImageArray images;
+
+    if (gltf_images.is_array()) {
+        for (const auto& c : gltf_images) {
+            ImageReference imageReference;
+            Image image;
+
+            const auto& uri = check(c, "uri");
+            if (uri.is_string()) {
+                std::tie(imageReference._name, imageReference._mimeType, imageReference._data) = parseURI(-1, uri.get<std::string>(), model_path_root);
+            } else {
+                const auto& mimeType = check(c, "mimeType");
+                if (mimeType.is_string()) {
+                    imageReference._mimeType = mimeType.get<std::string>();
+                }
+
+                Index bufferViewId{ INVALID_INDEX };
+                const auto& bufferView = check(c, "bufferView");
+                if (bufferView.is_number_integer()) {
+                    bufferViewId = bufferView.get<Index>();
+                }
+
+                // Now populate data...
+            }
+            if (imageReference._data.size()) {
+                //imageReference._mimeType;
+                image.loadFromMemory(ImageMimeType::JPEG, imageReference._data);
+            }
+
+            imageReferences.emplace_back(imageReference);
+            images.emplace_back(image);
+        }
+    }
+
+    return { std::move(images), std::move(imageReferences) };
+}
+
+
+SamplerArray parseSamplers(const json& gltf_samplers) {
+    SamplerArray samplers;
+
+    if (gltf_samplers.is_array()) {
+        for (const auto& s : gltf_samplers) {
+            Sampler sampler;
+
+            const auto& name = check(s, "name");
+            if (name.is_string()) {
+                sampler._name = name.get<std::string>();
+            }
+
+            const auto& magFilter = check(s, "magFilter");
+            if (magFilter.is_number_integer()) {
+                switch (magFilter.get<uint16_t>()) {
+                    case 9728:
+                        sampler.magFilter = Sampler::NEAREST;
+                        break;
+                    case 9729:
+                        sampler.magFilter = Sampler::LINEAR;
+                        break;
+                    default:;
+                }
+            }
+            const auto& minFilter = check(s, "minFilter");
+            if (minFilter.is_number_integer()) {
+                switch (minFilter.get<uint16_t>()) {
+                    case 9728:
+                        sampler.minFilter = Sampler::NEAREST;
+                        break;
+                    case 9729:
+                        sampler.minFilter = Sampler::LINEAR;
+                        break;
+                    case 9984:
+                        sampler.minFilter = Sampler::NEAREST_MIPMAP_NEAREST;
+                        break;
+                    case 9985:
+                        sampler.minFilter = Sampler::LINEAR_MIPMAP_NEAREST;
+                        break;
+                    case 9986:
+                        sampler.minFilter = Sampler::NEAREST_MIPMAP_LINEAR;
+                        break;
+                    case 9987:
+                        sampler.minFilter = Sampler::LINEAR_MIPMAP_LINEAR;
+                        break;
+                    default:;
+                }
+            }
+            const auto& wrapS = check(s, "wrapS");
+            if (wrapS.is_number_integer()) {
+                switch (wrapS.get<uint16_t>()) {
+                    case 33071:
+                        sampler.wrapS = Sampler::CLAMP_TO_EDGE;
+                        break;
+                    case 33648:
+                        sampler.wrapS = Sampler::MIRRORED_REPEAT;
+                        break;
+                    case 10497:
+                        sampler.wrapS = Sampler::REPEAT;
+                        break;
+                    default:;
+                }
+            }
+            const auto& wrapT = check(s, "wrapT");
+            if (wrapT.is_number_integer()) {
+                switch (wrapT.get<uint16_t>()) {
+                    case 33071:
+                        sampler.wrapT = Sampler::CLAMP_TO_EDGE;
+                        break;
+                    case 33648:
+                        sampler.wrapT = Sampler::MIRRORED_REPEAT;
+                        break;
+                    case 10497:
+                        sampler.wrapT = Sampler::REPEAT;
+                        break;
+                    default:;
+                }
+            }
+
+            samplers.emplace_back(sampler);
+        }
+    }
+    return std::move(samplers);
+}
+
+TextureArray parseTextures(const json& gltf_textures) {
+    TextureArray textures;
+
+    if (gltf_textures.is_array()) {
+        for (const auto& s : gltf_textures) {
+            Texture texture;
+
+            const auto& name = check(s, "name");
+            if (name.is_string()) {
+                texture._name = name.get<std::string>();
+            }
+
+            const auto& sampler = check(s, "sampler");
+            if (sampler.is_number_integer()) {
+                texture._sampler = sampler.get<Index>();
+            }
+
+            const auto& source = check(s, "source");
+            if (source.is_number_integer()) {
+                texture._image = source.get<Index>();
+            }
+
+            textures.emplace_back(texture);
+        }
+    }
+    return std::move(textures);
 }
 
 CameraArray parseCameras(const json& gltf_cameras) {
@@ -496,7 +681,6 @@ CameraArray parseCameras(const json& gltf_cameras) {
             if (name.is_string()) {
                 cam._name = name.get<std::string>();
             }
-            const auto& type = check(c, "type");
             const auto& type = check(c, "type");
             if (type.is_string()) {
                 if (type.get<std::string>() == "orthographic") {
@@ -512,6 +696,10 @@ CameraArray parseCameras(const json& gltf_cameras) {
                 if (ar.is_number()) {
                     cam._projection.setAspectRatio(ar.get<float>());
                 }
+                const auto& znear = check(persp, "znear");
+                if (znear.is_number()) {
+                    cam._projection.setFocal(znear.get<float>());
+                }
                 const auto& yfov = check(persp, "yfov");
                 if (yfov.is_number()) {
                     cam._projection.setFov(yfov.get<float>());
@@ -519,33 +707,32 @@ CameraArray parseCameras(const json& gltf_cameras) {
                 const auto& zfar = check(persp, "zfar");
                 if (zfar.is_number()) {
                     cam._projection.setFar(zfar.get<float>());
-                }
-                const auto& znear = check(persp, "znear");
-                if (znear.is_number()) {
-                    cam._projection.setNear(znear.get<float>());
                 }
             }
 
             const auto& ortho = check(c, "orthographic");
             if (ortho.is_object()) {
-                const auto& ar = check(persp, "aspectRatio");
-                if (ar.is_number()) {
-                    cam._projection.setAspectRatio(ar.get<float>());
+                float h = 0;
+                const auto& ymag = check(ortho, "ymag");
+                if (ymag.is_number()) {
+                    h = ymag.get<float>();
+                    cam._projection.setOrthoHeight(h);
                 }
-                const auto& yfov = check(persp, "yfov");
-                if (yfov.is_number()) {
-                    cam._projection.setFov(yfov.get<float>());
+                const auto& xmag = check(ortho, "xmag");
+                if (xmag.is_number()) {
+                    float w = xmag.get<float>();
+                    cam._projection.setOrthoSide(w, false);
                 }
-                const auto& zfar = check(persp, "zfar");
+
+                const auto& zfar = check(ortho, "zfar");
                 if (zfar.is_number()) {
-                    cam._projection.setFar(zfar.get<float>());
+                    cam._projection.setOrthoFar(zfar.get<float>());
                 }
-                const auto& znear = check(persp, "znear");
+                const auto& znear = check(ortho, "znear");
                 if (znear.is_number()) {
-                    cam._projection.setNear(znear.get<float>());
+                    cam._projection.setOrthoNear(znear.get<float>());
                 }
             }
-
 
             cameras.emplace_back(cam);
         }
@@ -557,18 +744,18 @@ CameraArray parseCameras(const json& gltf_cameras) {
 std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
     auto model = std::make_unique<Model>();
     
-    
     std::tie( model->_nodes, model->_items) = parseNodes(check(gltf, "nodes"));
     
-
     model->_buffers = parseBuffers(check(gltf, "buffers"), model_path_root);
     model->_bufferViews = parseBufferViews(check(gltf, "bufferViews"));
-
-
     model->_accessors = parseAccessors(check(gltf, "accessors"));
+
     std::tie( model->_meshes, model->_primitives) = parseMeshes(check(gltf, "meshes"));
 
     model->_materials = parseMaterials(check(gltf, "materials"));
+    std::tie( model->_images, model->_imageReferences) = parseImages(check(gltf, "images"), model_path_root);
+    model->_samplers = parseSamplers(check(gltf, "samplers"));
+    model->_textures = parseTextures(check(gltf, "textures"));
 
     model->_cameras = parseCameras(check(gltf, "cameras"));
 

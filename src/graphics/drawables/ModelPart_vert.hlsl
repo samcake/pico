@@ -126,6 +126,21 @@ Transform node_getWorldTransform(int nodeID) {
 //
 // Model
 //
+struct Part {
+    uint numIndices;
+    uint indexOffset;
+    uint vertexOffset;
+    uint attribOffset;
+    uint material;
+    uint spareA;
+    uint spareB;
+    uint spareC;
+};
+
+StructuredBuffer<Part>  part_array : register(t1);
+
+Buffer<uint>  index_array : register(t2);
+
 struct Vertex {
     float x;
     float y;
@@ -133,33 +148,44 @@ struct Vertex {
     float w;
 };
 
-StructuredBuffer<Vertex>  vertex_array : register(t1);
+StructuredBuffer<Vertex>  vertex_array : register(t3);
 
-Buffer<uint>  index_array : register(t2);
-
-struct Part {
-    uint numIndices;
-    uint indexOffset;
-    uint vertexOffset;
-    uint material;
+struct VertexAttrib {
+    float x;
+    float y;
+    float z;
+    float w;
 };
 
-StructuredBuffer<Part>  part_array : register(t3);
+StructuredBuffer<VertexAttrib>  vertex_attrib_array : register(t4);
+
+uint3 fetchFaceIndices(int indexOffset, int faceNum) {
+    // Fetch Face indices
+    int faceIndexBase = indexOffset + faceNum * 3;
+    return uint3(index_array[faceIndexBase], index_array[faceIndexBase + 1], index_array[faceIndexBase + 2]);
+}
 
 struct Face {
     float4 v[3];
 };
 
-Face fetchFace(int indexOffset, int vertexOffset, int faceNum) {
-    // Fetch Face indices
-    int faceIndexBase = indexOffset + faceNum * 3;
-    uint3 fvid = uint3(index_array[faceIndexBase], index_array[faceIndexBase + 1], index_array[faceIndexBase + 2]);
-
+Face fetchFaceVerts(uint3 fvid, int vertexOffset) {
     // Fetch Face vertices
     Face face;
     for (int i = 0; i < 3; i++) {
         uint vi = vertexOffset + fvid[i];
         face.v[i] = float4(vertex_array[vi].x, vertex_array[vi].y, vertex_array[vi].z, vertex_array[vi].w);
+    }
+
+    return face;
+}
+
+Face fetchFaceAttribs(uint3 fvid, int attribOffset) {
+    // Fetch Face vertices
+    Face face;
+    for (int i = 0; i < 3; i++) {
+        uint vi = attribOffset + fvid[i];
+        face.v[i] = float4(vertex_attrib_array[vi].x, vertex_attrib_array[vi].y, vertex_attrib_array[vi].z, vertex_attrib_array[vi].w);
     }
 
     return face;
@@ -176,6 +202,7 @@ cbuffer UniformBlock1 : register(b1) {
 struct VertexShaderOutput
 {
     float3 Normal   : NORMAL;
+    float2 Texcoord  : TEXCOORD;
     float4 Position : SV_Position;
 };
 
@@ -187,7 +214,14 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     uint tidx = vidx / 3;
     uint tvidx = vidx % 3;
 
-    Face faceVerts = fetchFace(p.indexOffset, p.vertexOffset, tidx);
+    uint3 faceIndices = fetchFaceIndices(p.indexOffset, tidx);
+    Face faceVerts = fetchFaceVerts(faceIndices, p.vertexOffset);
+
+    float2 texcoord = float2(0.5, 0.5);
+    if (p.attribOffset != uint( -1)) {
+        VertexAttrib va = vertex_attrib_array[faceIndices[tvidx] + p.attribOffset];
+        texcoord = float2(va.x, va.y);
+    }
 
     // Generate normal
     float3 faceEdge0 = faceVerts.v[1].xyz - faceVerts.v[0].xyz;
@@ -218,6 +252,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     VertexShaderOutput OUT;
     OUT.Position = clipPos;
     OUT.Normal = normal;
+    OUT.Texcoord = texcoord;
     
     return OUT;
 }

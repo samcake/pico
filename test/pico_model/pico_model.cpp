@@ -58,18 +58,19 @@ document::ModelPointer lmodel;
 
 void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
- //   std::string modelFile("../asset/gltf/toycar.gltf");
+  //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
- //   std::string modelFile("../asset/gltf/Sponza.gltf");
- //   std::string modelFile("../asset/gltf/WaterBottle.gltf");
- //  std::string modelFile("../asset/gltf/lantern.gltf");
-    std::string modelFile("../asset/gltf/buggy.gltf");
+  //  std::string modelFile("../asset/gltf/Sponza.gltf");
+  //  std::string modelFile("../asset/gltf/WaterBottle.gltf");
+   std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+  //  std::string modelFile("../asset/gltf/buggy.gltf");
     //  std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
-  // std::string modelFile("../asset/gltf/DamagedHelmet.gltf");
-//    std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
-  //  std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
+  //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
+   // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
+ //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+ //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
 
     
     

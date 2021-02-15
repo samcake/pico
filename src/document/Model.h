@@ -32,6 +32,7 @@
 #include <core/math/LinearAlgebra.h>
 #include <core/math/CameraTransform.h>
 #include <document/dllmain.h>
+#include <document/Image.h>
 
 namespace document
 {
@@ -49,8 +50,6 @@ namespace model {
 
         Index _parent{ INVALID_INDEX };
         IndexArray _children;
-
-        Index _index{ INVALID_INDEX };
     };
     using NodeArray = std::vector<Node>;
 
@@ -127,6 +126,7 @@ namespace model {
     public:
         Index _positions{ INVALID_INDEX };
         Index _normals{ INVALID_INDEX };
+        Index _texcoords{ INVALID_INDEX };
 
         Index _indices{ INVALID_INDEX };
         Index _material{ INVALID_INDEX };
@@ -148,6 +148,7 @@ namespace model {
         core::vec4 _baseColor{ 0.5f, 0.5f, 0.5f, 1.0f };
         float _metallicFactor{ 1.0f };
         float _roughnessFactor{ 0.0f };
+        Index _baseColorTexture{ INVALID_INDEX };
     };
     using MaterialArray = std::vector<Material>;
 
@@ -155,7 +156,7 @@ namespace model {
     class Camera {
     public:
         std::string _name;
-        Projection _projection;
+        core::Projection _projection;
     };
     using CameraArray = std::vector<Camera>;
 
@@ -163,11 +164,50 @@ namespace model {
     public:
         Index _node{ INVALID_INDEX };
         Index _mesh{ INVALID_INDEX };
+        Index _camera{ INVALID_INDEX };
     };
     using ItemArray = std::vector<Item>;
 
+    class ImageReference {
+    public:
+        std::string _name;
+        std::vector<uint8_t> _data;
+        std::string _mimeType;
+    };
+    using ImageReferenceArray = std::vector<ImageReference>;
+    using ImageArray = std::vector<Image>;
 
-    class Model;
+    class Sampler {
+    public:
+        enum Filter : uint8_t {
+            NEAREST = 0,
+            LINEAR,
+            NEAREST_MIPMAP_NEAREST,
+            LINEAR_MIPMAP_NEAREST,
+            NEAREST_MIPMAP_LINEAR,
+            LINEAR_MIPMAP_LINEAR
+        };
+        enum Wrap : uint8_t {
+            CLAMP_TO_EDGE = 0,
+            MIRRORED_REPEAT,
+            REPEAT
+        };
+
+        std::string _name;
+        Filter magFilter{ NEAREST };
+        Filter minFilter{ NEAREST };
+        Wrap wrapS{ CLAMP_TO_EDGE };
+        Wrap wrapT{ CLAMP_TO_EDGE };
+    };
+    using SamplerArray = std::vector<Sampler>;
+
+    class Texture {
+    public:
+        std::string _name;
+        Index _image;
+        Index _sampler;
+    };
+    using TextureArray = std::vector<Texture>;
 
     class DOCUMENT_API Model {
     public:
@@ -189,6 +229,13 @@ namespace model {
         MaterialArray _materials;
 
         CameraArray _cameras;
+
+        ImageReferenceArray _imageReferences;
+        ImageArray _images;
+
+        SamplerArray _samplers;
+        TextureArray _textures;
+
     };
 }
     using Model = model::Model;

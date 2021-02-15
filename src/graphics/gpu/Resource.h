@@ -28,6 +28,8 @@
 
 #include "gpu.h"
 
+#include <vector>
+
 namespace graphics {
 
     class VISUALIZATION_API Resource {
@@ -77,7 +79,7 @@ namespace graphics {
         uint32_t width { 0 };
         uint32_t height { 0 };
 
-        
+        std::vector<uint8_t> initData;
     };
 
     class VISUALIZATION_API Texture : public Resource {

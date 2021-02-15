@@ -45,6 +45,8 @@ namespace graphics {
 
     class ModelDrawable;
     class ModelDrawablePart;
+    
+    static const uint32_t MODEL_INVALID_INDEX = document::model::INVALID_INDEX;
 
     struct VISUALIZATION_API ModelDrawableUniforms {
         int numNodes{ 0 };
@@ -84,8 +86,9 @@ namespace graphics {
     using ModelDrawableFactoryPointer = std::shared_ptr< ModelDrawableFactory>;
 
     struct ModelItem {
-        uint32_t node{ (uint32_t)-1 };
-        uint32_t shape{ (uint32_t)-1 };
+        uint32_t node{ MODEL_INVALID_INDEX };
+        uint32_t shape{ MODEL_INVALID_INDEX };
+        uint32_t camera{ MODEL_INVALID_INDEX };
     };
 
     struct ModelShape {
@@ -97,8 +100,11 @@ namespace graphics {
         uint32_t numIndices{ 0 };
         uint32_t indexOffset{ 0 };
         uint32_t vertexOffset{ 0 };
-
-        uint32_t material{ (uint32_t) -1 };
+        uint32_t attribOffset{ MODEL_INVALID_INDEX };
+        uint32_t material{ MODEL_INVALID_INDEX };
+        uint32_t spareA;
+        uint32_t spareB;
+        uint32_t spareC;
     };
 
     struct ModelMaterial {
@@ -107,6 +113,14 @@ namespace graphics {
         float roughness{0.0f };
         float spareA;
         float spareB;
+        uint32_t baseColorTexture{ MODEL_INVALID_INDEX };
+        uint32_t normalTexture{ MODEL_INVALID_INDEX };
+        uint32_t spareTextureA{ MODEL_INVALID_INDEX };
+        uint32_t spareTextureB{ MODEL_INVALID_INDEX };
+    };
+
+    struct ModelCamera {
+        core::Projection _projection;
     };
 
     class VISUALIZATION_API ModelDrawable {
@@ -118,20 +132,18 @@ namespace graphics {
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
+        // immutable buffer containing the vertices, indices, parts and materials of the model
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }
+        graphics::BufferPointer getVertexAttribBuffer() const { return _vertexAttribBuffer; }
         graphics::BufferPointer getIndexBuffer() const { return _indexBuffer; }
         graphics::BufferPointer getPartBuffer() const { return _partBuffer; }
 
         graphics::BufferPointer getMaterialBuffer() const { return _materialBuffer; }
+        graphics::TexturePointer getAlbedoTexture() const { return _albedoTexture; }
 
-        std::vector<ModelItem> _localItems;
-
-        std::vector<core::mat4x3> _localNodeTransforms;
-        std::vector<uint32_t> _localNodeParents;
-
-        std::vector<ModelShape> _shapes;
         std::vector<ModelPart> _parts;
         std::vector<core::aabox3> _partAABBs;
+        std::vector<ModelShape> _shapes;
 
         // For each part, we create one drawable
         DrawableIDs _partDrawables;
@@ -139,14 +151,27 @@ namespace graphics {
         // Self DrawableID
         DrawableID _drawableID;
 
+        // Local nodes hierarchy in the model, used to create concrete instances of scene nodes when
+        // instanciating a model in the scene 
+        std::vector<core::mat4x3> _localNodeTransforms;
+        std::vector<uint32_t> _localNodeParents;
+
+        // Local Items used to create the list of items in the scene when instanciating the model 
+        std::vector<ModelItem> _localItems;
+
+        // local Cameras
+        std::vector<ModelCamera> _localCameras;
+
     protected:
         friend class ModelDrawableFactory;
 
-        graphics::BufferPointer _vertexBuffer;
+        graphics::BufferPointer _vertexBuffer; // core vertex attribs: pos
+        graphics::BufferPointer _vertexAttribBuffer; // extra vertex attribs texcoord, ...
         graphics::BufferPointer _indexBuffer;
         graphics::BufferPointer _partBuffer;
 
         graphics::BufferPointer _materialBuffer;
+        graphics::TexturePointer _albedoTexture;
 
         graphics::DescriptorSetPointer  _descriptorSet;
 

@@ -116,6 +116,13 @@ namespace core
         // tan of the half field of view angle
         // @param vertical: true by default
         float fovHalfTan(bool vertical = true) const { return (vertical ? 1.0f : _aspectRatio) * 0.5f * _height / _focal; }
+        
+        // Set perspective height from fov at current focal
+        void setFov(float fov_rad,bool vertical = true) {
+            float halfTan = tanf(fov_rad * 0.5);
+            _height = 2.0f * (vertical ? 1.0f : _aspectRatio) * _focal * halfTan;
+        }
+
 
         void setFar(float pfar) {
             _persFar = core::max(core::FLOAT_EPSILON, pfar);

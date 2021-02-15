@@ -354,6 +354,7 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPo
     // ANd one after
 }
 
+
 void D3D12BatchBackend::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {
     _commandList->Dispatch(numThreadsX, numThreadsY, numThreadsZ);
 }

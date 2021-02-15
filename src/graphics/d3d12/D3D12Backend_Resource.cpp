@@ -259,7 +259,7 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
         clear_value.Color[3] = p_texture->clear_value.a;
     }*/
     clear_value.Color[0] = 0.0f;
-    clear_value.Color[1] = 0.0f;
+    clear_value.Color[1] = 1.0f;
     clear_value.Color[2] = 0.0f;
     clear_value.Color[3] = 1.0f;
 

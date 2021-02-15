@@ -71,12 +71,14 @@ namespace graphics
         graphics::DescriptorLayouts descriptorLayouts{
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 3, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 4, 1},
-
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 5, 1},  // Material
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 0, 1},  // Albedo Texture
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -128,7 +130,7 @@ namespace graphics
         // Define the items
         modelDrawable->_localItems.reserve(model->_items.size());
         for (const auto& si : model->_items) {
-            modelDrawable->_localItems.emplace_back(ModelItem{si._node, si._mesh});
+            modelDrawable->_localItems.emplace_back(ModelItem{si._node, si._mesh, si._camera });
         }
 
         // Define the shapes
@@ -137,9 +139,16 @@ namespace graphics
             modelDrawable->_shapes.emplace_back(ModelShape{ m._primitiveStart, m._primitiveCount });
         }
 
+        // Define the cameras
+        modelDrawable->_localCameras.reserve(model->_cameras.size());
+        for (const auto& cam : model->_cameras) {
+            modelDrawable->_localCameras.emplace_back(ModelCamera{ cam._projection });
+        }
+
         // Build the geometry vb, ib and pb
         // as long as the vertex buffer is  less than 65535 the indices can be uint16
         std::vector<core::vec4> vertex_buffer;
+        std::vector<core::vec4> vertex_attrib_buffer;
         std::vector<uint16_t> index_buffer;
         std::vector<ModelPart> parts;
         std::vector<core::aabox3> partAABBs;
@@ -156,7 +165,11 @@ namespace graphics
             const auto& posView = model->_bufferViews[posAccess._bufferView];
             const auto& posBuffer = model->_buffers[posView._buffer];
 
-            ModelPart part{ indexAccess._elementCount, (uint32_t) index_buffer.size(), (uint32_t) vertex_buffer.size(), p._material};
+            uint32_t attribsOffset = -1;
+            if (p._texcoords != document::model::INVALID_INDEX) {
+                attribsOffset = (uint32_t) vertex_attrib_buffer.size();
+            }   
+            ModelPart part{ indexAccess._elementCount, (uint32_t) index_buffer.size(), (uint32_t) vertex_buffer.size(), attribsOffset, p._material};
             parts.emplace_back(part);
 
             auto indexStride = (indexView._byteStride ? indexView._byteStride : document::model::componentTypeSize(indexAccess._componentType));
@@ -173,13 +186,24 @@ namespace graphics
             }
 
             partAABBs.emplace_back(posAccess._aabb);
-
             if (first) {
                 bound = posAccess._aabb;
                 first = false;
             }
             else {
                 bound = core::aabox3::fromBound(bound, posAccess._aabb);
+            }
+            
+            if (p._texcoords != document::model::INVALID_INDEX) {
+                const auto& texcoordAccess = model->_accessors[p._texcoords];
+                const auto& texcoordView = model->_bufferViews[texcoordAccess._bufferView];
+                const auto& texcoordBuffer = model->_buffers[texcoordView._buffer];
+
+                auto texcoordStride = (texcoordView._byteStride ? texcoordView._byteStride : document::model::elementTypeComponentCount(texcoordAccess._elementType) * sizeof(float));
+                for (uint32_t i = 0; i < texcoordAccess._elementCount; ++i) {
+                    auto texcoord = (float*)(texcoordBuffer._bytes.data() + texcoordView._byteOffset + texcoordAccess._byteOffset + texcoordStride * i);
+                    vertex_attrib_buffer.emplace_back(*texcoord, *(texcoord + 1), 0.0f, 0.0f);
+                }
             }
         }
 
@@ -207,6 +231,21 @@ namespace graphics
         auto vbresourceBuffer = device->createBuffer(vertexBufferInit);
         memcpy(vbresourceBuffer->_cpuMappedAddress, vertex_buffer.data(), vertexBufferInit.bufferSize);
 
+        // vertex attrib buffer
+        BufferInit vertexattribBufferInit;
+        BufferPointer vabresourceBuffer;
+        if (vertex_attrib_buffer.size()) {
+            vertexattribBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+            vertexattribBufferInit.bufferSize = vertex_attrib_buffer.size() * sizeof(core::vec4);
+            vertexattribBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
+            vertexattribBufferInit.firstElement = 0;
+            vertexattribBufferInit.numElements = vertex_attrib_buffer.size();
+            vertexattribBufferInit.structStride = sizeof(core::vec4);
+
+            vabresourceBuffer = device->createBuffer(vertexattribBufferInit);
+            memcpy(vabresourceBuffer->_cpuMappedAddress, vertex_attrib_buffer.data(), vertexattribBufferInit.bufferSize);
+        }
+
         // index buffer
         BufferInit indexBufferInit;
         indexBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
@@ -222,6 +261,7 @@ namespace graphics
         modelDrawable->_uniforms = _sharedUniforms;
         modelDrawable->_indexBuffer = ibresourceBuffer;
         modelDrawable->_vertexBuffer = vbresourceBuffer;
+        modelDrawable->_vertexAttribBuffer = vabresourceBuffer;
         modelDrawable->_partBuffer = pbuniformBuffer;
 
         // Also need aversion of the parts and their bound on the cpu side
@@ -235,6 +275,7 @@ namespace graphics
             mm.color = m._baseColor;
             mm.metallic = m._metallicFactor;
             mm.roughness = m._roughnessFactor;
+            mm.baseColorTexture = m._baseColorTexture;
             materials.emplace_back(mm);
         }
 
@@ -252,24 +293,38 @@ namespace graphics
 
         modelDrawable->_materialBuffer = mbresourceBuffer;
 
+        // Allocate the textures
+        if (model->_images.size()) {
+            auto& image0 = model->_images[2];
+            TextureInit albedoTexInit;
+            albedoTexInit.width = image0._desc.width;
+            albedoTexInit.height = image0._desc.height;
+            albedoTexInit.initData = image0._pixels;
+            auto albedoresourceTexture = device->createTexture(albedoTexInit);
+
+            modelDrawable->_albedoTexture = albedoresourceTexture;
+        }
+        
         // Model local bound is the containing box for all the local items of the model
         core::aabox3 model_aabb;
         for (const auto& i : modelDrawable->_localItems) {
-            auto nodeIdx = i.node;
-            core::mat4x3 transform = modelDrawable->_localNodeTransforms[nodeIdx];
-            nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
-            while(nodeIdx != INVALID_NODE_ID) {
-                transform = core::mul(modelDrawable->_localNodeTransforms[nodeIdx], transform);
+            if (i.shape != MODEL_INVALID_INDEX) {
+                auto nodeIdx = i.node;
+                core::mat4x3 transform = modelDrawable->_localNodeTransforms[nodeIdx];
                 nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
-            }
+                while(nodeIdx != INVALID_NODE_ID) {
+                    transform = core::mul(modelDrawable->_localNodeTransforms[nodeIdx], transform);
+                    nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
+                }
 
-            const auto& s = modelDrawable->_shapes[i.shape];
-            core::aabox3 shape_aabb = modelDrawable->_partAABBs[s.partOffset];
-            for (int p = 1; p < s.numParts; ++p) {
-                shape_aabb = core::aabox3::fromBound(shape_aabb, modelDrawable->_partAABBs[p + s.partOffset]);
-            };
-            shape_aabb = core::aabox_transformFrom(transform, shape_aabb);
-            model_aabb = core::aabox3::fromBound(model_aabb, shape_aabb);
+                const auto& s = modelDrawable->_shapes[i.shape];
+                core::aabox3 shape_aabb = modelDrawable->_partAABBs[s.partOffset];
+                for (int p = 1; p < s.numParts; ++p) {
+                    shape_aabb = core::aabox3::fromBound(shape_aabb, modelDrawable->_partAABBs[p + s.partOffset]);
+                };
+                shape_aabb = core::aabox_transformFrom(transform, shape_aabb);
+                model_aabb = core::aabox3::fromBound(model_aabb, shape_aabb);
+            }
         }
         modelDrawable->_bound = model_aabb;
 
@@ -296,21 +351,35 @@ namespace graphics
        camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
        graphics::DescriptorObject transform_rboDescriptorObject;
        transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
-       graphics::DescriptorObject vb_rboDescriptorObject;
-       vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
-       graphics::DescriptorObject ib_rboDescriptorObject;
-       ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
+
        graphics::DescriptorObject pb_rboDescriptorObject;
        pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
+       graphics::DescriptorObject ib_rboDescriptorObject;
+       ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
+       graphics::DescriptorObject vb_rboDescriptorObject;
+       vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
+       graphics::DescriptorObject ab_rboDescriptorObject;
+       ab_rboDescriptorObject._buffers.push_back(model.getVertexAttribBuffer());
+
        graphics::DescriptorObject mb_rboDescriptorObject;
        mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
+       graphics::DescriptorObject texDescriptorObject;
+       texDescriptorObject._textures.push_back(model.getAlbedoTexture());
+       graphics::DescriptorObject samplerDescriptorObject;
+       graphics::SamplerInit samplerInit{};
+       auto sampler = device->createSampler(samplerInit);
+       samplerDescriptorObject._samplers.push_back(sampler);
+
        graphics::DescriptorObjects descriptorObjects = {
             camera_uboDescriptorObject,
             transform_rboDescriptorObject, 
-            vb_rboDescriptorObject, 
-            ib_rboDescriptorObject, 
             pb_rboDescriptorObject,
-            mb_rboDescriptorObject
+            ib_rboDescriptorObject,
+            vb_rboDescriptorObject,
+            ab_rboDescriptorObject,
+            mb_rboDescriptorObject,
+            texDescriptorObject,
+            samplerDescriptorObject
        };
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -325,14 +394,26 @@ namespace graphics
        auto numNodes = model._localNodeTransforms.size();
 
        auto pipeline = this->_pipeline;
+       auto albedoTex = model.getAlbedoTexture();
 
        // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline](
+       graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline, albedoTex](
            const NodeID node,
            const graphics::CameraPointer& camera,
            const graphics::SwapchainPointer& swapchain,
            const graphics::DevicePointer& device,
            const graphics::BatchPointer& batch) {
+            
+            static bool first{ true };
+            if (first) {
+                first = false;
+                if (albedoTex) {
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                    batch->uploadInitTexture(device, albedoTex);
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                }
+            }
+
             batch->bindPipeline(pipeline);
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
@@ -395,9 +476,14 @@ namespace graphics
         items.emplace_back(scene->createItem(rootNode.id(), model._drawableID).id());
 
         for (const auto& li : model._localItems) {
-            const auto& s = model._shapes[li.shape];
-            for (uint32_t si = 0; si < s.numParts; ++si) {
-                items.emplace_back(scene->createItem(modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
+            if (li.shape != MODEL_INVALID_INDEX) {
+                const auto& s = model._shapes[li.shape];
+                for (uint32_t si = 0; si < s.numParts; ++si) {
+                    items.emplace_back(scene->createItem(modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
+                }
+            }
+            if (li.camera != MODEL_INVALID_INDEX) {
+                
             }
         }
 

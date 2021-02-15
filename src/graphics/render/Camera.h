@@ -26,7 +26,7 @@
 //
 #pragma once
 
-#include <core/math/ViewSpaceTransform.h>
+#include <core/math/CameraTransform.h>
 #include <mutex>
 
 #include "render.h"
