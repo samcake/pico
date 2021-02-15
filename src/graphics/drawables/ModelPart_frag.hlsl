@@ -85,7 +85,12 @@ float4 main(PixelShaderInput IN) : SV_Target{
     shading = (NDotL * lightI + NDotG * globalI);
     
     float3 baseColor = float3(1.0, 1.0, 1.0);
+    // with albedo from property or from texture
     baseColor = m.color;
+    if (m.textures.x != -1) {
+        baseColor = uTex0.Sample(uSampler0, IN.Texcoord.xy).xyz;
+    }
+
   //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
   //  baseColor = normal;
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
@@ -93,8 +98,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
   //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
   //  baseColor = float3(IN.Texcoord.x, 0.0f * IN.Texcoord.y, 0.0f);
 
-
-    baseColor = uTex0.Sample(uSampler0, IN.Texcoord.xy).xyz;
+    
  
     float3 color = shading * baseColor;
     return float4(color, 1.0);
