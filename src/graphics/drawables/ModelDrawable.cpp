@@ -295,7 +295,8 @@ namespace graphics
 
         // Allocate the textures
         if (model->_images.size()) {
-            auto& image0 = model->_images[2];
+            
+            auto& image0 = model->_images[0];
             TextureInit albedoTexInit;
             albedoTexInit.width = image0._desc.width;
             albedoTexInit.height = image0._desc.height;
