@@ -24,12 +24,13 @@ struct Material {
     float roughness;
     float spareA;
     float spareB;
+    float4 emissive;
     uint4 textures;
 };
 
 StructuredBuffer<Material>  material_array : register(t5);
 
-Texture2D uTex0 : register(t0);
+Texture2DArray uTex0 : register(t0);
 SamplerState uSampler0 : register(s0);
 
 //
@@ -88,18 +89,21 @@ float4 main(PixelShaderInput IN) : SV_Target{
     // with albedo from property or from texture
     baseColor = m.color;
     if (m.textures.x != -1) {
-        baseColor = uTex0.Sample(uSampler0, IN.Texcoord.xy).xyz;
+        baseColor = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }
-
-  //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
+    baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
   //  baseColor = normal;
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
   //  baseColor = rainbowRGB(_partID, float(_numParts));
   //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
   //  baseColor = float3(IN.Texcoord.x, 0.0f * IN.Texcoord.y, 0.0f);
 
-    
+
+    float3 emissiveColor = float3 (0.0, 0.0, 0.0);
+    if (m.textures.w != -1) {
+ //       emissiveColor = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.w)).xyz;
+    }
  
-    float3 color = shading * baseColor;
+    float3 color = shading * baseColor + emissiveColor;
     return float4(color, 1.0);
 }

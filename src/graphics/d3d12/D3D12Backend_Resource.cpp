@@ -224,7 +224,7 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     desc.Alignment = 0;
     desc.Width = init.width;
     desc.Height = init.height;
-    desc.DepthOrArraySize = 1;
+    desc.DepthOrArraySize = (init.numSlices ? init.numSlices : 1); // if init numSLices is 0 then just 1, else it s an array
     desc.MipLevels = (UINT16)1;
     desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM; //d3d12Format;
     desc.SampleDesc.Count = 1;
@@ -290,16 +290,24 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
         }
         assert(D3D12_SRV_DIMENSION_UNKNOWN != view_dim);
 */
-      auto view_dim = D3D12_SRV_DIMENSION_TEXTURE2D;
-
-      d3d12TextureBackend->_shaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-      d3d12TextureBackend->_shaderResourceViewDesc.Format = d3d12Format;
-      d3d12TextureBackend->_shaderResourceViewDesc.ViewDimension = view_dim;
-      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MipLevels = 1;
-      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.PlaneSlice = 0;
-      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
-      d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-  //  }
+    d3d12TextureBackend->_shaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    d3d12TextureBackend->_shaderResourceViewDesc.Format = d3d12Format;
+    
+    if (init.numSlices > 0) {
+        d3d12TextureBackend->_shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.ArraySize = init.numSlices;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.FirstArraySlice = 0;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.MipLevels = 1;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.PlaneSlice = 0;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.MostDetailedMip = 0;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2DArray.ResourceMinLODClamp = 0.0f;
+    } else {
+        d3d12TextureBackend->_shaderResourceViewDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MipLevels = 1;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.PlaneSlice = 0;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
+        d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+    }
 /*
     if (p_texture->usage & tr_texture_usage_storage_image) {
         p_texture->dx_uav_view_desc.Format = tr_util_to_dx_format(p_texture->format);

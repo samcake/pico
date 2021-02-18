@@ -126,6 +126,7 @@ namespace model {
     public:
         Index _positions{ INVALID_INDEX };
         Index _normals{ INVALID_INDEX };
+        Index _tangents{ INVALID_INDEX };
         Index _texcoords{ INVALID_INDEX };
 
         Index _indices{ INVALID_INDEX };
@@ -149,6 +150,10 @@ namespace model {
         float _metallicFactor{ 1.0f };
         float _roughnessFactor{ 0.0f };
         Index _baseColorTexture{ INVALID_INDEX };
+        Index _normalTexture{ INVALID_INDEX };
+        Index _roughnessMetallicTexture{ INVALID_INDEX };
+        Index _occlusionTexture{ INVALID_INDEX };
+        Index _emissiveTexture{ INVALID_INDEX };
     };
     using MaterialArray = std::vector<Material>;
 

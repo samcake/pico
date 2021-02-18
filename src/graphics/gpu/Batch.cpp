@@ -69,18 +69,53 @@ void Batch::bindVertexBuffers(uint32_t num, const BufferPointer* buffers) {}
 void Batch::draw(uint32_t numPrimitives, uint32_t startIndex) {}
 void Batch::drawIndexed(uint32_t numPrimitives, uint32_t startIndex) {}
 
-void Batch::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {}
-void Batch::uploadInitTexture(const DevicePointer& device, const TexturePointer& dest) {
+void Batch::uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayout, const BufferPointer& src) {}
+void Batch::uploadTextureFromInitdata(const DevicePointer& device, const TexturePointer& dest, const std::vector<uint32_t>& subresources) {
+    
+    // find amount of data required to fit all the init data
+    uint64_t bufferSize = 0;
+    UploadSubresourceLayoutArray updloadLayout;
+    // if no subresoruces, assume all
+    if (subresources.empty()) {
+        uint32_t s = 0;
+        for (const auto& id : dest->_init.initData) {
+            if (id.size()) {
+                UploadSubresourceLayout ul;
+                ul.subresource = s;
+                ul.byteOffset = bufferSize;
+                ul.byteLength = dest->_init.initData[s].size();
+                bufferSize += ul.byteLength;
+                updloadLayout.emplace_back(ul);
+            }
+            s++;
+        }
+    } else {
+        for (const auto& s : subresources) {
+            if (dest->_init.initData.size() > s) {
+                if (dest->_init.initData[s].size()) {
+                    UploadSubresourceLayout ul;
+                    ul.subresource = s;
+                    ul.byteOffset = bufferSize;
+                    ul.byteLength = dest->_init.initData[s].size();
+                    bufferSize += ul.byteLength;
+                    updloadLayout.emplace_back(ul);
+                }
+            }
+        }
+    }
+
     // create a buffer, fill it with the data and then call uploadTexture
     BufferInit bufferInit;
-    bufferInit.bufferSize = dest->_init.initData.size();
+    bufferInit.bufferSize = bufferSize;
     bufferInit.hostVisible = true;
-    
-    auto copyBuffer = device->createBuffer(bufferInit);
+    auto uploadBuffer = device->createBuffer(bufferInit);
 
-    memcpy(copyBuffer->_cpuMappedAddress, dest->_init.initData.data(), dest->_init.initData.size());
+    for (const auto& l : updloadLayout) {
+        std::byte* destmem = (std::byte*)(uploadBuffer->_cpuMappedAddress) + l.byteOffset;
+        memcpy(destmem, dest->_init.initData[l.subresource].data(), l.byteLength);
+    }
 
-    uploadTexture(dest, copyBuffer);
+    uploadTexture(dest, updloadLayout, uploadBuffer);
 }
 
 void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}

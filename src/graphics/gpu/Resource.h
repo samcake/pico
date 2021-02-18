@@ -80,8 +80,7 @@ namespace graphics {
         uint32_t height { 0 };
         uint32_t numSlices { 0 }; // if numSlices is > 0 => array texture
 
-        std::vector<uint8_t> initData;
-        std::vector<uint8_t> initData;
+        std::vector<std::vector<uint8_t>> initData;
     };
 
     class VISUALIZATION_API Texture : public Resource {

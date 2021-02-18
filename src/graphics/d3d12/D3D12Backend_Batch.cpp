@@ -303,33 +303,37 @@ void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex)
     _commandList->DrawIndexedInstanced(numPrimitives, 1, startIndex, 0, 0);
 }
 
-void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPointer& src) {
+void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayouts, const BufferPointer& src) {
     auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
     auto dstBackend = static_cast<D3D12TextureBackend*>(dest.get());
 
 
 
-    D3D12_RESOURCE_DESC texResourceDesc{};
-    texResourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    texResourceDesc.Alignment = 0;
-    texResourceDesc.Width = dstBackend->_init.width;
-    texResourceDesc.Height = dstBackend->_init.height;
-    texResourceDesc.DepthOrArraySize = 1;
-    texResourceDesc.MipLevels = 1;
-    texResourceDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    texResourceDesc.SampleDesc.Count = 1;
-    texResourceDesc.SampleDesc.Quality = 0;
-    texResourceDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    texResourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
-    
-    std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> subres_layouts(texResourceDesc.MipLevels);
-    std::vector<UINT> subres_rowcounts(texResourceDesc.MipLevels, 0);
-    std::vector<UINT64> subres_row_strides(texResourceDesc.MipLevels, 0);
+    D3D12_RESOURCE_DESC textureDesc{};
+    textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    textureDesc.Alignment = 0;
+    textureDesc.Width = dstBackend->_init.width;
+    textureDesc.Height = dstBackend->_init.height;
+    textureDesc.DepthOrArraySize = (dstBackend->_init.numSlices ? dstBackend->_init.numSlices : 1);
+    textureDesc.MipLevels = 1;
+    textureDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    textureDesc.SampleDesc.Count = 1;
+    textureDesc.SampleDesc.Quality = 0;
+    textureDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    textureDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+   
+
+    const uint32_t numSubResources = textureDesc.MipLevels * textureDesc.DepthOrArraySize;
+
+    std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> subres_layouts(numSubResources);
+    std::vector<UINT> subres_rowcounts(numSubResources, 0);
+    std::vector<UINT64> subres_row_strides(numSubResources, 0);
     UINT64 buffer_size = 0;
 
+    
     ID3D12Device* pDevice;
     _commandList->GetDevice(__uuidof(*pDevice), reinterpret_cast<void**>(&pDevice));
-    pDevice->GetCopyableFootprints(&texResourceDesc, 0, 1, 0, subres_layouts.data(), subres_rowcounts.data(), subres_row_strides.data(), &buffer_size);
+    pDevice->GetCopyableFootprints(&textureDesc, 0, numSubResources, 0, subres_layouts.data(), subres_rowcounts.data(), subres_row_strides.data(), &buffer_size);
 
     // let s check that the source buffer is big enough
     // maybe?
@@ -337,21 +341,84 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const BufferPo
 
     // Copy buffer to texture
     // Assume a  resourceBarrier before
-    for (uint32_t mip_level = 0; mip_level < texResourceDesc.MipLevels; ++mip_level) {
-        const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& layout = subres_layouts[mip_level];
-        D3D12_TEXTURE_COPY_LOCATION srcLoc{};
-        srcLoc.pResource = srcBackend->_resource.Get();
-        srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
-        srcLoc.PlacedFootprint = layout;
+  //  for (uint32_t slice_num = 0; slice_num < textureDesc.DepthOrArraySize; ++slice_num) {
+ //       for (uint32_t mip_level = 0; mip_level < textureDesc.MipLevels; ++mip_level) {
+    for (auto& subresourceLayout : subresourceLayouts)
+    {
+            const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& layout = subres_layouts[subresourceLayout.subresource];
+            D3D12_TEXTURE_COPY_LOCATION srcLoc{};
+            srcLoc.pResource = srcBackend->_resource.Get();
+            srcLoc.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+            srcLoc.PlacedFootprint = subres_layouts[subresourceLayout.subresource];
+            srcLoc.PlacedFootprint.Offset = subresourceLayout.byteOffset;
 
-        D3D12_TEXTURE_COPY_LOCATION dstLoc{};
-        dstLoc.pResource = dstBackend->_resource.Get();
-        dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
-        dstLoc.SubresourceIndex = mip_level;
+            D3D12_TEXTURE_COPY_LOCATION dstLoc{};
+            dstLoc.pResource = dstBackend->_resource.Get();
+            dstLoc.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+            dstLoc.SubresourceIndex = subresourceLayout.subresource;
 
-       _commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr );
+           _commandList->CopyTextureRegion(&dstLoc, 0, 0, 0, &srcLoc, nullptr );
     }
-    // ANd one after
+/*
+    uint32_t arraySize = 1;
+    uint32_t NumMips = 1;
+
+    const uint32_t numSubResources = textureDesc.MipLevels * textureDesc.DepthOrArraySize;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT* layouts = (D3D12_PLACED_SUBRESOURCE_FOOTPRINT*)_alloca(sizeof(D3D12_PLACED_SUBRESOURCE_FOOTPRINT) * numSubResources);
+    uint32_t* numRows = (uint32_t*)_alloca(sizeof(uint32_t) * numSubResources);
+    uint64_t* rowSizes = (uint64_t*)_alloca(sizeof(uint64_t) * numSubResources);
+
+    uint64_t textureMemSize = 0;
+    pDevice->GetCopyableFootprints(&textureDesc, 0, uint32_t(numSubResources), 0, layouts, numRows, rowSizes, &textureMemSize);
+
+    // Get a GPU upload buffer
+    uint8_t* uploadMem = reinterpret_cast<uint8_t*>(uploadCPUMem);
+
+    const uint8_t* srcMem = reinterpret_cast<const uint8_t*>(initData);
+    const uint64_t srcTexelSize = 4; // probably ?
+
+    for (uint32_t arrayIdx = 0; arrayIdx < texResourceDesc.DepthOrArraySize; ++arrayIdx)
+    {
+        uint32_t mipWidth = textureDesc.Width;
+        for (uint32_t mipIdx = 0; mipIdx < textureDesc.MipLevels; ++mipIdx)
+        {
+            const uint32_t subResourceIdx = mipIdx + (arrayIdx * textureDesc.MipLevels);
+
+            const D3D12_PLACED_SUBRESOURCE_FOOTPRINT& subResourceLayout = layouts[subResourceIdx];
+            const uint32_t subResourceHeight = numRows[subResourceIdx];
+            const uint32_t subResourcePitch = subResourceLayout.Footprint.RowPitch;
+            const uint32_t subResourceDepth = subResourceLayout.Footprint.Depth;
+            const uint32_t srcPitch = mipWidth * srcTexelSize;
+            uint8_t* dstSubResourceMem = uploadMem + subResourceLayout.Offset;
+
+            for (uint32_t z = 0; z < subResourceDepth; ++z)
+            {
+                for (uint32_t y = 0; y < subResourceHeight; ++y)
+                {
+                    memcpy(dstSubResourceMem, srcMem, core::min(subResourcePitch, srcPitch));
+                    dstSubResourceMem += subResourcePitch;
+                    srcMem += srcPitch;
+                }
+            }
+
+            mipWidth = core::max(mipWidth / 2, 1ull);
+        }
+    }
+
+    for (uint32_t subResourceIdx = 0; subResourceIdx < numSubResources; ++subResourceIdx)
+    {
+        D3D12_TEXTURE_COPY_LOCATION dst = {};
+        dst.pResource = texture.Resource;
+        dst.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dst.SubresourceIndex = uint32_t(subResourceIdx);
+        D3D12_TEXTURE_COPY_LOCATION src = {};
+        src.pResource = uploadResource;
+        src.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        src.PlacedFootprint = layouts[subResourceIdx];
+        src.PlacedFootprint.Offset += resourceOffset;
+        _commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
+    }
+    // ANd one after*/
 }
 
 

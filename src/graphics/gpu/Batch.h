@@ -79,8 +79,14 @@ namespace graphics {
         virtual void draw(uint32_t numPrimitives, uint32_t startIndex);
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
-        virtual void uploadTexture(const TexturePointer& dest, const BufferPointer& src);
-        virtual void uploadInitTexture(const DevicePointer& device, const TexturePointer& dest);
+        struct UploadSubresourceLayout {
+            uint32_t subresource { 0 };
+            uint64_t byteOffset{ 0 };
+            uint64_t byteLength{ 0 };
+        };
+        using UploadSubresourceLayoutArray = std::vector< UploadSubresourceLayout>;
+        virtual void uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayout, const BufferPointer& src);
+        virtual void uploadTextureFromInitdata(const DevicePointer& device, const TexturePointer& dest, const std::vector<uint32_t>& subresources = std::vector<uint32_t>());
 
         virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);
     };

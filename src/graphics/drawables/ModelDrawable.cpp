@@ -182,7 +182,27 @@ namespace graphics
             auto posStride = (posView._byteStride ? posView._byteStride : document::model::elementTypeComponentCount(posAccess._elementType) *sizeof(float));
             for (uint32_t i = 0; i < posAccess._elementCount; ++i) {
                 auto pos = (float*)(posBuffer._bytes.data() + posView._byteOffset + posAccess._byteOffset + posStride * i);
-                vertex_buffer.emplace_back( *pos, *(pos+1), *(pos + 2), *(pos + 3));
+                vertex_buffer.emplace_back( *pos, *(pos+1), *(pos + 2), 0.0); // 4th 32bits component is space for normal
+            }
+
+            if (p._normals != document::model::INVALID_INDEX) {
+                const auto& norAccess = model->_accessors[p._normals];
+                const auto& norView = model->_bufferViews[norAccess._bufferView];
+                const auto& norBuffer = model->_buffers[norView._buffer];
+                auto norStride = (norView._byteStride ? norView._byteStride : document::model::elementTypeComponentCount(norAccess._elementType) * sizeof(float));
+                
+                union {
+                    uint32_t i;
+                    float f;
+                } i2f;
+
+                for (uint32_t i = 0; i < norAccess._elementCount; ++i) {
+                    auto nor = (float*)(norBuffer._bytes.data() + norView._byteOffset + norAccess._byteOffset + norStride * i);
+                    auto normal = core::vec3(*nor, *(nor + 1), *(nor + 2));
+                    // 4th 32bits component is space for normal, let's pack it
+                    i2f.i = core::packNormal32I(normal);
+                    vertex_buffer[i].w = i2f.f;
+                }
             }
 
             partAABBs.emplace_back(posAccess._aabb);
@@ -276,6 +296,9 @@ namespace graphics
             mm.metallic = m._metallicFactor;
             mm.roughness = m._roughnessFactor;
             mm.baseColorTexture = m._baseColorTexture;
+            mm.normalTexture = m._normalTexture;
+            mm.rmaoTexture = m._roughnessMetallicTexture;
+            mm.emissiveTexture = m._emissiveTexture;
             materials.emplace_back(mm);
         }
 
@@ -295,11 +318,21 @@ namespace graphics
 
         // Allocate the textures
         if (model->_images.size()) {
-            auto& image0 = model->_images[2];
+            uint32_t numImages = model->_images.size();
+            uint32_t maxWidth = 0;
+            uint32_t maxHeight = 0;
+            std::vector<std::vector<uint8_t>> pixels;
+            for (auto& i : model->_images) {
+                maxWidth = core::max(maxWidth, i._desc.width);
+                maxHeight = core::max(maxHeight, i._desc.height);
+                pixels.emplace_back(std::move(i._pixels));
+            }
+            
             TextureInit albedoTexInit;
-            albedoTexInit.width = image0._desc.width;
-            albedoTexInit.height = image0._desc.height;
-            albedoTexInit.initData = image0._pixels;
+            albedoTexInit.width = maxWidth;
+            albedoTexInit.height = maxHeight;
+            albedoTexInit.numSlices = numImages;
+            albedoTexInit.initData = std::move(pixels);
             auto albedoresourceTexture = device->createTexture(albedoTexInit);
 
             modelDrawable->_albedoTexture = albedoresourceTexture;
@@ -409,7 +442,7 @@ namespace graphics
                 first = false;
                 if (albedoTex) {
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                    batch->uploadInitTexture(device, albedoTex);
+                    batch->uploadTextureFromInitdata(device, albedoTex);
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
                 }
             }

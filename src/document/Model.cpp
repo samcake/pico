@@ -442,6 +442,11 @@ if (gltf_meshes.is_array()) {
                     if (nor.is_number_integer()) {
                         prim._normals = nor.get<uint32_t>();
                     }
+
+                    const auto& tan = check(a, "TANGENT");
+                    if (tan.is_number_integer()) {
+                        prim._tangents = tan.get<uint32_t>();
+                    }
                     const auto& tc0 = check(a, "TEXCOORD_0");
                     if (tc0.is_number_integer()) {
                         prim._texcoords = tc0.get<uint32_t>();
@@ -506,7 +511,26 @@ MaterialArray parseMaterials(const json& gltf_materials) {
                 if (bct.is_object() && bct.contains("index")) {
                     material._baseColorTexture = bct["index"].get<Index>();
                 }
-                
+
+                const auto& rmt = check(pbrMetallicRoughness, "metallicRoughnessTexture");
+                if (rmt.is_object() && rmt.contains("index")) {
+                    material._roughnessMetallicTexture = rmt["index"].get<Index>();
+                }
+            }
+
+            const auto& nt = check(m, "normalTexture");
+            if (nt.is_object() && nt.contains("index")) {
+                material._normalTexture = nt["index"].get<Index>();
+            }
+
+            const auto& ot = check(m, "occlusionTexture");
+            if (ot.is_object() && ot.contains("index")) {
+                material._occlusionTexture = ot["index"].get<Index>();
+            }
+
+            const auto& et = check(m, "emissiveTexture");
+            if (et.is_object() && et.contains("index")) {
+                material._emissiveTexture = et["index"].get<Index>();
             }
 
             materials.emplace_back(material);

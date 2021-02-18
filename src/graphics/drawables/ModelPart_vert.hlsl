@@ -123,6 +123,22 @@ Transform node_getWorldTransform(int nodeID) {
 }
 
 
+float3 unpackNormalFrom32I(uint n) {
+    int nx = int(n & 0x3FF);
+    int ny = int((n >> 10) & 0x3FF);
+    int nz = int((n >> 20) & 0x3FF);
+ //   nx = nx + (nx > 511 ? -1024 : 0);
+//    ny = ny + (ny > 511 ? -1024 : 0); 
+  //  nz = nz + (nz > 511 ? -1024 : 0); 
+    nx = nx - 511;
+    ny = ny - 511;
+    nz = nz - 511;
+
+
+    return normalize(float3(float(nx), float(ny), float(nz)));
+}
+
+
 //
 // Model
 //
@@ -145,7 +161,7 @@ struct Vertex {
     float x;
     float y;
     float z;
-    float w;
+    uint n;
 };
 
 StructuredBuffer<Vertex>  vertex_array : register(t3);
@@ -166,7 +182,8 @@ uint3 fetchFaceIndices(int indexOffset, int faceNum) {
 }
 
 struct Face {
-    float4 v[3];
+    float3 v[3];
+    uint3 n;
 };
 
 Face fetchFaceVerts(uint3 fvid, int vertexOffset) {
@@ -174,7 +191,8 @@ Face fetchFaceVerts(uint3 fvid, int vertexOffset) {
     Face face;
     for (int i = 0; i < 3; i++) {
         uint vi = vertexOffset + fvid[i];
-        face.v[i] = float4(vertex_array[vi].x, vertex_array[vi].y, vertex_array[vi].z, vertex_array[vi].w);
+        face.v[i] = float3(vertex_array[vi].x, vertex_array[vi].y, vertex_array[vi].z);
+        face.n[i] = vertex_array[vi].n;
     }
 
     return face;
@@ -227,6 +245,10 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     float3 faceEdge0 = faceVerts.v[1].xyz - faceVerts.v[0].xyz;
     float3 faceEdge1 = faceVerts.v[2].xyz - faceVerts.v[0].xyz;
     float3 normal = normalize(cross(faceEdge0, faceEdge1));
+
+    //normal = unpackNormalFrom32I(asuint(faceVerts.v[tvidx].w));
+    normal = unpackNormalFrom32I(faceVerts.n[tvidx]);
+   // normal = float3(0.0, 1.0, 0.0);
 
     // Barycenter 
     float3 barycenter = (faceVerts.v[0].xyz + faceVerts.v[1].xyz + faceVerts.v[2].xyz) / 3.0f;

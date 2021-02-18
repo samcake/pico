@@ -62,7 +62,7 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
   //  std::string modelFile("../asset/gltf/Sponza.gltf");
   //  std::string modelFile("../asset/gltf/WaterBottle.gltf");
- //  std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+  // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
     std::string modelFile("../asset/gltf/buggy.gltf");
     //  std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");

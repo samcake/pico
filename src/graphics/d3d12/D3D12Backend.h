@@ -170,7 +170,7 @@ namespace graphics {
         void draw(uint32_t numPrimitives, uint32_t startIndex) override;
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
 
-        void uploadTexture(const TexturePointer& dest, const BufferPointer& src) override;
+        void uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayout, const BufferPointer& src) override;
 
         void dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) override;
 

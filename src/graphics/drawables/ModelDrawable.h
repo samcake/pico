@@ -113,10 +113,12 @@ namespace graphics {
         float roughness{0.0f };
         float spareA;
         float spareB;
+        core::vec4 emissive{ 0.0f, 0.0f, 0.0f, 1.0f };
+
         uint32_t baseColorTexture{ MODEL_INVALID_INDEX };
         uint32_t normalTexture{ MODEL_INVALID_INDEX };
-        uint32_t spareTextureA{ MODEL_INVALID_INDEX };
-        uint32_t spareTextureB{ MODEL_INVALID_INDEX };
+        uint32_t rmaoTexture{ MODEL_INVALID_INDEX };
+        uint32_t emissiveTexture{ MODEL_INVALID_INDEX };
     };
 
     struct ModelCamera {
