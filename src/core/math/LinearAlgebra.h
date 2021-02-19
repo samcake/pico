@@ -286,20 +286,20 @@ namespace core
     // Normal packing
     inline uint32_t packNormal32I(const vec3& n) {
         //inline uint32_t Pack_INT_2_10_10_10_REV(float x, float y, float z, float w)
-        const uint32_t xs = n.x < 0;
+     /*    const uint32_t xs = n.x < 0;
         const uint32_t ys = n.y < 0;
         const uint32_t zs = n.z < 0;
         const int w = 0;
         const uint32_t ws = w < 0;
-  /*      uint32_t vi =
+       uint32_t vi =
             ws << 31 | ((uint32_t)(w + (ws << 1)) & 1) << 30 |
             zs << 29 | ((uint32_t)(n.z * 511 + (zs << 9)) & 511) << 20 |
             ys << 19 | ((uint32_t)(n.y * 511 + (ys << 9)) & 511) << 10 |
             xs << 9 | ((uint32_t)(n.x * 511 + (xs << 9)) & 511);
     */    uint32_t vi = 
-                    ((uint32_t)((n.x + 1.0f) * 511) & 1023) |
-                    ((uint32_t)((n.y + 1.0f) * 511) & 1023) << 10 |
-                    ((uint32_t)((n.z + 1.0f) * 511) & 1023) << 20 ;
+                    ((uint32_t)((n.x + 1.0f) * 511) & 0x3FF) |
+                    ((uint32_t)((n.y + 1.0f) * 511) & 0x3FF) << 10 |
+                    ((uint32_t)((n.z + 1.0f) * 511) & 0x3FF) << 20 ;
 
         return vi;
     }

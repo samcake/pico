@@ -146,13 +146,20 @@ namespace graphics
         }
 
         // Build the geometry vb, ib and pb
+        struct Vertex {
+            float px{ 0.f };
+            float py{ 0.f };
+            float pz{ 0.f };
+            uint32_t n{ 0 };
+        };
         // as long as the vertex buffer is  less than 65535 the indices can be uint16
-        std::vector<core::vec4> vertex_buffer;
+        std::vector<Vertex> vertex_buffer;
         std::vector<core::vec4> vertex_attrib_buffer;
         std::vector<uint16_t> index_buffer;
         std::vector<ModelPart> parts;
         std::vector<core::aabox3> partAABBs;
         core::aabox3 bound;
+
 
         bool first = true;
         for (const auto& p : model->_primitives) {
@@ -182,7 +189,7 @@ namespace graphics
             auto posStride = (posView._byteStride ? posView._byteStride : document::model::elementTypeComponentCount(posAccess._elementType) *sizeof(float));
             for (uint32_t i = 0; i < posAccess._elementCount; ++i) {
                 auto pos = (float*)(posBuffer._bytes.data() + posView._byteOffset + posAccess._byteOffset + posStride * i);
-                vertex_buffer.emplace_back( *pos, *(pos+1), *(pos + 2), 0.0); // 4th 32bits component is space for normal
+                vertex_buffer.emplace_back( Vertex{ *pos, *(pos+1), *(pos + 2), 0} ); // 4th 32bits component is space for normal
             }
 
             if (p._normals != document::model::INVALID_INDEX) {
@@ -200,8 +207,7 @@ namespace graphics
                     auto nor = (float*)(norBuffer._bytes.data() + norView._byteOffset + norAccess._byteOffset + norStride * i);
                     auto normal = core::vec3(*nor, *(nor + 1), *(nor + 2));
                     // 4th 32bits component is space for normal, let's pack it
-                    i2f.i = core::packNormal32I(normal);
-                    vertex_buffer[i].w = i2f.f;
+                    vertex_buffer[i].n = core::packNormal32I(normal);
                 }
             }
 

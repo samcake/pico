@@ -61,15 +61,18 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
   //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
   //  std::string modelFile("../asset/gltf/Sponza.gltf");
-  //  std::string modelFile("../asset/gltf/WaterBottle.gltf");
-  // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
-    std::string modelFile("../asset/gltf/buggy.gltf");
+  //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
+ //  std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+   // std::string modelFile("../asset/gltf/buggy.gltf");
     //  std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
-  //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
-   // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
- //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+   // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
+  // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
+    
+   //  std::string modelFile("../asset/gltf/Rusted Metal Barrel_teufceuda_Metal/Rusted Metal Barrel_LOD2__teufceuda.gltf");
+   //  std::string modelFile("../asset/gltf/Castle Parapet Wall_sbxuw_3D Asset/Castle Parapet Wall_LOD0__sbxuw.gltf");
+    std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
  //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
 
     
@@ -84,7 +87,7 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
 
     auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
 
-    for (int i = 0; i < 1; ++i) {
+    for (int i = 0; i < 3; ++i) {
         auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
 
         modelDrawableFactory->createModelParts(node1.id(), scene, *modelDrawablePtr);

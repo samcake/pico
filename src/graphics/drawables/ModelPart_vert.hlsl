@@ -191,8 +191,9 @@ Face fetchFaceVerts(uint3 fvid, int vertexOffset) {
     Face face;
     for (int i = 0; i < 3; i++) {
         uint vi = vertexOffset + fvid[i];
-        face.v[i] = float3(vertex_array[vi].x, vertex_array[vi].y, vertex_array[vi].z);
-        face.n[i] = vertex_array[vi].n;
+        Vertex v = vertex_array[vi];
+        face.v[i] = float3(v.x, v.y, v.z);
+        face.n[i] = v.n;
     }
 
     return face;
@@ -219,6 +220,7 @@ cbuffer UniformBlock1 : register(b1) {
 
 struct VertexShaderOutput
 {
+    float3 EyePos : EPOS;
     float3 Normal   : NORMAL;
     float2 Texcoord  : TEXCOORD;
     float4 Position : SV_Position;
@@ -246,9 +248,8 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     float3 faceEdge1 = faceVerts.v[2].xyz - faceVerts.v[0].xyz;
     float3 normal = normalize(cross(faceEdge0, faceEdge1));
 
-    //normal = unpackNormalFrom32I(asuint(faceVerts.v[tvidx].w));
     normal = unpackNormalFrom32I(faceVerts.n[tvidx]);
-   // normal = float3(0.0, 1.0, 0.0);
+  //  normal = float3(0.0, 1.0, 0.0);
 
     // Barycenter 
     float3 barycenter = (faceVerts.v[0].xyz + faceVerts.v[1].xyz + faceVerts.v[2].xyz) / 3.0f;
@@ -273,6 +274,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
 */
     VertexShaderOutput OUT;
     OUT.Position = clipPos;
+    OUT.EyePos = eyePosition;
     OUT.Normal = normal;
     OUT.Texcoord = texcoord;
     

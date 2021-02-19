@@ -250,6 +250,7 @@ std::tuple<std::string, std::string, std::vector<uint8_t>> parseURI(const uint64
    if (uri.find(embedded_data_header) == 0) {
        const std::string rawbuffer_header = "data:application/octet-stream;base64,";
        const std::string jpeg_header = "data:image/jpeg;base64,";
+       const std::string png_header = "data:image/png;base64,";
        if (uri.find(rawbuffer_header) == 0) {
            urim = rawbuffer_header;
            mime_type = "application/octet-stream";
@@ -260,7 +261,11 @@ std::tuple<std::string, std::string, std::vector<uint8_t>> parseURI(const uint64
            mime_type = "image/jpeg";
            bytes = base64_decode(uri.substr(jpeg_header.size()));  // cut mime string.
        }
-
+       else if (uri.find(png_header) == 0) {
+           urim = png_header;
+           mime_type = "image/png";
+           bytes = base64_decode(uri.substr(png_header.size()));  // cut mime string.
+       }
    } else {
        urim = uri;
        auto glb_path = model_path_root / uri;
