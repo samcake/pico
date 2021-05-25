@@ -153,10 +153,13 @@ bool CameraController::onMouse(const MouseEvent& e) {
         if (e.state & uix::MOUSE_LBUTTON) {
         }
         if (e.state & uix::MOUSE_MBUTTON) {
+            float panScale = _controlData._boomLength * 0.001f;
             if (_cam->isOrtho()) {
+                panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
             }
             else {
             }
+            _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
         }
         if (e.state & uix::MOUSE_RBUTTON) {
             if (e.state & uix::MOUSE_CONTROL) {
@@ -189,7 +192,13 @@ bool CameraController::onMouse(const MouseEvent& e) {
         else {
             if (_cam->isOrtho()) {
                 float zoomScale = 0.1f;
+                auto m_e1 = _cam->eyeSpaceFromImageSpace2D(e.pos.x, _cam->getViewport().height() - e.pos.y);
+
                 _cam->setOrthoHeight(_cam->getOrthoHeight() * (1.0f + e.wheel * zoomScale));
+
+                auto m_e2 = _cam->eyeSpaceFromImageSpace2D(e.pos.x, _cam->getViewport().height() - e.pos.y);
+                
+                _cam->pan(m_e1.x - m_e2.x, m_e1.y - m_e2.y);
             }
             else {
                 float dollyScale = 0.08f;

@@ -51,7 +51,7 @@ namespace graphics {
     struct VISUALIZATION_API GizmoDrawableUniforms {
         int numNodes{ 0 };
         bool showTransform{ true };
-        bool showBranch{ false };
+        bool showBranch{ true };
         bool showLocalBound{ true };
         bool showWorldBound{ false };
 

@@ -78,6 +78,8 @@ namespace graphics {
         bool antialisedLineEnable : 1;
         bool alphaToCoverageEnable : 1;
       //  uint8_t _spare1 : 2;
-    };
+    
+        RasterizerState& withCullBack() { cullMode = CullMode::BACK; return (*this); }
+     };
 }
 

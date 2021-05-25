@@ -53,6 +53,38 @@ TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, NodeID pa
     return new_node_id;
 }
 
+TransformTree::NodeIDs TransformTree::allocateBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets) {
+    NodeIDs new_node_ids = _indexTable.allocate(transforms.size());
+
+    // first pass 
+    uint32_t i = 0;
+    for (auto new_node_id : new_node_ids) {
+       // bool allocated = new_node_id == (_indexTable.getNumAllocatedElements() - 1);
+        bool allocated = new_node_id == (_treeNodes.size());
+        if (allocated) {
+            _treeNodes.push_back(Node());
+            _nodeTransforms.push_back(transforms[i]);
+            _worldTransforms.push_back(transforms[i]);
+        }
+        else {
+            _treeNodes[new_node_id] = Node();
+            _nodeTransforms[new_node_id] = transforms[i];
+            _worldTransforms[new_node_id] = transforms[i];
+        }
+        ++i;
+    }
+
+    // 2nd pass needs to happen after 1st pass allocation
+    i = 0;
+    for (auto new_node_id : new_node_ids) {
+        auto o = parentsOffsets[i];
+        attachNode(new_node_id, (o == INVALID_NODE_ID ? rootParent : new_node_ids[o]));
+        i++;
+    }
+
+    return new_node_ids;
+}
+
 void TransformTree::free(NodeID nodeId) {
     _indexTable.free(nodeId);
 
@@ -217,6 +249,19 @@ NodeID NodeStore::createNode(const core::mat4x3& rts, NodeID parent) {
     }
 
     return nodeId;
+}
+
+NodeIDs NodeStore::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets) {
+    auto nodeIds = _tree.allocateBranch(rootParent, transforms, parentsOffsets);
+
+    if (nodeIds.back() < _num_buffers_elements) {
+        for (auto n: nodeIds) {
+            reinterpret_cast<TransformTree::Node*>(_nodes_buffer->_cpuMappedAddress)[n] = _tree._treeNodes[n];
+            reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress)[2 * n] = _tree._nodeTransforms[n];
+        }
+    }
+
+    return nodeIds;
 }
 
 void NodeStore::deleteNode(NodeID nodeId) {

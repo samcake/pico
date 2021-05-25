@@ -439,10 +439,26 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._buffers[j].get()));
                 auto dxBuffer = static_cast<D3D12BufferBackend*> (descriptorObject._buffers[j].get());
-
-                ID3D12Resource* resource = dxBuffer->_resource.Get();
-                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxBuffer->_resourceBufferView);
-                _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                if (dxBuffer) {
+                    ID3D12Resource* resource = dxBuffer->_resource.Get();
+                    D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxBuffer->_resourceBufferView);
+                    _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                } else {
+                    D3D12_SHADER_RESOURCE_VIEW_DESC view_desc;
+                    view_desc.Format = DXGI_FORMAT_UNKNOWN;
+                    view_desc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+                    view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+                    view_desc.Buffer.FirstElement = 0;
+                    view_desc.Buffer.NumElements = 0;
+                    view_desc.Buffer.StructureByteStride = 0;
+                    view_desc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+                 //   if (bufferBackend->_init.raw) {
+                    view_desc.Buffer.StructureByteStride = 0;
+                    view_desc.Format = DXGI_FORMAT_R32_TYPELESS;
+                    view_desc.Buffer.Flags |= D3D12_BUFFER_SRV_FLAG_RAW;
+                   // }*/
+                    _device->CreateShaderResourceView(nullptr, &view_desc, cpuHandle);
+                }
                 cpuHandle.ptr += handle_inc_size;
             }
         }
@@ -497,9 +513,25 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 picoAssert((descriptorObject._textures[j].get()));
                 auto dxTex = static_cast<D3D12TextureBackend*> (descriptorObject._textures[j].get());
 
-                ID3D12Resource* resource = dxTex->_resource.Get();
-                D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxTex->_shaderResourceViewDesc);
-                _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                if (dxTex) {
+                    ID3D12Resource* resource = dxTex->_resource.Get();
+                    D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxTex->_shaderResourceViewDesc);
+                    _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                } else {
+                    D3D12_SHADER_RESOURCE_VIEW_DESC view_desc;
+
+                    auto view_dim = D3D12_SRV_DIMENSION_TEXTURE2D;
+
+                    view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+                    view_desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                    view_desc.ViewDimension = view_dim;
+                    view_desc.Texture2D.MipLevels = 1;
+                    view_desc.Texture2D.PlaneSlice = 0;
+                    view_desc.Texture2D.MostDetailedMip = 0;
+                    view_desc.Texture2D.ResourceMinLODClamp = 0.0f;
+                    // }*/
+                    _device->CreateShaderResourceView(nullptr, &view_desc, cpuHandle);
+                }
                 cpuHandle.ptr += handle_inc_size;
             }
         }

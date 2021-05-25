@@ -27,6 +27,7 @@
 #pragma once
 #include <stdint.h>
 #include <cmath>
+#include <utility>
 
 
 namespace core 
@@ -63,6 +64,7 @@ namespace core
         vec3 operator-() const { return vec3(-x, -y, -z); }
 
         float operator[](int i) const { return data()[i]; }
+        float& operator[](int i) { return data()[i]; }
 
         const static vec3 X;
         const static vec3 Y;
@@ -89,6 +91,9 @@ namespace core
         vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         vec4 operator*(float s) const { return vec4(x * s, y * s, z * s, w * s); }
         vec4 operator-() const { return vec4(-x, -y, -z, -w); }
+
+        float operator[](int i) const { return data()[i]; }
+        float& operator[](int i) { return data()[i]; }
 
         vec3 xyz() const { return vec3(x, y, z); }
     };
@@ -136,6 +141,8 @@ namespace core
     }
 
     // Max Min
+    inline uint32_t min(uint32_t a, uint32_t b) { return (a < b ? a : b); }
+    inline uint32_t max(uint32_t a, uint32_t b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }
     inline float max(float a, float b) { return (a > b ? a : b); }
     inline vec2 min(const vec2& a, const vec2& b) {
@@ -276,6 +283,27 @@ namespace core
                      yuv.x + 2.032f * yuv.y);
     }
 
+    // Normal packing
+    inline uint32_t packNormal32I(const vec3& n) {
+        //inline uint32_t Pack_INT_2_10_10_10_REV(float x, float y, float z, float w)
+     /*    const uint32_t xs = n.x < 0;
+        const uint32_t ys = n.y < 0;
+        const uint32_t zs = n.z < 0;
+        const int w = 0;
+        const uint32_t ws = w < 0;
+       uint32_t vi =
+            ws << 31 | ((uint32_t)(w + (ws << 1)) & 1) << 30 |
+            zs << 29 | ((uint32_t)(n.z * 511 + (zs << 9)) & 511) << 20 |
+            ys << 19 | ((uint32_t)(n.y * 511 + (ys << 9)) & 511) << 10 |
+            xs << 9 | ((uint32_t)(n.x * 511 + (xs << 9)) & 511);
+    */    uint32_t vi = 
+                    ((uint32_t)((n.x + 1.0f) * 511) & 0x3FF) |
+                    ((uint32_t)((n.y + 1.0f) * 511) & 0x3FF) << 10 |
+                    ((uint32_t)((n.z + 1.0f) * 511) & 0x3FF) << 20 ;
+
+        return vi;
+    }
+
     // Matrix: 4 columns 3 rows 
     struct mat4x3 {
         vec3 _columns[4]{ vec3::X, vec3::Y, vec3::Z, vec3() };
@@ -289,7 +317,7 @@ namespace core
             _columns[2] = (c2);
             _columns[3] = (c3);
         }
-
+        
         vec4 row_0() const { return { _columns[0].x, _columns[1].x, _columns[2].x, _columns[3].x }; }
         vec4 row_1() const { return { _columns[0].y, _columns[1].y, _columns[2].y, _columns[3].y }; }
         vec4 row_2() const { return { _columns[0].z, _columns[1].z, _columns[2].z, _columns[3].z }; }
@@ -556,7 +584,7 @@ namespace core
         return mat;
     }
     inline mat4x3 translation(const vec3& t) {
-        return translation(mat4x3(), t);
+        return std::move(translation(mat4x3(), t));
     }
     inline mat4x3& rotation(mat4x3& mat, const rotor3& r) {
         mat._columns[0] = r.rotate_X();
@@ -565,13 +593,13 @@ namespace core
         return mat;
     }
     inline mat4x3 rotation(const rotor3& r) {
-        return rotation(mat4x3(), r);
+        return std::move(rotation(mat4x3(), r));
     }
     inline mat4x3& translation_rotation(mat4x3& mat, const vec3& t, const rotor3& r) {
-        return rotation(translation(mat, t), r);
+        return translation(rotation(mat, r), t);
     }
     inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
-        return translation_rotation(mat4x3(), t, r);
+        return std::move(translation_rotation(mat4x3(), t, r));
     }
     inline mat4x3& rotate(mat4x3& mat, const rotor3& r) {
         mat._columns[0] = r.rotate(mat._columns[0]);

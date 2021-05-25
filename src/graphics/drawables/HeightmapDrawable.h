@@ -50,8 +50,8 @@ namespace graphics {
         uint32_t map_height{ 1 };
         float    map_spacing{ 1.f };
 
-        uint32_t getMapNumElementsX() const { return map_width + 1; }
-        uint32_t getMapNumElementsY() const { return map_height + 1; }
+        uint32_t getMapNumElementsX() const { return map_width; }
+        uint32_t getMapNumElementsY() const { return map_height; }
         uint32_t getMapNumElements() const { return getMapNumElementsX() * getMapNumElementsY(); }
 
         uint32_t mesh_resolutionX{ 1 };
@@ -65,6 +65,8 @@ namespace graphics {
         uint32_t getMeshPerStripNumIndices() const { return (2 * mesh_resolutionX) + 1; }
         uint32_t getMeshNumStrips() const { return mesh_resolutionY; }
         uint32_t getMeshNumIndices() const { return getMeshNumStrips() * getMeshPerStripNumIndices() - 1; } // remove the last index of the last strip
+ 
+        std::vector<float> heights;
 
     };
 

@@ -152,7 +152,11 @@ public:
             return 0;
         } break;
         case WM_MOUSEWHEEL: {
-            core::vec2 newPos = { (float)GET_X_LPARAM(lparam),(float)GET_Y_LPARAM(lparam) };
+            // wheel events are expresed in screen space... we want client
+            POINT cursorPos{ GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+            ScreenToClient(_sysWindow, &cursorPos);
+            core::vec2 newPos = { (float)cursorPos.x,(float)cursorPos.y };
+
             if (_unknownLastMousePos) {
                 _lastMouseEventPos = newPos;
                 _unknownLastMousePos = false;
