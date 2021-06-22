@@ -120,7 +120,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     
   //  normal = T;
 
-    baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
+  //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
   //  baseColor = normal;
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
   //  baseColor = rainbowRGB(_partID, float(_numParts));
