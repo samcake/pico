@@ -42,6 +42,7 @@
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/ModelDrawable.h>
+#include <graphics/drawables/ModelDrawableInspector.h>
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -56,7 +57,7 @@
 
 document::ModelPointer lmodel;
 
-void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
+void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root, bool withInspector) {
 
   //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
@@ -89,11 +90,28 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
 
     auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
+    if (!withInspector) {
+        for (int i = 0; i < 1; ++i) {
+            auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
 
-    for (int i = 0; i < 3; ++i) {
-        auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
+            modelDrawableFactory->createModelParts(node1.id(), scene, *modelDrawablePtr);
+        }
+    }
+    if (withInspector) {
 
-        modelDrawableFactory->createModelParts(node1.id(), scene, *modelDrawablePtr);
+        auto modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
+        modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
+
+        auto modelDrawableInspectorPtr = modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
+        modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
+
+        auto modelDrawableInspector = scene->createDrawable(*modelDrawableInspectorPtr);
+
+        for (int i = 0; i < 1; ++i) {
+            auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i * modelDrawableInspector.getBound().half_size.z * 2.5f }), root.id());
+
+            modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
+        }
     }
 }
 
@@ -155,7 +173,7 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
-    generateModel(gpuDevice, scene, camera, node0);
+    generateModel(gpuDevice, scene, camera, node0, true);
 
 
     scene->_nodes.updateTransforms();

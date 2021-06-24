@@ -1,6 +1,6 @@
-// Model.h 
+// ModelDrawableInspector.h 
 //
-// Sam Gateau - January 2021
+// Sam Gateau - June 2021
 // 
 // MIT License
 //
@@ -26,110 +26,57 @@
 //
 #pragma once
 
-#include <memory>
-#include <core/math/LinearAlgebra.h>
-#include "dllmain.h"
-#include <document/Model.h>
-#include <render/Scene.h>
-#include <render/Drawable.h>
+// helper class to model Drawable
+#include "ModelDrawable.h"
 
 namespace graphics {
-    class Device;
-    using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-    class Buffer;
-    using BufferPointer = std::shared_ptr<Buffer>;
-    class PipelineState;
-    using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class ModelDrawable;
-    class ModelDrawablePart;
-    
-    static const uint32_t MODEL_INVALID_INDEX = document::model::INVALID_INDEX;
+    class ModelDrawableInspector;
+    class ModelDrawableInspectorPart;
 
-    struct VISUALIZATION_API ModelDrawableUniforms {
+    struct VISUALIZATION_API ModelDrawableInspectorUniforms {
         int numNodes{ 0 };
     };
-    using ModelDrawableUniformsPointer = std::shared_ptr<ModelDrawableUniforms>;
+    using ModelDrawableInspectorUniformsPointer = std::shared_ptr<ModelDrawableInspectorUniforms>;
 
-    class VISUALIZATION_API ModelDrawableFactory {
+    class VISUALIZATION_API ModelDrawableInspectorFactory {
     public:
-        ModelDrawableFactory();
-        ~ModelDrawableFactory();
+        ModelDrawableInspectorFactory();
+        ~ModelDrawableInspectorFactory();
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
         // Create ModelDrawable for a given Model document
-        graphics::ModelDrawable* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model);
+        graphics::ModelDrawableInspector* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDrawable* drawable);
 
         // Create Drawcall object drawing the ModelDrawable in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
             const graphics::CameraPointer& camera,
-            graphics::ModelDrawable& model);
+            graphics::ModelDrawableInspector& model);
 
         
-        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawable& model);
+        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawableInspector& model);
 
 
         // Read / write shared uniforms
-        const ModelDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        ModelDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        const ModelDrawableInspectorUniforms& getUniforms() const { return (*_sharedUniforms); }
+        ModelDrawableInspectorUniforms& editUniforms() { return (*_sharedUniforms); }
 
     protected:
-        ModelDrawableUniformsPointer _sharedUniforms;
+        ModelDrawableInspectorUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
     };
-    using ModelDrawableFactoryPointer = std::shared_ptr< ModelDrawableFactory>;
+    using ModelDrawableInspectorFactoryPointer = std::shared_ptr< ModelDrawableInspectorFactory>;
 
-    struct ModelItem {
-        uint32_t node{ MODEL_INVALID_INDEX };
-        uint32_t shape{ MODEL_INVALID_INDEX };
-        uint32_t camera{ MODEL_INVALID_INDEX };
-    };
 
-    struct ModelShape {
-        uint32_t partOffset{ 0 };
-        uint32_t numParts{ 0 };
-    };
-
-    struct ModelPart {
-        uint32_t numIndices{ 0 };
-        uint32_t indexOffset{ 0 };
-        uint32_t vertexOffset{ 0 };
-        uint32_t attribOffset{ MODEL_INVALID_INDEX };
-        uint32_t material{ MODEL_INVALID_INDEX };
-        uint32_t spareA;
-        uint32_t spareB;
-        uint32_t spareC;
-    };
-
-    struct ModelMaterial {
-        core::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
-        float metallic{ 0.0f };
-        float roughness{0.0f };
-        float spareA;
-        float spareB;
-        core::vec4 emissive{ 0.0f, 0.0f, 0.0f, 1.0f };
-
-        uint32_t baseColorTexture{ MODEL_INVALID_INDEX };
-        uint32_t normalTexture{ MODEL_INVALID_INDEX };
-        uint32_t rmaoTexture{ MODEL_INVALID_INDEX };
-        uint32_t emissiveTexture{ MODEL_INVALID_INDEX };
-    };
-
-    struct ModelCamera {
-        core::Projection _projection;
-    };
-
-    class VISUALIZATION_API ModelDrawable {
+    class VISUALIZATION_API ModelDrawableInspector {
     public:
 
-        void swapUniforms(const ModelDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const ModelDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const ModelDrawableInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const ModelDrawableInspectorUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
@@ -164,9 +111,11 @@ namespace graphics {
         // local Cameras
         std::vector<ModelCamera> _localCameras;
 
+        
     protected:
-        friend class ModelDrawableFactory;
         friend class ModelDrawableInspectorFactory;
+
+        const ModelDrawable* _inspectedModelDrawable;
 
         graphics::BufferPointer _vertexBuffer; // core vertex attribs: pos
         graphics::BufferPointer _vertexAttribBuffer; // extra vertex attribs texcoord, ...
@@ -178,20 +127,20 @@ namespace graphics {
 
         graphics::DescriptorSetPointer  _descriptorSet;
 
-        ModelDrawableUniformsPointer _uniforms;
+        ModelDrawableInspectorUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };
 
     
-    class VISUALIZATION_API ModelDrawablePart {
+    class VISUALIZATION_API ModelDrawableInspectorPart {
     public:
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
         
         
     protected:
-        friend class ModelDrawableFactory;
+        friend class ModelDrawableInspectorFactory;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };

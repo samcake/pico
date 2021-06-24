@@ -258,10 +258,10 @@ D3D12SamplerBackend::~D3D12SamplerBackend() {
 
 SamplerPointer D3D12Backend::createSampler(const SamplerInit& init) {
     auto sampler = new D3D12SamplerBackend;
-    sampler->_samplerDesc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-    sampler->_samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    sampler->_samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-    sampler->_samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+    sampler->_samplerDesc.Filter = D3D12_FILTER((int32_t)D3D12_FILTER_MIN_MAG_MIP_POINT + (int32_t)init._filter);
+    sampler->_samplerDesc.AddressU = D3D12_TEXTURE_ADDRESS_MODE((int32_t)D3D12_TEXTURE_ADDRESS_MODE_WRAP + (int32_t)init._addressU);
+    sampler->_samplerDesc.AddressV = D3D12_TEXTURE_ADDRESS_MODE((int32_t)D3D12_TEXTURE_ADDRESS_MODE_WRAP + (int32_t)init._addressV);
+    sampler->_samplerDesc.AddressW = D3D12_TEXTURE_ADDRESS_MODE((int32_t)D3D12_TEXTURE_ADDRESS_MODE_WRAP + (int32_t)init._addressW);
     sampler->_samplerDesc.MipLODBias = 0;
     sampler->_samplerDesc.MaxAnisotropy = 0;
     sampler->_samplerDesc.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
