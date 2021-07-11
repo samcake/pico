@@ -125,8 +125,18 @@ namespace graphics {
         core::Projection _projection;
     };
 
+    struct ModelVertex {
+        float px{ 0.f };
+        float py{ 0.f };
+        float pz{ 0.f };
+        uint32_t n{ 0 };
+    };
+    using ModelVertexAttrib = core::vec4;
+    using ModelIndex = uint16_t;
+
     class VISUALIZATION_API ModelDrawable {
     public:
+        virtual ~ModelDrawable() {}
 
         void swapUniforms(const ModelDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
         const ModelDrawableUniformsPointer& getUniforms() const { return _uniforms; }
@@ -143,6 +153,9 @@ namespace graphics {
         graphics::BufferPointer getMaterialBuffer() const { return _materialBuffer; }
         graphics::TexturePointer getAlbedoTexture() const { return _albedoTexture; }
 
+        std::vector<ModelVertex> _vertices;
+        std::vector<ModelVertexAttrib> _vertex_attribs;
+        std::vector<ModelIndex> _indices;
         std::vector<ModelPart> _parts;
         std::vector<core::aabox3> _partAABBs;
         std::vector<ModelShape> _shapes;

@@ -32,6 +32,58 @@ using namespace graphics;
 
 #ifdef _WINDOWS
 
+bool textureToRTV(D3D12TextureBackend* tex, D3D12_RENDER_TARGET_VIEW_DESC& rtv) {
+
+    if (tex->_init.usage & ResourceUsage::RENDER_TARGET) {
+        auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+        rtv.Format = d3d12Format;
+
+        if (tex->_init.numSlices > 0) {
+            rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
+            rtv.Texture2DArray.ArraySize = tex->_init.numSlices;
+            rtv.Texture2DArray.FirstArraySlice = 0;
+            rtv.Texture2DArray.MipSlice = 0;
+            rtv.Texture2DArray.PlaneSlice = 0;
+        }
+        else {
+            rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+            rtv.Texture2D.MipSlice = 0;
+            rtv.Texture2D.PlaneSlice = 0;
+        }
+    
+        return true;
+    }
+
+    return false;
+}
+
+bool textureToDSV(D3D12TextureBackend* tex, D3D12_DEPTH_STENCIL_VIEW_DESC& dsv) {
+
+    if (tex->_init.usage & ResourceUsage::RENDER_TARGET) {
+        auto d3d12Format = DXGI_FORMAT_D32_FLOAT;
+
+        dsv.Format = d3d12Format;
+        dsv.Flags = D3D12_DSV_FLAG_NONE;
+
+        if (tex->_init.numSlices > 0) {
+            dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+            dsv.Texture2DArray.ArraySize = tex->_init.numSlices;
+            dsv.Texture2DArray.FirstArraySlice = 0;
+            dsv.Texture2DArray.MipSlice = 0;
+        }
+        else {
+            dsv.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+            dsv.Texture2D.MipSlice = 0;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+
+
 D3D12FramebufferBackend::D3D12FramebufferBackend() : Framebuffer() {
 
 }
@@ -42,31 +94,83 @@ D3D12FramebufferBackend::~D3D12FramebufferBackend() {
 
 FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit& init) {
     auto framebuffer = new D3D12FramebufferBackend();
-/*
-    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
 
+    auto numColorRTs = std::min((uint32_t)init.colorTargets.size(), FRAMEBUFFER_MAX_NUM_COLOR_TARGETS);
+    auto numDepthStencil = (init.depthStencilTarget ? 1 : 0);
+    
+    auto width = (init.width == 0 ? 0xFFFFFFFF : init.width);
+    auto height = (init.height == 0 ? 0xFFFFFFFF : init.height);
 
-    sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
+    if (numColorRTs) {
+        framebuffer->_numRenderTargets = numColorRTs;
 
-    sw->_rtvDescriptorHeap = CreateDescriptorHeap(_device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, D3D12Backend::CHAIN_NUM_FRAMES);
-    sw->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+        desc.NumDescriptors = numColorRTs;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        ComPtr<ID3D12DescriptorHeap> descriptorHeap;
+        _device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
+        framebuffer->_rtvDescriptorHeap = descriptorHeap;
+        framebuffer->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        framebuffer->_rtvs = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
 
-    auto rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+        auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+        auto rtvHandle = framebuffer->_rtvs;
 
-    for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
-    {
-        ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+        for (uint32_t i = 0; i < numColorRTs; i++) {
+            auto tex = init.colorTargets[i];
+            if (tex->_init.usage & ResourceUsage::RENDER_TARGET) {
+                auto d3d12TextureBackend = static_cast<D3D12TextureBackend*> (tex.get());
 
-        _device->CreateRenderTargetView(backBuffer.Get(), nullptr, rtvHandle);
+                D3D12_RENDER_TARGET_VIEW_DESC rtvdesc;
+                if (textureToRTV(d3d12TextureBackend, rtvdesc)) {
+                    _device->CreateRenderTargetView(d3d12TextureBackend->_resource.Get(), &rtvdesc, rtvHandle);
+                }
+            
+                width = std::min(width, tex->width());
+                height = std::min(height, tex->height());
 
-        sw->_backBuffers[i] = backBuffer;
-
-        rtvHandle.ptr += (rtvDescriptorSize);
+                rtvHandle.ptr += framebuffer->_rtvDescriptorSize;
+            }
+        }
     }
-*/
+
+    if (numDepthStencil) {
+        D3D12_DESCRIPTOR_HEAP_DESC desc = {};
+        desc.NumDescriptors = numDepthStencil;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+        ComPtr<ID3D12DescriptorHeap> descriptorHeap;
+        _device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
+        framebuffer->_dsvDescriptorHeap = descriptorHeap;
+        framebuffer->_dsvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+        framebuffer->_dsv = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+
+        auto dsvHandle = framebuffer->_dsv;
+
+        auto tex = init.depthStencilTarget;
+        if (tex->_init.usage & ResourceUsage::RENDER_TARGET) {
+            auto d3d12TextureBackend = static_cast<D3D12TextureBackend*> (tex.get());
+
+            D3D12_DEPTH_STENCIL_VIEW_DESC dsvdesc;
+            if (textureToDSV(d3d12TextureBackend, dsvdesc)) {
+                _device->CreateDepthStencilView(d3d12TextureBackend->_resource.Get(), &dsvdesc, dsvHandle);
+            }
+
+            width = std::min(width, tex->width());
+            height = std::min(height, tex->height());
+        }
+    }
+    
+    framebuffer->_init = init;
+
+    if (init.width == 0) {
+        framebuffer->_init.width = width;
+    }
+
+    if (init.height == 0) {
+        framebuffer->_init.height = height;
+    }
+
     return FramebufferPointer(framebuffer);
 }
 

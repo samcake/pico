@@ -146,16 +146,10 @@ namespace graphics
         }
 
         // Build the geometry vb, ib and pb
-        struct Vertex {
-            float px{ 0.f };
-            float py{ 0.f };
-            float pz{ 0.f };
-            uint32_t n{ 0 };
-        };
         // as long as the vertex buffer is  less than 65535 the indices can be uint16
-        std::vector<Vertex> vertex_buffer;
-        std::vector<core::vec4> vertex_attrib_buffer;
-        std::vector<uint16_t> index_buffer;
+        std::vector<ModelVertex> vertex_buffer;
+        std::vector<ModelVertexAttrib> vertex_attrib_buffer;
+        std::vector<ModelIndex> index_buffer;
         std::vector<ModelPart> parts;
         std::vector<core::aabox3> partAABBs;
         core::aabox3 bound;
@@ -189,7 +183,7 @@ namespace graphics
             auto posStride = (posView._byteStride ? posView._byteStride : document::model::elementTypeComponentCount(posAccess._elementType) *sizeof(float));
             for (uint32_t i = 0; i < posAccess._elementCount; ++i) {
                 auto pos = (float*)(posBuffer._bytes.data() + posView._byteOffset + posAccess._byteOffset + posStride * i);
-                vertex_buffer.emplace_back( Vertex{ *pos, *(pos+1), *(pos + 2), 0} ); // 4th 32bits component is space for normal
+                vertex_buffer.emplace_back(ModelVertex{ *pos, *(pos+1), *(pos + 2), 0} ); // 4th 32bits component is space for normal
             }
 
             if (p._normals != document::model::INVALID_INDEX) {
@@ -290,7 +284,10 @@ namespace graphics
         modelDrawable->_vertexAttribBuffer = vabresourceBuffer;
         modelDrawable->_partBuffer = pbuniformBuffer;
 
-        // Also need aversion of the parts and their bound on the cpu side
+        // Also need a version of the mesh and parts and their bound on the cpu side
+        modelDrawable->_vertices = std::move(vertex_buffer);
+        modelDrawable->_vertex_attribs = std::move(vertex_attrib_buffer);
+        modelDrawable->_indices = std::move(index_buffer);
         modelDrawable->_parts = std::move(parts);
         modelDrawable->_partAABBs = std::move(partAABBs);
 

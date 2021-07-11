@@ -210,12 +210,26 @@ Face fetchFaceAttribs(uint3 fvid, int attribOffset) {
     return face;
 }
 
+
+
+struct Edge {
+    uint p;
+    uint2 i;
+    uint d;
+};
+
+StructuredBuffer<Edge>  edge_array : register(t5);
+
+
+// Drawcall data
 cbuffer UniformBlock1 : register(b1) {
     int _nodeID;
     int _partID;
     int _numNodes;
     int _numParts;
     int _numMaterials;
+    int _numEdges;
+    int _drawMode;
 }
 
 struct VertexShaderOutput
@@ -227,12 +241,27 @@ struct VertexShaderOutput
 };
 
 VertexShaderOutput main(uint vidx : SV_VertexID) {
-
+    
     // Fetch the part data
-    Part p = part_array[_partID];
+    Part p;
+    uint pvidx;
+    // Valid part idx means per part drawcall
+    if (_partID != uint( -1)) {
+        p = part_array[_partID];
+        pvidx = vidx;
+    }
 
-    uint tidx = vidx / 3;
-    uint tvidx = vidx % 3;
+    // draw edges ?
+    if (_drawMode & 1) {
+        uint eidx = vidx / 2;
+        int evidx = vidx % 2; 
+        Edge edge = edge_array[eidx];
+        p = part_array[edge.p];
+        pvidx = edge.i[evidx];
+    }
+
+    uint tidx = pvidx / 3;
+    uint tvidx = pvidx % 3;
 
     uint3 faceIndices = fetchFaceIndices(p.indexOffset, tidx);
     Face faceVerts = fetchFaceVerts(faceIndices, p.vertexOffset);
@@ -278,11 +307,16 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     OUT.Normal = normal;
     OUT.Texcoord = texcoord;
 
-    if (false) {
-
+    if (_drawMode & 2) {
         OUT.Position = orthoClipFromEyeSpace(_projection.aspectRatio(), 2.0f, 0.0f, 2.0f,
-                                             float3(2 * texcoord - float2(1.0, 1.0), 1.0f)); 
+                                             float3(2 * texcoord - float2(1.0, 1.0), 1.0f));
+    } else if (_drawMode & 8) {
+        OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
+            float3(2 * texcoord - float2(1.0, 1.0), 1.0f));
+        OUT.Position.y = -OUT.Position.y;
     }
+
+
     
     return OUT;
 }

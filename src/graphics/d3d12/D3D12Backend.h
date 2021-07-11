@@ -132,6 +132,15 @@ namespace graphics {
         D3D12FramebufferBackend();
         virtual ~D3D12FramebufferBackend();
 
+        // Gather color buffer rtvs in one heap
+        UINT _numRenderTargets = 0;
+        ComPtr<ID3D12DescriptorHeap> _rtvDescriptorHeap;
+        UINT _rtvDescriptorSize = 0;
+        D3D12_CPU_DESCRIPTOR_HANDLE _rtvs;
+
+        ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
+        UINT _dsvDescriptorSize = 0;
+        D3D12_CPU_DESCRIPTOR_HANDLE _dsv;
     };
 
     class D3D12BatchBackend : public Batch {
@@ -159,6 +168,8 @@ namespace graphics {
 
         void setViewport(const core::vec4& viewport) override;
         void setScissor(const core::vec4& scissor) override;
+
+        void bindFramebuffer(const FramebufferPointer& framebuffer) override;
 
         void bindPipeline(const PipelineStatePointer& pipeline) override;
         void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) override;
@@ -212,7 +223,6 @@ namespace graphics {
         ComPtr<ID3D12Resource> _resource;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
-   
     };
 
     class D3D12ShaderBackend : public Shader {

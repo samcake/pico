@@ -300,7 +300,7 @@ void D3D12PipelineStateBackend::fill_rasterizer_desc(const RasterizerState& src,
 
     dst.DepthClipEnable = src.depthClampEnable;
     dst.MultisampleEnable = src.multisampleEnable;
-    dst.AntialiasedLineEnable = src.antialisedLineEnable;
+    dst.AntialiasedLineEnable = src.antialiasedLineEnable;
     dst.ForcedSampleCount = 0;
 
     dst.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;

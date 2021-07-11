@@ -29,7 +29,6 @@
 using namespace graphics;
 
 Framebuffer::Framebuffer() : _currentIndex(0) {
-
 }
 
 Framebuffer::~Framebuffer() {

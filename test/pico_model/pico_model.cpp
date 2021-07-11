@@ -57,6 +57,8 @@
 
 document::ModelPointer lmodel;
 
+graphics::ModelDrawableInspectorFactoryPointer _modelDrawableInspectorFactory;
+
 void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root, bool withInspector) {
 
   //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
@@ -75,7 +77,11 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
    //  std::string modelFile("../asset/gltf/Castle Parapet Wall_sbxuw_3D Asset/Castle Parapet Wall_LOD0__sbxuw.gltf");
    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
-    std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
+  // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
+   std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
+ //   std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
+
+    
 
  //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
 
@@ -99,18 +105,20 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     }
     if (withInspector) {
 
-        auto modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
-        modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
+        if (!_modelDrawableInspectorFactory) {
+            _modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
+            _modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
+        }
 
-        auto modelDrawableInspectorPtr = modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
-        modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
+        auto modelDrawableInspectorPtr = _modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
+        _modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
 
         auto modelDrawableInspector = scene->createDrawable(*modelDrawableInspectorPtr);
 
         for (int i = 0; i < 1; ++i) {
             auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i * modelDrawableInspector.getBound().half_size.z * 2.5f }), root.id());
 
-            modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
+            _modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
         }
     }
 }
@@ -252,6 +260,22 @@ int main(int argc, char *argv[])
         }
         if (e.state && e.key == uix::KEY_B) {
             gzitem_item.setVisible(!gzitem_item.isVisible());
+        }
+
+        if (e.state && e.key == uix::KEY_U) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().switchRenderUVSpace();
+            }
+        }
+        if (e.state && e.key == uix::KEY_G) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().switchDrawUVGrid();
+            }
+        }
+        if (e.state && e.key == uix::KEY_E) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().switchDrawUVEdges();
+            }
         }
 
         bool zoomToScene = false;

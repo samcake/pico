@@ -31,11 +31,44 @@
 
 namespace graphics {
 
+
+    // Utility: generate uvmap seams edge list
+    struct ModelEdge {
+        uint32_t p;
+        uint32_t i0;
+        uint32_t i1;
+        uint32_t d;
+    };
+    using ModelEdgeArray = std::vector<ModelEdge>;
+    ModelEdgeArray computeUVSeamsEdges(const ModelDrawable& model);
+
+
     class ModelDrawableInspector;
     class ModelDrawableInspectorPart;
 
     struct VISUALIZATION_API ModelDrawableInspectorUniforms {
         int numNodes{ 0 };
+        bool renderUVSpace{ false };
+        bool showUVGrid{ true };
+        bool showUVEdges{ true };
+
+        void switchRenderUVSpace() {
+            renderUVSpace = ! renderUVSpace;
+        }
+        void switchDrawUVGrid() {
+            showUVGrid = ! showUVGrid;
+        }
+        void switchDrawUVEdges() {
+            showUVEdges = !showUVEdges;
+        }
+        
+        enum {
+            // first bit is used internally
+            RENDER_UV_SPACE_BIT = 0x00000002,
+            SHOW_UV_GRID_BIT = 0x00000004,
+            MAKE_EDGE_MAP_BIT = 0x00000008,
+        };
+        uint32_t buildFlags() const;
     };
     using ModelDrawableInspectorUniformsPointer = std::shared_ptr<ModelDrawableInspectorUniforms>;
 
@@ -68,68 +101,41 @@ namespace graphics {
     protected:
         ModelDrawableInspectorUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
+        graphics::PipelineStatePointer _pipelineInspectUVMap;
+        graphics::PipelineStatePointer _pipelineMakeSeamMap;
     };
     using ModelDrawableInspectorFactoryPointer = std::shared_ptr< ModelDrawableInspectorFactory>;
 
 
-    class VISUALIZATION_API ModelDrawableInspector {
+    class VISUALIZATION_API ModelDrawableInspector : public ModelDrawable {
     public:
 
         void swapUniforms(const ModelDrawableInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
         const ModelDrawableInspectorUniformsPointer& getUniforms() const { return _uniforms; }
-
-        core::aabox3 getBound() const { return _bound; }
-        DrawObjectCallback getDrawcall() const { return _drawcall; }
-
-        // immutable buffer containing the vertices, indices, parts and materials of the model
-        graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }
-        graphics::BufferPointer getVertexAttribBuffer() const { return _vertexAttribBuffer; }
-        graphics::BufferPointer getIndexBuffer() const { return _indexBuffer; }
-        graphics::BufferPointer getPartBuffer() const { return _partBuffer; }
-
-        graphics::BufferPointer getMaterialBuffer() const { return _materialBuffer; }
-        graphics::TexturePointer getAlbedoTexture() const { return _albedoTexture; }
-
-        std::vector<ModelPart> _parts;
-        std::vector<core::aabox3> _partAABBs;
-        std::vector<ModelShape> _shapes;
-
-        // For each part, we create one drawable
-        DrawableIDs _partDrawables;
-
-        // Self DrawableID
-        DrawableID _drawableID;
-
-        // Local nodes hierarchy in the model, used to create concrete instances of scene nodes when
-        // instanciating a model in the scene 
-        std::vector<core::mat4x3> _localNodeTransforms;
-        std::vector<uint32_t> _localNodeParents;
-
-        // Local Items used to create the list of items in the scene when instanciating the model 
-        std::vector<ModelItem> _localItems;
-
-        // local Cameras
-        std::vector<ModelCamera> _localCameras;
-
         
+        graphics::BufferPointer getEdgeBuffer() const { return _edgeBuffer; }
+
+        ModelEdgeArray _edges;
+
+        // Edges DrawableID
+        DrawableID _drawEdgesID;
+
+        // Make edges DrawbleID
+        DrawableID _makeEdgesID;
+
     protected:
         friend class ModelDrawableInspectorFactory;
 
         const ModelDrawable* _inspectedModelDrawable;
 
-        graphics::BufferPointer _vertexBuffer; // core vertex attribs: pos
-        graphics::BufferPointer _vertexAttribBuffer; // extra vertex attribs texcoord, ...
-        graphics::BufferPointer _indexBuffer;
-        graphics::BufferPointer _partBuffer;
+        graphics::BufferPointer _edgeBuffer;
 
-        graphics::BufferPointer _materialBuffer;
-        graphics::TexturePointer _albedoTexture;
+        graphics::TexturePointer _edgeTexture;
+        graphics::FramebufferPointer _edgeFramebuffer;
 
-        graphics::DescriptorSetPointer  _descriptorSet;
+        graphics::DescriptorSetPointer  _descriptorSetMakeSeamMap;
 
         ModelDrawableInspectorUniformsPointer _uniforms;
-        DrawObjectCallback _drawcall;
-        core::aabox3 _bound;
     };
 
     
@@ -145,6 +151,16 @@ namespace graphics {
         core::aabox3 _bound;
     };
     
-    
+    class VISUALIZATION_API ModelDrawableInspectorEdges {
+    public:
+        core::aabox3 getBound() const { return _bound; }
+        DrawObjectCallback getDrawcall() const { return _drawcall; }
+
+
+    protected:
+        friend class ModelDrawableInspectorFactory;
+        DrawObjectCallback _drawcall;
+        core::aabox3 _bound;
+    };
 
 } // !namespace graphics

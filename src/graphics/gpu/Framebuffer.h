@@ -27,15 +27,22 @@
 #pragma once
 
 #include "gpu.h"
- 
+#include <vector> 
+
 namespace graphics {
 
+    const uint32_t FRAMEBUFFER_MAX_NUM_COLOR_TARGETS = 8;
+
+    using TextureArray = std::vector<TexturePointer>;
+
+    
     struct FramebufferInit {
-        uint32_t width;
-        uint32_t height;
+        uint32_t width = 0; // default is 0 meaning the width and height will be evaluated from the render target size 
+        uint32_t height = 0;
 
-        
+        TextureArray colorTargets;
 
+        TexturePointer depthStencilTarget;
     };
 
     class Framebuffer {
@@ -44,8 +51,29 @@ namespace graphics {
         friend class Device;
         Framebuffer();
 
+        FramebufferInit _init;
+
     public:
         ~Framebuffer();
+
+        enum BufferMask {
+            BUFFER_COLOR0 = 1,
+            BUFFER_COLOR1 = 2,
+            BUFFER_COLOR2 = 4,
+            BUFFER_COLOR3 = 8,
+            BUFFER_COLOR4 = 16,
+            BUFFER_COLOR5 = 32,
+            BUFFER_COLOR6 = 64,
+            BUFFER_COLOR7 = 128,
+            BUFFER_COLORS = 0x000000FF,
+
+            BUFFER_DEPTH = 0x40000000,
+            BUFFER_STENCIL = 0x80000000,
+            BUFFER_DEPTHSTENCIL = 0xC0000000,
+        };
+
+        uint32_t width() const { return _init.width; }
+        uint32_t height() const { return _init.height; }
 
         uint8_t _currentIndex;
         uint8_t currentIndex() const;

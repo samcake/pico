@@ -231,20 +231,24 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     desc.SampleDesc.Quality = 0;
     desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-      /*  if (p_texture->usage & tr_texture_usage_color_attachment) {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-        }
-        if (p_texture->usage & tr_texture_usage_depth_stencil_attachment) {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-        }
-        if (p_texture->usage & tr_texture_usage_storage_image) {
-            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-        }
-*/
-        D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
-    /*    if (p_texture->usage & tr_texture_usage_color_attachment) {
-            res_states = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        }*/
+
+
+    if (init.usage & ResourceUsage::RENDER_TARGET) {
+        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+    }
+ /*   if (p_texture->usage & tr_texture_usage_depth_stencil_attachment) {
+        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+    }*/
+    if (init.usage & ResourceUsage::RW_RESOURCE_TEXTURE) {
+        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+    }
+
+    // Default resource state is ready to be read from
+    D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    if (init.usage & ResourceUsage::RENDER_TARGET) {
+        // or render target if it s the usage
+        res_states = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    }
 
     D3D12_CLEAR_VALUE clear_value{};
     clear_value.Format = d3d12Format;
@@ -264,9 +268,9 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     clear_value.Color[3] = 1.0f;
 
     D3D12_CLEAR_VALUE* p_clear_value = NULL;
-   /* if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) || (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) {
+    if ((desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET) || (desc.Flags & D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) {
         p_clear_value = &clear_value;
-    }*/
+    }
 
     auto d3d12TextureBackend = new D3D12TextureBackend();
     d3d12TextureBackend->_init = init;
@@ -317,7 +321,6 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     }
 
 */
-
     return d3d12TextureBackend;
 }
 

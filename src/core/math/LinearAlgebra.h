@@ -96,6 +96,7 @@ namespace core
         float& operator[](int i) { return data()[i]; }
 
         vec3 xyz() const { return vec3(x, y, z); }
+        vec2 xy() const { return vec2(x, y); }
     };
     struct ucvec4 {
         uint8_t x, y, z, w;

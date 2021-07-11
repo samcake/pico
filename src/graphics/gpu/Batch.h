@@ -69,6 +69,8 @@ namespace graphics {
         virtual void setViewport(const core::vec4& viewport);
         virtual void setScissor(const core::vec4& scissor);
 
+        virtual void bindFramebuffer(const FramebufferPointer& framebuffer);
+
         virtual void bindPipeline(const PipelineStatePointer& pipeline);
         virtual void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet);
         virtual void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data);

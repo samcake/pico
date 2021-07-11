@@ -191,6 +191,26 @@ void D3D12BatchBackend::setScissor(const core::vec4 & scissor) {
     _commandList->RSSetScissorRects(1, &dxRect);
 }
 
+void D3D12BatchBackend::bindFramebuffer(const FramebufferPointer& framebuffer) {
+    auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+
+    _commandList->OMSetRenderTargets(fbo->_numRenderTargets, &fbo->_rtvs, TRUE, (fbo->_dsvDescriptorSize ? &fbo->_dsv : nullptr));
+}
+/*
+void D3D12BatchBackend::bindRenderTarget(const TextureArray& colors, const TexturePointer& depthStencil) {
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvs[1];
+
+    uint32_t bufNum = 0;
+    for (const auto& cb : colors) {
+
+        auto colorBuf = static_cast<D3D12TextureBackend*>(cb.get());
+        rtvs[bufNum] =  colorBuf->_rtv;
+    }
+    
+    
+    _commandList->OMSetRenderTargets(1, rtvs, TRUE, nullptr);
+}
+*/
 void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
 

@@ -59,6 +59,8 @@ void Batch::resourceBarrierTransition(
 void Batch::setViewport(const core::vec4& viewport) {}
 void Batch::setScissor(const core::vec4& scissor) {}
 
+void Batch::bindFramebuffer(const FramebufferPointer& framebuffer) {}
+
 void Batch::bindPipeline(const PipelineStatePointer& pipeline) {}
 void Batch::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {}
 void Batch::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {}
