@@ -338,7 +338,8 @@ int main(int argc, char *argv[])
         batch->beginPass(swapchain, currentIndex);
 
         batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
-        batch->uploadTexture(textureForGDI, gdcRenderer->pixelBuffer);
+        graphics::Batch::UploadSubresourceLayoutArray layouts = { { 0, 0, gdcRenderer->pixelBuffer->_bufferSize}};
+        batch->uploadTexture(textureForGDI, layouts, gdcRenderer->pixelBuffer);
         batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
     
 

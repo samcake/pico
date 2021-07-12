@@ -137,15 +137,18 @@ namespace graphics
         auto numHeights = heightmap.getMapNumElements();
 
         graphics::BufferInit hbresourceBufferInit{};
-        hbresourceBufferInit.usage = (graphics::ResourceUsage::RESOURCE_BUFFER | graphics::ResourceUsage::RW_RESOURCE_BUFFER);
-   //     hbresourceBufferInit.hostVisible = true;
+        hbresourceBufferInit.usage = (graphics::ResourceUsage::RESOURCE_BUFFER) | (heightmap.heights.empty() ? graphics::ResourceUsage::RW_RESOURCE_BUFFER : 0);
+        hbresourceBufferInit.hostVisible = (heightmap.heights.size() > 0);
         hbresourceBufferInit.bufferSize = numHeights * sizeof(float);
         hbresourceBufferInit.firstElement = 0;
         hbresourceBufferInit.numElements = numHeights;
         hbresourceBufferInit.structStride = sizeof(float);
 
         HeightmapDrawable->_heightBuffer = device->createBuffer(hbresourceBufferInit);
-        // memcpy(HeightmapDrawable->_heightBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), vbresourceBufferInit.bufferSize);
+
+        if ( heightmap.heights.size() > 0) {
+             memcpy(HeightmapDrawable->_heightBuffer->_cpuMappedAddress, heightmap.heights.data(), hbresourceBufferInit.bufferSize);
+        }
 
         return HeightmapDrawable;
     }
@@ -157,6 +160,9 @@ namespace graphics
         graphics::HeightmapDrawable& drawable)
     {
 
+       auto heightmap = &drawable;
+       bool doCompute = heightmap->_heightmap.heights.empty();
+
        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
        // then we will assign a uniform buffer in it
        graphics::DescriptorSetInit compDescriptorSetInit{
@@ -164,12 +170,14 @@ namespace graphics
        };
        auto compDescriptorSet = device->createDescriptorSet(compDescriptorSetInit);
 
-       graphics::DescriptorObject compute_wrboDescriptorObject;
-       compute_wrboDescriptorObject._buffers.push_back(drawable.getHeightBuffer());
-       graphics::DescriptorObjects compute_descriptorObjects = {
-            compute_wrboDescriptorObject
-       };
-       device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
+       if (doCompute) {
+           graphics::DescriptorObject compute_wrboDescriptorObject;
+           compute_wrboDescriptorObject._buffers.push_back(drawable.getHeightBuffer());
+           graphics::DescriptorObjects compute_descriptorObjects = {
+                compute_wrboDescriptorObject
+           };
+           device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
+       }
 
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
@@ -193,13 +201,11 @@ namespace graphics
             heightmap_rboDescriptorObject
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
-
-        auto heightmap = &drawable;
         auto compute_pipeline = this->_computePipeline;
         auto pipeline = this->_HeightmapPipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [heightmap, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
             batch->setViewport(camera->getViewportRect());
             batch->setScissor(camera->getViewportRect());
     
@@ -208,13 +214,15 @@ namespace graphics
             HeightmapObjectData odata{ frameNum, heightmap->_heightmap.map_width,  heightmap->_heightmap.map_height, heightmap->_heightmap.map_spacing,
                                        heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
 
-            batch->bindPipeline(compute_pipeline);
-            batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
-            batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+            if (doCompute) {
+                batch->bindPipeline(compute_pipeline);
+                batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
+                batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
             
-        //   batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
-            batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
-            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+            //   batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
+                batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
+                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+            }
 
             odata.nodeID = node;
             batch->bindPipeline(pipeline);

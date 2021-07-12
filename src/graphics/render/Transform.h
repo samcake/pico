@@ -66,6 +66,7 @@ namespace graphics {
         };
 
         NodeID allocate(const core::mat4x3& rts, NodeID parent = 0);
+        NodeIDs allocateBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets);
         void free(NodeID nodeId);
         
         void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
@@ -85,6 +86,7 @@ namespace graphics {
     };
 
     using NodeID = TransformTree::NodeID;
+    using NodeIDs = TransformTree::NodeIDs;
     const static NodeID INVALID_NODE_ID{ TransformTree::INVALID_ID };
 
     class VISUALIZATION_API NodeStore {
@@ -102,6 +104,7 @@ namespace graphics {
         void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
 
         NodeID createNode(const core::mat4x3& rts, NodeID parent);
+        NodeIDs createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentsOffsets);
         void deleteNode(NodeID nodeId);
         void attachNode(NodeID child, NodeID parent);
         void detachNode(NodeID child);

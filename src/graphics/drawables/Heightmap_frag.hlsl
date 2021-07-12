@@ -190,7 +190,10 @@ float4 evalShading(float l_dot_h, float v_dot_h, float n_dot_l, float n_dot_v, f
 float4 main(PixelShaderInput IN) : SV_Target
 {
     float3 L = getLightDir();
-    float3 N = normalize(IN.Normal);
+//    float3 N = normalize(IN.Normal);
+    float3 N = normalize(cross(ddy(IN.WPos), ddx(IN.WPos)));
+
+
     float3 E2F = IN.WPos - _view.col_w();
     float E2Flen = length(E2F);
     float3 V = -normalize(E2F);
@@ -218,7 +221,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
     float4 spec_diff_lighting = evalShading(l_dot_h, v_dot_h, n_dot_l, n_dot_h, n_dot_v, roughness2, metallic, F0);
 
-    float3 color = spec_diff_lighting.w * base_color + spec_diff_lighting.xyz * 1.0;
+    float3 color = spec_diff_lighting.w * base_color + spec_diff_lighting.xyz * 0.0;
 //    color *= 0.8 * base_color;
 
 //    float fog = (1.0f - max(0.f, pow(1 - E2Flen / 100.f, 1.2f)));
