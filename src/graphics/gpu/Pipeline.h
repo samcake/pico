@@ -32,6 +32,7 @@
 #include "Rasterizer.h"
 #include "DepthStencil.h"
 #include "Blend.h"
+#include "Sampler.h"
 
 namespace graphics {
 
@@ -87,22 +88,6 @@ namespace graphics {
         bool realize();
 
         static void registerToWatcher(const PipelineStatePointer& pipeline, PipelineRealizer pipelineRealizer);
-    };
-
-    struct VISUALIZATION_API SamplerInit {
-
-    };
-
-    class VISUALIZATION_API Sampler {
-    protected:
-        // Sampler is created from the device
-        friend class Device;
-        Sampler();
-
-    public:
-        virtual ~Sampler();
-
-        SamplerInit _init;
     };
 
     class PipelineWatcher {

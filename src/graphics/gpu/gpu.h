@@ -146,8 +146,12 @@ namespace graphics {
         UNIFORM_BUFFER = 0x04,
         RESOURCE_BUFFER = 0x08,
         RW_RESOURCE_BUFFER = 0x10,
+        RESOURCE_TEXTURE = 0x20,
+        RW_RESOURCE_TEXTURE = 0x40,
+        RENDER_TARGET = 0x80,
 
-        COUNT = 5,
+
+        COUNT = 8,
     };
 
     enum class ResourceState {

@@ -214,6 +214,7 @@ namespace model {
     };
     using TextureArray = std::vector<Texture>;
 
+ 
     class DOCUMENT_API Model {
     public:
         static std::unique_ptr<Model> createFromGLTF(const std::string& filename);

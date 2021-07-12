@@ -76,6 +76,7 @@ namespace graphics {
 
 
     struct VISUALIZATION_API TextureInit {
+        uint8_t usage { 0 }; // indicate the different usage expected for this resource. Default is SHADER_RESOURCE
         uint32_t width { 0 };
         uint32_t height { 0 };
         uint32_t numSlices { 0 }; // if numSlices is > 0 => array texture
@@ -92,8 +93,13 @@ namespace graphics {
     public:
         virtual ~Texture();
 
+        uint32_t width() const { return _init.width; }
+        uint32_t height() const { return _init.height; }
+        uint32_t numSlices() const { return _init.numSlices; }
+
         TextureInit _init;
         void* _cpuMappedAddress = nullptr;
         uint64_t _bufferSize;
     };
+
 }

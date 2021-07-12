@@ -1,5 +1,24 @@
 
 //
+// Paint API
+// 
+float3 paintStripe(float3 value, float period, float stripe) {
+    float3 normalizedWidth = fwidth(value);
+    normalizedWidth /= (period);
+    float half_stripe_width = 0.5 * stripe;
+    float3 offset = float3(half_stripe_width, half_stripe_width, half_stripe_width);
+    float stripe_over_period = stripe / period;
+    float3 edge = float3(stripe_over_period, stripe_over_period, stripe_over_period);
+    float3 x0 = (value - offset) / (period) - normalizedWidth * 0.5;
+    float3 x1 = x0 + normalizedWidth;
+    float3 balance = float3(1.0, 1.0, 1.0) - edge;
+    float3 i0 = edge * floor(x0) + max(float3(0.0, 0.0, 0.0), frac(x0) - balance);
+    float3 i1 = edge * floor(x1) + max(float3(0.0, 0.0, 0.0), frac(x1) - balance);
+    float3 strip = (i1 - i0) / normalizedWidth;
+    return clamp(strip, float3(0.0, 0.0, 0.0), float3(1.0, 1.0, 1.0));
+}
+
+//
 // Color API
 // 
 
@@ -15,6 +34,8 @@ float3 rainbowRGB(float n, float d = 1.0f) {
     return colorRGBfromHSV(float3((n / d) * (5.0 / 6.0), 3.0, 1.0));
 }
 
+
+
 //
 // Material API
 // 
@@ -28,7 +49,7 @@ struct Material {
     uint4 textures;
 };
 
-StructuredBuffer<Material>  material_array : register(t5);
+StructuredBuffer<Material>  material_array : register(t6);
 
 Texture2DArray uTex0 : register(t0);
 SamplerState uSampler0 : register(s0);
@@ -61,6 +82,8 @@ cbuffer UniformBlock1 : register(b1) {
     int _numNodes;
     int _numParts;
     int _numMaterials;
+    int _numEdges;
+    int _drawMode;
 }
 
 struct PixelShaderInput{
@@ -70,6 +93,10 @@ struct PixelShaderInput{
 };
 
 float4 main(PixelShaderInput IN) : SV_Target{
+    if (_drawMode & 1) {
+        return float4(1.0, 1.0, 0.0, 1.0);
+    }
+
     int matIdx = part_array[_partID].material;// < 0.0 ? 0 : floor(IN.Material));
 //    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
@@ -116,18 +143,18 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
 
     float3 shading = float3(1.0, 1.0, 1.0);
-    shading = (NDotL * lightI + NDotG * globalI);
+  //  shading = (NDotL * lightI + NDotG * globalI);
     
   //  normal = T;
 
   //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
-  //  baseColor = normal;
+   // baseColor = normal;
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
   //  baseColor = rainbowRGB(_partID, float(_numParts));
   //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
-  //  baseColor = float3(IN.Texcoord.x, 0.0f * IN.Texcoord.y, 0.0f);
+  //  baseColor = float3(IN.Texcoord.x, IN.Texcoord.y, 0.0f);
     
-  //   baseColor = normalMap;
+   //  baseColor = mapN;
 
 
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
@@ -136,5 +163,29 @@ float4 main(PixelShaderInput IN) : SV_Target{
     }
  
     float3 color = shading * baseColor + emissiveColor;
+
+    // Add uv stripes
+    if (_drawMode & 4) {
+        float tex_width, tex_height, tex_elements;
+        uTex0.GetDimensions(tex_width, tex_height, tex_elements);
+
+        float3 texcoord = float3(IN.Texcoord.x * tex_width, IN.Texcoord.y * tex_height, 1.0f);
+
+        float3 grid = paintStripe(texcoord, tex_width * 0.1f, 1.5f);
+        color = lerp(color, float3(1.0, 0.0, 0.0), grid.x);
+        color = lerp(color, float3(0.0, 1.0, 0.0), grid.y);
+
+        grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
+        color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
+
+        //float2 normalizedWidth = fwidth(IN.Texcoord);
+    // color = lerp(color, float3(normalizedWidth, 0.0), 1.0);
+    }
+    
     return float4(color, 1.0);
+}
+
+
+float4 white(PixelShaderInput IN) : SV_Target{
+    return float4(1.0, 1.0, 1.0, 1.0);
 }

@@ -60,10 +60,10 @@ namespace graphics {
         bool isVisible() const { return _self->isVisible(); }
 
      //   void setNode(Node node) { _self->setNode(node); }
-        NodeID getNode() const { return _self->getNode(); }
+        NodeID getNodeID() const { return _self->getNodeID(); }
 
       //  void setDrawable(Drawable drawable) { _self->setDrawable(drawable); }
-        DrawableID getDrawable() const { return _self->getDrawable(); }
+        DrawableID getDrawableID() const { return _self->getDrawableID(); }
 
         core::aabox3 fetchWorldBound() const { return _self->fetchWorldBound(); }
 
@@ -87,9 +87,9 @@ namespace graphics {
             void setVisible(bool visible);
             bool isVisible() const;
             void setNode(Node node);
-            NodeID getNode() const;
+            NodeID getNodeID() const;
             void setDrawable(Drawable drawable);
-            DrawableID getDrawable() const;
+            DrawableID getDrawableID() const;
 
             core::aabox3 fetchWorldBound() const;
         };
@@ -145,8 +145,8 @@ namespace graphics {
 
 
     inline bool Item::Concept::isVisible() const { return _store->getInfo(_id)._isVisible; }
-    inline NodeID Item::Concept::getNode() const { return _store->getInfo(_id)._nodeID; }
-    inline DrawableID Item::Concept::getDrawable() const { return _store->getInfo(_id)._drawableID; }
+    inline NodeID Item::Concept::getNodeID() const { return _store->getInfo(_id)._nodeID; }
+    inline DrawableID Item::Concept::getDrawableID() const { return _store->getInfo(_id)._drawableID; }
 
 
     using IDToIndices = std::unordered_map<ItemID, uint32_t>;

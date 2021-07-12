@@ -1,6 +1,6 @@
-// Framebuffer.cpp
+// Sampler.cpp
 //
-// Sam Gateau - January 2020
+// Sam Gateau - June 2021
 // 
 // MIT License
 //
@@ -24,18 +24,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Framebuffer.h"
+#include "Sampler.h"
 
 using namespace graphics;
 
-Framebuffer::Framebuffer() : _currentIndex(0) {
-}
-
-Framebuffer::~Framebuffer() {
+Sampler::Sampler() {
 
 }
 
+Sampler::~Sampler() {
 
-uint8_t Framebuffer::currentIndex() const {
-    return _currentIndex;
 }

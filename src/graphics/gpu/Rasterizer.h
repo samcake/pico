@@ -58,8 +58,8 @@ namespace graphics {
             primitiveDiscardEnable(false),
             conservativeRasterizerEnable(false),
 
-            multisampleEnable(true),
-            antialisedLineEnable(true),
+            multisampleEnable(false),
+            antialiasedLineEnable(false),
             alphaToCoverageEnable(false)
         {}
 
@@ -75,11 +75,13 @@ namespace graphics {
 
         // Maybe its own state in the futuere to describe multisample state separately like in vulkan
         bool multisampleEnable : 1;
-        bool antialisedLineEnable : 1;
+        bool antialiasedLineEnable : 1;
         bool alphaToCoverageEnable : 1;
       //  uint8_t _spare1 : 2;
     
         RasterizerState& withCullBack() { cullMode = CullMode::BACK; return (*this); }
+        RasterizerState& withConservativeRasterizer() { conservativeRasterizerEnable = true; return (*this); }
+        RasterizerState& withAntialiasedLine() { antialiasedLineEnable = true; return (*this); }
      };
 }
 

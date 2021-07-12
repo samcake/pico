@@ -252,7 +252,11 @@ int main (int argc, char** argv) {
 
     // ready to parse and generate
     std::stringstream destStringStream;
+    // first header
     destStringStream << header;
+    // after header, reset line count
+    destStringStream << "#line 0\n";
+    // now parse
     int numErrors = scribe->scribe(destStringStream, srcStream, vars);
     // Close srcStream, not needed anymore
     srcStream.close();
