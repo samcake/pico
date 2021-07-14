@@ -107,3 +107,7 @@ void Device::executeBatch(const BatchPointer& batch) {
 void Device::presentSwapchain(const SwapchainPointer& swapchain) {
     _backend->presentSwapchain(swapchain);
 }
+
+void Device::flush() {
+    _backend->flush();
+}

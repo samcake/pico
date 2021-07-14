@@ -45,6 +45,7 @@ void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {
 void Batch::endPass() {}
 
 void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {}
+void Batch::clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) {}
 
 void Batch::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,

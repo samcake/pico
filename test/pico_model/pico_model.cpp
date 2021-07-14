@@ -47,6 +47,7 @@
 #include <uix/Window.h>
 #include <uix/CameraController.h>
 
+
 #include <vector>
 
 //--------------------------------------------------------------------------------------
@@ -123,6 +124,8 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     }
 }
 
+uint32_t appMode = 0;
+
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
@@ -198,14 +201,26 @@ int main(int argc, char *argv[])
     float cameraOrbitLength = camControl->zoomTo(sceneSphere);
     camera->setFar(cameraOrbitLength * 100.0f);
 
+
+    // A UV space camera to look at the uv space
+    auto uv_camera = std::make_shared<graphics::Camera>();
+    uv_camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
+    uv_camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
+    uv_camera->setOrthoHeight(1.0f);
+    uv_camera->setOrtho(true);
+    auto uv_camControl = std::make_shared< uix::CameraController >(uv_camera, true);
+
+
     // Presentation creation
 
     // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
-    uix::WindowInit windowInit { windowHandler, "Pico Ocean" };
+    uix::WindowInit windowInit { windowHandler, "Pico Model" };
     auto window = uix::Window::createWindow(windowInit);
+
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
+    uv_camera->setViewport(window->width(), window->height(), true);
 
     graphics::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
@@ -219,7 +234,7 @@ int main(int argc, char *argv[])
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
             frameSample = currentSample;
-            std::string title = std::string("Pico Terrain: ") + std::to_string((uint32_t) frameSample.beginRate())
+            std::string title = std::string("Pico Model: ") + std::to_string((uint32_t) frameSample.beginRate())
                               + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
                               + (camera->isOrtho()
                                     ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
@@ -235,6 +250,7 @@ int main(int argc, char *argv[])
         scene->_items.syncBuffer();
         scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+        uv_camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!
         viewport->present(swapchain);
@@ -248,6 +264,7 @@ int main(int argc, char *argv[])
         }
 
         camControl->onResize(e);
+        uv_camControl->onResize(e);
     };
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
@@ -262,9 +279,26 @@ int main(int argc, char *argv[])
             gzitem_item.setVisible(!gzitem_item.isVisible());
         }
 
-        if (e.state && e.key == uix::KEY_U) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().switchRenderUVSpace();
+        if (e.state && e.key == uix::KEY_0) {
+            // Cycle through the app mode
+            appMode = (appMode + 1) % 2; 
+
+            switch (appMode) {
+            case 0: {
+                // Switch the camera mode to 3d space
+
+                if (_modelDrawableInspectorFactory) {
+                    _modelDrawableInspectorFactory->editUniforms().renderUVSpace = false;
+                }
+            } break;
+            case 1: {
+                // Switch the camera mode to UV space
+
+                if (_modelDrawableInspectorFactory) {
+                    _modelDrawableInspectorFactory->editUniforms().renderUVSpace = true;
+                }
+            } break;
+
             }
         }
         if (e.state && e.key == uix::KEY_G) {
@@ -272,9 +306,25 @@ int main(int argc, char *argv[])
                 _modelDrawableInspectorFactory->editUniforms().switchDrawUVGrid();
             }
         }
-        if (e.state && e.key == uix::KEY_E) {
+        if (e.state && e.key == uix::KEY_L) {
             if (_modelDrawableInspectorFactory) {
                 _modelDrawableInspectorFactory->editUniforms().switchDrawUVEdges();
+            }
+        }
+        if (e.state && e.key == uix::KEY_P) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().switchDrawUVEdgeTexels();
+            }
+        }
+        if (e.state && e.key == uix::KEY_M) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().makeUVEdgeMap();
+            }
+        }
+
+        if (e.state && e.key == uix::KEY_F) {
+            if (_modelDrawableInspectorFactory) {
+                _modelDrawableInspectorFactory->editUniforms().doRunFilter();
             }
         }
 
@@ -294,16 +344,23 @@ int main(int argc, char *argv[])
     };
 
     windowHandler->_onMouseDelegate = [&](const uix::MouseEvent& e) {
-
-        if (camControl->onMouse(e)) {
+        // UV space mode
+        if (appMode == 1) {
+            (uv_camControl->onMouse(e)); {
+                if (_modelDrawableInspectorFactory) {
+                    _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterX = uv_camera->getEye().x;
+                    _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterY = uv_camera->getEye().y;
+                    _modelDrawableInspectorFactory->editUniforms().uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
+                }
+                
+                return;
+            }
             return;
         }
 
-        if (e.state & uix::MOUSE_MOVE) {
-            if (e.state & uix::MOUSE_LBUTTON) {
-            }
-            if (e.state & uix::MOUSE_MBUTTON) {
-            }
+        // Default app mode case appMode == 0
+        if (camControl->onMouse(e)) {
+            return;
         }
     };
  

@@ -34,7 +34,7 @@
 using namespace uix;
 
 
-CameraController::CameraController(const graphics::CameraPointer& cam) : _cam(cam) {
+CameraController::CameraController(const graphics::CameraPointer& cam, bool orthoNorthUp) : _cam(cam), _orthoNorthUp( orthoNorthUp ) {
 
 }
 
@@ -129,14 +129,14 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
             _controlData._translateRight = 0.0f;
         }
     }
-    if (e.key == Key::KEY_A) {
+    if (e.key == Key::KEY_A && _orthoNorthUp) {
         if (e.state) {
             _controlData._rotateLeft = 1.0f;
         } else {
             _controlData._rotateLeft = 0.0f;
         }
     }
-    if (e.key == Key::KEY_D) {
+    if (e.key == Key::KEY_D && _orthoNorthUp) {
         if (e.state) {
             _controlData._rotateRight = 1.0f;
         } else {
@@ -162,7 +162,7 @@ bool CameraController::onMouse(const MouseEvent& e) {
             _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
         }
         if (e.state & uix::MOUSE_RBUTTON) {
-            if (e.state & uix::MOUSE_CONTROL) {
+            if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {
                 float panScale = _controlData._boomLength * 0.001f;
                 if (_cam->isOrtho()) {
                     panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
@@ -172,15 +172,15 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
             }
             else {
-                float orbitScale = 0.01f;
-                _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                    float orbitScale = 0.01f;
+                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
             }
         }
     }
     else if (e.state & uix::MOUSE_WHEEL) {
         if (e.state & uix::MOUSE_CONTROL) {
             if (_cam->isOrtho()) {
-                float dollyScale = 0.08f;
+                float dollyScale = -0.08f;
                 float orbitLengthDelta = (e.wheel * dollyScale) * _controlData._boomLength;
                 _controlData._boomLength = _cam->boom(_controlData._boomLength, orbitLengthDelta);
             }
@@ -201,7 +201,7 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 _cam->pan(m_e1.x - m_e2.x, m_e1.y - m_e2.y);
             }
             else {
-                float dollyScale = 0.08f;
+                float dollyScale = 0.05f;
                 float orbitLengthDelta = (e.wheel * dollyScale) * _controlData._boomLength;
                 _controlData._boomLength = _cam->boom(_controlData._boomLength, orbitLengthDelta);
             }

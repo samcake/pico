@@ -40,8 +40,9 @@ namespace uix {
     class CameraController {
 
         graphics::CameraPointer _cam;
+        bool _orthoNorthUp{ false }; // in ortho mode, no rotate
     public:
-        CameraController(const graphics::CameraPointer& cam);
+        CameraController(const graphics::CameraPointer& cam, bool orthoNorthUp = false);
 
         struct ControlData {
             float _translateFront{ 0 };

@@ -48,9 +48,17 @@ namespace graphics {
 
     struct VISUALIZATION_API ModelDrawableInspectorUniforms {
         int numNodes{ 0 };
+        bool renderMakeUVEdgeMap{ true };
         bool renderUVSpace{ false };
         bool showUVGrid{ true };
+        bool showUVEdgeTexels{ true };
         bool showUVEdges{ true };
+
+        bool runFilter{ true };
+
+        float uvSpaceCenterX = 0.0f;
+        float uvSpaceCenterY = 0.0f;
+        float uvSpaceScale = 1.0f;
 
         void switchRenderUVSpace() {
             renderUVSpace = ! renderUVSpace;
@@ -61,12 +69,24 @@ namespace graphics {
         void switchDrawUVEdges() {
             showUVEdges = !showUVEdges;
         }
+        void switchDrawUVEdgeTexels() {
+            showUVEdgeTexels = !showUVEdgeTexels;
+        }
+        void makeUVEdgeMap() {
+            renderMakeUVEdgeMap = true;
+        }
+        void doRunFilter() {
+            runFilter = true;
+        }
         
         enum {
             // first bit is used internally
+            MAKE_EDGE_MAP_BIT = 0x00000001,
             RENDER_UV_SPACE_BIT = 0x00000002,
-            SHOW_UV_GRID_BIT = 0x00000004,
-            MAKE_EDGE_MAP_BIT = 0x00000008,
+            SHOW_UV_EDGE_TEXELS_BIT = 0x00000004,
+            SHOW_UV_GRID_BIT = 0x00000008,
+
+            DRAW_EDGE_LINE_BIT = 0x00000010,
         };
         uint32_t buildFlags() const;
     };
@@ -102,7 +122,12 @@ namespace graphics {
         ModelDrawableInspectorUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
         graphics::PipelineStatePointer _pipelineInspectUVMap;
+
         graphics::PipelineStatePointer _pipelineMakeSeamMap;
+        graphics::PipelineStatePointer _pipelineInspectUVSpace;
+
+
+        graphics::PipelineStatePointer _pipelineUVSpaceComputeBlur;
     };
     using ModelDrawableInspectorFactoryPointer = std::shared_ptr< ModelDrawableInspectorFactory>;
 
@@ -133,7 +158,11 @@ namespace graphics {
         graphics::TexturePointer _edgeTexture;
         graphics::FramebufferPointer _edgeFramebuffer;
 
-        graphics::DescriptorSetPointer  _descriptorSetMakeSeamMap;
+        graphics::DescriptorSetPointer  _descriptorSet_makeEdgeMap;
+
+        graphics::DescriptorSetPointer _descriptorSet_compute;
+
+        graphics::TexturePointer _computeTexture;
 
         ModelDrawableInspectorUniformsPointer _uniforms;
     };

@@ -120,6 +120,20 @@ void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, 
     }
 }
 
+void D3D12BatchBackend::clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) {
+
+    auto fb = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+    for (UINT i = 0; i < fb->_numRenderTargets; ++i) {
+        D3D12_CPU_DESCRIPTOR_HANDLE rtv{ fb->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + fb->_rtvDescriptorSize * i };
+        _commandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
+    }
+
+    if (fb->_dsvDescriptorHeap) {
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv{ fb->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr };
+        _commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
+    }
+}
+
 void D3D12BatchBackend::resourceBarrierTransition(
     ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
     const SwapchainPointer & swapchain, uint8_t currentIndex, uint32_t subresource) {

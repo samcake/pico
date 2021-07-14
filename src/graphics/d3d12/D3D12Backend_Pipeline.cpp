@@ -284,6 +284,7 @@ void D3D12PipelineStateBackend::fill_rasterizer_desc(const RasterizerState& src,
         D3D12_FILL_MODE_WIREFRAME
     };
     dst.FillMode = FillMode_to_d3d12[(int8_t)src.fillMode];
+    dst.FillMode = D3D12_FILL_MODE_SOLID;
 
     const D3D12_CULL_MODE CullMode_to_d3d12[]{
         D3D12_CULL_MODE_NONE,

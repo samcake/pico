@@ -82,6 +82,7 @@ namespace graphics {
         RasterizerState& withCullBack() { cullMode = CullMode::BACK; return (*this); }
         RasterizerState& withConservativeRasterizer() { conservativeRasterizerEnable = true; return (*this); }
         RasterizerState& withAntialiasedLine() { antialiasedLineEnable = true; return (*this); }
+        RasterizerState& withMultisample() { multisampleEnable = true; return (*this); }
      };
 }
 

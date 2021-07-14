@@ -56,6 +56,8 @@ namespace graphics {
 
         static const uint8_t CHAIN_NUM_FRAMES = 3;
 
+        void* nativeDevice() override { return _device.Get(); }
+
         // DirectX 12 Objects
         ComPtr<ID3D12Device2> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
@@ -97,7 +99,7 @@ namespace graphics {
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
 
-        void flush();
+        void flush() override;
 
         // Separate shader and pipeline state compilation as functions in order
         // to be able to live edit the shaders
@@ -156,6 +158,8 @@ namespace graphics {
         void endPass() override;
 
         void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) override;
+        void clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) override;
+
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const SwapchainPointer& swapchain, uint8_t currentIndex, uint32_t subresource) override;
@@ -223,6 +227,7 @@ namespace graphics {
         ComPtr<ID3D12Resource> _resource;
 
         D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
+        D3D12_UNORDERED_ACCESS_VIEW_DESC   _unorderedAccessViewDesc;
     };
 
     class D3D12ShaderBackend : public Shader {

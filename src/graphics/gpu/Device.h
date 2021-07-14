@@ -65,6 +65,11 @@ namespace graphics {
 
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
+
+        virtual void flush() = 0;
+
+
+        virtual void* nativeDevice() = 0;
     };
 
     class VISUALIZATION_API Device {
@@ -82,7 +87,6 @@ namespace graphics {
 
         // Factories
         SwapchainPointer createSwapchain(const SwapchainInit& init);
-        void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height);
 
         FramebufferPointer createFramebuffer(const FramebufferInit& init);
 
@@ -102,11 +106,21 @@ namespace graphics {
         DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init);
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);
 
+        // Operations
+
+        // resize swapchain calls a device flush
+        void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height);
+
+        // update a descriptor with a new set of objects
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects);
 
         // CommandQueue work
         void executeBatch(const BatchPointer& batch);
+        void flush();
+
         void presentSwapchain(const SwapchainPointer& swapchain);
+
+        void* nativeDevice() { return _backend->nativeDevice(); }
 
     private:
 #pragma warning(push)

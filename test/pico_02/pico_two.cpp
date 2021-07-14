@@ -39,19 +39,22 @@
 #include <graphics/render/Renderer.h>
 
 #include <uix/Window.h>
+#include <uix/Imgui.h>
 
 #include <vector>
 
 
 //--------------------------------------------------------------------------------------
-// pico 2: Draw a triangle
+// pico 2: Draw a triangle and use ImGui
 // introducing:
 // gpu::Batch
 // gpu::Shader
 // gpu::Pipeline State 
 // gpu::Buffer as Vertex & Index buffer
 // gpu::StreamLayout
-// gpu::RenderCallback
+// render::RenderCallback
+//
+// uix::Imgui
 
 //--------------------------------------------------------------------------------------
 
@@ -139,6 +142,7 @@ int main(int argc, char *argv[])
     graphics::DeviceInit deviceInit {};
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
+
     // Content creation
 
     // Let's allocate buffer
@@ -183,7 +187,6 @@ int main(int argc, char *argv[])
     // And a Pipeline
     graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
 
-
     // And now a render callback where we describe the rendering sequence
     graphics::RenderCallback renderCallback = [&](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
         core::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
@@ -218,6 +221,8 @@ int main(int argc, char *argv[])
 
         batch->drawIndexed(6, 0);
 
+        uix::Imgui::draw(batch);
+
         batch->endPass();
 
         batch->resourceBarrierTransition(
@@ -246,6 +251,11 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
+
+    // Setup Dear ImGui context with the gpuDevice and the brand new window
+    uix::Imgui::create();
+    uix::Imgui::setup(window, gpuDevice);
+
     graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
@@ -253,6 +263,7 @@ int main(int argc, char *argv[])
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
     windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
         // Measuring framerate
+        static uint64_t numSixtyFrame = 0;
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
         static std::chrono::high_resolution_clock clock;
@@ -271,12 +282,29 @@ int main(int argc, char *argv[])
             OutputDebugString(buffer);
             frameCounter = 0;
             elapsedSeconds = 0.0;
+            numSixtyFrame++;
         }
 
+
+        uix::Imgui::newFrame();
+
+        ImGui::Begin("Hello, world!");
+        ImGui::Text("This is some useful text.");
+        ImGui::Text((std::to_string(numSixtyFrame) + " - " + std::to_string(frameCounter)).c_str());
+        ImGui::End();
+        ImGui::Render();
 
         // Render!
         renderer->render(nullptr, swapchain);
     });
+
+    // On resize deal with it
+    windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
+        // only resize the swapchain when we re done with the resize
+        //if (e.over)
+        gpuDevice->flush();
+        gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
+    };
 
     // Render Loop 
     bool keepOnGoing = true;
@@ -284,6 +312,7 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
     }
 
+    uix::Imgui::destroy();
     core::api::destroy();
 
      return 0;

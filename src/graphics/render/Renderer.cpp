@@ -45,8 +45,10 @@ Renderer::~Renderer() {
 
 }
 
-void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapchain) {
-    if (_callback) {
+void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapchain, RenderCallback callback) {
+    if (callback) {
+        callback(camera, swapchain, _device, _batch);
+    } else if (_callback) {
         _callback(camera, swapchain, _device, _batch);
     } else {
         auto currentIndex = swapchain->currentIndex();
