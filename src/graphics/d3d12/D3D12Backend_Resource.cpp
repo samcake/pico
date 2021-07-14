@@ -245,10 +245,15 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
 
     // Default resource state is ready to be read from
     D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+  /* // We could do that but we are not, it s just easier to assume read only and do transition i think at the moment...
     if (init.usage & ResourceUsage::RENDER_TARGET) {
         // or render target if it s the usage
         res_states = D3D12_RESOURCE_STATE_RENDER_TARGET;
     }
+    if (init.usage & ResourceUsage::RW_RESOURCE_TEXTURE) {
+        // or rw aka uav
+        res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }*/
 
     D3D12_CLEAR_VALUE clear_value{};
     clear_value.Format = d3d12Format;
@@ -281,19 +286,6 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
         __uuidof(d3d12TextureBackend->_resource), (void**)&(d3d12TextureBackend->_resource));
    // assert(SUCCEEDED(hres));
 
-  //  p_texture->owns_image = true;
-   // }
-
- //   if (p_texture->usage & tr_texture_usage_sampled_image) {
-      /*  D3D12_SRV_DIMENSION view_dim = D3D12_SRV_DIMENSION_UNKNOWN;
-        switch (p_texture->type) {
-        case tr_texture_type_1d: view_dim = D3D12_SRV_DIMENSION_TEXTURE1D; break;
-        case tr_texture_type_2d: view_dim = D3D12_SRV_DIMENSION_TEXTURE2D; break;
-        case tr_texture_type_3d: view_dim = D3D12_SRV_DIMENSION_TEXTURE3D; break;
-        case tr_texture_type_cube: view_dim = D3D12_SRV_DIMENSION_TEXTURE2D; break;
-        }
-        assert(D3D12_SRV_DIMENSION_UNKNOWN != view_dim);
-*/
     d3d12TextureBackend->_shaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     d3d12TextureBackend->_shaderResourceViewDesc.Format = d3d12Format;
     
@@ -312,15 +304,26 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
         d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.MostDetailedMip = 0;
         d3d12TextureBackend->_shaderResourceViewDesc.Texture2D.ResourceMinLODClamp = 0.0f;
     }
-/*
-    if (p_texture->usage & tr_texture_usage_storage_image) {
-        p_texture->dx_uav_view_desc.Format = tr_util_to_dx_format(p_texture->format);
-        p_texture->dx_uav_view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        p_texture->dx_uav_view_desc.Texture2D.MipSlice = 0;
-        p_texture->dx_uav_view_desc.Texture2D.PlaneSlice = 0;
+
+    if (init.usage & ResourceUsage::RW_RESOURCE_TEXTURE) {
+        
+        d3d12TextureBackend->_unorderedAccessViewDesc.Format = d3d12Format;
+        
+        if (init.numSlices > 0) {
+            d3d12TextureBackend->_unorderedAccessViewDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2DArray.ArraySize = init.numSlices;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2DArray.FirstArraySlice = 0;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2DArray.MipSlice = 0;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2DArray.PlaneSlice = 0;
+        }
+        else {
+            d3d12TextureBackend->_unorderedAccessViewDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2D.MipSlice = 0;
+            d3d12TextureBackend->_unorderedAccessViewDesc.Texture2D.PlaneSlice = 0;
+        }
+
     }
 
-*/
     return d3d12TextureBackend;
 }
 

@@ -44,6 +44,7 @@
 
 #include "ModelInspectorPart_vert.h"
 #include "ModelInspectorPart_frag.h"
+#include "ModelUVSpaceProcessing_comp.h"
 
 #include <functional>
 //using namespace view3d;
@@ -67,12 +68,19 @@ namespace graphics
         uint32_t numMaterials{ 0 };
         uint32_t numEdges{ 0 };
         uint32_t drawMode{ 0 };
+
+
+        float _uvCenterX{ 0.0f };
+        float _uvCenterY{ 0.0f };
+        float _uvScale{ 1.0f };
     };
 
     
     uint32_t ModelDrawableInspectorUniforms::buildFlags() const {
         return (uint32_t) 
-                  (renderUVSpace) * RENDER_UV_SPACE_BIT 
+                  (renderMakeUVEdgeMap) * MAKE_EDGE_MAP_BIT
+                | (renderUVSpace) * RENDER_UV_SPACE_BIT
+                | (showUVEdgeTexels) * SHOW_UV_EDGE_TEXELS_BIT
                 | (showUVGrid) * SHOW_UV_GRID_BIT;
     }
 
@@ -89,8 +97,10 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
 
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 6, 1},  // Material
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 0, 1},  // Albedo Texture
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1},  // Material
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 11, 1},  // UVTool Texture
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
             { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
         };
 
@@ -113,12 +123,34 @@ namespace graphics
         graphics::DescriptorSetLayoutInit edge_descriptorSetLayoutInit{ edge_descriptorLayouts };
         auto edge_descriptorSetLayout = device->createDescriptorSetLayout(edge_descriptorSetLayoutInit);
 
+        // Let's describe the pipeline Descriptors layout for compute pass
+        graphics::DescriptorLayouts computeDescriptorLayouts{
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 1, sizeof(ModelObjectData) >> 2},
+
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 1, 1}, // Part
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 2, 1}, // Index
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 3, 1}, // Vertex
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 4, 1}, // Attrib
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 5, 1}, // Edge
+
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 9, 1},  // Material
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 10, 1},  // Albedo Texture
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 11, 1},  // UVTool Texture
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 1},
+
+            { graphics::DescriptorType::RW_RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 0, 1}, // render target!
+        };
+
+        graphics::DescriptorSetLayoutInit computeDescriptorSetLayoutInit{ computeDescriptorLayouts };
+        auto compute_descriptorSetLayout = device->createDescriptorSetLayout(computeDescriptorSetLayoutInit);
 
         // And a Pipeline
 
         // Load shaders (as stored in the resources)
         auto shader_vertex_src = ModelInspectorPart_vert::getSource();
         auto shader_pixel_src = ModelInspectorPart_frag::getSource();
+        auto shader_comp_src = ModelUVSpaceProcessing_comp::getSource();
+        auto shader_comp_src_file = ModelUVSpaceProcessing_comp::getSourceFilename();
 
         // test: create shader
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
@@ -129,12 +161,6 @@ namespace graphics
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);
-
-        graphics::ShaderInit whitepixelShaderInit{ graphics::ShaderType::PIXEL, "white", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
-        graphics::ShaderPointer whitepixelShader = device->createShader(whitepixelShaderInit);
-
-        graphics::ProgramInit edge_programInit{ vertexShader, whitepixelShader };
-        graphics::ShaderPointer edge_programShader = device->createProgram(edge_programInit);
 
         // Default pipeline draw faces
         graphics::GraphicsPipelineStateInit pipelineInit{
@@ -154,23 +180,62 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     descriptorSetLayout,
-                    RasterizerState().withAntialiasedLine().withConservativeRasterizer(),
+                    RasterizerState(),//.withAntialiasedLine().withConservativeRasterizer(),
                     true, // enable depth
                     BlendState()
         };
         _pipelineInspectUVMap = device->createGraphicsPipelineState(pipelineInitUVMap);
 
+        // Draw some widgets to debug and uderstand the UV space
+        graphics::ShaderInit uv_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer uv_vertexShader = device->createShader(uv_vertexShaderInit);
+        graphics::ShaderInit uv_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvspace", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer uv_pixelShader = device->createShader(uv_pixelShaderInit);
+
+        graphics::ProgramInit uv_programInit{ uv_vertexShader, uv_pixelShader };
+        graphics::ShaderPointer uv_programShader = device->createProgram(uv_programInit);
+
+        graphics::GraphicsPipelineStateInit pipelineInitUVSpace{
+            uv_programShader,
+            StreamLayout(),
+            graphics::PrimitiveTopology::TRIANGLE_STRIP,
+            descriptorSetLayout,
+            RasterizerState(),
+            false,
+            BlendState()
+        }; 
+        _pipelineInspectUVSpace = device->createGraphicsPipelineState(pipelineInitUVSpace);
+
         // Make UVMap pipeline draw edges
+        graphics::ShaderInit whitepixelShaderInit{ graphics::ShaderType::PIXEL, "white", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer whitepixelShader = device->createShader(whitepixelShaderInit);
+
+        graphics::ProgramInit edge_programInit{ vertexShader, whitepixelShader };
+        graphics::ShaderPointer edge_programShader = device->createProgram(edge_programInit);
+
         graphics::GraphicsPipelineStateInit pipelineInitMakeUVMap{
                     edge_programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     edge_descriptorSetLayout,
-                    RasterizerState().withConservativeRasterizer(),
+                    RasterizerState().withAntialiasedLine().withMultisample(),//.withConservativeRasterizer(),
                     false,
                     BlendState()
         };
         _pipelineMakeSeamMap = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
+
+        // First compute blur shader and pipeline
+        graphics::ShaderInit blur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_blur", "", shader_comp_src, shader_comp_src_file };
+        graphics::ShaderPointer blur_compShader = device->createShader(blur_compShaderInit);
+
+        // Let's describe the Compute pipeline Descriptors layout
+        graphics::ComputePipelineStateInit blur_compPipelineInit{
+            blur_compShader,
+            compute_descriptorSetLayout
+        };
+
+        _pipelineUVSpaceComputeBlur = device->createComputePipelineState(blur_compPipelineInit);
+
     }
 
 
@@ -246,6 +311,14 @@ namespace graphics
         auto edgeFramebuffer = device->createFramebuffer(edgeFramebufferInit);
         modelDrawable->_edgeFramebuffer = edgeFramebuffer;
 
+        // Making one "compute map" which will be rw destination from the compute kernel and then used to fetch from
+        TextureInit computeMapInit;
+        computeMapInit.width = modelDrawable->_albedoTexture->_init.width;
+        computeMapInit.height = modelDrawable->_albedoTexture->_init.height;
+        computeMapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
+        auto computeMap = device->createTexture(computeMapInit);
+        modelDrawable->_computeTexture = computeMap;
+
         return modelDrawable;
     }
 
@@ -286,8 +359,13 @@ namespace graphics
             graphics::DescriptorObject mb_rboDescriptorObject;
             mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
             graphics::DescriptorObject texDescriptorObject;
-         //   texDescriptorObject._textures.push_back(model.getAlbedoTexture());
-            texDescriptorObject._textures.push_back(model._edgeTexture);
+            texDescriptorObject._textures.push_back(model.getAlbedoTexture());
+            graphics::DescriptorObject computeDescriptorObject;
+            computeDescriptorObject._textures.push_back(model._computeTexture);
+
+            graphics::DescriptorObject uvtoolDescriptorObject;
+            uvtoolDescriptorObject._textures.push_back(model._edgeTexture);
+            
             graphics::DescriptorObject samplerDescriptorObject;
             graphics::SamplerInit samplerInit{};
             auto sampler = device->createSampler(samplerInit);
@@ -304,6 +382,8 @@ namespace graphics
 
                 mb_rboDescriptorObject,
                 texDescriptorObject,
+                uvtoolDescriptorObject,
+                computeDescriptorObject,
                 samplerDescriptorObject
             };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
@@ -316,7 +396,7 @@ namespace graphics
                 _pipelineMakeSeamMap->getDescriptorSetLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
-            model._descriptorSetMakeSeamMap = descriptorSet;
+            model._descriptorSet_makeEdgeMap = descriptorSet;
 
             // Assign the Camera UBO just created as the resource of the descriptorSet
             // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
@@ -337,15 +417,6 @@ namespace graphics
             graphics::DescriptorObject eb_rboDescriptorObject;
             eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
 
-       /*     graphics::DescriptorObject mb_rboDescriptorObject;
-            mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
-            graphics::DescriptorObject texDescriptorObject;
-            texDescriptorObject._textures.push_back(model.getAlbedoTexture());
-            graphics::DescriptorObject samplerDescriptorObject;
-            graphics::SamplerInit samplerInit{};
-            auto sampler = device->createSampler(samplerInit);
-            samplerDescriptorObject._samplers.push_back(sampler);
-            */
             graphics::DescriptorObjects descriptorObjects = {
                 camera_uboDescriptorObject,
                 transform_rboDescriptorObject,
@@ -353,11 +424,62 @@ namespace graphics
                 ib_rboDescriptorObject,
                 vb_rboDescriptorObject,
                 ab_rboDescriptorObject,
+                eb_rboDescriptorObject
+            };
+            device->updateDescriptorSet(descriptorSet, descriptorObjects);
+        }
+
+        {
+            // It s time to create a descriptorSet that matches the expected pipeline descriptor set
+            // then we will assign a uniform buffer in it
+            graphics::DescriptorSetInit descriptorSetInit{
+                _pipelineUVSpaceComputeBlur->getDescriptorSetLayout()
+            };
+            auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
+            model._descriptorSet_compute = descriptorSet;
+
+
+            graphics::DescriptorObject pb_rboDescriptorObject;
+            pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
+            graphics::DescriptorObject ib_rboDescriptorObject;
+            ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
+            graphics::DescriptorObject vb_rboDescriptorObject;
+            vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
+            graphics::DescriptorObject ab_rboDescriptorObject;
+            ab_rboDescriptorObject._buffers.push_back(model.getVertexAttribBuffer());
+
+            graphics::DescriptorObject eb_rboDescriptorObject;
+            eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
+
+            graphics::DescriptorObject mb_rboDescriptorObject;
+            mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
+            graphics::DescriptorObject texDescriptorObject;
+            texDescriptorObject._textures.push_back(model.getAlbedoTexture());
+
+            graphics::DescriptorObject uvtoolDescriptorObject;
+            uvtoolDescriptorObject._textures.push_back(model._edgeTexture);
+
+            graphics::DescriptorObject samplerDescriptorObject;
+            graphics::SamplerInit samplerInit{};
+            auto sampler = device->createSampler(samplerInit);
+            samplerDescriptorObject._samplers.push_back(sampler);
+
+            graphics::DescriptorObject dest_DescriptorObject;
+            dest_DescriptorObject._textures.push_back(model._computeTexture);
+
+            graphics::DescriptorObjects descriptorObjects = {
+                pb_rboDescriptorObject,
+                ib_rboDescriptorObject,
+                vb_rboDescriptorObject,
+                ab_rboDescriptorObject,
                 eb_rboDescriptorObject,
 
-          //      mb_rboDescriptorObject,
-          //      texDescriptorObject,
-          //      samplerDescriptorObject
+                mb_rboDescriptorObject,
+                texDescriptorObject,
+                uvtoolDescriptorObject,
+                samplerDescriptorObject,
+
+                dest_DescriptorObject
             };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
@@ -377,9 +499,11 @@ namespace graphics
         auto albedoTex = model.getAlbedoTexture();
         auto pmodel = &model;
         auto descriptorSet = model._descriptorSet;
-        auto makeSeamDescriptorSet = model._descriptorSetMakeSeamMap;
+        auto descriptorSet_make = model._descriptorSet_makeEdgeMap;
+        auto descriptorSet_compute = model._descriptorSet_compute;
         auto edgeMap = model._edgeTexture;
         auto edgeFramebuffer = model._edgeFramebuffer;
+        auto computeMap =model._computeTexture;
 
         // And now a render callback where we describe the rendering sequence
         {
@@ -389,16 +513,8 @@ namespace graphics
                 const graphics::SwapchainPointer& swapchain,
                 const graphics::DevicePointer& device,
                 const graphics::BatchPointer& batch) {
-            
-             /*   static bool first{ true };
-                if (first) {
-                    first = false;
-                    if (albedoTex) {
-                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                        batch->uploadTextureFromInitdata(device, albedoTex);
-                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
-                    }
-                }*/
+
+                // this all works because the main texture is populated in the very first drawcall on the first call
 
                 batch->bindPipeline(pipeline);
                 batch->setViewport(camera->getViewportRect());
@@ -425,9 +541,9 @@ namespace graphics
                     const graphics::SwapchainPointer& swapchain,
                     const graphics::DevicePointer& device,
                     const graphics::BatchPointer& batch) {
-
-                        auto flags = pmodel->getUniforms()->buildFlags();
-                        ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, numEdges, flags };
+                        auto params = pmodel->getUniforms().get();
+                        auto flags = params->buildFlags();
+                        ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale};
                         batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                         batch->draw(partNumIndices, 0);
                 };
@@ -461,8 +577,9 @@ namespace graphics
 
                         batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-                        auto flags = pmodel->getUniforms()->buildFlags();
-                        ModelObjectData odata{ (int32_t)node, (int32_t)-1, numNodes, numParts, numMaterials, numEdges, 1 | flags};
+                        auto params = pmodel->getUniforms().get();
+                        auto flags = params->buildFlags() | ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
+                        ModelObjectData odata{ (int32_t)node, (int32_t)-1, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
                         batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                         batch->draw(numEdges * 2, 0);
                     }
@@ -476,37 +593,115 @@ namespace graphics
         // Generate the edge seam map pass
         {
             auto edgesPipeline = _pipelineMakeSeamMap;
+            auto uvSpacePipeline = _pipelineInspectUVSpace;
+            auto computePipeline = _pipelineUVSpaceComputeBlur;
             auto makeEdges = new ModelDrawableInspectorEdges();
             makeEdges->_bound = model._bound;
             // And now a render callback where we describe the rendering sequence
-            graphics::DrawObjectCallback drawCallback = [pmodel, edgeFramebuffer, edgeMap, makeSeamDescriptorSet, edgesPipeline, numEdges, numNodes, numParts, numMaterials](
+            graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, edgeFramebuffer, edgeMap, computeMap,
+                descriptorSet_make, edgesPipeline,
+                descriptorSet, uvSpacePipeline,
+                descriptorSet_compute, computePipeline,
+                numEdges, numNodes, numParts, numMaterials](
                 const NodeID node,
                 const graphics::CameraPointer& camera,
                 const graphics::SwapchainPointer& swapchain,
                 const graphics::DevicePointer& device,
                 const graphics::BatchPointer& batch) {
-                    static bool first{ true };
-                    if (first) {
-                        first = false;
-                        //batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, edgeMap);
+                static bool first{ true };
+                auto params = pmodel->getUniforms().get();
 
-                        batch->bindFramebuffer(edgeFramebuffer);
-                        batch->bindPipeline(edgesPipeline);
+                if (first || pmodel->getUniforms()->renderMakeUVEdgeMap) {
 
-                        core::vec4 viewport(0, 0, edgeFramebuffer->width(), edgeFramebuffer->height());
-                        batch->setViewport(viewport);
-                        batch->setScissor(viewport);
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, edgeMap);
+                    batch->bindFramebuffer(edgeFramebuffer);
 
-                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, makeSeamDescriptorSet);
+                    batch->clear(edgeFramebuffer, {0, 0, 0, 0});
 
-                        auto flags = pmodel->getUniforms()->buildFlags();
-                        ModelObjectData odata{ (int32_t)node, (int32_t)-1, numNodes, numParts, numMaterials, numEdges, 1 | (uint32_t)ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT };
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                        batch->draw(numEdges * 2, 0);
+                    batch->bindPipeline(edgesPipeline);
+                    core::vec4 viewport(0, 0, edgeFramebuffer->width(), edgeFramebuffer->height());
+                    batch->setViewport(viewport);
+                    batch->setScissor(viewport);
 
-                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, edgeMap);
-                        batch->beginPass(swapchain, swapchain->currentIndex());
+                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_make);
+
+                    auto flags = ModelDrawableInspectorUniforms::RENDER_UV_SPACE_BIT | ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
+                    ModelObjectData odata{ (int32_t)node, (int32_t)0, numNodes, numParts, numMaterials, numEdges, flags };
+                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+
+                    batch->draw(numEdges * 2, 0);
+
+/*
+                    for (int d = 0; d < model._partAABBs.size(); ++d) {
+                        auto part = new ModelDrawableInspectorPart();
+                        part->_bound = model._partAABBs[d];
+
+                        auto partNumIndices = model._parts[d].numIndices;
+                        // And now a render callback where we describe the rendering sequence
+                        graphics::DrawObjectCallback drawCallback = [pmodel, d, partNumIndices, numEdges, numNodes, numParts, numMaterials, descriptorSet, pipeline](
+                            const NodeID node,
+                            const graphics::CameraPointer& camera,
+                            const graphics::SwapchainPointer& swapchain,
+                            const graphics::DevicePointer& device,
+                            const graphics::BatchPointer& batch) {
+                                auto params = pmodel->getUniforms().get();
+                                auto flags = params->buildFlags();
+                                ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                batch->draw(partNumIndices, 0);
+                        };
+
+                        part->_drawcall = drawCallback;
+
+                        auto partDrawable = scene->createDrawable(*part);
+                        drawables.emplace_back(partDrawable.id());
                     }
+*/
+
+
+
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, edgeMap);
+
+                    batch->beginPass(swapchain, swapchain->currentIndex());
+
+                    if (pmodel->getUniforms()->renderMakeUVEdgeMap) {
+                        pmodel->getUniforms()->renderMakeUVEdgeMap = false;
+                    }
+                }
+
+                if (first) {
+                    if (albedoTex) {
+                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                        batch->uploadTextureFromInitdata(device, albedoTex);
+                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                    }
+                }
+
+                if (params->runFilter) {
+                    batch->bindPipeline(computePipeline);
+                    batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
+
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
+                    batch->dispatch(computeMap->width() / 32, computeMap->height() / 32);
+                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
+
+                    params->runFilter = false;
+                }
+
+                // in uv space mode, draw uvspace inspect quad
+                if (params->renderUVSpace) {
+                    batch->bindPipeline(uvSpacePipeline);
+                    batch->setViewport(camera->getViewportRect());
+                    batch->setScissor(camera->getViewportRect());
+                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+
+                    auto flags = params->buildFlags();
+                    ModelObjectData odata{ (int32_t)node, (int32_t)0, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
+                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                    batch->draw(4, 0); // draw quad
+                }
+
+                first = false;
             };
 
             makeEdges->_drawcall = drawCallback;

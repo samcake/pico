@@ -1,6 +1,10 @@
-// Renderer.h 
-//
-// Sam Gateau - January 2020
+// Imgui.h 
+// Encapsulation of Dear Imgui for pico
+// 
+// Dear ImGui by Omar Cornut: Bloat-free Graphical User interface for C++ with minimal dependencies
+// https://github.com/ocornut/imgui
+// 
+// Sam Gateau - July 2021
 // 
 // MIT License
 //
@@ -26,27 +30,27 @@
 //
 #pragma once
 
-#include "render.h"
-#include <functional>
+#include <graphics/gpu/gpu.h>
+#include "Window.h"
 
-namespace graphics {
+#include "imgui/imgui.h"
 
-    using RenderCallback = std::function<void(const CameraPointer & camera, const SwapchainPointer & swapchain, const DevicePointer & device, const BatchPointer & batch)>;
+namespace uix {
+class Imgui {
+public:
 
-    class VISUALIZATION_API Renderer {
-    public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
-        ~Renderer();
+    static void create();
+    static void destroy();
+    static void setup(const WindowPointer& win, const graphics::DevicePointer& gpudevice);
 
-        void render(const CameraPointer& camera, const SwapchainPointer& swapchain, RenderCallback callback = nullptr);
+    static void newFrame();
+    static void draw(const graphics::BatchPointer& batch);
 
-    protected:
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        DevicePointer _device;
-        BatchPointer _batch;
-        RenderCallback _callback;
+    static void createDeviceObjects();
+    static void invalidateDeviceObjects();
 
-#pragma warning(pop)
-    };
+#ifdef WIN32
+    static bool customEventCallback(HWND win, UINT msg, WPARAM wparam, LPARAM lparam);
+#endif
+};
 }

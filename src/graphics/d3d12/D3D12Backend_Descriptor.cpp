@@ -67,7 +67,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         case DescriptorType::RESOURCE_BUFFER: cbvsrvuav_count += count; break;
         case DescriptorType::RW_RESOURCE_BUFFER: cbvsrvuav_count += count; break;
         case DescriptorType::RESOURCE_TEXTURE: cbvsrvuav_count += count; break;
-        case DescriptorType::TEXTURE_UAV: cbvsrvuav_count += count; break;
+        case DescriptorType::RW_RESOURCE_TEXTURE: cbvsrvuav_count += count; break;
         case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV: cbvsrvuav_count += count; break;
         case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: cbvsrvuav_count += count; break;
         case DescriptorType::PUSH_UNIFORM: push_count += count; break;
@@ -171,7 +171,7 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
                                                     break;
         case DescriptorType::RW_RESOURCE_BUFFER:
         case DescriptorType::STORAGE_TEXEL_BUFFER_UAV:
-        case DescriptorType::TEXTURE_UAV: {
+        case DescriptorType::RW_RESOURCE_TEXTURE: {
             range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
             range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
             assign_range = true;
@@ -242,7 +242,9 @@ DescriptorSetLayoutPointer D3D12Backend::createDescriptorSetLayout(const Descrip
         hres = D3D12SerializeRootSignature(&(desc.Desc_1_0), D3D_ROOT_SIGNATURE_VERSION_1_0, &sig_blob, &error_msgs);
     }
     picoAssert(SUCCEEDED(hres));
-
+    if (error_msgs) {
+        picoLog() << (char*)error_msgs->GetBufferPointer();
+    }
 
     hres = _device->CreateRootSignature(0, sig_blob->GetBufferPointer(), sig_blob->GetBufferSize(),
         __uuidof(descriptorLayout->_rootSignature), (void**)&(descriptorLayout->_rootSignature));
@@ -314,7 +316,7 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
             case DescriptorType::RESOURCE_BUFFER:
             case DescriptorType::RW_RESOURCE_BUFFER:
             case DescriptorType::RESOURCE_TEXTURE:
-            case DescriptorType::TEXTURE_UAV:
+            case DescriptorType::RW_RESOURCE_TEXTURE:
             case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV:
             case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: {
                 descriptorSet->_dxHeapOffsets[i] = cbvsrvuav_heap_offset;
@@ -465,7 +467,6 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         break;
 
         case DescriptorType::RW_RESOURCE_BUFFER:
-     //   case tr_descriptor_type_storage_texel_buffer_uav:
         {
             picoAssert(descriptorObject._buffers.size() >= descriptorLayout._count);
 
@@ -535,24 +536,38 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 cpuHandle.ptr += handle_inc_size;
             }
         }
-                                           break;
+        break;
 
-  /*      case tr_descriptor_type_texture_uav: {
-            assert(NULL != descriptor->textures);
+        case DescriptorType::RW_RESOURCE_TEXTURE:
+        {
+            picoAssert(descriptorObject._textures.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = p_renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
-            for (uint32_t i = 0; i < descriptor->count; ++i) {
-                assert(NULL != descriptor->textures[i]);
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
-                ID3D12Resource* resource = descriptor->textures[i]->dx_resource;
-                D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(descriptor->textures[i]->dx_uav_view_desc);
-                p_renderer->dx_device->CreateUnorderedAccessView(resource, NULL, view_desc, handle);
-                handle.ptr += handle_inc_size;
+            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
+
+            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
+            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+
+            for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
+                picoAssert((descriptorObject._textures[j].get()));
+                auto dxTex = static_cast<D3D12TextureBackend*> (descriptorObject._textures[j].get());
+
+                if (dxTex) {
+                    ID3D12Resource* resource = dxTex->_resource.Get();
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC* view_desc = &(dxTex->_unorderedAccessViewDesc);
+                    _device->CreateUnorderedAccessView(resource, NULL, view_desc, cpuHandle);
+                }
+                else {
+                    // this is an empty descriptor slot, probably bad
+                }
+                cpuHandle.ptr += handle_inc_size;
             }
         }
-                                           break;*/
+        break;
         }
     }
 

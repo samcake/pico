@@ -55,6 +55,7 @@ namespace graphics {
         virtual void endPass();
 
         virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth = 0.0f);
+        virtual void clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth = 0.0f);
 
         virtual void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,

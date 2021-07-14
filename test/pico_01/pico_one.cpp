@@ -36,13 +36,15 @@
 
 #include <uix/Window.h>
 
+
 //--------------------------------------------------------------------------------------
 // pico 1: Clear a swapchain
 // introducing:
 // gpu::Device
 // gpu::Swapchain
-// window::Window
 // render::Renderer
+// uix::Window
+
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -87,6 +89,7 @@ int main(int argc, char *argv[])
     graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
+
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
     windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
@@ -110,7 +113,6 @@ int main(int argc, char *argv[])
             frameCounter = 0;
             elapsedSeconds = 0.0;
         }
-
 
         // Render!
         // By default just clear the swapchain

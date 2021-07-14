@@ -1,3 +1,8 @@
+int MAKE_EDGE_MAP_BIT() { return 0x00000001; }
+int RENDER_UV_SPACE_BIT() { return 0x00000002; }
+int SHOW_UV_EDGE_TEXELS_BIT() { return 0x00000004;}
+int SHOW_UV_GRID_BIT() { return 0x00000008;}
+int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
 
 //
 // Paint API
@@ -49,9 +54,11 @@ struct Material {
     uint4 textures;
 };
 
-StructuredBuffer<Material>  material_array : register(t6);
+StructuredBuffer<Material>  material_array : register(t9);
 
-Texture2DArray uTex0 : register(t0);
+Texture2DArray uTex0 : register(t10);
+Texture2D uTex1 : register(t11);
+Texture2D uTex2 : register(t12);
 SamplerState uSampler0 : register(s0);
 
 //
@@ -84,6 +91,11 @@ cbuffer UniformBlock1 : register(b1) {
     int _numMaterials;
     int _numEdges;
     int _drawMode;
+
+
+    float _uvCenterX;
+    float _uvCenterY;
+    float _uvScale;
 }
 
 struct PixelShaderInput{
@@ -92,8 +104,26 @@ struct PixelShaderInput{
     float2 Texcoord : TEXCOORD;
 };
 
+
+// Drawgrid
+float3 drawGrid(float2 uv, float3 color) {
+    float tex_width, tex_height, tex_elements;
+    uTex0.GetDimensions(tex_width, tex_height, tex_elements);
+
+    float3 texcoord = float3(uv.x * tex_width, uv.y * tex_height, 1.0f);
+
+    float3 grid = paintStripe(texcoord, tex_width * 0.1f, 1.5f);
+    color = lerp(color, float3(1.0, 0.0, 0.0), grid.x);
+    color = lerp(color, float3(0.0, 1.0, 0.0), grid.y);
+
+    grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
+    color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
+
+    return color;
+}
+
 float4 main(PixelShaderInput IN) : SV_Target{
-    if (_drawMode & 1) {
+    if (_drawMode & DRAW_EDGE_LINE_BIT()) {
         return float4(1.0, 1.0, 0.0, 1.0);
     }
 
@@ -101,10 +131,13 @@ float4 main(PixelShaderInput IN) : SV_Target{
 //    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
 
-    float4 mapN = float4(0.0, 0.0, 0.0, 0.0);
+    float4 mapNor = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.y != -1) {
-        mapN = float4(uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz * 2.0 - 1.0, 1.0);
+        mapNor = float4(uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz, 1.0);
     }
+
+    float4 mapN = mapNor *2.0 - 1.0;
+
     float3 surf_normal = normalize(IN.Normal);
 
 
@@ -147,8 +180,8 @@ float4 main(PixelShaderInput IN) : SV_Target{
     
   //  normal = T;
 
-  //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
-   // baseColor = normal;
+   // baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
+   // baseColor = mapNor.xyz;
   //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
   //  baseColor = rainbowRGB(_partID, float(_numParts));
   //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
@@ -156,6 +189,16 @@ float4 main(PixelShaderInput IN) : SV_Target{
     
    //  baseColor = mapN;
 
+    // Compute map instead of baseColor
+    float4 compute = uTex2.Sample(uSampler0, IN.Texcoord.xy);
+    baseColor = lerp(baseColor, compute.xyz, (IN.Texcoord.x < IN.Texcoord.y));
+
+    // UV space tool map
+    float4 uvTool = uTex1.Sample(uSampler0, IN.Texcoord.xy);
+    // Draw edge pixels from edge map
+    if (_drawMode & SHOW_UV_EDGE_TEXELS_BIT()) {
+        baseColor = lerp(baseColor, float3(1.0f, 0.0f, 1.0f), uvTool.x);
+    }
 
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
     if (m.textures.w != -1) {
@@ -165,21 +208,8 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float3 color = shading * baseColor + emissiveColor;
 
     // Add uv stripes
-    if (_drawMode & 4) {
-        float tex_width, tex_height, tex_elements;
-        uTex0.GetDimensions(tex_width, tex_height, tex_elements);
-
-        float3 texcoord = float3(IN.Texcoord.x * tex_width, IN.Texcoord.y * tex_height, 1.0f);
-
-        float3 grid = paintStripe(texcoord, tex_width * 0.1f, 1.5f);
-        color = lerp(color, float3(1.0, 0.0, 0.0), grid.x);
-        color = lerp(color, float3(0.0, 1.0, 0.0), grid.y);
-
-        grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
-        color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
-
-        //float2 normalizedWidth = fwidth(IN.Texcoord);
-    // color = lerp(color, float3(normalizedWidth, 0.0), 1.0);
+    if (_drawMode & SHOW_UV_GRID_BIT()) {
+        color = drawGrid(IN.Texcoord, color);
     }
     
     return float4(color, 1.0);
@@ -188,4 +218,35 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
 float4 white(PixelShaderInput IN) : SV_Target{
     return float4(1.0, 1.0, 1.0, 1.0);
+}
+
+float4 main_uvspace(PixelShaderInput IN) : SV_Target{
+    
+    float3 color = float3(0,0,0);
+
+    int matIdx = part_array[_partID].material;
+    Material m = material_array[matIdx];
+
+    if (m.textures.x != -1) {
+        color = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.x)).xyz;
+    }
+
+  //  color = mapN.xyz;
+
+    // Compute map
+    float4 compute = uTex2.Sample(uSampler0, IN.Texcoord.xy);
+    color = lerp(color, compute.xyz, (IN.Texcoord.x < IN.Texcoord.y));
+
+    float4 uvTool = uTex1.Sample(uSampler0, IN.Texcoord.xy);
+    // Draw edge pixels from edge map
+    if (_drawMode & SHOW_UV_EDGE_TEXELS_BIT()) {
+        color = lerp(color, float3(0.0f, 1.0f, 1.0f), uvTool.x);
+    }
+
+      // Add uv stripes
+    if (_drawMode & SHOW_UV_GRID_BIT()) {
+        color = drawGrid(IN.Texcoord, color);
+    }
+
+    return float4(color, 1.0);
 }

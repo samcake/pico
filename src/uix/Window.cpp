@@ -29,6 +29,8 @@
 #include <map>
 #include <iostream>
 
+#include "Imgui.h"
+
 using namespace uix;
 
 #ifdef WIN32
@@ -89,6 +91,7 @@ public:
         }
     }
     static LRESULT CALLBACK windowProc(HWND window, UINT msg, WPARAM wparam, LPARAM lparam) {
+
         switch (msg) {
         case WM_CREATE:
             createCallback(window);
@@ -123,6 +126,10 @@ public:
     }
 
     LRESULT eventCallback(UINT msg, WPARAM wparam, LPARAM lparam) {
+        if (Imgui::customEventCallback(_sysWindow, msg, wparam, lparam)) {
+            return true;
+        }
+
         switch (msg) {
         // These 2 events will never be caught here
         // case WM_CREATE:

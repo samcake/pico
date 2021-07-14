@@ -1,5 +1,10 @@
 #define mat43 float4x3
 
+int MAKE_EDGE_MAP_BIT() { return 0x00000001; }
+int RENDER_UV_SPACE_BIT() { return 0x00000002; }
+int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+
+
 //
 // Transform API
 //
@@ -230,6 +235,16 @@ cbuffer UniformBlock1 : register(b1) {
     int _numMaterials;
     int _numEdges;
     int _drawMode;
+
+    float _uvCenterX;
+    float _uvCenterY;
+    float _uvScale;
+}
+
+float4 uvSpaceClipPos(float2 uv) {
+    float2 eyeUV = uv - float2(_uvCenterX, _uvCenterY);
+    return orthoClipFromEyeSpace(_projection.aspectRatio(),  2.0f * _uvScale
+    , 0.0f, 2.0f, float3( eyeUV, 1.0f));
 }
 
 struct VertexShaderOutput
@@ -252,7 +267,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     }
 
     // draw edges ?
-    if (_drawMode & 1) {
+    if (_drawMode & DRAW_EDGE_LINE_BIT()) {
         uint eidx = vidx / 2;
         int evidx = vidx % 2; 
         Edge edge = edge_array[eidx];
@@ -307,17 +322,36 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     OUT.Normal = normal;
     OUT.Texcoord = texcoord;
 
-    if (_drawMode & 2) {
-        OUT.Position = orthoClipFromEyeSpace(_projection.aspectRatio(), 2.0f, 0.0f, 2.0f,
-                                             float3(2 * texcoord - float2(1.0, 1.0), 1.0f));
-    } else if (_drawMode & 8) {
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+    } else if (_drawMode & MAKE_EDGE_MAP_BIT()) {
+        float2 uv = 2 * texcoord - float2(1.0, 1.0);
+        //uv.x += 0.5 * 1.0/ 2048.0f;
+        //uv.y -= 0.5 * 1.0/ 2048.0f;
         OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
-            float3(2 * texcoord - float2(1.0, 1.0), 1.0f));
+            float3(uv, 1.0f));
         OUT.Position.y = -OUT.Position.y;
     }
 
 
     
+    return OUT;
+}
+
+VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
+    uint tidx = vidx / 2;
+    uint tvidx = vidx % 2;
+
+    float2 texcoord = float2(float(tidx), float(tvidx));
+    
+    VertexShaderOutput OUT;
+
+    OUT.Position = uvSpaceClipPos(texcoord);
+    OUT.EyePos = OUT.Position;
+
+    OUT.Normal = float3(0.0, 0.0, 1.0);
+    OUT.Texcoord = texcoord;
+
     return OUT;
 }
 

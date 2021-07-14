@@ -246,7 +246,7 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
         sw->_init.width = std::max(1U, width);
         sw->_init.height = std::max(1U, height);
 
-        flush();
+        flush(); // make sure the swapchain is not in use anymore
 
         for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
         {
