@@ -73,16 +73,10 @@ namespace graphics
         float _uvCenterX{ 0.0f };
         float _uvCenterY{ 0.0f };
         float _uvScale{ 1.0f };
-    };
+        float _colorMapBlend{ 0.5f };
 
-    
-    uint32_t ModelDrawableInspectorUniforms::buildFlags() const {
-        return (uint32_t) 
-                  (renderMakeUVEdgeMap) * MAKE_EDGE_MAP_BIT
-                | (renderUVSpace) * RENDER_UV_SPACE_BIT
-                | (showUVEdgeTexels) * SHOW_UV_EDGE_TEXELS_BIT
-                | (showUVGrid) * SHOW_UV_GRID_BIT;
-    }
+        float _kernelRadius{ 5.0f };
+    };
 
     void ModelDrawableInspectorFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
@@ -101,7 +95,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 11, 1},  // UVTool Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 2},
         };
 
         graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
@@ -125,7 +119,7 @@ namespace graphics
 
         // Let's describe the pipeline Descriptors layout for compute pass
         graphics::DescriptorLayouts computeDescriptorLayouts{
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 1, sizeof(ModelObjectData) >> 2},
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 0, sizeof(ModelObjectData) >> 2},
 
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 1, 1}, // Part
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 2, 1}, // Index
@@ -207,14 +201,14 @@ namespace graphics
         _pipelineInspectUVSpace = device->createGraphicsPipelineState(pipelineInitUVSpace);
 
         // Make UVMap pipeline draw edges
-        graphics::ShaderInit whitepixelShaderInit{ graphics::ShaderType::PIXEL, "white", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
-        graphics::ShaderPointer whitepixelShader = device->createShader(whitepixelShaderInit);
+        graphics::ShaderInit makeSeamMap_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_makeSeamMap", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer makeSeamMap_pixelShader = device->createShader(makeSeamMap_pixelShaderInit);
 
-        graphics::ProgramInit edge_programInit{ vertexShader, whitepixelShader };
-        graphics::ShaderPointer edge_programShader = device->createProgram(edge_programInit);
+        graphics::ProgramInit seam_programInit{ vertexShader, makeSeamMap_pixelShader };
+        graphics::ShaderPointer seam_programShader = device->createProgram(seam_programInit);
 
         graphics::GraphicsPipelineStateInit pipelineInitMakeUVMap{
-                    edge_programShader,
+                    seam_programShader,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     edge_descriptorSetLayout,
@@ -222,7 +216,9 @@ namespace graphics
                     false,
                     BlendState()
         };
-        _pipelineMakeSeamMap = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
+        _pipelineMakeSeamMap_edge = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
+        pipelineInitMakeUVMap.primitiveTopology = graphics::PrimitiveTopology::TRIANGLE;
+        _pipelineMakeSeamMap_face = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
 
         // First compute blur shader and pipeline
         graphics::ShaderInit blur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_blur", "", shader_comp_src, shader_comp_src_file };
@@ -371,6 +367,10 @@ namespace graphics
             auto sampler = device->createSampler(samplerInit);
             samplerDescriptorObject._samplers.push_back(sampler);
 
+            samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
+            auto samplerL = device->createSampler(samplerInit);
+            samplerDescriptorObject._samplers.push_back(samplerL);
+
             graphics::DescriptorObjects descriptorObjects = {
                 camera_uboDescriptorObject,
                 transform_rboDescriptorObject, 
@@ -393,7 +393,7 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipelineMakeSeamMap->getDescriptorSetLayout()
+                _pipelineMakeSeamMap_edge->getDescriptorSetLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_makeEdgeMap = descriptorSet;
@@ -542,10 +542,18 @@ namespace graphics
                     const graphics::DevicePointer& device,
                     const graphics::BatchPointer& batch) {
                         auto params = pmodel->getUniforms().get();
-                        auto flags = params->buildFlags();
-                        ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale};
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                        batch->draw(partNumIndices, 0);
+                        if (params->render3DModel) {
+                            auto flags = params->buildFlags();
+                            ModelObjectData odata{
+                                (int32_t)node,
+                                (int32_t)d,
+                                numNodes, numParts, numMaterials, numEdges,
+                                flags,
+                                params->uvSpaceCenterX, params->uvSpaceCenterY,
+                                params->uvSpaceScale, params->colorMapBlend};
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            batch->draw(partNumIndices, 0);
+                        }
                 };
 
                 part->_drawcall = drawCallback;
@@ -579,7 +587,11 @@ namespace graphics
 
                         auto params = pmodel->getUniforms().get();
                         auto flags = params->buildFlags() | ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
-                        ModelObjectData odata{ (int32_t)node, (int32_t)-1, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
+                        ModelObjectData odata{ (int32_t)node, (int32_t)-1,
+                            numNodes, numParts, numMaterials, numEdges,
+                            flags,
+                            params->uvSpaceCenterX, params->uvSpaceCenterY,
+                            params->uvSpaceScale, params->colorMapBlend };
                         batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                         batch->draw(numEdges * 2, 0);
                     }
@@ -592,14 +604,15 @@ namespace graphics
 
         // Generate the edge seam map pass
         {
-            auto edgesPipeline = _pipelineMakeSeamMap;
+            auto seamPipeline_edge = _pipelineMakeSeamMap_edge;
+            auto seamPipeline_face = _pipelineMakeSeamMap_face;
             auto uvSpacePipeline = _pipelineInspectUVSpace;
             auto computePipeline = _pipelineUVSpaceComputeBlur;
             auto makeEdges = new ModelDrawableInspectorEdges();
             makeEdges->_bound = model._bound;
             // And now a render callback where we describe the rendering sequence
             graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, edgeFramebuffer, edgeMap, computeMap,
-                descriptorSet_make, edgesPipeline,
+                descriptorSet_make, seamPipeline_edge, seamPipeline_face,
                 descriptorSet, uvSpacePipeline,
                 descriptorSet_compute, computePipeline,
                 numEdges, numNodes, numParts, numMaterials](
@@ -611,62 +624,62 @@ namespace graphics
                 static bool first{ true };
                 auto params = pmodel->getUniforms().get();
 
-                if (first || pmodel->getUniforms()->renderMakeUVEdgeMap) {
+                if (params->renderMakeUVEdgeMap) {
 
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, edgeMap);
                     batch->bindFramebuffer(edgeFramebuffer);
 
                     batch->clear(edgeFramebuffer, {0, 0, 0, 0});
 
-                    batch->bindPipeline(edgesPipeline);
                     core::vec4 viewport(0, 0, edgeFramebuffer->width(), edgeFramebuffer->height());
                     batch->setViewport(viewport);
                     batch->setScissor(viewport);
 
+
+
+                    // Draw faces of the mesh in the edge map
+                    batch->bindPipeline(seamPipeline_face);
+
+                    // descriptor is bound for both passes since it s the same layout signature
                     batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_make);
 
-                    auto flags = ModelDrawableInspectorUniforms::RENDER_UV_SPACE_BIT | ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
-                    ModelObjectData odata{ (int32_t)node, (int32_t)0, numNodes, numParts, numMaterials, numEdges, flags };
-                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                    for (int d = 0; d < pmodel->_partAABBs.size(); ++d) {
 
-                    batch->draw(numEdges * 2, 0);
-
-/*
-                    for (int d = 0; d < model._partAABBs.size(); ++d) {
-                        auto part = new ModelDrawableInspectorPart();
-                        part->_bound = model._partAABBs[d];
-
-                        auto partNumIndices = model._parts[d].numIndices;
-                        // And now a render callback where we describe the rendering sequence
-                        graphics::DrawObjectCallback drawCallback = [pmodel, d, partNumIndices, numEdges, numNodes, numParts, numMaterials, descriptorSet, pipeline](
-                            const NodeID node,
-                            const graphics::CameraPointer& camera,
-                            const graphics::SwapchainPointer& swapchain,
-                            const graphics::DevicePointer& device,
-                            const graphics::BatchPointer& batch) {
-                                auto params = pmodel->getUniforms().get();
-                                auto flags = params->buildFlags();
-                                ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                                batch->draw(partNumIndices, 0);
-                        };
-
-                        part->_drawcall = drawCallback;
-
-                        auto partDrawable = scene->createDrawable(*part);
-                        drawables.emplace_back(partDrawable.id());
+                        auto partNumIndices = pmodel->_parts[d].numIndices;
+                        auto flags =
+                            ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT;
+                        ModelObjectData odata{ (int32_t)node, (int32_t)d,
+                            numNodes, numParts, numMaterials, numEdges,
+                            flags,
+                            params->uvSpaceCenterX, params->uvSpaceCenterY,
+                            params->uvSpaceScale, params->colorMapBlend };
+                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                        batch->draw(partNumIndices, 0);
                     }
-*/
 
+                    // Draw the edges over
+                    {
+                        batch->bindPipeline(seamPipeline_edge);
+                        auto flags =
+                        ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT |
+                        ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
+                        ModelObjectData odata{ (int32_t)node, (int32_t)-1,
+                                numNodes, numParts, numMaterials, numEdges,
+                                flags,
+                                params->uvSpaceCenterX, params->uvSpaceCenterY,
+                                params->uvSpaceScale, params->colorMapBlend };
+                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
+                        batch->draw(numEdges * 2, 0);
+                    }
 
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, edgeMap);
 
                     batch->beginPass(swapchain, swapchain->currentIndex());
 
-                    if (pmodel->getUniforms()->renderMakeUVEdgeMap) {
-                        pmodel->getUniforms()->renderMakeUVEdgeMap = false;
-                    }
+
+                   // params->renderMakeUVEdgeMap = false;
+
                 }
 
                 if (first) {
@@ -680,6 +693,15 @@ namespace graphics
                 if (params->runFilter) {
                     batch->bindPipeline(computePipeline);
                     batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
+
+                    auto flags = params->buildFlags();
+                    ModelObjectData odata{ (int32_t)node, (int32_t)0,
+                        numNodes, numParts, numMaterials, numEdges,
+                        flags,
+                        params->uvSpaceCenterX, params->uvSpaceCenterY,
+                        params->uvSpaceScale, params->colorMapBlend,
+                        params->kernelRadius };
+                    batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
                     batch->dispatch(computeMap->width() / 32, computeMap->height() / 32);
@@ -696,7 +718,11 @@ namespace graphics
                     batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
                     auto flags = params->buildFlags();
-                    ModelObjectData odata{ (int32_t)node, (int32_t)0, numNodes, numParts, numMaterials, numEdges, flags, params->uvSpaceCenterX, params->uvSpaceCenterY, params->uvSpaceScale };
+                    ModelObjectData odata{ (int32_t)node, (int32_t)0,
+                        numNodes, numParts, numMaterials, numEdges,
+                        flags,
+                        params->uvSpaceCenterX, params->uvSpaceCenterY,
+                        params->uvSpaceScale, params->colorMapBlend };
                     batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                     batch->draw(4, 0); // draw quad
                 }

@@ -48,30 +48,29 @@ namespace graphics {
 
     struct VISUALIZATION_API ModelDrawableInspectorUniforms {
         int numNodes{ 0 };
-        bool renderMakeUVEdgeMap{ true };
-        bool renderUVSpace{ false };
-        bool showUVGrid{ true };
-        bool showUVEdgeTexels{ true };
-        bool showUVEdges{ true };
+        bool showUVGrid{ false };
+        bool showUVEdgeTexels{ false };
+        bool showUVMesh{ true };
 
+        bool showUVEdges{ false };
+
+        bool render3DModel{ false };
+        bool renderUVSpace{ false };
+  
+
+        bool renderMakeUVEdgeMap{ true };
         bool runFilter{ true };
+        bool maskOutsideUV{ true };
+        bool linearSampler{ false };
 
         float uvSpaceCenterX = 0.0f;
         float uvSpaceCenterY = 0.0f;
         float uvSpaceScale = 1.0f;
+        float colorMapBlend = 0.5f;
 
-        void switchRenderUVSpace() {
-            renderUVSpace = ! renderUVSpace;
-        }
-        void switchDrawUVGrid() {
-            showUVGrid = ! showUVGrid;
-        }
-        void switchDrawUVEdges() {
-            showUVEdges = !showUVEdges;
-        }
-        void switchDrawUVEdgeTexels() {
-            showUVEdgeTexels = !showUVEdgeTexels;
-        }
+        float kernelRadius = 5.0f;
+
+ 
         void makeUVEdgeMap() {
             renderMakeUVEdgeMap = true;
         }
@@ -81,14 +80,29 @@ namespace graphics {
         
         enum {
             // first bit is used internally
-            MAKE_EDGE_MAP_BIT = 0x00000001,
-            RENDER_UV_SPACE_BIT = 0x00000002,
+            RENDER_UV_SPACE_BIT = 0x00000001,
+            SHOW_UV_MESH_BIT = 0x00000002,
             SHOW_UV_EDGE_TEXELS_BIT = 0x00000004,
             SHOW_UV_GRID_BIT = 0x00000008,
 
             DRAW_EDGE_LINE_BIT = 0x00000010,
+            MASK_OUTSIDE_UV_BIT = 0x00000020,
+            LINEAR_SAMPLER_BIT = 0x00000040,
+
+            MAKE_EDGE_MAP_BIT = 0x00000100,
+
         };
-        uint32_t buildFlags() const;
+        uint32_t buildFlags() const {
+            return (uint32_t)
+                (renderUVSpace)*RENDER_UV_SPACE_BIT
+                | (showUVMesh)*SHOW_UV_MESH_BIT
+                | (showUVEdgeTexels)*SHOW_UV_EDGE_TEXELS_BIT
+                | (showUVGrid)*SHOW_UV_GRID_BIT
+
+                | (maskOutsideUV)*MASK_OUTSIDE_UV_BIT
+                | (linearSampler)*LINEAR_SAMPLER_BIT
+                ;
+        }
     };
     using ModelDrawableInspectorUniformsPointer = std::shared_ptr<ModelDrawableInspectorUniforms>;
 
@@ -123,7 +137,9 @@ namespace graphics {
         graphics::PipelineStatePointer _pipeline;
         graphics::PipelineStatePointer _pipelineInspectUVMap;
 
-        graphics::PipelineStatePointer _pipelineMakeSeamMap;
+        graphics::PipelineStatePointer _pipelineMakeSeamMap_edge;
+        graphics::PipelineStatePointer _pipelineMakeSeamMap_face;
+
         graphics::PipelineStatePointer _pipelineInspectUVSpace;
 
 

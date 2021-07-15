@@ -272,38 +272,7 @@ void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSet
                 _commandList->SetComputeRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
             } break;
         }
-/*
-        switch (p_descriptor_set->descriptors[i].type) {
-        case tr_descriptor_type_sampler: {
-            D3D12_GPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_sampler_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = p_cmd->cmd_pool->renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
-            p_cmd->dx_cmd_list->SetGraphicsRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
-        }
-                                       break;
-
-        case tr_descriptor_type_uniform_buffer_cbv:
-        case tr_descriptor_type_storage_buffer_srv:
-        case tr_descriptor_type_storage_buffer_uav:
-        case tr_descriptor_type_texture_srv:
-        case tr_descriptor_type_texture_uav:
-        case tr_descriptor_type_uniform_texel_buffer_srv:
-        case tr_descriptor_type_storage_texel_buffer_uav: {
-            D3D12_GPU_DESCRIPTOR_HANDLE handle = p_descriptor_set->dx_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = p_cmd->cmd_pool->renderer->dx_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-            handle.ptr += descriptor->dx_heap_offset * handle_inc_size;
-            if (p_pipeline->type == tr_pipeline_type_graphics) {
-                p_cmd->dx_cmd_list->SetGraphicsRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
-            }
-            else if (p_pipeline->type == tr_pipeline_type_compute) {
-                p_cmd->dx_cmd_list->SetComputeRootDescriptorTable(descriptor->dx_root_parameter_index, handle);
-            }
-        }
-                                                        break;
-        }
-*/
     }
-    
 }
 
 void D3D12BatchBackend::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {
@@ -315,6 +284,8 @@ void D3D12BatchBackend::bindPushUniform(PipelineType type, uint32_t slot, uint32
         _commandList->SetComputeRoot32BitConstants(slot, size >> 2, data, 0);
     } break;
     }
+    // TODO: THe slot is actually the position of the rootsignature entry, NOT the index of the UBO slot used for it
+    // Need to address that...
 }
 
 

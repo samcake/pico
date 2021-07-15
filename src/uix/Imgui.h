@@ -31,6 +31,7 @@
 #pragma once
 
 #include <graphics/gpu/gpu.h>
+#include <graphics/render/render.h>
 #include "Window.h"
 
 #include "imgui/imgui.h"
@@ -52,5 +53,11 @@ public:
 #ifdef WIN32
     static bool customEventCallback(HWND win, UINT msg, WPARAM wparam, LPARAM lparam);
 #endif
+
+    static void standardPostSceneRenderCallback(const graphics::CameraPointer& camera,
+                                                const graphics::SwapchainPointer& swapchain,
+                                                const graphics::DevicePointer& device,
+                                                const graphics::BatchPointer& batch);
+
 };
 }

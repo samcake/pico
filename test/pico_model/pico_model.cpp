@@ -45,6 +45,7 @@
 #include <graphics/drawables/ModelDrawableInspector.h>
 
 #include <uix/Window.h>
+#include <uix/Imgui.h>
 #include <uix/CameraController.h>
 
 
@@ -79,10 +80,15 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
   // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-   std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
- //   std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
-
+ //  std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
+    //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
+    //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
+    std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
     
+
+
 
  //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
 
@@ -124,7 +130,14 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     }
 }
 
-uint32_t appMode = 0;
+struct AppState {
+
+    uint32_t appMode = 0;
+    uint32_t makeUVMapFrame = 0;
+    uint32_t makeFilteredMapFrame = 0;
+};
+
+AppState state;
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -159,7 +172,8 @@ int main(int argc, char *argv[])
     camera->setFocal(0.1f);
 
     // The viewport managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice);
+    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice,
+        uix::Imgui::standardPostSceneRenderCallback);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -219,6 +233,10 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler, "Pico Model" };
     auto window = uix::Window::createWindow(windowInit);
 
+    // Setup Dear ImGui context with the gpuDevice and the brand new window
+    uix::Imgui::create();
+    uix::Imgui::setup(window, gpuDevice);
+
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
     uv_camera->setViewport(window->width(), window->height(), true);
 
@@ -246,11 +264,60 @@ int main(int argc, char *argv[])
 
         if (doAnimate) {
         }
+        uix::Imgui::newFrame();
+
+        if (ImGui::Begin("UV Seams")) {
+            if (_modelDrawableInspectorFactory) {
+                auto& params = _modelDrawableInspectorFactory->editUniforms();
+                if (ImGui::Checkbox("UV Space", &params.renderUVSpace)) {
+                    state.appMode = params.renderUVSpace;
+                    // when switching to UV space, hide 3d model
+                    if (params.renderUVSpace) {
+                        params.render3DModel = false;
+                    }
+                }
+
+                if (params.renderUVSpace) {
+                    ImGui::Checkbox("3D pass", &params.render3DModel);
+                } else {
+                    params.render3DModel = true; // render 3d model in 3d view always
+                }
+
+                ImGui::Checkbox("Show UV Grid", &params.showUVGrid);
+                ImGui::Checkbox("Show Edge Lines", &params.showUVEdges);
+                ImGui::Checkbox("Show Edge Texels", &params.showUVEdgeTexels);
+
+
+                ImGui::Checkbox("Show UV Mesh", &params.showUVMesh);
+                ImGui::Checkbox("Linear sampler", &params.linearSampler);
+
+                ImGui::SliderFloat("Filtered Map", &params.colorMapBlend, 0.0f, 1.0f);
+
+                if (ImGui::Button((std::string("Make UV map ") + std::to_string(state.makeUVMapFrame)).c_str())) {
+                    params.makeUVEdgeMap();
+                    state.makeUVMapFrame++;
+                }
+                bool runFilter = false;
+                runFilter |= ImGui::Button((std::string("Make Filtered map ") + std::to_string(state.makeFilteredMapFrame)).c_str());
+                runFilter |= ImGui::Checkbox("Mask outside", &params.maskOutsideUV);
+                runFilter |= ImGui::SliderFloat("Kernel radius", &params.kernelRadius, 0.0f, 32.0f);
+
+                if (runFilter) {
+                    params.doRunFilter();
+                    state.makeFilteredMapFrame++;
+                }
+
+            }
+        }
+        ImGui::End();
 
         scene->_items.syncBuffer();
         scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
         uv_camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+        _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterX = uv_camera->getEye().x;
+        _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterY = uv_camera->getEye().y;
+        _modelDrawableInspectorFactory->editUniforms().uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
 
         // Render!
         viewport->present(swapchain);
@@ -279,55 +346,6 @@ int main(int argc, char *argv[])
             gzitem_item.setVisible(!gzitem_item.isVisible());
         }
 
-        if (e.state && e.key == uix::KEY_0) {
-            // Cycle through the app mode
-            appMode = (appMode + 1) % 2; 
-
-            switch (appMode) {
-            case 0: {
-                // Switch the camera mode to 3d space
-
-                if (_modelDrawableInspectorFactory) {
-                    _modelDrawableInspectorFactory->editUniforms().renderUVSpace = false;
-                }
-            } break;
-            case 1: {
-                // Switch the camera mode to UV space
-
-                if (_modelDrawableInspectorFactory) {
-                    _modelDrawableInspectorFactory->editUniforms().renderUVSpace = true;
-                }
-            } break;
-
-            }
-        }
-        if (e.state && e.key == uix::KEY_G) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().switchDrawUVGrid();
-            }
-        }
-        if (e.state && e.key == uix::KEY_L) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().switchDrawUVEdges();
-            }
-        }
-        if (e.state && e.key == uix::KEY_P) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().switchDrawUVEdgeTexels();
-            }
-        }
-        if (e.state && e.key == uix::KEY_M) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().makeUVEdgeMap();
-            }
-        }
-
-        if (e.state && e.key == uix::KEY_F) {
-            if (_modelDrawableInspectorFactory) {
-                _modelDrawableInspectorFactory->editUniforms().doRunFilter();
-            }
-        }
-
         bool zoomToScene = false;
         if (e.state && e.key == uix::KEY_1) {
             // look side
@@ -345,7 +363,7 @@ int main(int argc, char *argv[])
 
     windowHandler->_onMouseDelegate = [&](const uix::MouseEvent& e) {
         // UV space mode
-        if (appMode == 1) {
+        if (state.appMode == 1) {
             (uv_camControl->onMouse(e)); {
                 if (_modelDrawableInspectorFactory) {
                     _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterX = uv_camera->getEye().x;
@@ -370,6 +388,7 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
     }
 
+    uix::Imgui::destroy();
     core::api::destroy();
 
     return 0;
