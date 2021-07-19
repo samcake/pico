@@ -213,14 +213,14 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
     const float globalI = 0.3f;
-    const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
+    const float3 lightD = normalize(float3(1.0f, -1.0f, -1.0f));
     const float lightI = 0.8f;
 
     float NDotL = clamp(dot(normal, -lightD), 0.0f, 1.0f);
     float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
 
     float3 shading = float3(1.0, 1.0, 1.0);
-  //  shading = (NDotL * lightI + NDotG * globalI);
+    shading = (NDotL * lightI + NDotG * globalI);
     
   //  normal = T;
 

@@ -112,13 +112,11 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             psoDesc.SampleMask = UINT_MAX;
             psoDesc.PrimitiveTopologyType = D3D12BatchBackend::PrimitiveTopologyTypes[(int)init.primitiveTopology];
             psoDesc.NumRenderTargets = 1;
-            psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-          //  psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-          //  psoDesc.RTVFormats[0] = DXGI_FORMAT_R10G10B10A2_UNORM;
+            psoDesc.RTVFormats[0] = D3D12Backend::Format[(uint32_t) init.colorTargetFormat];
 
             psoDesc.SampleDesc.Count = 1;
             if (init.depthStencil.depthTest.isEnabled()) {
-                psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+                psoDesc.DSVFormat = D3D12Backend::Format[(uint32_t)init.depthStencilFormat];
             }
             else {
                 psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;

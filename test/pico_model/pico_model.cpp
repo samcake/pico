@@ -80,12 +80,12 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
   // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
- //  std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
+   std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
     //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
     //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
-    std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
     
 
 
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
     uv_camera->setViewport(window->width(), window->height(), true);
 
-    graphics::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
+    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
 
@@ -326,9 +326,9 @@ int main(int argc, char *argv[])
     // On resize deal with it
     windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
         // only resize the swapchain when we re done with the resize
-        if (e.over) {
+      //  if (e.over) {
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
-        }
+      //  }
 
         camControl->onResize(e);
         uv_camControl->onResize(e);

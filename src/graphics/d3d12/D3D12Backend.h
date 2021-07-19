@@ -50,7 +50,6 @@ namespace graphics {
     
     class D3D12Backend : public DeviceBackend {
     public:
-
         D3D12Backend();
         virtual ~D3D12Backend();
 
@@ -110,6 +109,10 @@ namespace graphics {
         // them to be destroyed at a later time
         void garbageCollect(const ComPtr<ID3D12DeviceChild>& child);
         std::list< ComPtr<ID3D12DeviceChild> > _garbageObjects;
+
+        // Enum translation tables
+        static const DXGI_FORMAT Format[uint32_t(PixelFormat::COUNT)];
+
     };
 
     class D3D12SwapchainBackend : public Swapchain {

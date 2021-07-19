@@ -33,15 +33,17 @@
 namespace graphics {
 
     struct VISUALIZATION_API SwapchainInit {
+#ifdef _WINDOWS
+        HWND hWnd;
+#endif  
+
         uint32_t width;
         uint32_t height;
 
-        
-#ifdef _WINDOWS
-        HWND hWnd;
-#endif
         // No depth buffer by default
         bool     depthBuffer{ false };
+
+        PixelFormat colorBufferFormat{ PixelFormat::R8G8B8A8_UNORM };
     };
 
     class VISUALIZATION_API Swapchain {
@@ -54,8 +56,13 @@ namespace graphics {
         ~Swapchain();
 
         SwapchainInit _init;
-
         uint8_t _currentIndex;
+
         uint8_t currentIndex() const;
+
+        uint32_t width() const { return _init.width; }
+        uint32_t height() const { return _init.height; }
+        PixelFormat colorBufferFormat() const { return _init.colorBufferFormat; }
+
     };
 }

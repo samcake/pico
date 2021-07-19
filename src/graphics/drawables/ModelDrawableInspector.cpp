@@ -212,9 +212,10 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     edge_descriptorSetLayout,
-                    RasterizerState().withAntialiasedLine().withMultisample(),//.withConservativeRasterizer(),
+                    RasterizerState().withAntialiasedLine().withMultisample().withConservativeRasterizer(),
                     false,
-                    BlendState()
+                    BlendState(),
+                    graphics::PixelFormat::R16G16B16A16_UNORM
         };
         _pipelineMakeSeamMap_edge = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
         pipelineInitMakeUVMap.primitiveTopology = graphics::PrimitiveTopology::TRIANGLE;
@@ -298,6 +299,7 @@ namespace graphics
         edgeMapInit.width = modelDrawable->_albedoTexture->_init.width;
         edgeMapInit.height = modelDrawable->_albedoTexture->_init.height;
         edgeMapInit.usage = ResourceUsage::RENDER_TARGET;
+        edgeMapInit.format = graphics::PixelFormat::R16G16B16A16_UNORM;
         auto edgeMap = device->createTexture(edgeMapInit);
         modelDrawable->_edgeTexture = edgeMap;
 
@@ -658,7 +660,7 @@ namespace graphics
                     }
 
                     // Draw the edges over
-                    {
+               /*     {
                         batch->bindPipeline(seamPipeline_edge);
                         auto flags =
                         ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT |
@@ -672,7 +674,7 @@ namespace graphics
 
                         batch->draw(numEdges * 2, 0);
                     }
-
+                    */
                     batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, edgeMap);
 
                     batch->beginPass(swapchain, swapchain->currentIndex());

@@ -31,6 +31,8 @@
 #include <graphics/gpu/Resource.h>
 #include "Window.h"
 
+#include <core/Log.h>
+
 using namespace uix;
 
 
@@ -150,7 +152,25 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
 bool CameraController::onMouse(const MouseEvent& e) {
 
     if (e.state & uix::MOUSE_MOVE) {
+        if (e.state & uix::MOUSE_CONTROL) {
+            picoLog() << e.state;
+        }
         if (e.state & uix::MOUSE_LBUTTON) {
+            if ((e.state & uix::MOUSE_SHIFT)) {
+                if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {
+                    float panScale = _controlData._boomLength * 0.001f;
+                    if (_cam->isOrtho()) {
+                        panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
+                    }
+                    else {
+                    }
+                    _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
+                }
+                else {
+                    float orbitScale = 0.01f;
+                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                }
+            }
         }
         if (e.state & uix::MOUSE_MBUTTON) {
             float panScale = _controlData._boomLength * 0.001f;
@@ -214,9 +234,9 @@ bool CameraController::onMouse(const MouseEvent& e) {
 bool CameraController::onResize(const ResizeEvent& e) {
     // aspect ratio changes with a resize always
     // viewport resolution, only once the resize is over
-    if (!e.over) {
+  /*  if (!e.over) {
         _cam->setAspectRatio(e.width/ (float) e.height);
-    } else {
+    } else */ {
         _cam->setViewport(e.width, e.height, true);
     }
 
