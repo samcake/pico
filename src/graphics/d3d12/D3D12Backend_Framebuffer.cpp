@@ -35,9 +35,8 @@ using namespace graphics;
 bool textureToRTV(D3D12TextureBackend* tex, D3D12_RENDER_TARGET_VIEW_DESC& rtv) {
 
     if (tex->_init.usage & ResourceUsage::RENDER_TARGET) {
-        auto d3d12Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
-        rtv.Format = d3d12Format;
+        rtv.Format = D3D12Backend::Format[(uint32_t)tex->format()];
 
         if (tex->_init.numSlices > 0) {
             rtv.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;

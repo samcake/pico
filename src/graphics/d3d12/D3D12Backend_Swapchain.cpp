@@ -132,9 +132,7 @@ bool CreateSwapchainRenderTargets(ComPtr<ID3D12Device2> device, D3D12SwapchainBa
     D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
     // Setup RTV descriptor to specify sRGB format.
     D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-    rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-  //  rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
-  //  rtvDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
+    rtvDesc.Format = D3D12Backend::Format[(uint32_t)sw->colorBufferFormat()];
     rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)

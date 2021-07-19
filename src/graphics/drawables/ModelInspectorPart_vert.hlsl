@@ -1,9 +1,14 @@
 #define mat43 float4x3
 
-int MAKE_EDGE_MAP_BIT() { return 0x00000001; }
-int RENDER_UV_SPACE_BIT() { return 0x00000002; }
-int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+int RENDER_UV_SPACE_BIT() { return 0x00000001; }
+int SHOW_UV_MESH_BIT() { return 0x00000002; }
+int SHOW_UV_EDGE_TEXELS_BIT() { return 0x00000004; }
+int SHOW_UV_GRID_BIT() { return 0x00000008; }
 
+int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+int MASK_OUTSIDE_UV_BIT() { return 0x00000020; }
+
+int MAKE_EDGE_MAP_BIT() { return 0x00000100; }
 
 //
 // Transform API
@@ -230,15 +235,20 @@ StructuredBuffer<Edge>  edge_array : register(t5);
 cbuffer UniformBlock1 : register(b1) {
     int _nodeID;
     int _partID;
+
     int _numNodes;
     int _numParts;
     int _numMaterials;
     int _numEdges;
     int _drawMode;
 
+
     float _uvCenterX;
     float _uvCenterY;
     float _uvScale;
+    float _colorMapBlend;
+
+    float _kernelRadius;
 }
 
 float4 uvSpaceClipPos(float2 uv) {
@@ -252,6 +262,7 @@ struct VertexShaderOutput
     float3 EyePos : EPOS;
     float3 Normal   : NORMAL;
     float2 Texcoord  : TEXCOORD;
+    float4 TriPos : TBPOS;
     float4 Position : SV_Position;
 };
 
@@ -297,6 +308,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
 
     // Barycenter 
     float3 barycenter = (faceVerts.v[0].xyz + faceVerts.v[1].xyz + faceVerts.v[2].xyz) / 3.0f;
+    float4 trianglePos = float4(tvidx == 0, tvidx == 1, tvidx == 2, tidx);
 
     // Transform
     float3 position = faceVerts.v[tvidx].xyz;
@@ -321,6 +333,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     OUT.EyePos = eyePosition;
     OUT.Normal = normal;
     OUT.Texcoord = texcoord;
+    OUT.TriPos = trianglePos;
 
     if (_drawMode & RENDER_UV_SPACE_BIT()) {
         OUT.Position = uvSpaceClipPos(texcoord);
@@ -351,6 +364,7 @@ VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
 
     OUT.Normal = float3(0.0, 0.0, 1.0);
     OUT.Texcoord = texcoord;
+    OUT.TriPos = float4(0, 0, 0, tidx);
 
     return OUT;
 }

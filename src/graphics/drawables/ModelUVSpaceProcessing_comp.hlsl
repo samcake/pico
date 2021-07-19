@@ -1,4 +1,12 @@
+int RENDER_UV_SPACE_BIT() { return 0x00000001; }
+int SHOW_UV_MESH_BIT() { return 0x00000002; }
+int SHOW_UV_EDGE_TEXELS_BIT() { return 0x00000004; }
+int SHOW_UV_GRID_BIT() { return 0x00000008; }
 
+int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+int MASK_OUTSIDE_UV_BIT() { return 0x00000020; }
+
+int MAKE_EDGE_MAP_BIT() { return 0x00000100; }
 
 //
 // Model
@@ -103,14 +111,23 @@ SamplerState uSampler0 : register(s0);
 // Kernel 
 // 
 
-cbuffer UniformBlock1 : register(b1) {
-    int   _nodeID;
-    int  _map_width;
-    int  _map_height;
-    float _map_spacing;
-    int  _mesh_width;
-    int  _mesh_height;
-    float _mesh_spacing;
+cbuffer UniformBlock1 : register(b0) {
+    int _nodeID;
+    int _partID;
+
+    int _numNodes;
+    int _numParts;
+    int _numMaterials;
+    int _numEdges;
+    int _drawMode;
+
+
+    float _uvCenterX;
+    float _uvCenterY;
+    float _uvScale;
+    float _colorMapBlend;
+
+    float _kernelRadius;
 }
 
 
@@ -134,7 +151,7 @@ void main_blur(uint3 DTid : SV_DispatchThreadID)
     float tex_width, tex_height, tex_elements;
     uTex0.GetDimensions(tex_width, tex_height, tex_elements);
 
-    int radius = 5;
+    int radius = floor(_kernelRadius);
     float numSamples = 0;
     int2 coord = pixelCoord;
     int minX = max(0, pixelCoord.x - radius);
@@ -143,11 +160,14 @@ void main_blur(uint3 DTid : SV_DispatchThreadID)
     int minY = max(0, pixelCoord.y - radius);
     int maxY = min(int(tex_height) - 1, pixelCoord.y + radius);
 
+    float maskOutside = (_drawMode & MASK_OUTSIDE_UV_BIT() ? 1.0 : 0.0);
+
     for (int i = minX; i <= maxX; ++i) {
         for (int j = minY; j <= maxY; ++j) {
-            float mask = uTex1[uint2(i, j)].w;
             float3 texel = uTex0[uint3(i, j, mapId)].xyz;
-            texel = lerp(texel, float3(1.0, 1.0, 1.0), mask);
+
+            float mask = maskOutside * (1.0 - uTex1[uint2(i, j)].w);
+            texel = lerp(texel, float3(1.0, 0.0, 0.0), mask);
             color += texel;
             numSamples += 1.0;
         }

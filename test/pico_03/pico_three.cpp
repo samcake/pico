@@ -353,7 +353,7 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    graphics::SwapchainInit swapchainInit { (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, (HWND) window->nativeWindow(), true };
+    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

@@ -106,5 +106,15 @@ void Imgui::invalidateDeviceObjects() {
     ImGui_ImplDX12_InvalidateDeviceObjects();
 }
 
+void Imgui::standardPostSceneRenderCallback(
+    const graphics::CameraPointer& camera,
+    const graphics::SwapchainPointer& swapchain,
+    const graphics::DevicePointer& device,
+    const graphics::BatchPointer& batch) {
+
+    ImGui::Render();
+    draw(batch);
+}
+
 
 #endif //win32

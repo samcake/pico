@@ -36,10 +36,11 @@
 
 using namespace graphics;
 
-Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device) :
+Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC) :
     _scene(scene),
     _camera(camera),
-    _device(device)
+    _device(device),
+    _postSceneRC(postSceneRC)
 {
     // Configure the Camera to look at the scene
     _camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
@@ -94,6 +95,11 @@ void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPoint
     batch->setScissor(camera->getViewportRect());
 
     this->renderScene(camera, swapchain, device, batch);
+
+
+    if (_postSceneRC) {
+        this->_postSceneRC(camera, swapchain, device, batch);
+    }
 
     batch->endPass();
 

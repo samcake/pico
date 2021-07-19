@@ -29,11 +29,13 @@
 #include "render.h"
 
 #include <core/Realtime.h>
+#include "Renderer.h"
 
 namespace graphics {
+
     class VISUALIZATION_API Viewport {
     public:
-        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device);
+        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC = nullptr);
         ~Viewport();
 
         void present(const SwapchainPointer& swapchain);
@@ -51,6 +53,8 @@ namespace graphics {
         CameraPointer _camera;
         DevicePointer _device;
         RendererPointer _renderer;
+
+        RenderCallback _postSceneRC;
 
         // Measuring framerate
         core::FrameTimer _frameTimer;

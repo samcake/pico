@@ -81,6 +81,8 @@ namespace graphics {
         uint32_t height { 0 };
         uint32_t numSlices { 0 }; // if numSlices is > 0 => array texture
 
+        PixelFormat format { PixelFormat::R8G8B8A8_UNORM };
+
         std::vector<std::vector<uint8_t>> initData;
     };
 
@@ -96,6 +98,7 @@ namespace graphics {
         uint32_t width() const { return _init.width; }
         uint32_t height() const { return _init.height; }
         uint32_t numSlices() const { return _init.numSlices; }
+        PixelFormat format() const { return _init.format; }
 
         TextureInit _init;
         void* _cpuMappedAddress = nullptr;

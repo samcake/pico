@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height() };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     // Let's try to do something in a DC:

@@ -172,7 +172,7 @@ enum MouseState : uint8_t {
 };
 
 struct ResizeEvent {
-    uint32_t width;
+    uint32_t width;  // width and ehight of the resize of the CLIENT area
     uint32_t height;
     bool over{ false };
 };
@@ -252,6 +252,9 @@ public:
     virtual uint32_t width() const = 0;
     virtual uint32_t height() const = 0;
 
+    virtual uint32_t chromedWidth() const = 0;
+    virtual uint32_t chromedHeight() const = 0;
+
     virtual void setTitle(const std::string& title) = 0;
 };
 
@@ -277,6 +280,8 @@ public:
 
     uint32_t width() const;
     uint32_t height() const;
+    uint32_t chromedWidth() const;
+    uint32_t chromedHeight() const;
 
     void onResize(const ResizeEvent & e);
     void onPaint(const PaintEvent& e);

@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
     auto window = uix::Window::createWindow(windowInit);
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    graphics::SwapchainInit swapchainInit { window->width(), window->height(), (HWND) window->nativeWindow(), true };
+    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
 

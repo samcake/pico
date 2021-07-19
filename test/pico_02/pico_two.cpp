@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
     uix::Imgui::create();
     uix::Imgui::setup(window, gpuDevice);
 
-    graphics::SwapchainInit swapchainInit { 640, 480, (HWND) window->nativeWindow() };
+    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), 640, 480 };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

@@ -49,6 +49,9 @@ public:
     HWND _sysWindow{ nullptr };
     uint32_t _width{ 0 };
     uint32_t _height{ 0 };
+    uint32_t _chromedWidth{ 0 };
+    uint32_t _chromedHeight{ 0 };
+
     core::vec2 _lastMouseEventPos{ 0.f };
     bool _unknownLastMousePos{ true };
     bool _didResize{ false };
@@ -125,6 +128,28 @@ public:
         std::cout << "destroying that window" << std::endl;
     }
 
+    void innerHandleResize(bool over = true) {
+        RECT wr;
+        RECT cr;
+        GetWindowRect(_sysWindow, &wr);
+        GetClientRect(_sysWindow, &cr);
+
+        auto ww = wr.right - wr.left;
+        auto wh = wr.bottom - wr.top;
+
+        auto cw = cr.right - cr.left;
+        auto ch = cr.bottom - cr.top;
+
+        _didResize = true;
+        _width = cw;
+        _height = ch;
+        _chromedWidth = ww;
+        _chromedHeight = wh;
+
+        ResizeEvent e{ _width, _height, over };
+        _ownerWindow->onResize({ e });
+    }
+
     LRESULT eventCallback(UINT msg, WPARAM wparam, LPARAM lparam) {
         if (Imgui::customEventCallback(_sysWindow, msg, wparam, lparam)) {
             return true;
@@ -136,19 +161,16 @@ public:
         // case WM_DESTROY:
 
         // Pass on events to standard handler
-     //   case WM_ENTERSIZEMOVE:
+        case WM_ENTERSIZEMOVE:
         case WM_SIZE: {
             ResizeEvent e { LOWORD(lparam), HIWORD(lparam) };
-            _width = e.width;
-            _height = e.height;
             _didResize = true;
-            _ownerWindow->onResize({e});
+            innerHandleResize(false);
            return 0;
         } break;
         case WM_EXITSIZEMOVE: {
             if (_didResize) {
-                ResizeEvent e{ _width, _height, true };
-                _ownerWindow->onResize({ e });
+                innerHandleResize(true);
             }
             _didResize = false;
             return 0;
@@ -230,6 +252,8 @@ public:
         initWinClass();
         width = (width == -1 ? 640 : width);
         height = (height == -1 ? 480 : height);
+
+        
        /* auto sysWindow = CreateWindowA(WINDOW_CLASS.c_str(), name.c_str(),
             WS_OVERLAPPEDWINDOW | WS_VISIBLE, CW_USEDEFAULT, CW_USEDEFAULT,
             width, height, NULL, NULL, NULL, NULL);*/
@@ -239,7 +263,8 @@ public:
         auto window = new WIN32WindowBackend(owner, sysWindow, name, width, height);
 
         _sysWindowMap[sysWindow] = window;
-    
+        window->innerHandleResize(true);
+
         return window;
     }
 
@@ -277,6 +302,8 @@ public:
     void* nativeWindow() override { return _sysWindow; }
     uint32_t width() const override { return _width; }
     uint32_t height() const override { return _height; }
+    uint32_t chromedWidth() const override { return _chromedWidth; }
+    uint32_t chromedHeight() const override { return _chromedHeight; }
 
     void setTitle(const std::string& title) override { SetWindowTextA(_sysWindow, title.c_str()); }
 };
