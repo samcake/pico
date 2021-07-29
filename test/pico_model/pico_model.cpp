@@ -51,6 +51,19 @@
 
 #include <vector>
 
+
+struct AppState {
+
+    uint32_t makeUVMapFrame = 0;
+    uint32_t makeFilteredMapFrame = 0;
+
+  
+    graphics::ModelDrawableInspectorFactoryPointer _modelDrawableInspectorFactory;
+    graphics::ModelDrawableInspectorUniformsPointer params;
+};
+
+AppState state;
+
 //--------------------------------------------------------------------------------------
 // pico model:
 //  Explore the definition of a document::model created from loading a gltf file
@@ -59,17 +72,16 @@
 
 document::ModelPointer lmodel;
 
-graphics::ModelDrawableInspectorFactoryPointer _modelDrawableInspectorFactory;
 
 void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root, bool withInspector) {
 
-  //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
+ //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
-  //  std::string modelFile("../asset/gltf/Sponza.gltf");
+ //   std::string modelFile("../asset/gltf/Sponza.gltf");
   //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
- //  std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
-   // std::string modelFile("../asset/gltf/buggy.gltf");
-    //  std::string modelFile("../asset/gltf/VC.gltf");
+  // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+  //  std::string modelFile("../asset/gltf/buggy.gltf");
+   //   std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
    // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
@@ -83,9 +95,12 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
    std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
-    //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
     //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
+
+  // 
     
 
 
@@ -103,6 +118,7 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
 
     auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
+
     if (!withInspector) {
         for (int i = 0; i < 1; ++i) {
             auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
@@ -112,32 +128,25 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     }
     if (withInspector) {
 
-        if (!_modelDrawableInspectorFactory) {
-            _modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
-            _modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
+        if (!state._modelDrawableInspectorFactory) {
+            state._modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
+            state._modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
+            state.params = state._modelDrawableInspectorFactory->getUniformsPtr();
         }
 
-        auto modelDrawableInspectorPtr = _modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
-        _modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
+        auto modelDrawableInspectorPtr = state._modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
+        state._modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
 
         auto modelDrawableInspector = scene->createDrawable(*modelDrawableInspectorPtr);
 
         for (int i = 0; i < 1; ++i) {
             auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i * modelDrawableInspector.getBound().half_size.z * 2.5f }), root.id());
 
-            _modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
+            state._modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
         }
     }
 }
 
-struct AppState {
-
-    uint32_t appMode = 0;
-    uint32_t makeUVMapFrame = 0;
-    uint32_t makeFilteredMapFrame = 0;
-};
-
-AppState state;
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -222,6 +231,7 @@ int main(int argc, char *argv[])
     uv_camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     uv_camera->setOrthoHeight(1.0f);
     uv_camera->setOrtho(true);
+    uv_camera->setEye(core::vec3(0.5, 0.5, 0));
     auto uv_camControl = std::make_shared< uix::CameraController >(uv_camera, true);
 
 
@@ -266,46 +276,151 @@ int main(int argc, char *argv[])
         }
         uix::Imgui::newFrame();
 
+
         if (ImGui::Begin("UV Seams")) {
-            if (_modelDrawableInspectorFactory) {
-                auto& params = _modelDrawableInspectorFactory->editUniforms();
-                if (ImGui::Checkbox("UV Space", &params.renderUVSpace)) {
-                    state.appMode = params.renderUVSpace;
-                    // when switching to UV space, hide 3d model
-                    if (params.renderUVSpace) {
-                        params.render3DModel = false;
+            if (state.params) {
+                auto& params = *state.params.get();
+                bool runFilter = false;
+
+
+                static const char* displayedNames[] = {
+                    "albedo", "normal", "surface normal", "normal map"
+                };
+                if (ImGui::BeginCombo("Displayed Color", displayedNames[params.displayedColor])) {
+                    for (int n = 0; n < IM_ARRAYSIZE(displayedNames); n++) {
+                        bool is_selected = (params.displayedColor == n); // You can store your selection however you want, outside or inside your objects
+                        if (ImGui::Selectable(displayedNames[n], is_selected)) {
+                            params.displayedColor = n;
+                        }
+                        if (is_selected)
+                            ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
                     }
+                    ImGui::EndCombo();
                 }
 
-                if (params.renderUVSpace) {
-                    ImGui::Checkbox("3D pass", &params.render3DModel);
-                } else {
-                    params.render3DModel = true; // render 3d model in 3d view always
-                }
 
-                ImGui::Checkbox("Show UV Grid", &params.showUVGrid);
-                ImGui::Checkbox("Show Edge Lines", &params.showUVEdges);
-                ImGui::Checkbox("Show Edge Texels", &params.showUVEdgeTexels);
+                ImGui::Checkbox("UV Space", &params.renderUVSpace);
 
+                ImGui::Separator();
 
-                ImGui::Checkbox("Show UV Mesh", &params.showUVMesh);
+                ImGui::Checkbox("Render mesh", &params.render3DModel);
+                ImGui::Checkbox("Render wireframe", &params.renderWireframe);
+                ImGui::Checkbox("Render uvmesh points", &params.renderUVMeshPoints);
+                ImGui::Checkbox("Render edge lines", &params.renderUVEdgeLines);
+
+                ImGui::Separator();
+                ImGui::Checkbox("Show uv grid", &params.showUVGrid);
+                ImGui::Checkbox("Show uvmesh outside", &params.showUVMeshOutside);
+                ImGui::Checkbox("Show uvmesh edges", &params.showUVMeshEdges);
+                ImGui::Checkbox("Show uvmesh faces", &params.showUVMeshFaces);
+                ImGui::Checkbox("Show uvmesh faces id", &params.showUVMeshFacesID);
+                ImGui::Separator();
+
+                ImGui::Checkbox("Light shading", &params.lightShading);
+
                 ImGui::Checkbox("Linear sampler", &params.linearSampler);
 
-                ImGui::SliderFloat("Filtered Map", &params.colorMapBlend, 0.0f, 1.0f);
+                ImGui::Separator();
 
-                if (ImGui::Button((std::string("Make UV map ") + std::to_string(state.makeUVMapFrame)).c_str())) {
-                    params.makeUVEdgeMap();
+                ImGui::Checkbox("Render connectivity", &params.renderConnectivity);
+                ImGui::BeginGroup();
+                    ImGui::PushID("connectivity");
+                    if (ImGui::Button("-")) {
+                        params.numInspectedTriangles -= 1;
+                        if (params.numInspectedTriangles < 1) params.numInspectedTriangles = 1;
+                    }
+                    ImGui::SameLine();
+                    ImGui::SliderInt("Triangles", &params.numInspectedTriangles, 1, 32);
+                    ImGui::SameLine();
+                    if (ImGui::Button("+")) {
+                        params.numInspectedTriangles += 1;
+                        if (params.numInspectedTriangles > 32) params.numInspectedTriangles = 32;
+                    }
+                    ImGui::PopID();
+                ImGui::EndGroup();
+
+                ImGui::Separator();
+
+                ImGui::Text("Inspected triangle");
+                ImGui::BeginGroup();
+                    ImGui::PushID("inspected");
+
+                    if (ImGui::Button("-")) {
+                        params.inspectedTriangle -= 1;
+                        if (params.inspectedTriangle < -1) params.inspectedTriangle = -1;
+                    }
+                    ImGui::SameLine();
+
+                    runFilter |= ImGui::SliderInt(std::to_string(params.numTriangles).c_str(), &params.inspectedTriangle, -1, params.numTriangles - 1);
+                    ImGui::SameLine();
+                    if (ImGui::Button("+")) {
+                        params.inspectedTriangle += 1;
+                        if (params.inspectedTriangle >= params.numTriangles) params.inspectedTriangle = params.numTriangles - 1;
+                    }
+                    ImGui::PopID();
+                ImGui::EndGroup();
+                ImGui::Separator();
+
+                bool makeUVMeshMap = false;
+                makeUVMeshMap |= ImGui::Button((std::string("Make uvmesh map ") + std::to_string(state.makeUVMapFrame)).c_str());
+                makeUVMeshMap |= ImGui::Checkbox("With uvmesh edge lines pass", &params.uvmeshEdgeLinesPass);
+                if (makeUVMeshMap) {
+                    params.makeUVMeshMap = true;
                     state.makeUVMapFrame++;
+
+                    // trigger a new computed filter
+                    runFilter |= true;
                 }
-                bool runFilter = false;
-                runFilter |= ImGui::Button((std::string("Make Filtered map ") + std::to_string(state.makeFilteredMapFrame)).c_str());
-                runFilter |= ImGui::Checkbox("Mask outside", &params.maskOutsideUV);
-                runFilter |= ImGui::SliderFloat("Kernel radius", &params.kernelRadius, 0.0f, 32.0f);
+                ImGui::Separator();
+
+                runFilter |= ImGui::Button((std::string("Make filtered map ") + std::to_string(state.makeFilteredMapFrame)).c_str());
+                {
+                    static const char* techniqueNames[] = {
+                        "Image space", "3D space"
+                    };
+                    
+                    if (ImGui::BeginCombo("Filter Technique", techniqueNames[params.filterKernelTechnique])) {
+                        for (int n = 0; n < IM_ARRAYSIZE(techniqueNames); n++) {
+                            bool is_selected = (params.filterKernelTechnique == n); // You can store your selection however you want, outside or inside your objects
+                            if (ImGui::Selectable(techniqueNames[n], is_selected)) {
+                                runFilter |= (params.filterKernelTechnique != n); // if inspected map change, regenerate the filtered texture
+                                params.setFilterKernelTechnique(n);
+                            }
+                            if (is_selected)
+                                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                        }
+                        ImGui::EndCombo();
+                    }
+
+                    static const char* mapNames[] = {
+                        "Albedo", "Normal"
+                    };
+                    if (ImGui::BeginCombo("Source Map", mapNames[params.inspectedMap])) {
+                        for (int n = 0; n < IM_ARRAYSIZE(mapNames); n++) {
+                            bool is_selected = (params.inspectedMap == n); // You can store your selection however you want, outside or inside your objects
+                            if (ImGui::Selectable(mapNames[n], is_selected)) {
+                                runFilter |= (params.inspectedMap != n); // if inspected map change, regenerate the filtered texture
+                                params.inspectedMap = n;
+                            }
+                            if (is_selected)
+                                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
+                        }
+                        ImGui::EndCombo();
+                    }
+                    runFilter |= ImGui::Checkbox("Mask outside", &params.maskOutsideUV);
+
+                    runFilter |= ImGui::SliderFloat("Kernel radius", &params.kernelRadius, 0.0f, params.kernelRadiusMax);
+                }
 
                 if (runFilter) {
-                    params.doRunFilter();
+                    params.makeComputedMap = true;
                     state.makeFilteredMapFrame++;
                 }
+
+                ImGui::Separator();
+
+                // Blending slider to copare filtered texture against base
+                ImGui::SliderFloat("Filtered Map", &params.colorMapBlend, 0.0f, 1.0f);
 
             }
         }
@@ -315,9 +430,11 @@ int main(int argc, char *argv[])
         scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
         uv_camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
-        _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterX = uv_camera->getEye().x;
-        _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterY = uv_camera->getEye().y;
-        _modelDrawableInspectorFactory->editUniforms().uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
+        if (state.params) {
+            state.params->uvSpaceCenterX = uv_camera->getEye().x;
+            state.params->uvSpaceCenterY = uv_camera->getEye().y;
+            state.params->uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
+        }
 
         // Render!
         viewport->present(swapchain);
@@ -332,6 +449,11 @@ int main(int argc, char *argv[])
 
         camControl->onResize(e);
         uv_camControl->onResize(e);
+
+        if (e.over) {
+            camControl->onResize(e);
+            uv_camControl->onResize(e);
+        }
     };
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
@@ -363,14 +485,12 @@ int main(int argc, char *argv[])
 
     windowHandler->_onMouseDelegate = [&](const uix::MouseEvent& e) {
         // UV space mode
-        if (state.appMode == 1) {
+        if (state.params && state.params->renderUVSpace) {
             (uv_camControl->onMouse(e)); {
-                if (_modelDrawableInspectorFactory) {
-                    _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterX = uv_camera->getEye().x;
-                    _modelDrawableInspectorFactory->editUniforms().uvSpaceCenterY = uv_camera->getEye().y;
-                    _modelDrawableInspectorFactory->editUniforms().uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
-                }
-                
+                state.params->uvSpaceCenterX = uv_camera->getEye().x;
+                state.params->uvSpaceCenterY = uv_camera->getEye().y;
+                state.params->uvSpaceScale = uv_camera->getOrthoHeight() * 0.5f;
+
                 return;
             }
             return;

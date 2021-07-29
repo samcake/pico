@@ -75,8 +75,14 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
 
     if (FAILED(hr)) {
         if (errorBlob) {
-            picoLog() << (char*)errorBlob->GetBufferPointer();
-            //   OutputDebugStringA((char*)errorBlob->GetBufferPointer());
+            std::string file = (shader->getShaderDesc().watcher_file.empty() ?
+                                    (shader->getShaderDesc().url.empty() ?
+                                        "no source file" :
+                                        shader->getShaderDesc().url) :
+                                    shader->getShaderDesc().watcher_file);
+            picoLog() << target << " " << shader->getShaderDesc().entryPoint << std::endl
+                      << "    " << file << std::endl
+                      << (char*)errorBlob->GetBufferPointer();
             errorBlob->Release();
         }
 

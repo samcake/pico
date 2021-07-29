@@ -1,16 +1,89 @@
-int RENDER_UV_SPACE_BIT() { return 0x00000001; }
-int SHOW_UV_MESH_BIT() { return 0x00000002; }
-int SHOW_UV_EDGE_TEXELS_BIT() { return 0x00000004;}
-int SHOW_UV_GRID_BIT() { return 0x00000008;}
+int SHOW_UVMESH_OUTSIDE_BIT() { return 0x00000001; }
+int SHOW_UVMESH_FACES_BIT() { return 0x00000002; }
+int SHOW_UVMESH_EDGES_BIT() { return 0x00000004; }
+int SHOW_UVMESH_FACES_ID_BIT() { return 0x00000008; }
 
-int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+int SHOW_UV_GRID_BIT() { return 0x00000010; }
 int MASK_OUTSIDE_UV_BIT() { return 0x00000020; }
 int LINEAR_SAMPLER_BIT() { return 0x00000040; }
+int LIGHT_SHADING_BIT() { return 0x00000080; }
 
-int MAKE_EDGE_MAP_BIT() { return 0x00000100; }
+int MAKE_UVMESH_MAP_BIT() { return 0x00000100; }
+int RENDER_UV_SPACE_BIT() { return 0x00000200; }
+int DRAW_EDGE_LINE_BIT() { return 0x00000400; }
+int RENDER_WIREFRAME_BIT() { return 0x00000800; }
+
+int INSPECTED_MAP_BITS() { return 0x000F0000; }
+int INSPECTED_MAP_OFFSET() { return 16; }
+int INSPECTED_MAP(int drawMode) { return (drawMode & INSPECTED_MAP_BITS()) >> INSPECTED_MAP_OFFSET(); }
+
+int DISPLAYED_COLOR_BITS() { return 0x00F00000; }
+int DISPLAYED_COLOR_OFFSET() { return 20; }
+int DISPLAYED_COLOR(int drawMode) { return (drawMode & DISPLAYED_COLOR_BITS()) >> DISPLAYED_COLOR_OFFSET(); }
 
 
+//
+// Transform API
+//
+struct Transform {
+    float4 _right_upX;
+    float4 _upYZ_backXY;
+    float4 _backZ_ori;
 
+    float3 row_x() { return float3(_right_upX.x, _right_upX.w, _upYZ_backXY.z); }
+    float3 row_y() { return float3(_right_upX.y, _upYZ_backXY.x, _upYZ_backXY.w); }
+    float3 row_z() { return float3(_right_upX.z, _upYZ_backXY.y, _backZ_ori.x); }
+
+    float3 col_x() { return _right_upX.xyz; }
+    float3 col_y() { return float3(_right_upX.w, _upYZ_backXY.xy); }
+    float3 col_z() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
+    float3 col_w() { return _backZ_ori.yzw; }
+};
+
+float3 rotateFrom(const Transform mat, const float3 d) {
+    return float3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));
+}
+float3 rotateTo(const Transform mat, const float3 d) {
+    return float3(dot(mat.col_x(), d), dot(mat.col_y(), d), dot(mat.col_z(), d));
+}
+
+float3 transformTo(const Transform mat, const float3 p) {
+    return rotateTo(mat, p - mat.col_w());
+}
+float3 transformFrom(const Transform mat, const float3 p) {
+    return rotateFrom(mat, p) + mat.col_w();
+}
+
+//
+// Projection API
+// 
+struct Projection {
+    float4 _aspectRatio_sensorHeight_focal_far;
+    float4 _ortho_enabled_height_near_far;
+
+    float aspectRatio() { return (_aspectRatio_sensorHeight_focal_far.x); }
+    float sensorHeight() { return (_aspectRatio_sensorHeight_focal_far.y); }
+    float focal() { return (_aspectRatio_sensorHeight_focal_far.z); }
+    float persFar() { return (_aspectRatio_sensorHeight_focal_far.w); }
+
+    bool isOrtho() { return (_ortho_enabled_height_near_far.x > 0.0); }
+    float orthoHeight() { return (_ortho_enabled_height_near_far.y); }
+    float orthoNear() { return (_ortho_enabled_height_near_far.z); }
+    float orthoFar() { return (_ortho_enabled_height_near_far.w); }
+};
+
+// Camera buffer
+cbuffer UniformBlock0 : register(b0) {
+    //float4x3 _view;
+    Transform _view;
+    Projection _projection;
+    float4 _viewport;
+};
+
+
+float3 worldFromEyeSpaceDir(Transform view, float3 eyeDir) {
+    return rotateFrom(view, eyeDir);
+}
 
 //
 // Paint API
@@ -64,10 +137,31 @@ struct Material {
 
 StructuredBuffer<Material>  material_array : register(t9);
 
-Texture2DArray uTex0 : register(t10);
-Texture2D uTex1 : register(t11);
-Texture2D uTex2 : register(t12);
+Texture2DArray material_textures : register(t10);
+
 SamplerState uSampler0[2] : register(s0);
+
+// 
+// UVMesh map API
+//
+Texture2D uvmesh_map : register(t11);
+float uvmesh_isOutside(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w == 0.0f);
+}
+float uvmesh_isEdge(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w < 0.0f);
+}
+float uvmesh_isFace(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w > 0.0f);
+}
+int uvmesh_triangle(float4 uvmesh_texel) {
+    return int(abs(uvmesh_texel.w)) - 1;
+}
+
+//
+// Computed map API
+//
+Texture2D computed_map : register(t12);
 
 //
 // Model & Parts
@@ -100,6 +194,8 @@ cbuffer UniformBlock1 : register(b1) {
     int _numMaterials;
     int _numEdges;
     int _drawMode;
+    int _inspectedTriangle;
+    int _numInspectedTriangles;
 
 
     float _uvCenterX;
@@ -117,9 +213,28 @@ struct PixelShaderInput{
     float4 TriPos : TBPOS;
 };
 
+// Compute tangent space and final normal
+float3 computeNormal(float3 surfNormal, float3 normalMap, float3 eyePos, float2 uv) {
+    float3 q0 = ddx(eyePos);
+    float3 q1 = ddy(eyePos);
+    float2 st0 = ddx(uv);
+    float2 st1 = ddy(uv);
+
+    float3 S = normalize(q0 * st1.y - q1 * st0.y);
+    float3 T = normalize(-q0 * st1.x + q1 * st0.x);
+    float3 normal = surfNormal;
+/*
+    normalMap.xy = 1.0 * normalMap.xy;
+    float3x3 tsn = float3x3(S, T, normal);
+    normal = mul(tsn, normalMap.xyz);
+    normal = normalize(normal);
+  */  return normal;
+}
+
 // Map Color / Computed blend
 float colorMapBlend(float2 uv) {
-    return dot(uv, uv) < (_colorMapBlend * 2);
+    float sqrt2 = 1.4142135;
+    return dot(0.5 * float2(sqrt2, sqrt2), uv) < (_colorMapBlend * sqrt2);
 }
 
 int samplerIdx() {
@@ -129,7 +244,7 @@ int samplerIdx() {
 // Drawgrid
 float3 drawGrid(float2 uv, float3 color) {
     float tex_width, tex_height, tex_elements;
-    uTex0.GetDimensions(tex_width, tex_height, tex_elements);
+    material_textures.GetDimensions(tex_width, tex_height, tex_elements);
 
     float3 texcoord = float3(uv.x * tex_width, uv.y * tex_height, 1.0f);
 
@@ -144,16 +259,26 @@ float3 drawGrid(float2 uv, float3 color) {
 }
 
 // Tool / Debug Coloring from UVMesh map
-float3 drawUVMeshTool(float2 uv, float3 color) {
-    float4 uvTool = uTex1.Sample(uSampler0[0], uv.xy);
-    // Draw edge pixels from edge map
-    if (_drawMode & SHOW_UV_EDGE_TEXELS_BIT()) {
-        color = lerp(color, float3(0.0f, 1.0f, 1.0f), uvTool.x);
+float3 drawUVMeshTool(float2 uv, float3 color, int numIndices) {
+    float4 uvmesh = uvmesh_map.Sample(uSampler0[0], uv.xy);
+
+    // uvmesh faces
+    if (_drawMode & SHOW_UVMESH_FACES_BIT()) {
+        color = lerp(color, uvmesh.xyz, uvmesh_isFace(uvmesh));
     }
-    if (_drawMode & SHOW_UV_MESH_BIT()) {
-        //  baseColor = lerp(baseColor, rainbowRGB(IN.TriPos.w, float(numIndices / 3)), 0.5);
-       //   baseColor = lerp(baseColor, IN.TriPos.xyz, 0.5);
-        color = lerp(color, uvTool.xyz, uvTool.w);
+
+    if (_drawMode & SHOW_UVMESH_FACES_ID_BIT()) {
+        color = lerp(color, rainbowRGB(float(uvmesh_triangle(uvmesh)), float(numIndices/ 3)), 0.5f * (1- uvmesh_isOutside(uvmesh)));
+    }
+
+    // uvmesh edge texels
+    if (_drawMode & SHOW_UVMESH_EDGES_BIT()) {
+        color = lerp(color, uvmesh.xyz, uvmesh_isEdge(uvmesh));
+    }
+
+    // uvmesh outside
+    if (_drawMode & SHOW_UVMESH_OUTSIDE_BIT()) {
+        color = lerp(color, float3(1.0f, 0.0f, 0.0f), 0.6f * uvmesh_isOutside(uvmesh));
     }
 
     // Add uv stripes
@@ -177,38 +302,32 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     float4 mapNor = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.y != -1) {
-        mapNor = float4(uTex0.Sample(uSampler0[0], float3(IN.Texcoord.xy, m.textures.y)).xyz, 1.0);
+        mapNor = float4(material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.y)).xyz, 1.0);
     }
 
-    float4 mapN = mapNor *2.0 - 1.0;
+    float4 mapN = (mapNor *2.0 - 1.0);
+    float3 surfNormal = normalize(IN.Normal);
+    float3 normal = computeNormal(surfNormal, mapN, IN.EyePos.xyz, IN.Texcoord.xy);
 
-    float3 surf_normal = normalize(IN.Normal);
-
-
-    float3 q0 = ddx(IN.EyePos.xyz);
-    float3 q1 = ddy(IN.EyePos.xyz);
-    float2 st0 = ddx(IN.Texcoord.xy);
-    float2 st1 = ddy(IN.Texcoord.xy);
-
-    float3 S = normalize(q0 * st1.y - q1 * st0.y);
-    float3 T = normalize(-q0 * st1.x + q1 * st0.x);
-    float3 normal = surf_normal;
-
-    mapN.xy = 1.0 * mapN.xy;
-    float3x3 tsn = float3x3(S, T, normal);
-//    normal = mul( tsn, mapN.xyz);
- //   normal = normalize(normal);
+    normal = worldFromEyeSpaceDir(_view, normal);
 
     float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.z != -1) {
-        rmaoMap = uTex0.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.z));
+        rmaoMap = material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.z));
     }
 
     float3 baseColor = float3(1.0, 1.0, 1.0);
     // with albedo from property or from texture
     baseColor = m.color;
     if (m.textures.x != -1) {
-        baseColor = uTex0.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.x)).xyz;
+        baseColor = material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.x)).xyz;
+    }
+
+    switch (DISPLAYED_COLOR(_drawMode)) {
+    case 0: break;
+    case 1: baseColor = normal; break;
+    case 2: baseColor = surfNormal; break;
+    case 3: baseColor = mapNor; break;
     }
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
@@ -220,8 +339,10 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
 
     float3 shading = float3(1.0, 1.0, 1.0);
-    shading = (NDotL * lightI + NDotG * globalI);
-    
+    if ((LIGHT_SHADING_BIT() & _drawMode)) {
+        shading = (NDotL * lightI + NDotG * globalI);
+    }
+
   //  normal = T;
 
    // baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
@@ -234,15 +355,15 @@ float4 main(PixelShaderInput IN) : SV_Target{
    //  baseColor = mapN;
 
     // Compute map instead of baseColor
-    float4 compute = uTex2.Sample(uSampler0[samplerIdx()], IN.Texcoord.xy);
+    float4 compute = computed_map.Sample(uSampler0[samplerIdx()], IN.Texcoord.xy);
     baseColor = lerp(baseColor, compute.xyz, colorMapBlend(IN.Texcoord.xy));
 
     // Draw tools
-    baseColor = drawUVMeshTool(IN.Texcoord.xy, baseColor);
+    baseColor = drawUVMeshTool(IN.Texcoord.xy, baseColor, numIndices);
 
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
     if (m.textures.w != -1) {
-        emissiveColor = uTex0.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.w)).xyz;
+        emissiveColor = material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
  
     float3 color = shading * baseColor + emissiveColor;
@@ -255,34 +376,37 @@ float4 main(PixelShaderInput IN) : SV_Target{
     return float4(color, 1.0);
 }
 
+float4 main_connectivity(PixelShaderInput IN) : SV_Target{
+    return float4(rainbowRGB(IN.TriPos.w, IN.TriPos.x), 1.0);
+}
 
-float4 main_makeSeamMap(PixelShaderInput IN) : SV_Target{
-    if (_drawMode & DRAW_EDGE_LINE_BIT())
-        return float4(0.0, 0.0, 0.0, 0.6);
-
-    else
-        return float4(IN.TriPos.xyz, 1.0);
+float4 main_uvmesh(PixelShaderInput IN) : SV_Target{
+    return float4(IN.TriPos.xyzw);
 }
 
 float4 main_uvspace(PixelShaderInput IN) : SV_Target{
     
     float3 color = float3(0,0,0);
 
+    int numIndices = part_array[_partID].numIndices;
     int matIdx = part_array[_partID].material;
     Material m = material_array[matIdx];
+    int inspectedMapId = m.textures[INSPECTED_MAP(_drawMode)];
 
-    if (m.textures.x != -1) {
-        color = uTex0.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.x)).xyz;
+    if (inspectedMapId != -1) {
+        color = material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, inspectedMapId)).xyz;
     }
 
-  //  color = mapN.xyz;
-
     // Compute map
-    float4 compute = uTex2.Sample(uSampler0[samplerIdx()], IN.Texcoord.xy);
+    float4 compute = computed_map.Sample(uSampler0[samplerIdx()], IN.Texcoord.xy);
     color = lerp(color, compute.xyz, colorMapBlend(IN.Texcoord.xy));
 
     // Draw tools
-    color = drawUVMeshTool(IN.Texcoord.xy, color);
+    color = drawUVMeshTool(IN.Texcoord.xy, color, numIndices);
 
     return float4(color, 1.0);
+}
+
+float4 main_uvmesh_point(PixelShaderInput IN) : SV_Target{
+    return float4(1.0, 1.0, 1.0, 1.0);
 }

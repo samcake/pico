@@ -32,75 +32,120 @@
 namespace graphics {
 
 
-    // Utility: generate uvmap seams edge list
-    struct ModelEdge {
-        uint32_t p;
-        uint32_t i0;
-        uint32_t i1;
-        uint32_t d;
-    };
-    using ModelEdgeArray = std::vector<ModelEdge>;
-    ModelEdgeArray computeUVSeamsEdges(const ModelDrawable& model);
+    // Utility mesh connectivity information:
+    using ModelUVSeam = uint32_t;
+    using ModelUVSeamArray = std::vector<ModelUVSeam>;
+    //  generate uvmap seams edge list
+    ModelUVSeamArray computeUVSeamsEdges(const ModelDrawable& model);
 
 
     class ModelDrawableInspector;
     class ModelDrawableInspectorPart;
 
     struct VISUALIZATION_API ModelDrawableInspectorUniforms {
-        int numNodes{ 0 };
-        bool showUVGrid{ false };
-        bool showUVEdgeTexels{ false };
-        bool showUVMesh{ true };
+        int32_t numNodes{ 0 };
+        int32_t numParts{ 0 };
+        int32_t numTriangles{ 0 };
+        int32_t numMaterials{ 0 };
+        int32_t numEdges{ 0 };
 
-        bool showUVEdges{ false };
+        bool showUVMeshOutside{false};
+        bool showUVMeshEdges{ false };
+        bool showUVMeshFaces{ false };
+        bool showUVMeshFacesID{ false };
+
+        bool showUVGrid{ false };
+        bool linearSampler{ false };
+        bool lightShading{ false };
 
         bool render3DModel{ false };
-        bool renderUVSpace{ false };
-  
+        bool renderWireframe{ false };
+        bool renderUVEdgeLines{ false };
+        bool renderConnectivity{ true };
 
-        bool renderMakeUVEdgeMap{ true };
-        bool runFilter{ true };
-        bool maskOutsideUV{ true };
-        bool linearSampler{ false };
+        bool renderUVMeshPoints{ false };
+        bool renderUVSpace{ true };
+  
+        int32_t inspectedTriangle{ -1 };
+        int32_t numInspectedTriangles{ 1 };
+
+        uint8_t inspectedMap{ 0 }; // 0 for albedo, 1 for normal ...
+
+        uint8_t displayedColor{ 0 }; // 0 for albedo, 1 for normal ...
+
+        bool makeUVMeshMap{ true };
+        bool uvmeshEdgeLinesPass{ true };
+
+        bool makeComputedMap{ true };
 
         float uvSpaceCenterX = 0.0f;
         float uvSpaceCenterY = 0.0f;
         float uvSpaceScale = 1.0f;
+
         float colorMapBlend = 0.5f;
 
-        float kernelRadius = 5.0f;
+        enum {
+            FKT_IMAGE_SPACE = 0,
+            FKT_MESH_SPACE = 1,
+        };
+        uint8_t filterKernelTechnique{ FKT_MESH_SPACE }; // 0 for image space, 1 for 3d space ...
 
- 
-        void makeUVEdgeMap() {
-            renderMakeUVEdgeMap = true;
-        }
-        void doRunFilter() {
-            runFilter = true;
+        bool maskOutsideUV{ true };
+        float kernelRadius = 0.1f;
+        float kernelRadiusMax = 1.0f;
+
+        void setFilterKernelTechnique(uint8_t ftk) {
+            if (filterKernelTechnique != ftk) {
+                filterKernelTechnique = ftk;
+                if (filterKernelTechnique == graphics::ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE) {
+                    kernelRadius = 5.f;
+                    kernelRadiusMax = 10.0f;
+                }
+                else {
+                    kernelRadius = 0.1f;
+                    kernelRadiusMax = 1.0f;
+                }
+            }
         }
         
         enum {
             // first bit is used internally
-            RENDER_UV_SPACE_BIT = 0x00000001,
-            SHOW_UV_MESH_BIT = 0x00000002,
-            SHOW_UV_EDGE_TEXELS_BIT = 0x00000004,
-            SHOW_UV_GRID_BIT = 0x00000008,
+            SHOW_UVMESH_OUTSIDE_BIT = 0x00000001,
+            SHOW_UVMESH_FACES_BIT = 0x00000002,
+            SHOW_UVMESH_EDGES_BIT = 0x00000004,
+            SHOW_UVMESH_FACES_ID_BIT = 0x00000008,
 
-            DRAW_EDGE_LINE_BIT = 0x00000010,
+            SHOW_UV_GRID_BIT = 0x00000010,
             MASK_OUTSIDE_UV_BIT = 0x00000020,
             LINEAR_SAMPLER_BIT = 0x00000040,
+            LIGHT_SHADING_BIT = 0x00000080,
 
-            MAKE_EDGE_MAP_BIT = 0x00000100,
+            MAKE_UVMESH_MAP_BIT = 0x00000100,
+            RENDER_UV_SPACE_BIT = 0x00000200,
+            RENDER_UV_EDGE_LINES_BIT = 0x00000400,
+            RENDER_WIREFRAME_BIT = 0x00000800,
 
+            INSPECTED_MAP_BITS = 0x000F0000,
+            INSPECTED_MAP_OFFSET = 16,
+            DISPLAYED_COLOR_BITS = 0x00F00000,
+            DISPLAYED_COLOR_OFFSET = 20,
         };
         uint32_t buildFlags() const {
             return (uint32_t)
-                (renderUVSpace)*RENDER_UV_SPACE_BIT
-                | (showUVMesh)*SHOW_UV_MESH_BIT
-                | (showUVEdgeTexels)*SHOW_UV_EDGE_TEXELS_BIT
-                | (showUVGrid)*SHOW_UV_GRID_BIT
+                  (showUVMeshOutside)*SHOW_UVMESH_OUTSIDE_BIT
+                | (showUVMeshFaces)*SHOW_UVMESH_FACES_BIT
+                | (showUVMeshEdges)*SHOW_UVMESH_EDGES_BIT
+                | (showUVMeshFacesID)*SHOW_UVMESH_FACES_ID_BIT
 
+                | (showUVGrid)*SHOW_UV_GRID_BIT
                 | (maskOutsideUV)*MASK_OUTSIDE_UV_BIT
                 | (linearSampler)*LINEAR_SAMPLER_BIT
+                | (lightShading)*LIGHT_SHADING_BIT
+
+                |(renderUVSpace)*RENDER_UV_SPACE_BIT
+
+                | (INSPECTED_MAP_BITS & (inspectedMap << INSPECTED_MAP_OFFSET))
+                | (DISPLAYED_COLOR_BITS & (displayedColor << DISPLAYED_COLOR_OFFSET))
                 ;
         }
     };
@@ -131,19 +176,26 @@ namespace graphics {
         // Read / write shared uniforms
         const ModelDrawableInspectorUniforms& getUniforms() const { return (*_sharedUniforms); }
         ModelDrawableInspectorUniforms& editUniforms() { return (*_sharedUniforms); }
+        ModelDrawableInspectorUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
 
     protected:
         ModelDrawableInspectorUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _pipeline;
-        graphics::PipelineStatePointer _pipelineInspectUVMap;
 
-        graphics::PipelineStatePointer _pipelineMakeSeamMap_edge;
-        graphics::PipelineStatePointer _pipelineMakeSeamMap_face;
+        graphics::PipelineStatePointer _pipeline_draw_mesh;
+        graphics::PipelineStatePointer _pipeline_draw_edges;
+        graphics::PipelineStatePointer _pipeline_draw_connectivity;
 
-        graphics::PipelineStatePointer _pipelineInspectUVSpace;
+        graphics::PixelFormat _uvmeshMapFormat = graphics::PixelFormat::R32G32B32A32_FLOAT;
+        graphics::PipelineStatePointer _pipeline_uvmesh_makeEdge;
+        graphics::PipelineStatePointer _pipeline_uvmesh_makeFace;
 
 
-        graphics::PipelineStatePointer _pipelineUVSpaceComputeBlur;
+        graphics::PipelineStatePointer _pipeline_draw_uvspace_inspect;
+
+        graphics::PipelineStatePointer _pipeline_draw_uvmesh_point;
+
+        graphics::PipelineStatePointer _pipeline_compute_imageSpaceBlur;
+        graphics::PipelineStatePointer _pipeline_compute_meshSpaceBlur;
     };
     using ModelDrawableInspectorFactoryPointer = std::shared_ptr< ModelDrawableInspectorFactory>;
 
@@ -154,31 +206,27 @@ namespace graphics {
         void swapUniforms(const ModelDrawableInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
         const ModelDrawableInspectorUniformsPointer& getUniforms() const { return _uniforms; }
         
-        graphics::BufferPointer getEdgeBuffer() const { return _edgeBuffer; }
+        // PRE pass DrawbleID
+        DrawableID _pre_pass_ID;
 
-        ModelEdgeArray _edges;
+        // POST pass DrawbleID
+        DrawableID _post_pass_ID;
 
-        // Edges DrawableID
-        DrawableID _drawEdgesID;
-
-        // Make edges DrawbleID
-        DrawableID _makeEdgesID;
 
     protected:
         friend class ModelDrawableInspectorFactory;
 
         const ModelDrawable* _inspectedModelDrawable;
 
-        graphics::BufferPointer _edgeBuffer;
+        graphics::BufferPointer _buffer_edge;
 
-        graphics::TexturePointer _edgeTexture;
-        graphics::FramebufferPointer _edgeFramebuffer;
+        graphics::TexturePointer _texture_uvmesh;
+        graphics::FramebufferPointer _framebuffer_uvmesh;
 
-        graphics::DescriptorSetPointer  _descriptorSet_makeEdgeMap;
-
+        graphics::DescriptorSetPointer  _descriptorSet_uvmesh;
         graphics::DescriptorSetPointer _descriptorSet_compute;
 
-        graphics::TexturePointer _computeTexture;
+        graphics::TexturePointer _texture_compute;
 
         ModelDrawableInspectorUniformsPointer _uniforms;
     };
@@ -195,17 +243,6 @@ namespace graphics {
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };
-    
-    class VISUALIZATION_API ModelDrawableInspectorEdges {
-    public:
-        core::aabox3 getBound() const { return _bound; }
-        DrawObjectCallback getDrawcall() const { return _drawcall; }
 
-
-    protected:
-        friend class ModelDrawableInspectorFactory;
-        DrawObjectCallback _drawcall;
-        core::aabox3 _bound;
-    };
 
 } // !namespace graphics

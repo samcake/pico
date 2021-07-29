@@ -31,7 +31,6 @@
 #include <graphics/gpu/Resource.h>
 #include "Window.h"
 
-#include <core/Log.h>
 
 using namespace uix;
 
@@ -152,9 +151,6 @@ bool CameraController::onKeyboard(const KeyboardEvent& e) {
 bool CameraController::onMouse(const MouseEvent& e) {
 
     if (e.state & uix::MOUSE_MOVE) {
-        if (e.state & uix::MOUSE_CONTROL) {
-            picoLog() << e.state;
-        }
         if (e.state & uix::MOUSE_LBUTTON) {
             if ((e.state & uix::MOUSE_SHIFT)) {
                 if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {

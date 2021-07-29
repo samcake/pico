@@ -48,6 +48,24 @@ namespace core
         vec2 operator*(float s) const { return vec2(x * s, y * s); }
         vec2 operator-() const { return vec2(-x, -y); }
     };
+    struct ivec2 {
+        int32_t x, y;
+        int32_t* data() { return &x; }
+        const int32_t* data() const { return &x; }
+
+        ivec2() : x(0), y(0) {}
+        ivec2(int32_t _x) : x(_x), y(_x) {}
+        ivec2(int32_t _x, int32_t _y) : x(_x), y(_y) {}
+        ivec2& operator=(const ivec2& a) { x = a.x; y = a.y; return *this; }
+
+        ivec2 operator+(const ivec2& a) const { return ivec2(x + a.x, y + a.y); }
+        ivec2 operator-(const ivec2& a) const { return ivec2(x - a.x, y - a.y); }
+        ivec2 operator*(int32_t s) const { return ivec2(x * s, y * s); }
+        ivec2 operator-() const { return ivec2(-x, -y); }
+
+        int32_t operator[](int i) const { return data()[i]; }
+        int32_t& operator[](int i) { return data()[i]; }
+    };
     struct vec3 {
         float x, y, z;
         float* data() { return &x; }
@@ -70,11 +88,28 @@ namespace core
         const static vec3 Y;
         const static vec3 Z;
     };
-
-
     inline const vec3 vec3::X{ 1.0f, 0, 0 };
     inline const vec3 vec3::Y{ 0, 1.0f, 0 };
     inline const vec3 vec3::Z{ 0, 0, 1.0f };
+    struct ivec3 {
+        int32_t x, y, z;
+        int32_t* data() { return &x; }
+        const int32_t* data() const { return &x; }
+
+        ivec3() : x(0), y(0), z(0) {}
+        ivec3(int32_t _x) : x(_x), y(_x), z(_x) {}
+        ivec3(int32_t _x, int32_t _y, int32_t _z) : x(_x), y(_y), z(_z) {}
+        ivec3& operator=(const ivec3& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        ivec3 operator+(const ivec3& a) const { return ivec3(x + a.x, y + a.y, z + a.z); }
+        ivec3 operator-(const ivec3& a) const { return ivec3(x - a.x, y - a.y, z - a.z); }
+        ivec3 operator*(int32_t s) const { return ivec3(x * s, y * s, z * s); }
+        ivec3 operator-() const { return ivec3(-x, -y, -z); }
+
+        int32_t operator[](int i) const { return data()[i]; }
+        int32_t& operator[](int i) { return data()[i]; }
+    };
+
 
     struct vec4 {
         float x, y, z, w;
@@ -121,12 +156,16 @@ namespace core
         ivec4() : x(0), y(0), z(0), w(0) {}
         ivec4(int32_t _x) : x(_x), y(_x), z(_x), w(_x) {}
         ivec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y), z(_z), w(_w) {}
-        ivec4& operator=(const ivec4& a) { x = a.x; y = a.y; z = a.z; return *this; }
+        ivec4& operator=(const ivec4& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
 
         ivec4 operator+(const ivec4& a) const { return ivec4(x + a.x, y + a.y, z + a.z, w + a.w); }
         ivec4 operator-(const ivec4& a) const { return ivec4(x - a.x, y - a.y, z - a.z, w - a.w); }
         ivec4 operator*(int32_t s) const { return ivec4(x * s, y * s, z * s, w * s); }
         ivec4 operator-() const { return ivec4(-x, -y, -z, -w); }
+
+        int32_t operator[](int i) const { return data()[i]; }
+        int32_t& operator[](int i) { return data()[i]; }
+
     };
 
     // Abs
@@ -261,6 +300,27 @@ namespace core
     }
     inline vec4 clamp(const vec4& a, const vec4& b, const vec4& c) {
         return vec4(clamp(a.x, b.x, c.x), clamp(a.y, b.y, c.y), clamp(a.z, b.z, c.z), clamp(a.w, b.w, c.w));
+    }
+
+    // Sort in increasing order 
+    inline ivec2 sort_increasing(const ivec2& a) {
+        return (a.x <= a.y ? a : ivec2(a.y, a.x));
+    }
+    inline ivec3 sort_increasing(const ivec3& a) {
+        ivec3 ordered{ a };
+        if (ordered.y < ordered.x) {
+            std::swap(ordered.x, ordered.y);
+        }
+
+        if (ordered.z < ordered.y) {
+            std::swap(ordered.z, ordered.y);
+        }
+
+        if (ordered.y < ordered.x) {
+            std::swap(ordered.x, ordered.y);
+        }
+
+        return ordered;
     }
 
     // Color tools

@@ -102,8 +102,8 @@ namespace graphics {
         uint32_t vertexOffset{ 0 };
         uint32_t attribOffset{ MODEL_INVALID_INDEX };
         uint32_t material{ MODEL_INVALID_INDEX };
-        uint32_t spareA;
-        uint32_t spareB;
+        uint32_t numEdges{ 0 };
+        uint32_t edgeOffset{ MODEL_INVALID_INDEX };
         uint32_t spareC;
     };
 
@@ -132,7 +132,10 @@ namespace graphics {
         uint32_t n{ 0 };
     };
     using ModelVertexAttrib = core::vec4;
-    using ModelIndex = uint16_t;
+    using ModelIndex = uint32_t;
+    
+    using ModelEdge = core::ivec4; // 2 vertex indices and 2 adjacent triangle indices (in index buffer)
+    using ModelFace = core::ivec4; // 3 edge indices of the face
 
     class VISUALIZATION_API ModelDrawable {
     public:
@@ -160,6 +163,13 @@ namespace graphics {
         std::vector<core::aabox3> _partAABBs;
         std::vector<ModelShape> _shapes;
 
+        // Connectivity information of the meshes
+        graphics::BufferPointer getEdgeBuffer() const { return _edgeBuffer; }
+        graphics::BufferPointer getFaceBuffer() const { return _faceBuffer; }
+        std::vector<ModelEdge> _edges;
+        std::vector<ModelFace> _faces;
+
+        // Utility mesh connectivity information:
         // For each part, we create one drawable
         DrawableIDs _partDrawables;
 
@@ -186,6 +196,9 @@ namespace graphics {
         graphics::BufferPointer _indexBuffer;
         graphics::BufferPointer _partBuffer;
 
+        graphics::BufferPointer _edgeBuffer;
+        graphics::BufferPointer _faceBuffer;
+        
         graphics::BufferPointer _materialBuffer;
         graphics::TexturePointer _albedoTexture;
 

@@ -1,14 +1,27 @@
 #define mat43 float4x3
 
-int RENDER_UV_SPACE_BIT() { return 0x00000001; }
-int SHOW_UV_MESH_BIT() { return 0x00000002; }
-int SHOW_UV_EDGE_TEXELS_BIT() { return 0x00000004; }
-int SHOW_UV_GRID_BIT() { return 0x00000008; }
+int SHOW_UVMESH_OUTSIDE_BIT() { return 0x00000001; }
+int SHOW_UVMESH_FACES_BIT() { return 0x00000002; }
+int SHOW_UVMESH_EDGES_BIT() { return 0x00000004; }
+int SHOW_UVMESH_FACES_ID_BIT() { return 0x00000008; }
 
-int DRAW_EDGE_LINE_BIT() { return 0x00000010; }
+int SHOW_UV_GRID_BIT() { return 0x00000010; }
 int MASK_OUTSIDE_UV_BIT() { return 0x00000020; }
+int LINEAR_SAMPLER_BIT() { return 0x00000040; }
+int LIGHT_SHADING_BIT() { return 0x00000080; }
 
-int MAKE_EDGE_MAP_BIT() { return 0x00000100; }
+int MAKE_UVMESH_MAP_BIT() { return 0x00000100; }
+int RENDER_UV_SPACE_BIT() { return 0x00000200; }
+int DRAW_EDGE_LINE_BIT() { return 0x00000400; }
+int RENDER_WIREFRAME_BIT() { return 0x00000800; }
+
+int INSPECTED_MAP_BITS() { return 0x000F0000; }
+int INSPECTED_MAP_OFFSET() { return 16; }
+int INSPECTED_MAP(int drawMode) { return (drawMode & INSPECTED_MAP_BITS()) >> INSPECTED_MAP_OFFSET(); }
+
+int DISPLAYED_COLOR_BITS() { return 0x00F00000; }
+int DISPLAYED_COLOR_OFFSET() { return 20; }
+int DISPLAYED_COLOR(int drawMode) { return (drawMode & DISPLAYED_COLOR_BITS()) >> DISPLAYED_COLOR_OFFSET(); }
 
 //
 // Transform API
@@ -107,6 +120,10 @@ float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
     return transformTo(view, worldPos);
 }
 
+float3 eyeFromWorldSpaceDir(Transform view, float3 worldDir) {
+    return rotateTo(view, worldDir);
+}
+
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
     return transformFrom(model, objPos);
 }
@@ -133,22 +150,6 @@ Transform node_getWorldTransform(int nodeID) {
 }
 
 
-float3 unpackNormalFrom32I(uint n) {
-    int nx = int(n & 0x3FF);
-    int ny = int((n >> 10) & 0x3FF);
-    int nz = int((n >> 20) & 0x3FF);
- //   nx = nx + (nx > 511 ? -1024 : 0);
-//    ny = ny + (ny > 511 ? -1024 : 0); 
-  //  nz = nz + (nz > 511 ? -1024 : 0); 
-    nx = nx - 511;
-    ny = ny - 511;
-    nz = nz - 511;
-
-
-    return normalize(float3(float(nx), float(ny), float(nz)));
-}
-
-
 //
 // Model
 //
@@ -158,77 +159,214 @@ struct Part {
     uint vertexOffset;
     uint attribOffset;
     uint material;
-    uint spareA;
-    uint spareB;
+    uint numEdges;
+    uint edgeOffset;
     uint spareC;
 };
 
 StructuredBuffer<Part>  part_array : register(t1);
 
+//
+// Mesh API
+//
 Buffer<uint>  index_array : register(t2);
 
-struct Vertex {
-    float x;
-    float y;
-    float z;
-    uint n;
-};
-
+typedef float4 Vertex;
 StructuredBuffer<Vertex>  vertex_array : register(t3);
 
-struct VertexAttrib {
-    float x;
-    float y;
-    float z;
-    float w;
-};
-
+typedef float4 VertexAttrib;
 StructuredBuffer<VertexAttrib>  vertex_attrib_array : register(t4);
 
-uint3 fetchFaceIndices(int indexOffset, int faceNum) {
+uint mesh_fetchVectorIndex(int vertNum, int indexOffset) {
+    return indexOffset + vertNum;
+}
+
+uint3 mesh_fetchFaceIndices(int faceNum, int indexOffset) {
     // Fetch Face indices
     int faceIndexBase = indexOffset + faceNum * 3;
     return uint3(index_array[faceIndexBase], index_array[faceIndexBase + 1], index_array[faceIndexBase + 2]);
 }
 
-struct Face {
-    float3 v[3];
+float3 unpackNormalFrom32I(uint n) {
+    int nx = int(n & 0x3FF);
+    int ny = int((n >> 10) & 0x3FF);
+    int nz = int((n >> 20) & 0x3FF);
+    //   nx = nx + (nx > 511 ? -1024 : 0);
+   //    ny = ny + (ny > 511 ? -1024 : 0); 
+     //  nz = nz + (nz > 511 ? -1024 : 0); 
+    nx = nx - 511;
+    ny = ny - 511;
+    nz = nz - 511;
+
+    return normalize(float3(float(nx), float(ny), float(nz)));
+}
+
+float3 mesh_fetchVertexPosition(uint vid, int vertexOffset) {
+    return vertex_array[vertexOffset + vid].xyz;
+}
+
+float3 mesh_fetchVertexNormal(uint vid, int vertexOffset) {
+    return unpackNormalFrom32I(asuint(vertex_array[vertexOffset + vid].w));
+}
+
+float2 mesh_fetchVertexTexcoord(uint aid, int attribOffset) {
+    return (attribOffset == -1 ? float2(0.5, 0.5) : vertex_attrib_array[attribOffset + aid].xy);
+}
+
+typedef float3x3 FacePositions;
+
+struct FaceVerts {
+    FacePositions v;
     uint3 n;
 };
 
-Face fetchFaceVerts(uint3 fvid, int vertexOffset) {
+FaceVerts mesh_fetchFaceVerts(uint3 fvid, int vertexOffset) {
     // Fetch Face vertices
-    Face face;
+    FaceVerts face;
     for (int i = 0; i < 3; i++) {
         uint vi = vertexOffset + fvid[i];
         Vertex v = vertex_array[vi];
-        face.v[i] = float3(v.x, v.y, v.z);
-        face.n[i] = v.n;
+        face.v[i] = v.xyz;
+        face.n[i] = asuint(v.w);
     }
-
     return face;
 }
 
-Face fetchFaceAttribs(uint3 fvid, int attribOffset) {
-    // Fetch Face vertices
-    Face face;
+FacePositions mesh_unpackFacePositions(FaceVerts fv) {
+    return fv.v;
+}
+
+typedef float3x3 FaceNormals;
+
+FaceNormals mesh_unpackFaceNormals(FaceVerts fv) {
+    FaceNormals fns;
+    fns[0] = unpackNormalFrom32I(fv.n[0]);
+    fns[1] = unpackNormalFrom32I(fv.n[1]);
+    fns[2] = unpackNormalFrom32I(fv.n[2]);
+    return fns;
+}
+
+typedef float3x4 FaceAttribs;
+typedef float3x2 FaceTexcoords;
+
+FaceAttribs mesh_fetchFaceAttribs(uint3 fvid, int attribOffset) {
+    // Fetch Face attribs
+    FaceAttribs face;
     for (int i = 0; i < 3; i++) {
-        uint vi = attribOffset + fvid[i];
-        face.v[i] = float4(vertex_attrib_array[vi].x, vertex_attrib_array[vi].y, vertex_attrib_array[vi].z, vertex_attrib_array[vi].w);
+        face[i] = vertex_attrib_array[attribOffset + fvid[i]].xyzw;
     }
-
+    return face;
+}
+FaceTexcoords mesh_fetchFaceTexcoords(uint3 fvid, int attribOffset) {
+    // Fetch Face attribs
+    FaceTexcoords face;
+    for (int i = 0; i < 3; i++) {
+        face[i] = vertex_attrib_array[attribOffset + fvid[i]].xy;
+    }
     return face;
 }
 
+// Triangle Attribute Intepolation
+float3 mesh_interpolateVertexPos(FaceVerts fv, float3 baryPos) {
+    return baryPos.x * fv.v[0].xyz + baryPos.y * fv.v[1].xyz + baryPos.z * fv.v[2].xyz;
+}
+float3 mesh_interpolateVertexPos(FacePositions fp, float3 baryPos) {
+    return baryPos.x * fp[0].xyz + baryPos.y * fp[1].xyz + baryPos.z * fp[2].xyz;
+}
+float3 mesh_interpolateVertexNormal(FaceNormals fns, float3 baryPos) {
+    return normalize(baryPos.x * fns[0] + baryPos.y * fns[1] + baryPos.z * fns[2]);
+}
+float2 mesh_interpolateVertexTexcoord(FaceTexcoords ft, float3 baryPos) {
+    return baryPos.x * ft[0].xy + baryPos.y * ft[1].xy + baryPos.z * ft[2].xy;
+}
 
 
-struct Edge {
-    uint p;
-    uint2 i;
-    uint d;
-};
-
+typedef int4 Edge; // x and y are vertex indices, z and w are triangle indices in index buffer
 StructuredBuffer<Edge>  edge_array : register(t5);
+
+bool mesh_edge_isAttribSeam(int4 edge) {
+    return edge.w < 0;
+}
+int mesh_edge_triangle0(int4 edge) {
+    return edge.z;
+}
+int mesh_edge_triangle1(int4 edge) {
+    return (edge.w < 0 ? -edge.w - 1 : edge.w);
+}
+
+bool mesh_edge_isOutline(int4 edge) { // no c1 continuity neighbor face in the mesh
+    return edge.z == mesh_edge_triangle1(edge);
+}
+
+typedef int4 FaceEdge; // x, y and z are the 3 edge indices of the face, allowing to retreive neighbor faces
+StructuredBuffer<FaceEdge>  face_array : register(t6);
+
+uint3 mesh_triangle_getAdjacentTriangles(uint triangleId, int edgeOffset) {
+    int3 faceEdges = face_array[triangleId].xyz;
+
+    uint3 triangles;
+    for (int e = 0; e < 3; ++e) {
+        Edge edge = edge_array[faceEdges[e] + edgeOffset];
+        triangles[e] = ((edge.z == triangleId) ? mesh_edge_triangle1(edge) : mesh_edge_triangle0(edge));
+    }
+    return triangles;
+}
+
+int2 mesh_triangle_nextTriangleAroundFromAdjacent(int dir, uint pivotTriangle, uint fromTriangle, int edgeOffset) {
+
+    uint3 pivotTriAdj = mesh_triangle_getAdjacentTriangles(pivotTriangle, edgeOffset);
+
+    int adjEdgeId = (pivotTriAdj.x == fromTriangle ? 0 :
+                        (pivotTriAdj.y == fromTriangle ? 1 : 2));
+
+    int nextEdgeId = (adjEdgeId + dir) % 3;
+
+    int nextTri = pivotTriAdj[nextEdgeId];
+
+    return int2(nextTri, nextEdgeId);
+}
+
+int mesh_triangle_detectAdjTriangle(uint nextRingTri, uint3 adjTriangles) {
+    int detectAdjTriangle = -1 + 1 * (adjTriangles.x == nextRingTri) + 2 * (adjTriangles.y == nextRingTri) + 3 * (adjTriangles.z == nextRingTri);
+    return detectAdjTriangle;
+}
+
+int mesh_triangle_gatherTriangleRing(out int ring[32], uint pivotTriangle, int edgeOffset) {
+    const int MAX_RING_LENGTH = 32;
+    uint3 adjFaces = mesh_triangle_getAdjacentTriangles(pivotTriangle, edgeOffset);
+
+    int prevTri = pivotTriangle;
+    int currentTri = adjFaces[0]; // find the other "ring" triangles from the last one
+    ring[0] = currentTri;
+    int ringLength = 1;
+
+    int direction = +1;
+    for (int rt = 1; rt < MAX_RING_LENGTH; ) {
+        int2 next = mesh_triangle_nextTriangleAroundFromAdjacent(direction, currentTri, prevTri, edgeOffset);
+
+        int detectAdjTriangle = mesh_triangle_detectAdjTriangle(next.x, adjFaces);
+        prevTri = currentTri;
+        currentTri = next.x;
+
+        if (detectAdjTriangle == 0) {
+            rt = MAX_RING_LENGTH;
+        } else {
+            // found the next triangle on the ring, not an adjTri
+            ring[ringLength] = currentTri;
+            ringLength++;
+            rt++;
+        
+            // reached another adj triangle;
+            if (detectAdjTriangle > 0) {
+                // reset the search from the center triangle
+                prevTri = pivotTriangle;
+            }
+        }
+    }
+
+    return ringLength;
+}
+
 
 
 // Drawcall data
@@ -242,6 +380,9 @@ cbuffer UniformBlock1 : register(b1) {
     int _numEdges;
     int _drawMode;
 
+    int _inspectedTriangle;
+    int _numInspectedTriangles;
+
 
     float _uvCenterX;
     float _uvCenterY;
@@ -251,14 +392,35 @@ cbuffer UniformBlock1 : register(b1) {
     float _kernelRadius;
 }
 
+
+// 
+// UVMesh map API
+//
+Texture2D uvmesh_map : register(t11);
+
+float uvmesh_isOutside(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w == 0.0f);
+}
+float uvmesh_isEdge(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w < 0.0f);
+}
+float uvmesh_isFace(float4 uvmesh_texel) {
+    return float(uvmesh_texel.w > 0.0f);
+}
+int uvmesh_triangle(float4 uvmesh_texel) {
+    return int(abs(uvmesh_texel.w)) - 1;
+}
+
+
+
+
 float4 uvSpaceClipPos(float2 uv) {
     float2 eyeUV = uv - float2(_uvCenterX, _uvCenterY);
     return orthoClipFromEyeSpace(_projection.aspectRatio(),  2.0f * _uvScale
     , 0.0f, 2.0f, float3( eyeUV, 1.0f));
 }
 
-struct VertexShaderOutput
-{
+struct VertexShaderOutput {
     float3 EyePos : EPOS;
     float3 Normal   : NORMAL;
     float2 Texcoord  : TEXCOORD;
@@ -266,54 +428,57 @@ struct VertexShaderOutput
     float4 Position : SV_Position;
 };
 
+
 VertexShaderOutput main(uint vidx : SV_VertexID) {
-    
+    VertexShaderOutput OUT;
+
+    // Which part ?
+    Part p = part_array[_partID];
+
     // Fetch the part data
-    Part p;
-    uint pvidx;
-    // Valid part idx means per part drawcall
-    if (_partID != uint( -1)) {
-        p = part_array[_partID];
-        pvidx = vidx;
-    }
+    uint pvidx = vidx;
+    uint tidx = pvidx / 3;
+    uint tvidx = pvidx % 3;
 
     // draw edges ?
     if (_drawMode & DRAW_EDGE_LINE_BIT()) {
         uint eidx = vidx / 2;
-        int evidx = vidx % 2; 
+        int evidx = vidx % 2;
         Edge edge = edge_array[eidx];
-        p = part_array[edge.p];
-        pvidx = edge.i[evidx];
+        pvidx = edge[evidx]; // x or y are vertex indices of the edge
+        tidx = mesh_edge_triangle0(edge);
+        if (!(_drawMode & RENDER_WIREFRAME_BIT()) && !mesh_edge_isAttribSeam(edge)) {
+            return OUT;
+        }
     }
 
-    uint tidx = pvidx / 3;
-    uint tvidx = pvidx % 3;
 
-    uint3 faceIndices = fetchFaceIndices(p.indexOffset, tidx);
-    Face faceVerts = fetchFaceVerts(faceIndices, p.vertexOffset);
+    // Fetch mesh and face data
+    uint3 faceIndices = mesh_fetchFaceIndices(tidx, p.indexOffset);
+    FaceVerts faceVerts = mesh_fetchFaceVerts(faceIndices, p.vertexOffset);
+    FacePositions facePositions = mesh_unpackFacePositions(faceVerts);
 
-    float2 texcoord = float2(0.5, 0.5);
-    if (p.attribOffset != uint( -1)) {
-        VertexAttrib va = vertex_attrib_array[faceIndices[tvidx] + p.attribOffset];
-        texcoord = float2(va.x, va.y);
+
+    if (_drawMode & DRAW_EDGE_LINE_BIT()) {
+        tvidx = ((pvidx == faceIndices[0]) ? 0 : (
+                    (pvidx == faceIndices[1]) ? 1 :
+                        2 ));
     }
 
-    // Generate normal
-    float3 faceEdge0 = faceVerts.v[1].xyz - faceVerts.v[0].xyz;
-    float3 faceEdge1 = faceVerts.v[2].xyz - faceVerts.v[0].xyz;
-    float3 normal = normalize(cross(faceEdge0, faceEdge1));
+    float3 position = facePositions[tvidx];
+    float3 normal = unpackNormalFrom32I(faceVerts.n[tvidx]);
+    float2 texcoord = mesh_fetchVertexTexcoord(faceIndices[tvidx], p.attribOffset);
 
-    normal = unpackNormalFrom32I(faceVerts.n[tvidx]);
-  //  normal = float3(0.0, 1.0, 0.0);
-
-    // Barycenter 
-    float3 barycenter = (faceVerts.v[0].xyz + faceVerts.v[1].xyz + faceVerts.v[2].xyz) / 3.0f;
-    float4 trianglePos = float4(tvidx == 0, tvidx == 1, tvidx == 2, tidx);
-
-    // Transform
-    float3 position = faceVerts.v[tvidx].xyz;
+    // Barycenter tweak 
+    float3 barycenter = (facePositions[0] + facePositions[1] + facePositions[2]) / 3.0f;
     position += 0.0f * (barycenter - position);
 
+    float4 trianglePos = float4(tvidx == 0, tvidx == 1, tvidx == 2, float(tidx + 1));
+    if (_drawMode & DRAW_EDGE_LINE_BIT()) {
+        trianglePos.w = -trianglePos.w;
+    }
+
+    // Transform
     Transform _model = node_getWorldTransform(_nodeID);
 
     position = worldFromObjectSpace(_model, position);
@@ -321,14 +486,8 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 
     normal = worldFromObjectSpaceDir(_model, normal);
+    normal = eyeFromWorldSpaceDir(_view, normal);
 
-  /*  uint color = asuint(p.material);
-    const float INT8_TO_NF = 1.0 / 255.0;
-    float r = INT8_TO_NF * (float)((color >> 0) & 0xFF);
-    float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
-    float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
-*/
-    VertexShaderOutput OUT;
     OUT.Position = clipPos;
     OUT.EyePos = eyePosition;
     OUT.Normal = normal;
@@ -337,17 +496,84 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
 
     if (_drawMode & RENDER_UV_SPACE_BIT()) {
         OUT.Position = uvSpaceClipPos(texcoord);
-    } else if (_drawMode & MAKE_EDGE_MAP_BIT()) {
+    } else if (_drawMode & MAKE_UVMESH_MAP_BIT()) {
         float2 uv = 2 * texcoord - float2(1.0, 1.0);
-        //uv.x += 0.5 * 1.0/ 2048.0f;
-        //uv.y -= 0.5 * 1.0/ 2048.0f;
         OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
             float3(uv, 1.0f));
         OUT.Position.y = -OUT.Position.y;
     }
 
+    return OUT;
+}
 
+
+VertexShaderOutput main_connectivity(uint vid : SV_VertexID) {
+    VertexShaderOutput OUT;
+    // Which part ?
+    Part p = part_array[_partID];
+
+    // Fetch the part data
+    uint pvidx = vid;
+
+    uint tidx = pvidx / 3;
+    uint tvidx = pvidx % 3;
     
+    uint neighbor_tidx = tidx % (_numInspectedTriangles);
+    tidx = tidx / (_numInspectedTriangles);
+
+    if (_inspectedTriangle == -1) {
+        return OUT;
+    }
+
+    tidx = _inspectedTriangle;
+    uint triangleIdx = 0;
+
+
+    int triangleRing[32];
+
+    int ringLength = mesh_triangle_gatherTriangleRing(triangleRing, tidx, p.edgeOffset);
+    if (neighbor_tidx > 0 && neighbor_tidx <= ringLength) {
+        triangleIdx = triangleRing[neighbor_tidx - 1];
+    }
+    else if (neighbor_tidx == 0) {
+        triangleIdx = tidx;
+    }
+
+
+    // Fetch the actual face vertex indices
+    uint3 faceIndices = mesh_fetchFaceIndices(triangleIdx, p.indexOffset);
+    int vidx = faceIndices[tvidx];
+   // float4 trianglePos = float4(tvidx == 0, tvidx == 1, tvidx == 2, float(triangleIdx + 1));
+    float4 trianglePos = float4(float(ringLength + 1), tvidx == 1, tvidx == 2, float(neighbor_tidx));
+    float3 position = mesh_fetchVertexPosition(vidx, p.vertexOffset);
+    float3 normal = mesh_fetchVertexNormal(vidx, p.vertexOffset);
+    float2 texcoord = mesh_fetchVertexTexcoord(vidx, p.attribOffset);
+
+    // Transform
+    Transform _model = node_getWorldTransform(_nodeID);
+    position = worldFromObjectSpace(_model, position);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
+    normal = worldFromObjectSpaceDir(_model, normal);
+    normal = eyeFromWorldSpaceDir(_view, normal);
+
+    OUT.Position = clipPos;
+    OUT.EyePos = eyePosition;
+    OUT.Normal = normal;
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = trianglePos;
+
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+    }
+    else if (_drawMode & MAKE_UVMESH_MAP_BIT()) {
+        float2 uv = 2 * texcoord - float2(1.0, 1.0);
+        OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
+            float3(uv, 1.0f));
+        OUT.Position.y = -OUT.Position.y;
+    }
+
     return OUT;
 }
 
@@ -364,8 +590,69 @@ VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
 
     OUT.Normal = float3(0.0, 0.0, 1.0);
     OUT.Texcoord = texcoord;
-    OUT.TriPos = float4(0, 0, 0, tidx);
+    OUT.TriPos = float4(0, 0, 0, 0);
 
     return OUT;
 }
+
+VertexShaderOutput main_uvmesh_point(uint vidx : SV_VertexID) {
+    uint tex_width, tex_height;
+    uvmesh_map.GetDimensions(tex_width, tex_height);
+    int2 texPos = int2(vidx % tex_width, vidx / tex_height);
+
+    float2 texUV = float2((texPos.x + 0.5f) / float(tex_width), (texPos.y + 0.5f) / float(tex_height));
+
+    // fetch the UVmesh
+    float4 k_uvmesh = uvmesh_map.Load(int3(texPos, 0));
+
+    // Find part / triangle idx
+    // Fetch the part data
+    Part p;
+    uint pvidx = 0;
+    // Valid part idx means per part drawcall
+    if (_partID != uint(-1)) {
+        p = part_array[_partID];
+        pvidx = vidx;
+    }
+
+    uint tidx = uvmesh_triangle(k_uvmesh);
+    uint3 faceIndices = mesh_fetchFaceIndices(tidx, p.indexOffset);
+
+    FaceVerts faceVerts = mesh_fetchFaceVerts(faceIndices, p.vertexOffset);
+    FacePositions facePositions = mesh_unpackFacePositions(faceVerts);
+    FaceNormals faceNormals = mesh_unpackFaceNormals(faceVerts);
+    FaceTexcoords faceTexcoords = mesh_fetchFaceTexcoords(faceIndices, p.attribOffset);
+
+    float3 position = mesh_interpolateVertexPos(facePositions, k_uvmesh.xyz);
+    float3 normal = mesh_interpolateVertexNormal(faceNormals, k_uvmesh.xyz); // y axis
+    float2 texcoord = mesh_interpolateVertexTexcoord(faceTexcoords, k_uvmesh.xyz);
+
+    float3 faceEdge = normalize(facePositions[1] - facePositions[0]);
+    float3 cotangent = normalize(cross(faceEdge, normal)); // z axis
+    float3 tangent = normalize(cross(normal, cotangent)); // x axis
+
+
+    // Full mvp transform for 3d
+    Transform _model = node_getWorldTransform(_nodeID);
+    position = worldFromObjectSpace(_model, position);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
+    VertexShaderOutput OUT;
+
+    OUT.Position = clipPos;
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+    }
+
+    OUT.EyePos = eyePosition;
+    OUT.Normal = float3(0.0, 0.0, 1.0);
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = k_uvmesh;
+
+    return OUT;
+
+}
+
+
 

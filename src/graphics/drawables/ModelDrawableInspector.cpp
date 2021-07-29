@@ -65,10 +65,12 @@ namespace graphics
         uint32_t partID{0};
         uint32_t numNodes{ 0 };
         uint32_t numParts{ 0 };
+
         uint32_t numMaterials{ 0 };
         uint32_t numEdges{ 0 };
         uint32_t drawMode{ 0 };
-
+        int32_t inspectedTriangle{ -1 };
+        int32_t numInspectedTriangles{ 1 };
 
         float _uvCenterX{ 0.0f };
         float _uvCenterY{ 0.0f };
@@ -78,11 +80,25 @@ namespace graphics
         float _kernelRadius{ 5.0f };
     };
 
+    ModelObjectData makeModelObjectData(const ModelDrawableInspectorUniforms& params, int32_t node, uint32_t flags) {
+        ModelObjectData odata{
+            node, (int32_t)0,
+            params.numNodes, params.numParts, params.numMaterials, params.numEdges,
+            flags,
+            params.inspectedTriangle, params.numInspectedTriangles,
+            params.uvSpaceCenterX, params.uvSpaceCenterY,
+            params.uvSpaceScale, params.colorMapBlend,
+            params.kernelRadius
+        };
+        return (odata);
+    }
+
+
     void ModelDrawableInspectorFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
-        // Let's describe the pipeline Descriptors layout
-        graphics::DescriptorLayouts descriptorLayouts{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+        // Let's describe the draw pipeline Descriptors layout
+        graphics::DescriptorLayouts draw_descriptorLayouts{
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
@@ -90,20 +106,21 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
 
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1},  // Material
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 11, 1},  // UVTool Texture
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 11, 1},  // UVMesh Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 2},
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
         };
 
-        graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
-        auto descriptorSetLayout = device->createDescriptorSetLayout(descriptorSetLayoutInit);
+        graphics::DescriptorSetLayoutInit draw_descriptorSetLayoutInit{ draw_descriptorLayouts };
+        auto draw_descriptorSetLayout = device->createDescriptorSetLayout(draw_descriptorSetLayoutInit);
 
-        // Let's describe the pipeline Descriptors layout
-        graphics::DescriptorLayouts edge_descriptorLayouts{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+        // Let's describe the uvmesh pipeline Descriptors layout
+        graphics::DescriptorLayouts uvmesh_descriptorLayouts{
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},// Camera
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
@@ -111,14 +128,15 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Edge
 
         };
 
-        graphics::DescriptorSetLayoutInit edge_descriptorSetLayoutInit{ edge_descriptorLayouts };
-        auto edge_descriptorSetLayout = device->createDescriptorSetLayout(edge_descriptorSetLayoutInit);
+        graphics::DescriptorSetLayoutInit uvmesh_descriptorSetLayoutInit{ uvmesh_descriptorLayouts };
+        auto uvmesh_descriptorSetLayout = device->createDescriptorSetLayout(uvmesh_descriptorSetLayoutInit);
 
         // Let's describe the pipeline Descriptors layout for compute pass
-        graphics::DescriptorLayouts computeDescriptorLayouts{
+        graphics::DescriptorLayouts compute_descriptorLayouts{
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 0, sizeof(ModelObjectData) >> 2},
 
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 1, 1}, // Part
@@ -126,6 +144,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 3, 1}, // Vertex
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 4, 1}, // Attrib
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 5, 1}, // Edge
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 6, 1}, // Face
 
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 9, 1},  // Material
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 10, 1},  // Albedo Texture
@@ -135,8 +154,8 @@ namespace graphics
             { graphics::DescriptorType::RW_RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 0, 1}, // render target!
         };
 
-        graphics::DescriptorSetLayoutInit computeDescriptorSetLayoutInit{ computeDescriptorLayouts };
-        auto compute_descriptorSetLayout = device->createDescriptorSetLayout(computeDescriptorSetLayoutInit);
+        graphics::DescriptorSetLayoutInit compute_descriptorSetLayoutInit{ compute_descriptorLayouts };
+        auto compute_descriptorSetLayout = device->createDescriptorSetLayout(compute_descriptorSetLayoutInit);
 
         // And a Pipeline
 
@@ -146,93 +165,148 @@ namespace graphics
         auto shader_comp_src = ModelUVSpaceProcessing_comp::getSource();
         auto shader_comp_src_file = ModelUVSpaceProcessing_comp::getSourceFilename();
 
-        // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
-        graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+        // Draw pass shaders and pipeline
+        graphics::ShaderInit draw_vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer draw_vertexShader = device->createShader(draw_vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
-        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+        graphics::ShaderInit draw_pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer draw_pixelShader = device->createShader(draw_pixelShaderInit);
 
-        graphics::ProgramInit programInit{ vertexShader, pixelShader };
-        graphics::ShaderPointer programShader = device->createProgram(programInit);
+        graphics::ProgramInit draw_programInit{ draw_vertexShader, draw_pixelShader };
+        graphics::ShaderPointer draw_program = device->createProgram(draw_programInit);
 
         // Default pipeline draw faces
-        graphics::GraphicsPipelineStateInit pipelineInit{
-                    programShader,
+        graphics::GraphicsPipelineStateInit draw_pipelineInit{
+                    draw_program,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    descriptorSetLayout,
+                    draw_descriptorSetLayout,
                     RasterizerState().withCullBack(),
                     true, // enable depth
                     BlendState()
         };
-        _pipeline = device->createGraphicsPipelineState(pipelineInit);
+        _pipeline_draw_mesh = device->createGraphicsPipelineState(draw_pipelineInit);
 
-        // Inspect UVMap pipeline draw edges
-        graphics::GraphicsPipelineStateInit pipelineInitUVMap{
-                    programShader,
+        // Draw mesh seam edges
+        graphics::GraphicsPipelineStateInit draw_edges_pipelineInit{
+                    draw_program,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
-                    descriptorSetLayout,
+                    draw_descriptorSetLayout,
                     RasterizerState(),//.withAntialiasedLine().withConservativeRasterizer(),
                     true, // enable depth
                     BlendState()
         };
-        _pipelineInspectUVMap = device->createGraphicsPipelineState(pipelineInitUVMap);
+        _pipeline_draw_edges = device->createGraphicsPipelineState(draw_edges_pipelineInit);
+
+        // Draw mesh connectivity
+        graphics::ShaderInit draw_connectivity_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_connectivity", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer draw_connectivity_vertexShader = device->createShader(draw_connectivity_vertexShaderInit);
+
+        graphics::ShaderInit draw_connectivity_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_connectivity", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer draw_connectivity_pixelShader = device->createShader(draw_connectivity_pixelShaderInit);
+
+        graphics::ProgramInit draw_connectivity_programInit{ draw_connectivity_vertexShader, draw_connectivity_pixelShader };
+        graphics::ShaderPointer draw_connectivity_program = device->createProgram(draw_connectivity_programInit);
+
+        graphics::GraphicsPipelineStateInit draw_connectivity_pipelineInit{
+                    draw_connectivity_program,
+                    StreamLayout(),
+                    graphics::PrimitiveTopology::TRIANGLE,
+                    draw_descriptorSetLayout,
+                    RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
+                    true, // enable depth
+                    BlendState()
+        };
+        _pipeline_draw_connectivity = device->createGraphicsPipelineState(draw_connectivity_pipelineInit);
 
         // Draw some widgets to debug and uderstand the UV space
-        graphics::ShaderInit uv_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
-        graphics::ShaderPointer uv_vertexShader = device->createShader(uv_vertexShaderInit);
-        graphics::ShaderInit uv_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvspace", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
-        graphics::ShaderPointer uv_pixelShader = device->createShader(uv_pixelShaderInit);
+        graphics::ShaderInit uvspace_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer uvspace_vertexShader = device->createShader(uvspace_vertexShaderInit);
+        graphics::ShaderInit uvspace_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvspace", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer uvspace_pixelShader = device->createShader(uvspace_pixelShaderInit);
 
-        graphics::ProgramInit uv_programInit{ uv_vertexShader, uv_pixelShader };
-        graphics::ShaderPointer uv_programShader = device->createProgram(uv_programInit);
+        graphics::ProgramInit uvspace_programInit{ uvspace_vertexShader, uvspace_pixelShader };
+        graphics::ShaderPointer uvspace_program = device->createProgram(uvspace_programInit);
 
-        graphics::GraphicsPipelineStateInit pipelineInitUVSpace{
-            uv_programShader,
+        graphics::GraphicsPipelineStateInit uvspace_pipelineInit{
+            uvspace_program,
             StreamLayout(),
             graphics::PrimitiveTopology::TRIANGLE_STRIP,
-            descriptorSetLayout,
+            draw_descriptorSetLayout,
             RasterizerState(),
             false,
             BlendState()
         }; 
-        _pipelineInspectUVSpace = device->createGraphicsPipelineState(pipelineInitUVSpace);
+        _pipeline_draw_uvspace_inspect = device->createGraphicsPipelineState(uvspace_pipelineInit);
 
-        // Make UVMap pipeline draw edges
-        graphics::ShaderInit makeSeamMap_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_makeSeamMap", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
-        graphics::ShaderPointer makeSeamMap_pixelShader = device->createShader(makeSeamMap_pixelShaderInit);
+        // Draw uvmesh map points
+        graphics::ShaderInit draw_uvmesh_point_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvmesh_point", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer draw_uvmesh_point_vertexShader = device->createShader(draw_uvmesh_point_vertexShaderInit);
 
-        graphics::ProgramInit seam_programInit{ vertexShader, makeSeamMap_pixelShader };
-        graphics::ShaderPointer seam_programShader = device->createProgram(seam_programInit);
+        graphics::ShaderInit draw_uvmesh_point_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh_point", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer draw_uvmesh_point_pixelShader = device->createShader(draw_uvmesh_point_pixelShaderInit);
 
-        graphics::GraphicsPipelineStateInit pipelineInitMakeUVMap{
-                    seam_programShader,
+        graphics::ProgramInit draw_uvmesh_point_programInit{ draw_uvmesh_point_vertexShader, draw_uvmesh_point_pixelShader };
+        graphics::ShaderPointer draw_uvmesh_point_program = device->createProgram(draw_uvmesh_point_programInit);
+
+        graphics::GraphicsPipelineStateInit pipeline_draw_uvmesh_point{
+            draw_uvmesh_point_program,
+            StreamLayout(),
+            graphics::PrimitiveTopology::POINT,
+            draw_descriptorSetLayout,
+            RasterizerState(),
+            true, // enable depth
+            BlendState()
+        };
+        _pipeline_draw_uvmesh_point = device->createGraphicsPipelineState(pipeline_draw_uvmesh_point);
+
+
+        // 
+        // Make uvmesh pipeline draw edges and face and encode mesh data
+        graphics::ShaderInit make_uvmesh_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer make_uvmesh_pixelShader = device->createShader(make_uvmesh_pixelShaderInit);
+
+        graphics::ProgramInit make_uvmesh_programInit{ draw_vertexShader, make_uvmesh_pixelShader };
+        graphics::ShaderPointer make_uvmesh_program = device->createProgram(make_uvmesh_programInit);
+
+        graphics::GraphicsPipelineStateInit make_uvmesh_pipelineInit{
+                    make_uvmesh_program,
                     StreamLayout(),
-                    graphics::PrimitiveTopology::LINE,
-                    edge_descriptorSetLayout,
-                    RasterizerState().withAntialiasedLine().withMultisample().withConservativeRasterizer(),
+                    graphics::PrimitiveTopology::TRIANGLE,
+                    uvmesh_descriptorSetLayout,
+                    RasterizerState().withConservativeRasterizer().withMultisample(),
                     false,
                     BlendState(),
-                    graphics::PixelFormat::R16G16B16A16_UNORM
+                    _uvmeshMapFormat // same format as the uvmesh_map
         };
-        _pipelineMakeSeamMap_edge = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
-        pipelineInitMakeUVMap.primitiveTopology = graphics::PrimitiveTopology::TRIANGLE;
-        _pipelineMakeSeamMap_face = device->createGraphicsPipelineState(pipelineInitMakeUVMap);
+        _pipeline_uvmesh_makeFace = device->createGraphicsPipelineState(make_uvmesh_pipelineInit);
+        make_uvmesh_pipelineInit.primitiveTopology = graphics::PrimitiveTopology::LINE;
+        make_uvmesh_pipelineInit.rasterizer = RasterizerState().withAntialiasedLine().withMultisample();
+        _pipeline_uvmesh_makeEdge = device->createGraphicsPipelineState(make_uvmesh_pipelineInit);
 
         // First compute blur shader and pipeline
-        graphics::ShaderInit blur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_blur", "", shader_comp_src, shader_comp_src_file };
-        graphics::ShaderPointer blur_compShader = device->createShader(blur_compShaderInit);
+        {
+            graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlur", "", shader_comp_src, shader_comp_src_file };
+            graphics::ShaderPointer imageSpaceBlur_compShader = device->createShader(imageSpaceBlur_compShaderInit);
 
-        // Let's describe the Compute pipeline Descriptors layout
-        graphics::ComputePipelineStateInit blur_compPipelineInit{
-            blur_compShader,
-            compute_descriptorSetLayout
-        };
+            // Let's describe the Compute pipeline Descriptors layout
+            graphics::ComputePipelineStateInit imageSpaceBlur_compPipelineInit{
+                imageSpaceBlur_compShader,
+                compute_descriptorSetLayout
+            };
 
-        _pipelineUVSpaceComputeBlur = device->createComputePipelineState(blur_compPipelineInit);
+            _pipeline_compute_imageSpaceBlur = device->createComputePipelineState(imageSpaceBlur_compPipelineInit);
+        }
+        {
+            graphics::ShaderInit meshSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_meshSpaceBlur", "", shader_comp_src, shader_comp_src_file };
+            graphics::ShaderPointer meshSpaceBlur_compShader = device->createShader(meshSpaceBlur_compShaderInit);
 
+            _pipeline_compute_meshSpaceBlur = device->createComputePipelineState({
+                meshSpaceBlur_compShader,
+                compute_descriptorSetLayout
+            });
+        }
     }
 
 
@@ -262,12 +336,15 @@ namespace graphics
         modelDrawable->_partBuffer = srcDrawable->_partBuffer;
         modelDrawable->_shapes = srcDrawable->_shapes;
 
-        // Also need aversion of the parts and their bound on the cpu side
+        // Also need a version of the parts and their bound on the cpu side
         modelDrawable->_vertices = srcDrawable->_vertices;
         modelDrawable->_vertex_attribs = srcDrawable->_vertex_attribs;
         modelDrawable->_indices = srcDrawable->_indices;
         modelDrawable->_parts = srcDrawable->_parts;
         modelDrawable->_partAABBs = srcDrawable->_partAABBs;
+
+        modelDrawable->_edgeBuffer = srcDrawable->_edgeBuffer;
+        modelDrawable->_faceBuffer = srcDrawable->_faceBuffer;
 
         // material buffer
         modelDrawable->_materialBuffer = srcDrawable->_materialBuffer;
@@ -276,38 +353,20 @@ namespace graphics
         // Model local bound is the containing box for all the local items of the model
         modelDrawable->_bound = srcDrawable->_bound;
 
-        // 
-        auto edges = computeUVSeamsEdges(*modelDrawable);
-
-        // seam edge buffer
-        BufferInit edgeBufferInit;
-        edgeBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        edgeBufferInit.bufferSize = edges.size() * sizeof(ModelEdge);
-        edgeBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
-        edgeBufferInit.firstElement = 0;
-        edgeBufferInit.numElements = edges.size();
-        edgeBufferInit.structStride = sizeof(ModelEdge);
-
-        auto ebuniformBuffer = device->createBuffer(edgeBufferInit);
-        memcpy(ebuniformBuffer->_cpuMappedAddress, edges.data(), edgeBufferInit.bufferSize);
-
-        modelDrawable->_edges = std::move(edges);
-        modelDrawable->_edgeBuffer = ebuniformBuffer;
-
-        // Making one "seam map" which will be rt once with the seam edges and then used to fetch from
-        TextureInit edgeMapInit;
-        edgeMapInit.width = modelDrawable->_albedoTexture->_init.width;
-        edgeMapInit.height = modelDrawable->_albedoTexture->_init.height;
-        edgeMapInit.usage = ResourceUsage::RENDER_TARGET;
-        edgeMapInit.format = graphics::PixelFormat::R16G16B16A16_UNORM;
-        auto edgeMap = device->createTexture(edgeMapInit);
-        modelDrawable->_edgeTexture = edgeMap;
+        // Making the "uvmesh map" which will be rt once with the mesh information and then used to fetch from
+        TextureInit uvmeshMapInit;
+        uvmeshMapInit.width = modelDrawable->_albedoTexture->_init.width;
+        uvmeshMapInit.height = modelDrawable->_albedoTexture->_init.height;
+        uvmeshMapInit.usage = ResourceUsage::RENDER_TARGET;
+        uvmeshMapInit.format = _uvmeshMapFormat;
+        auto uvmeshMap = device->createTexture(uvmeshMapInit);
+        modelDrawable->_texture_uvmesh = uvmeshMap;
 
         // And the framebuffer to render into it
-        FramebufferInit edgeFramebufferInit;
-        edgeFramebufferInit.colorTargets.push_back(edgeMap);
-        auto edgeFramebuffer = device->createFramebuffer(edgeFramebufferInit);
-        modelDrawable->_edgeFramebuffer = edgeFramebuffer;
+        FramebufferInit uvmeshFramebufferInit;
+        uvmeshFramebufferInit.colorTargets.push_back(uvmeshMap);
+        auto uvmeshFramebuffer = device->createFramebuffer(uvmeshFramebufferInit);
+        modelDrawable->_framebuffer_uvmesh = uvmeshFramebuffer;
 
         // Making one "compute map" which will be rw destination from the compute kernel and then used to fetch from
         TextureInit computeMapInit;
@@ -315,7 +374,14 @@ namespace graphics
         computeMapInit.height = modelDrawable->_albedoTexture->_init.height;
         computeMapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
         auto computeMap = device->createTexture(computeMapInit);
-        modelDrawable->_computeTexture = computeMap;
+        modelDrawable->_texture_compute = computeMap;
+
+        // fill the constant model dimensions in uniforms:
+        modelDrawable->getUniforms()->numNodes = modelDrawable->_localNodeTransforms.size();
+        modelDrawable->getUniforms()->numParts = modelDrawable->getPartBuffer()->getNumElements();
+        modelDrawable->getUniforms()->numNodes = modelDrawable->getMaterialBuffer()->getNumElements();
+        modelDrawable->getUniforms()->numEdges = modelDrawable->getEdgeBuffer()->getNumElements();
+        modelDrawable->getUniforms()->numTriangles = modelDrawable->getFaceBuffer()->getNumElements();
 
         return modelDrawable;
     }
@@ -330,7 +396,7 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline->getDescriptorSetLayout()
+                _pipeline_draw_mesh->getDescriptorSetLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet = descriptorSet;
@@ -353,16 +419,18 @@ namespace graphics
 
             graphics::DescriptorObject eb_rboDescriptorObject;
             eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
+            graphics::DescriptorObject fb_rboDescriptorObject;
+            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
 
             graphics::DescriptorObject mb_rboDescriptorObject;
             mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
             graphics::DescriptorObject texDescriptorObject;
             texDescriptorObject._textures.push_back(model.getAlbedoTexture());
             graphics::DescriptorObject computeDescriptorObject;
-            computeDescriptorObject._textures.push_back(model._computeTexture);
+            computeDescriptorObject._textures.push_back(model._texture_compute);
 
             graphics::DescriptorObject uvtoolDescriptorObject;
-            uvtoolDescriptorObject._textures.push_back(model._edgeTexture);
+            uvtoolDescriptorObject._textures.push_back(model._texture_uvmesh);
             
             graphics::DescriptorObject samplerDescriptorObject;
             graphics::SamplerInit samplerInit{};
@@ -381,6 +449,7 @@ namespace graphics
                 vb_rboDescriptorObject,
                 ab_rboDescriptorObject,
                 eb_rboDescriptorObject,
+                fb_rboDescriptorObject,
 
                 mb_rboDescriptorObject,
                 texDescriptorObject,
@@ -395,10 +464,10 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipelineMakeSeamMap_edge->getDescriptorSetLayout()
+                _pipeline_uvmesh_makeEdge->getDescriptorSetLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
-            model._descriptorSet_makeEdgeMap = descriptorSet;
+            model._descriptorSet_uvmesh = descriptorSet;
 
             // Assign the Camera UBO just created as the resource of the descriptorSet
             // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
@@ -418,6 +487,8 @@ namespace graphics
 
             graphics::DescriptorObject eb_rboDescriptorObject;
             eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
+            graphics::DescriptorObject fb_rboDescriptorObject;
+            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
 
             graphics::DescriptorObjects descriptorObjects = {
                 camera_uboDescriptorObject,
@@ -426,7 +497,8 @@ namespace graphics
                 ib_rboDescriptorObject,
                 vb_rboDescriptorObject,
                 ab_rboDescriptorObject,
-                eb_rboDescriptorObject
+                eb_rboDescriptorObject,
+                fb_rboDescriptorObject
             };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
@@ -435,7 +507,7 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipelineUVSpaceComputeBlur->getDescriptorSetLayout()
+                _pipeline_compute_imageSpaceBlur->getDescriptorSetLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_compute = descriptorSet;
@@ -452,6 +524,8 @@ namespace graphics
 
             graphics::DescriptorObject eb_rboDescriptorObject;
             eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
+            graphics::DescriptorObject fb_rboDescriptorObject;
+            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
 
             graphics::DescriptorObject mb_rboDescriptorObject;
             mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
@@ -459,7 +533,7 @@ namespace graphics
             texDescriptorObject._textures.push_back(model.getAlbedoTexture());
 
             graphics::DescriptorObject uvtoolDescriptorObject;
-            uvtoolDescriptorObject._textures.push_back(model._edgeTexture);
+            uvtoolDescriptorObject._textures.push_back(model._texture_uvmesh);
 
             graphics::DescriptorObject samplerDescriptorObject;
             graphics::SamplerInit samplerInit{};
@@ -467,7 +541,7 @@ namespace graphics
             samplerDescriptorObject._samplers.push_back(sampler);
 
             graphics::DescriptorObject dest_DescriptorObject;
-            dest_DescriptorObject._textures.push_back(model._computeTexture);
+            dest_DescriptorObject._textures.push_back(model._texture_compute);
 
             graphics::DescriptorObjects descriptorObjects = {
                 pb_rboDescriptorObject,
@@ -475,6 +549,7 @@ namespace graphics
                 vb_rboDescriptorObject,
                 ab_rboDescriptorObject,
                 eb_rboDescriptorObject,
+                fb_rboDescriptorObject,
 
                 mb_rboDescriptorObject,
                 texDescriptorObject,
@@ -497,245 +572,282 @@ namespace graphics
         // NUmber of nodes in the model
         auto numNodes = model._localNodeTransforms.size();
 
-        auto pipeline = this->_pipeline;
         auto albedoTex = model.getAlbedoTexture();
         auto pmodel = &model;
-        auto descriptorSet = model._descriptorSet;
-        auto descriptorSet_make = model._descriptorSet_makeEdgeMap;
+        auto descriptorSet_draw = model._descriptorSet;
+        auto descriptorSet_uvmesh = model._descriptorSet_uvmesh;
         auto descriptorSet_compute = model._descriptorSet_compute;
-        auto edgeMap = model._edgeTexture;
-        auto edgeFramebuffer = model._edgeFramebuffer;
-        auto computeMap =model._computeTexture;
+        auto uvmeshMap = model._texture_uvmesh;
+        auto uvmeshFramebuffer = model._framebuffer_uvmesh;
+        auto computeMap = model._texture_compute;
 
-        // And now a render callback where we describe the rendering sequence
+        auto pipeline_draw_mesh = _pipeline_draw_mesh;
+        auto pipeline_draw_uvspace = _pipeline_draw_uvspace_inspect;
+        auto pipeline_draw_edges = _pipeline_draw_edges;
+        auto pipeline_draw_connectivity = _pipeline_draw_connectivity;
+        auto pipeline_draw_uvmesh_point = _pipeline_draw_uvmesh_point;
+        auto pipeline_uvmesh_edge = _pipeline_uvmesh_makeEdge;
+        auto pipeline_uvmesh_face = _pipeline_uvmesh_makeFace;
+        auto pipeline_compute_imageSpaceBlur = _pipeline_compute_imageSpaceBlur;
+        auto pipeline_compute_meshSpaceBlur = _pipeline_compute_meshSpaceBlur;
+
+        // Pre pass drawable executed before drawing the model parts:
+        // Generate the uvmesh map pass
+        // dispatch compute pass(es)
+        // draw uvspace background
         {
-            graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline, albedoTex](
-                const NodeID node,
-                const graphics::CameraPointer& camera,
-                const graphics::SwapchainPointer& swapchain,
-                const graphics::DevicePointer& device,
-                const graphics::BatchPointer& batch) {
-
-                // this all works because the main texture is populated in the very first drawcall on the first call
-
-                batch->bindPipeline(pipeline);
-                batch->setViewport(camera->getViewportRect());
-                batch->setScissor(camera->getViewportRect());
-
-                batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-            };
-            model._drawcall = drawCallback;
-            model._drawableID = scene->createDrawable(model).id();
-        }
-
-        // one drawable per part
-        {
-            DrawableIDs drawables;
-            for (int d = 0; d < model._partAABBs.size(); ++d) {
-                auto part = new ModelDrawableInspectorPart();
-                part->_bound = model._partAABBs[d];
-
-                auto partNumIndices = model._parts[d].numIndices;
-                // And now a render callback where we describe the rendering sequence
-                graphics::DrawObjectCallback drawCallback = [pmodel, d, partNumIndices, numEdges, numNodes, numParts, numMaterials, descriptorSet, pipeline](
+            auto pre_pass = new ModelDrawableInspectorPart();
+            pre_pass->_bound = model._bound;
+            graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, uvmeshFramebuffer, uvmeshMap, computeMap,
+                descriptorSet_uvmesh, pipeline_uvmesh_edge, pipeline_uvmesh_face,
+                descriptorSet_compute, pipeline_compute_imageSpaceBlur, pipeline_compute_meshSpaceBlur,
+                descriptorSet_draw, pipeline_draw_uvspace, pipeline_draw_connectivity,
+                numEdges, numNodes, numParts, numMaterials](
                     const NodeID node,
                     const graphics::CameraPointer& camera,
                     const graphics::SwapchainPointer& swapchain,
                     const graphics::DevicePointer& device,
                     const graphics::BatchPointer& batch) {
+                        static bool first{ true };
                         auto params = pmodel->getUniforms().get();
-                        if (params->render3DModel) {
-                            auto flags = params->buildFlags();
-                            ModelObjectData odata{
-                                (int32_t)node,
-                                (int32_t)d,
-                                numNodes, numParts, numMaterials, numEdges,
-                                flags,
-                                params->uvSpaceCenterX, params->uvSpaceCenterY,
-                                params->uvSpaceScale, params->colorMapBlend};
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                            batch->draw(partNumIndices, 0);
+
+                        if (params->makeUVMeshMap) {
+
+                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, uvmeshMap);
+                            batch->bindFramebuffer(uvmeshFramebuffer);
+
+                            batch->clear(uvmeshFramebuffer, { 0, 0, 0, 0 });
+
+                            core::vec4 viewport(0, 0, uvmeshFramebuffer->width(), uvmeshFramebuffer->height());
+                            batch->setViewport(viewport);
+                            batch->setScissor(viewport);
+
+                            // Draw faces of the mesh in the edge map
+                            batch->bindPipeline(pipeline_uvmesh_face);
+
+                            // descriptor is bound for both passes since it s the same layout signature
+                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_uvmesh);
+                            
+                            ModelObjectData odata = makeModelObjectData(*params, node, ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT);
+
+                            for (int d = 0; d < pmodel->_parts.size(); ++d) {
+                                odata.partID = d;
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+ 
+                                auto partNumIndices = pmodel->_parts[d].numIndices;
+                                batch->draw(partNumIndices, 0);
+                            }
+
+                            // Draw the edges over
+                            if (params->uvmeshEdgeLinesPass) {
+                                batch->bindPipeline(pipeline_uvmesh_edge);
+                         
+                                odata.drawMode =    ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT |
+                                                    ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
+
+                                for (int d = 0; d < pmodel->_parts.size(); ++d) {
+                                    odata.partID = d;
+                                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                    auto partNumEdges = pmodel->_parts[d].numEdges;
+                                    batch->draw(partNumEdges * 2, 0);
+                                }
+                            }
+
+                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, uvmeshMap);
+
+                            batch->beginPass(swapchain, swapchain->currentIndex());
+
+
+                            params->makeUVMeshMap = false;
+
                         }
-                };
 
-                part->_drawcall = drawCallback;
+                        if (first) {
+                            if (albedoTex) {
+                                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                                batch->uploadTextureFromInitdata(device, albedoTex);
+                                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                            }
+                        }
 
-                auto partDrawable = scene->createDrawable(*part);
-                drawables.emplace_back(partDrawable.id());
-            }
+                        if (params->makeComputedMap) {
+                            switch (params->filterKernelTechnique) {
+                                case ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE:
+                                    batch->bindPipeline(pipeline_compute_imageSpaceBlur);
+                                break;
+                                case ModelDrawableInspectorUniforms::FKT_MESH_SPACE:
+                                    batch->bindPipeline(pipeline_compute_meshSpaceBlur);
+                                break;
+                            }
+                            
+                            batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
 
-           model._partDrawables = drawables;
-        }
+                            ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
+                            batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-        // one more drawable for the edges
-        {
-            auto edgesPipeline = _pipelineInspectUVMap;
-            auto drawEdges = new ModelDrawableInspectorEdges();
-            drawEdges->_bound = model._bound;
-            // And now a render callback where we describe the rendering sequence
-            graphics::DrawObjectCallback drawCallback = [pmodel, descriptorSet, edgesPipeline, numEdges, numNodes, numParts, numMaterials](
-                const NodeID node,
-                const graphics::CameraPointer& camera,
-                const graphics::SwapchainPointer& swapchain,
-                const graphics::DevicePointer& device,
-                const graphics::BatchPointer& batch) {
+                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
+                            batch->dispatch(computeMap->width() / 32, computeMap->height() / 32);
+                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
 
-                    if (pmodel->getUniforms()->showUVEdges) {
-                        batch->bindPipeline(edgesPipeline);
-                        batch->setViewport(camera->getViewportRect());
-                        batch->setScissor(camera->getViewportRect());
+                            params->makeComputedMap = false;
+                        }
 
-                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+                        // in uv space mode, draw uvspace inspect quad
+                        if (params->renderUVSpace) {
+                            batch->bindPipeline(pipeline_draw_uvspace);
+                            batch->setViewport(camera->getViewportRect());
+                            batch->setScissor(camera->getViewportRect());
 
-                        auto params = pmodel->getUniforms().get();
-                        auto flags = params->buildFlags() | ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
-                        ModelObjectData odata{ (int32_t)node, (int32_t)-1,
-                            numNodes, numParts, numMaterials, numEdges,
-                            flags,
-                            params->uvSpaceCenterX, params->uvSpaceCenterY,
-                            params->uvSpaceScale, params->colorMapBlend };
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                        batch->draw(numEdges * 2, 0);
-                    }
+                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+
+                            ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+
+                            batch->draw(4, 0); // draw quad
+                        }
+
+
+                        if (params->renderConnectivity && (params->inspectedTriangle > -1)) {
+                            batch->bindPipeline(pipeline_draw_connectivity);
+                            batch->setViewport(camera->getViewportRect());
+                            batch->setScissor(camera->getViewportRect());
+
+                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+
+                            auto flags = params->buildFlags();
+                            ModelObjectData odata = makeModelObjectData(*params, node, flags);
+
+                            for (int d = 0; d < pmodel->_parts.size(); ++d) {
+                                odata.partID = d;
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                auto partNumIndices = pmodel->_parts[d].numIndices;
+                                batch->draw((params->numInspectedTriangles) * 3, 0);
+                            }
+                        }
+                        first = false;
             };
 
-            drawEdges->_drawcall = drawCallback;
-            model._drawEdgesID = scene->createDrawable(*drawEdges).id();
+            pre_pass->_drawcall = drawCallback;
+            model._pre_pass_ID = scene->createDrawable(*pre_pass).id();
+
         }
 
-
-        // Generate the edge seam map pass
+        // Standard drawcalls for thee model and one drawcall per part
         {
-            auto seamPipeline_edge = _pipelineMakeSeamMap_edge;
-            auto seamPipeline_face = _pipelineMakeSeamMap_face;
-            auto uvSpacePipeline = _pipelineInspectUVSpace;
-            auto computePipeline = _pipelineUVSpaceComputeBlur;
-            auto makeEdges = new ModelDrawableInspectorEdges();
-            makeEdges->_bound = model._bound;
+            {
+                graphics::DrawObjectCallback drawCallback = [descriptorSet_draw, pipeline_draw_mesh](
+                    const NodeID node,
+                    const graphics::CameraPointer& camera,
+                    const graphics::SwapchainPointer& swapchain,
+                    const graphics::DevicePointer& device,
+                    const graphics::BatchPointer& batch) {
+
+
+                    // this all works because the main texture is populated in the very first drawcall on the first call
+
+                    batch->bindPipeline(pipeline_draw_mesh);
+                    batch->setViewport(camera->getViewportRect());
+                    batch->setScissor(camera->getViewportRect());
+
+                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                };
+                model._drawcall = drawCallback;
+                model._drawableID = scene->createDrawable(model).id();
+            }
+            {
+                // one drawable per part
+                DrawableIDs drawables;
+                for (int d = 0; d < model._partAABBs.size(); ++d) {
+                    auto part = new ModelDrawableInspectorPart();
+                    part->_bound = model._partAABBs[d];
+
+                    auto partNumIndices = model._parts[d].numIndices;
+                    // And now a render callback where we describe the rendering sequence
+                    graphics::DrawObjectCallback drawCallback = [pmodel, d, partNumIndices](
+                        const NodeID node,
+                        const graphics::CameraPointer& camera,
+                        const graphics::SwapchainPointer& swapchain,
+                        const graphics::DevicePointer& device,
+                        const graphics::BatchPointer& batch) {
+                            auto params = pmodel->getUniforms().get();
+                            if (params->render3DModel) {
+                                ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
+                                odata.partID = d;
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+
+                                batch->draw(partNumIndices, 0);
+                            }
+                    };
+
+                    part->_drawcall = drawCallback;
+
+                    auto partDrawable = scene->createDrawable(*part);
+                    drawables.emplace_back(partDrawable.id());
+                }
+
+               model._partDrawables = drawables;
+            }
+        }
+
+        // one more drawable for POST pass to draw extra widgets,  edges or uvmesh points
+        {
+            auto post_pass = new ModelDrawableInspectorPart();
+            post_pass->_bound = model._bound;
             // And now a render callback where we describe the rendering sequence
-            graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, edgeFramebuffer, edgeMap, computeMap,
-                descriptorSet_make, seamPipeline_edge, seamPipeline_face,
-                descriptorSet, uvSpacePipeline,
-                descriptorSet_compute, computePipeline,
+            graphics::DrawObjectCallback drawCallback = [pmodel, uvmeshMap,
+                descriptorSet_draw, pipeline_draw_edges, pipeline_draw_uvmesh_point, pipeline_draw_connectivity,
                 numEdges, numNodes, numParts, numMaterials](
                 const NodeID node,
                 const graphics::CameraPointer& camera,
                 const graphics::SwapchainPointer& swapchain,
                 const graphics::DevicePointer& device,
                 const graphics::BatchPointer& batch) {
-                static bool first{ true };
-                auto params = pmodel->getUniforms().get();
+                    auto params = pmodel->getUniforms().get();
 
-                if (params->renderMakeUVEdgeMap) {
+                    if (params->renderWireframe || params->renderUVEdgeLines) {
+                        batch->bindPipeline(pipeline_draw_edges);
+                        batch->setViewport(camera->getViewportRect());
+                        batch->setScissor(camera->getViewportRect());
 
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, edgeMap);
-                    batch->bindFramebuffer(edgeFramebuffer);
+                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
-                    batch->clear(edgeFramebuffer, {0, 0, 0, 0});
+                        auto flags = params->buildFlags();
+                        flags |= ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
+                        
+                        if (params->renderWireframe) {
+                            flags |= ModelDrawableInspectorUniforms::RENDER_WIREFRAME_BIT;
+                        }
+                        ModelObjectData odata = makeModelObjectData(*params, node, flags);
 
-                    core::vec4 viewport(0, 0, edgeFramebuffer->width(), edgeFramebuffer->height());
-                    batch->setViewport(viewport);
-                    batch->setScissor(viewport);
-
-
-
-                    // Draw faces of the mesh in the edge map
-                    batch->bindPipeline(seamPipeline_face);
-
-                    // descriptor is bound for both passes since it s the same layout signature
-                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_make);
-
-                    for (int d = 0; d < pmodel->_partAABBs.size(); ++d) {
-
-                        auto partNumIndices = pmodel->_parts[d].numIndices;
-                        auto flags =
-                            ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT;
-                        ModelObjectData odata{ (int32_t)node, (int32_t)d,
-                            numNodes, numParts, numMaterials, numEdges,
-                            flags,
-                            params->uvSpaceCenterX, params->uvSpaceCenterY,
-                            params->uvSpaceScale, params->colorMapBlend };
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                        batch->draw(partNumIndices, 0);
+                        for (int d = 0; d < pmodel->_parts.size(); ++d) {
+                            odata.partID = d;
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            auto partNumEdges = pmodel->_parts[d].numEdges;
+                            batch->draw(partNumEdges * 2, 0);
+                        }
                     }
 
-                    // Draw the edges over
-               /*     {
-                        batch->bindPipeline(seamPipeline_edge);
-                        auto flags =
-                        ModelDrawableInspectorUniforms::MAKE_EDGE_MAP_BIT |
-                        ModelDrawableInspectorUniforms::DRAW_EDGE_LINE_BIT;
-                        ModelObjectData odata{ (int32_t)node, (int32_t)-1,
-                                numNodes, numParts, numMaterials, numEdges,
-                                flags,
-                                params->uvSpaceCenterX, params->uvSpaceCenterY,
-                                params->uvSpaceScale, params->colorMapBlend };
+
+                    // draw the cloud point of samples from the uv mesh
+                    if (params->renderUVMeshPoints) {
+                        batch->bindPipeline(pipeline_draw_uvmesh_point);
+                        batch->setViewport(camera->getViewportRect());
+                        batch->setScissor(camera->getViewportRect());
+
+                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+
+                        ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
                         batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                        batch->draw(numEdges * 2, 0);
+                        batch->draw(uvmeshMap->width() * uvmeshMap->height(), 0); // draw point cloud
                     }
-                    */
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, edgeMap);
 
-                    batch->beginPass(swapchain, swapchain->currentIndex());
-
-
-                   // params->renderMakeUVEdgeMap = false;
-
-                }
-
-                if (first) {
-                    if (albedoTex) {
-                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                        batch->uploadTextureFromInitdata(device, albedoTex);
-                        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
-                    }
-                }
-
-                if (params->runFilter) {
-                    batch->bindPipeline(computePipeline);
-                    batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
-
-                    auto flags = params->buildFlags();
-                    ModelObjectData odata{ (int32_t)node, (int32_t)0,
-                        numNodes, numParts, numMaterials, numEdges,
-                        flags,
-                        params->uvSpaceCenterX, params->uvSpaceCenterY,
-                        params->uvSpaceScale, params->colorMapBlend,
-                        params->kernelRadius };
-                    batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
-
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
-                    batch->dispatch(computeMap->width() / 32, computeMap->height() / 32);
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
-
-                    params->runFilter = false;
-                }
-
-                // in uv space mode, draw uvspace inspect quad
-                if (params->renderUVSpace) {
-                    batch->bindPipeline(uvSpacePipeline);
-                    batch->setViewport(camera->getViewportRect());
-                    batch->setScissor(camera->getViewportRect());
-                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
-                    auto flags = params->buildFlags();
-                    ModelObjectData odata{ (int32_t)node, (int32_t)0,
-                        numNodes, numParts, numMaterials, numEdges,
-                        flags,
-                        params->uvSpaceCenterX, params->uvSpaceCenterY,
-                        params->uvSpaceScale, params->colorMapBlend };
-                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                    batch->draw(4, 0); // draw quad
-                }
-
-                first = false;
             };
 
-            makeEdges->_drawcall = drawCallback;
-            model._makeEdgesID = scene->createDrawable(*makeEdges).id();
-
+            post_pass->_drawcall = drawCallback;
+            model._post_pass_ID = scene->createDrawable(*post_pass).id();
         }
+
 
     }
 
@@ -753,8 +865,8 @@ namespace graphics
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
 
-        // Make edge item 
-        items.emplace_back(scene->createItem(rootNode.id(), model._makeEdgesID).id());
+        // Pre pass item 
+        items.emplace_back(scene->createItem(rootNode.id(), model._pre_pass_ID).id());
 
         // first item is the model drawable
         items.emplace_back(scene->createItem(rootNode.id(), model._drawableID).id());
@@ -772,124 +884,11 @@ namespace graphics
             }
         }
 
-        // One more item for the edges
-        items.emplace_back(scene->createItem(rootNode.id(), model._drawEdgesID).id());
+        // One more item for post
+        items.emplace_back(scene->createItem(rootNode.id(), model._post_pass_ID).id());
 
         return items; 
     }
 
-
-
-    ModelEdgeArray computeUVSeamsEdges(const ModelDrawable& model) {
-        ModelEdgeArray edges;
-
-        // detect edges on uv seams
-        // same 
-       
-        struct VI{
-            uint32_t p;
-            uint32_t i;
-            uint32_t v;
-        };
-        using VIs = std::vector<VI>;
-        using VImap = std::unordered_map<size_t, VIs>;
-        VImap vimap;
-
-        using EI = ModelEdge;
-        using EIs = std::vector<EI>;
-        using EImap = std::unordered_map<size_t, EIs>;
-        EImap edgeMap;
-
-        uint32_t pi = 0;
-        for (auto& p : model._parts) {
-            if (p.attribOffset != MODEL_INVALID_INDEX) {
-                for (uint32_t i = 0; i < p.numIndices; ++i) {
-                    auto index = model._indices[i + p.indexOffset];
-                    auto& v = model._vertices[index + p.vertexOffset];
-                    auto& a = model._vertex_attribs[index + p.attribOffset];
-
-                    //uint64_t k = *reinterpret_cast<uint64_t*>(&a.xy());
-                    size_t k = *reinterpret_cast<uint64_t*>(&a.xy());
-
-                    VI vi = {pi, i, index + p.vertexOffset };
-
-                    auto bi = vimap.find(k);
-                    if (bi == vimap.end()) {
-                        vimap.insert({ k, { vi } });
-                    }
-                    else {
-                        (*bi).second.emplace_back(vi);
-                    }
-                }
-
-                for (uint32_t i = 0; i < p.numIndices; i += 3) {
-
-                    auto i0 = model._indices[i + p.indexOffset];
-                    auto i1 = model._indices[i + 1 + p.indexOffset];
-                    auto i2 = model._indices[i + 2 + p.indexOffset];
-
-                    auto& v0 = model._vertices[i0 + p.vertexOffset];
-                    auto& v1 = model._vertices[i1 + p.vertexOffset];
-                    auto& v2 = model._vertices[i2 + p.vertexOffset];
-                    auto& a0 = model._vertex_attribs[i0 + p.attribOffset];
-                    auto& a1 = model._vertex_attribs[i1 + p.attribOffset];
-                    auto& a2 = model._vertex_attribs[i2 + p.attribOffset];
-
-                    auto ai0 = i0 + p.attribOffset;
-                    auto ai1 = i1 + p.attribOffset;
-                    auto ai2 = i2 + p.attribOffset;
-
-                    EI ei0 = { pi, i,     i + 1, (ai0 > ai1) };
-                    EI ei1 = { pi, i + 1, i + 2, (ai1 > ai2) };
-                    EI ei2 = { pi, i + 2, i,     (ai2 > ai0) };
-
-                    //uint64_t k = *reinterpret_cast<uint64_t*>(&a.xy());
-                    // size_t k = std::hash<core::vec4>(core::vec4(a0.x, a0.y, a1.x, a1.y));
-
-                //    uint64_t k0 = *reinterpret_cast<uint64_t*>(&e0);
-                    //  uint64_t k1 = *reinterpret_cast<uint64_t*>(&e1);
-                    //  uint64_t k2 = *reinterpret_cast<uint64_t*>(&e2);
-
-                    uint64_t k0 = *reinterpret_cast<uint64_t*>(&a0.xy()) | *reinterpret_cast<uint64_t*>(&a1.xy());
-                    uint64_t k1 = *reinterpret_cast<uint64_t*>(&a1.xy()) | *reinterpret_cast<uint64_t*>(&a2.xy());
-                    uint64_t k2 = *reinterpret_cast<uint64_t*>(&a2.xy()) | *reinterpret_cast<uint64_t*>(&a0.xy());
-                    
-
-                    auto bi0 = edgeMap.find(k0);
-                    if (bi0 == edgeMap.end()) {
-                        edgeMap.insert({ k0, { ei0 } });
-                    } else {
-                        (*bi0).second.emplace_back(ei0);
-                    }
-                    auto bi1 = edgeMap.find(k1);
-                    if (bi1 == edgeMap.end()) {
-                        edgeMap.insert({ k1, { ei1 } });
-                    }
-                    else {
-                        (*bi1).second.emplace_back(ei1);
-                    }
-                    auto bi2 = edgeMap.find(k2);
-                    if (bi2 == edgeMap.end()) {
-                        edgeMap.insert({ k2, { ei2 } });
-                    }
-                    else {
-                        (*bi2).second.emplace_back(ei2);
-                    }
-                }
-            }
-            pi++;
-        }
-
-
-        // LEt's go through the edges and keep the single ones which should be the seam edges
-        // and find their matching neighboors
-        for (auto& eb : edgeMap) {
-            if (eb.second.size() == 1) {
-                auto e = eb.second[0];
-                edges.emplace_back(e);
-            }
-        }
-        return edges;
-    }
 
 } // !namespace graphics

@@ -113,7 +113,13 @@ namespace graphics
     }
 
 
-
+    size_t hash(ModelVertex& v) {
+            return      *reinterpret_cast<uint64_t*>((uint64_t*)&v.px)
+                    | *reinterpret_cast<uint64_t*>((uint64_t*)&v.pz);
+    }
+    size_t hash(ModelVertexAttrib& a) {
+            return  *reinterpret_cast<uint64_t*>((uint64_t*)&a);
+    }
 
     graphics::ModelDrawable* ModelDrawableFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model) {
 
@@ -154,6 +160,20 @@ namespace graphics
         std::vector<core::aabox3> partAABBs;
         core::aabox3 bound;
 
+        std::vector<uint32_t> mainVertexIndices;
+
+        using LookupAttribArray = std::vector<std::pair<size_t, uint32_t>>;
+        using LookupVertex = struct { uint32_t index; LookupAttribArray attribs; };
+        using LookupVertexIndexTable = std::unordered_map<size_t, LookupVertex>;
+        LookupVertexIndexTable indexedVertexMap;
+
+        std::vector<ModelEdge> edge_buffer;
+        std::vector<ModelFace> face_buffer;
+
+        using LookupEdge = struct { uint32_t index; uint32_t t0; uint32_t t1{ (uint32_t) -1 }; };
+        using LookupEdgeIndexedTable = std::unordered_map<size_t, LookupEdge >;
+        LookupEdgeIndexedTable indexedEdgeMap;
+
 
         bool first = true;
         for (const auto& p : model->_primitives) {
@@ -161,48 +181,200 @@ namespace graphics
             const auto& indexAccess = model->_accessors[p._indices];
             const auto& indexView = model->_bufferViews[indexAccess._bufferView];
             const auto& indexBuffer = model->_buffers[indexView._buffer];
-
-            const auto& posAccess = model->_accessors[p._positions];
-            const auto& posView = model->_bufferViews[posAccess._bufferView];
-            const auto& posBuffer = model->_buffers[posView._buffer];
-
-            uint32_t attribsOffset = -1;
-            if (p._texcoords != document::model::INVALID_INDEX) {
-                attribsOffset = (uint32_t) vertex_attrib_buffer.size();
-            }   
-            ModelPart part{ indexAccess._elementCount, (uint32_t) index_buffer.size(), (uint32_t) vertex_buffer.size(), attribsOffset, p._material};
-            parts.emplace_back(part);
-
+            
+            // Index accessor
+            std::vector<ModelIndex> partIndices;
             auto indexStride = (indexView._byteStride ? indexView._byteStride : document::model::componentTypeSize(indexAccess._componentType));
             uint32_t indexMask = document::model::componentTypeInt32Mask(indexAccess._componentType);
             for (uint32_t i = 0; i < indexAccess._elementCount; ++i) {
-                auto index = (*(uint32_t*) (indexBuffer._bytes.data() + indexView._byteOffset + indexAccess._byteOffset + indexStride * i)) & indexMask;
-                index_buffer.emplace_back( index );
+                auto index = (*(uint32_t*)(indexBuffer._bytes.data() + indexView._byteOffset + indexAccess._byteOffset + indexStride * i)) & indexMask;
+                partIndices.emplace_back(index);
             }
 
-            auto posStride = (posView._byteStride ? posView._byteStride : document::model::elementTypeComponentCount(posAccess._elementType) *sizeof(float));
-            for (uint32_t i = 0; i < posAccess._elementCount; ++i) {
-                auto pos = (float*)(posBuffer._bytes.data() + posView._byteOffset + posAccess._byteOffset + posStride * i);
-                vertex_buffer.emplace_back(ModelVertex{ *pos, *(pos+1), *(pos + 2), 0} ); // 4th 32bits component is space for normal
-            }
+            // Position accessor
+            const auto& posAccess = model->_accessors[p._positions];
+            const auto& posView = model->_bufferViews[posAccess._bufferView];
+            const auto& posBuffer = model->_buffers[posView._buffer];
+            auto posStride = (posView._byteStride ? posView._byteStride : document::model::elementTypeComponentCount(posAccess._elementType) * sizeof(float));
+            std::function<core::vec3(uint32_t)> positionGetter = [&](uint32_t index) {
+                auto pos = (float*)(posBuffer._bytes.data() + posView._byteOffset + posAccess._byteOffset + posStride * index);
+                return core::vec3(*pos, *(pos + 1), *(pos + 2));
+            };
 
+            // Normal accessor
+            std::function<uint32_t(uint32_t)> normalGetter = [](uint32_t index) { return 0; };
             if (p._normals != document::model::INVALID_INDEX) {
                 const auto& norAccess = model->_accessors[p._normals];
                 const auto& norView = model->_bufferViews[norAccess._bufferView];
                 const auto& norBuffer = model->_buffers[norView._buffer];
                 auto norStride = (norView._byteStride ? norView._byteStride : document::model::elementTypeComponentCount(norAccess._elementType) * sizeof(float));
-                
-                union {
-                    uint32_t i;
-                    float f;
-                } i2f;
-
-                for (uint32_t i = 0; i < norAccess._elementCount; ++i) {
-                    auto nor = (float*)(norBuffer._bytes.data() + norView._byteOffset + norAccess._byteOffset + norStride * i);
+                normalGetter = [&](uint32_t index) {
+                    auto nor = (float*)(norBuffer._bytes.data() + norView._byteOffset + norAccess._byteOffset + norStride * index);
                     auto normal = core::vec3(*nor, *(nor + 1), *(nor + 2));
-                    // 4th 32bits component is space for normal, let's pack it
-                    vertex_buffer[i].n = core::packNormal32I(normal);
+                    return core::packNormal32I(normal);
+                };
+            }
+
+            // Texcoord accessor
+            std::function<core::vec2(uint32_t)> texcoordGetter = [](uint32_t index) { return core::vec2(); };
+            if (p._texcoords != document::model::INVALID_INDEX) {
+                const auto& texcoordAccess = model->_accessors[p._texcoords];
+                const auto& texcoordView = model->_bufferViews[texcoordAccess._bufferView];
+                const auto& texcoordBuffer = model->_buffers[texcoordView._buffer];
+                auto texcoordStride = (texcoordView._byteStride ? texcoordView._byteStride : document::model::elementTypeComponentCount(texcoordAccess._elementType) * sizeof(float));
+                texcoordGetter = [&](uint32_t index) {
+                    auto texcoord = (float*)(texcoordBuffer._bytes.data() + texcoordView._byteOffset + texcoordAccess._byteOffset + texcoordStride * index);
+                    return core::vec2(*texcoord, *(texcoord + 1));
+                };
+            }
+
+            std::vector<ModelVertex> partVerts;
+            std::vector<ModelVertexAttrib> partAttribs;
+
+            for (uint32_t i = 0; i < partIndices.size(); ++i) {
+                uint32_t index = partIndices[i];
+                auto vp = positionGetter(index);
+                auto vn = normalGetter(index);
+                auto vt = texcoordGetter(index);
+
+                ModelVertex v{ vp.x, vp.y, vp.z, vn };
+                partVerts.emplace_back(v);
+
+                ModelVertexAttrib a{ vt.x, vt.y, 0, 0 };
+                partAttribs.emplace_back(a);
+
+                //hash a key on vector pos and normal
+                size_t kv = hash(v);
+                size_t ka = hash(a);
+
+                auto v_bucket = indexedVertexMap.find(kv);
+                if (v_bucket == indexedVertexMap.end()) {
+                    index = vertex_buffer.size();
+
+                    vertex_buffer.emplace_back(v);
+                    vertex_attrib_buffer.emplace_back(a);
+
+                    indexedVertexMap.insert({ kv, { index, {{ka, index}} } });
+
+                    mainVertexIndices.emplace_back(index);
+                } else {
+                    auto& bucket = v_bucket->second.attribs;
+                    index = -1;
+                    for (auto& va : bucket) {
+                        if (va.first == ka) {
+                            index = va.second;
+                            break;
+                        }
+                    }
+                    if (index == -1) {
+                        index = vertex_buffer.size();
+                        vertex_buffer.emplace_back(v);
+                        vertex_attrib_buffer.emplace_back(a);
+                        bucket.emplace_back(std::pair(ka, index));
+
+                        mainVertexIndices.emplace_back(v_bucket->second.index);
+                    }
                 }
+
+                // update the index buffer index
+                partIndices[i] = index;
+            }
+
+            // Record edge and face:
+            std::vector<uint32_t> partEdges;
+            std::vector<ModelFace> partFaces;
+            std::unordered_map<size_t, std::vector<uint32_t>> partMainEdges;
+            int32_t numTriangles = partIndices.size() / 3;
+            partFaces.reserve(numTriangles);
+
+            for (uint32_t ti = 0; ti < numTriangles; ++ti) {
+                uint32_t baseFaceVertexIdx = 3 * ti;
+                core::ivec3 triangleVertIds(
+                    partIndices[baseFaceVertexIdx + 0],
+                    partIndices[baseFaceVertexIdx + 1],
+                    partIndices[baseFaceVertexIdx + 2]);
+
+                core::ivec2 edgeVertIndices[3] = {
+                  {triangleVertIds.x, triangleVertIds.y},
+                  {triangleVertIds.y, triangleVertIds.z},
+                  {triangleVertIds.z, triangleVertIds.x}
+                };
+
+                core::ivec4 faceEdges;
+                for (uint32_t vi = 0; vi < 3; ++vi) {
+                    uint32_t edgeIdx = baseFaceVertexIdx + vi;
+                    uint32_t edge_index = edgeIdx;
+
+                    auto edge = core::sort_increasing(edgeVertIndices[vi]);
+                    auto ek = *reinterpret_cast<uint64_t*>(&edge);
+
+                    auto e_bucket = indexedEdgeMap.find(ek);
+                    if (e_bucket == indexedEdgeMap.end()) {
+                        edge_index = edge_buffer.size();
+                        edge_buffer.emplace_back(core::ivec4{ edge.x, edge.y, (int32_t) ti, -1});
+                        indexedEdgeMap.insert({ ek, {edge_index, ti} });
+                    } else {
+                        picoAssert( (((int32_t) e_bucket->second.t1) == (-1)), "we have a problem, more than 2 triangles for that edge ???");
+                        
+                        edge_index = e_bucket->second.index;
+                        e_bucket->second.t1 = ti;
+                        edge_buffer[edge_index].w = ti;
+                    }
+
+                    partEdges.emplace_back(edge_index);
+                    faceEdges[vi] = edge_index;
+
+                    
+                    core::ivec2 mainEdge{ (int32_t) mainVertexIndices[edge.x], (int32_t) mainVertexIndices[edge.y] };
+                    mainEdge = core::sort_increasing(mainEdge);
+                    auto mek = *reinterpret_cast<uint64_t*>(&mainEdge);
+                    auto me_bucket = partMainEdges.find(mek);
+                    if (me_bucket == partMainEdges.end()) {
+                        partMainEdges.insert({ mek, {edge_index} });
+                    } else {
+                        me_bucket->second.emplace_back(edge_index);
+                    }
+                }
+                partFaces.emplace_back(faceEdges);
+            }
+
+
+            
+            for (uint32_t ei = 0; ei < partEdges.size(); ++ei) {
+                auto edgeId = partEdges[ei];
+                auto& edge = edge_buffer[edgeId];
+
+                if (edge.w == -1) {
+                    core::ivec2 mainEdge{ (int32_t)mainVertexIndices[edge.x], (int32_t)mainVertexIndices[edge.y] };
+                    mainEdge = core::sort_increasing(mainEdge);
+                    auto mek = *reinterpret_cast<uint64_t*>(&mainEdge);
+                    auto me_bucket = partMainEdges.find(mek);
+                    if (me_bucket != partMainEdges.end()) {
+                        if (me_bucket->second.size() > 1) {
+                            if (me_bucket->second.size() == 2) {
+                                for (auto lei : me_bucket->second) {
+                                    if (lei != edgeId) {
+                                        // go get that other edge and find the neighbor
+                                        auto t1 = edge_buffer[lei].z;
+                                        edge.w = -(1 + t1);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            ModelPart part{ partIndices.size(), (uint32_t)index_buffer.size(), 0, 0, p._material, partEdges.size(), 0  };
+            parts.emplace_back(part);
+            
+            // Fill the index_buffer with the true indices
+            for (auto i : partIndices) {
+                index_buffer.emplace_back(i);
+            }
+            // Fill the face_edge_buffer with the true indices
+            for (auto i : partFaces) {
+                face_buffer.emplace_back(i);
             }
 
             partAABBs.emplace_back(posAccess._aabb);
@@ -212,18 +384,6 @@ namespace graphics
             }
             else {
                 bound = core::aabox3::fromBound(bound, posAccess._aabb);
-            }
-            
-            if (p._texcoords != document::model::INVALID_INDEX) {
-                const auto& texcoordAccess = model->_accessors[p._texcoords];
-                const auto& texcoordView = model->_bufferViews[texcoordAccess._bufferView];
-                const auto& texcoordBuffer = model->_buffers[texcoordView._buffer];
-
-                auto texcoordStride = (texcoordView._byteStride ? texcoordView._byteStride : document::model::elementTypeComponentCount(texcoordAccess._elementType) * sizeof(float));
-                for (uint32_t i = 0; i < texcoordAccess._elementCount; ++i) {
-                    auto texcoord = (float*)(texcoordBuffer._bytes.data() + texcoordView._byteOffset + texcoordAccess._byteOffset + texcoordStride * i);
-                    vertex_attrib_buffer.emplace_back(*texcoord, *(texcoord + 1), 0.0f, 0.0f);
-                }
             }
         }
 
@@ -269,14 +429,46 @@ namespace graphics
         // index buffer
         BufferInit indexBufferInit;
         indexBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        indexBufferInit.bufferSize = index_buffer.size() * sizeof(uint16_t);
+        indexBufferInit.bufferSize = index_buffer.size() * sizeof(ModelIndex);
         indexBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
         indexBufferInit.firstElement = 0;
         indexBufferInit.numElements = index_buffer.size();
-        indexBufferInit.structStride = sizeof(uint16_t);
+        indexBufferInit.structStride = sizeof(ModelIndex);
 
         auto ibresourceBuffer = device->createBuffer(indexBufferInit);
         memcpy(ibresourceBuffer->_cpuMappedAddress, index_buffer.data(), indexBufferInit.bufferSize);
+
+
+        // edge buffer
+        BufferInit edgeBufferInit;
+        edgeBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+        edgeBufferInit.bufferSize = edge_buffer.size() * sizeof(ModelEdge);
+        edgeBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
+        edgeBufferInit.firstElement = 0;
+        edgeBufferInit.numElements = edge_buffer.size();
+        edgeBufferInit.structStride = sizeof(ModelEdge);
+
+        auto ebuniformBuffer = device->createBuffer(edgeBufferInit);
+        memcpy(ebuniformBuffer->_cpuMappedAddress, edge_buffer.data(), edgeBufferInit.bufferSize);
+
+        modelDrawable->_edges = std::move(edge_buffer);
+        modelDrawable->_edgeBuffer = ebuniformBuffer;
+
+        // Face buffer
+        BufferInit faceBufferInit;
+        faceBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+        faceBufferInit.bufferSize = face_buffer.size() * sizeof(ModelFace);
+        faceBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
+        faceBufferInit.firstElement = 0;
+        faceBufferInit.numElements = face_buffer.size();
+        faceBufferInit.structStride = sizeof(ModelFace);
+
+        auto fbuniformBuffer = device->createBuffer(faceBufferInit);
+        memcpy(fbuniformBuffer->_cpuMappedAddress, face_buffer.data(), faceBufferInit.bufferSize);
+
+        modelDrawable->_faces = std::move(face_buffer);
+        modelDrawable->_faceBuffer = fbuniformBuffer;
+
 
         modelDrawable->_uniforms = _sharedUniforms;
         modelDrawable->_indexBuffer = ibresourceBuffer;
