@@ -55,6 +55,6 @@ introducing:
 ## Build
 The repo is built using a standard cmake step to generate the makefiles for your favorite compiler.
 
-As described in the github action worflow .github/workflows/main.yml
+As described in the github action worflow [here](.github/workflows/main.yml).
 
 I develop on a windows machine, using visual studio 2019.
