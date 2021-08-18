@@ -70,7 +70,12 @@ void Scene::deleteAllItems() {
         deleteItem(indexIt->first);
 }
 
-void Scene::deleteItem(UserID id) {
+
+void Scene::deleteItem(ItemID id) {
+    _items.free(id);
+}
+
+void Scene::deleteItemFromID(UserID id) {
     auto indexIt = _idToIndices.find(id);
     if (indexIt != _idToIndices.end()) {
          auto removedItemIdx = indexIt->second;

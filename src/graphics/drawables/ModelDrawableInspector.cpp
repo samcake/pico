@@ -78,6 +78,9 @@ namespace graphics
         float _colorMapBlend{ 0.5f };
 
         float _kernelRadius{ 5.0f };
+
+        int32_t _inspectedTexelX{ 0 };
+        int32_t _inspectedTexelY{ 0 };
     };
 
     ModelObjectData makeModelObjectData(const ModelDrawableInspectorUniforms& params, int32_t node, uint32_t flags) {
@@ -88,7 +91,8 @@ namespace graphics
             params.inspectedTriangle, params.numInspectedTriangles,
             params.uvSpaceCenterX, params.uvSpaceCenterY,
             params.uvSpaceScale, params.colorMapBlend,
-            params.kernelRadius
+            params.kernelRadius,
+            params.inspectedTexelX, params.inspectedTexelY
         };
         return (odata);
     }
@@ -149,7 +153,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 9, 1},  // Material
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 10, 1},  // Albedo Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 11, 1},  // UVTool Texture
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 1},
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 2},
 
             { graphics::DescriptorType::RW_RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 0, 1}, // render target!
         };
@@ -219,6 +223,28 @@ namespace graphics
                     BlendState()
         };
         _pipeline_draw_connectivity = device->createGraphicsPipelineState(draw_connectivity_pipelineInit);
+
+        // Draw mesh connectivity
+        graphics::ShaderInit draw_kernelSamples_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_kernelSamples", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderPointer draw_kernelSamples_vertexShader = device->createShader(draw_kernelSamples_vertexShaderInit);
+
+        graphics::ShaderInit draw_kernelSamples_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_kernelSamples", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderPointer draw_kernelSamples_pixelShader = device->createShader(draw_kernelSamples_pixelShaderInit);
+
+        graphics::ProgramInit draw_kernelSamples_programInit{ draw_kernelSamples_vertexShader, draw_kernelSamples_pixelShader };
+        graphics::ShaderPointer draw_kernelSamples_program = device->createProgram(draw_kernelSamples_programInit);
+
+        graphics::GraphicsPipelineStateInit draw_kernelSamples_pipelineInit{
+                    draw_kernelSamples_program,
+                    StreamLayout(),
+                    graphics::PrimitiveTopology::TRIANGLE,
+                    draw_descriptorSetLayout,
+                    RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
+                    true, // enable depth
+                    BlendState()
+        };
+        _pipeline_draw_kernelSamples = device->createGraphicsPipelineState(draw_kernelSamples_pipelineInit);
+
 
         // Draw some widgets to debug and uderstand the UV space
         graphics::ShaderInit uvspace_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
@@ -383,6 +409,12 @@ namespace graphics
         modelDrawable->getUniforms()->numEdges = modelDrawable->getEdgeBuffer()->getNumElements();
         modelDrawable->getUniforms()->numTriangles = modelDrawable->getFaceBuffer()->getNumElements();
 
+        modelDrawable->getUniforms()->mapWidth = computeMapInit.width;
+        modelDrawable->getUniforms()->mapHeight = computeMapInit.height;
+        modelDrawable->getUniforms()->inspectedTexelX = computeMapInit.width >> 1;
+        modelDrawable->getUniforms()->inspectedTexelY = computeMapInit.height >> 1;
+
+
         return modelDrawable;
     }
 
@@ -540,6 +572,10 @@ namespace graphics
             auto sampler = device->createSampler(samplerInit);
             samplerDescriptorObject._samplers.push_back(sampler);
 
+            samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
+            auto samplerL = device->createSampler(samplerInit);
+            samplerDescriptorObject._samplers.push_back(samplerL);
+
             graphics::DescriptorObject dest_DescriptorObject;
             dest_DescriptorObject._textures.push_back(model._texture_compute);
 
@@ -585,6 +621,7 @@ namespace graphics
         auto pipeline_draw_uvspace = _pipeline_draw_uvspace_inspect;
         auto pipeline_draw_edges = _pipeline_draw_edges;
         auto pipeline_draw_connectivity = _pipeline_draw_connectivity;
+        auto pipeline_draw_kernelSamples = _pipeline_draw_kernelSamples;
         auto pipeline_draw_uvmesh_point = _pipeline_draw_uvmesh_point;
         auto pipeline_uvmesh_edge = _pipeline_uvmesh_makeEdge;
         auto pipeline_uvmesh_face = _pipeline_uvmesh_makeFace;
@@ -601,7 +638,7 @@ namespace graphics
             graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, uvmeshFramebuffer, uvmeshMap, computeMap,
                 descriptorSet_uvmesh, pipeline_uvmesh_edge, pipeline_uvmesh_face,
                 descriptorSet_compute, pipeline_compute_imageSpaceBlur, pipeline_compute_meshSpaceBlur,
-                descriptorSet_draw, pipeline_draw_uvspace, pipeline_draw_connectivity,
+                descriptorSet_draw, pipeline_draw_uvspace, pipeline_draw_connectivity, pipeline_draw_kernelSamples,
                 numEdges, numNodes, numParts, numMaterials](
                     const NodeID node,
                     const graphics::CameraPointer& camera,
@@ -724,6 +761,21 @@ namespace graphics
                                 batch->draw((params->numInspectedTriangles) * 3, 0);
                             }
                         }
+
+                        if (params->renderKernelSamples && (params->inspectedTexelX > -1) && (params->inspectedTexelY > -1)) {
+                            batch->bindPipeline(pipeline_draw_kernelSamples);
+                            batch->setViewport(camera->getViewportRect());
+                            batch->setScissor(camera->getViewportRect());
+
+                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+
+                            ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+
+                            batch->draw((params->numKernelSamples + 1) * 3, 0); // draw num samples per primitive
+                        }
+
+
                         first = false;
             };
 

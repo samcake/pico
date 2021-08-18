@@ -57,9 +57,17 @@ struct AppState {
     uint32_t makeUVMapFrame = 0;
     uint32_t makeFilteredMapFrame = 0;
 
-  
+    graphics::ModelDrawableFactoryPointer _modelDrawableFactory;
     graphics::ModelDrawableInspectorFactoryPointer _modelDrawableInspectorFactory;
     graphics::ModelDrawableInspectorUniformsPointer params;
+
+
+    graphics::ScenePointer _scene;
+
+    graphics::Node _modelRootNode;
+
+    graphics::ItemID _modelItemID;
+
 };
 
 AppState state;
@@ -73,7 +81,7 @@ AppState state;
 document::ModelPointer lmodel;
 
 
-void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root, bool withInspector) {
+graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root, bool withInspector) {
 
  //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
  //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
@@ -96,7 +104,7 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
-    //std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
 
@@ -111,40 +119,35 @@ void generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& s
     
     lmodel = document::model::Model::createFromGLTF(modelFile);
 
-    auto modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
-    modelDrawableFactory->allocateGPUShared(gpuDevice);
+    if (!state._modelDrawableFactory) {
+        state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
+        state._modelDrawableFactory->allocateGPUShared(gpuDevice);
+    }
 
-    auto modelDrawablePtr = modelDrawableFactory->createModel(gpuDevice, lmodel);
-    modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
+    auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
 
     auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
 
-    if (!withInspector) {
-        for (int i = 0; i < 1; ++i) {
-            auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i *  modelDrawable.getBound().half_size.z * 2.5f }), root.id());
+    graphics::ItemIDs modelItemIDs;
 
-            modelDrawableFactory->createModelParts(node1.id(), scene, *modelDrawablePtr);
-        }
-    }
     if (withInspector) {
-
         if (!state._modelDrawableInspectorFactory) {
             state._modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
             state._modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
             state.params = state._modelDrawableInspectorFactory->getUniformsPtr();
         }
-
         auto modelDrawableInspectorPtr = state._modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
         state._modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
 
         auto modelDrawableInspector = scene->createDrawable(*modelDrawableInspectorPtr);
 
-        for (int i = 0; i < 1; ++i) {
-            auto node1 = scene->createNode(core::translation({ 0.0f, 0.0f, i * modelDrawableInspector.getBound().half_size.z * 2.5f }), root.id());
-
-            state._modelDrawableInspectorFactory->createModelParts(node1.id(), scene, *modelDrawableInspectorPtr);
-        }
+        modelItemIDs = state._modelDrawableInspectorFactory->createModelParts(root.id(), scene, *modelDrawableInspectorPtr);
+    } else {
+        modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
     }
+
+    return modelItemIDs;
 }
 
 
@@ -172,7 +175,8 @@ int main(int argc, char *argv[])
     scene->_items.resizeBuffers(gpuDevice, 250000);
     scene->_nodes.resizeBuffers(gpuDevice, 250000);
     scene->_drawables.resizeBuffers(gpuDevice, 250000);
-  
+    state._scene = scene;
+
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
@@ -180,7 +184,7 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
-    // The viewport managing the rendering of the scene from the camera
+    // The view managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
 
@@ -205,10 +209,12 @@ int main(int argc, char *argv[])
 
 
     // Some nodes to layout the scene and animate objects
-    auto node0 = scene->createNode(core::mat4x3(), -1);
+    state._modelRootNode = scene->createNode(core::mat4x3(), -1);
 
-    generateModel(gpuDevice, scene, camera, node0, true);
-
+    auto modelItemIDs = generateModel(gpuDevice, scene, camera, state._modelRootNode, true);
+    if (modelItemIDs.size()) {
+         state._modelItemID = modelItemIDs[0];
+    }
 
     scene->_nodes.updateTransforms();
 
@@ -361,6 +367,45 @@ int main(int argc, char *argv[])
                 ImGui::EndGroup();
                 ImGui::Separator();
 
+                ImGui::Text("Inspected texel");
+                ImGui::Checkbox("Render kernel samples", &params.renderKernelSamples);
+
+                ImGui::PushID("inspected texel x");
+
+                if (ImGui::Button("-")) {
+                    params.inspectedTexelX -= 1;
+                    if (params.inspectedTexelX < 0) params.inspectedTexelX = 0;
+                }
+                ImGui::SameLine();
+
+                ImGui::SliderInt("Texel X", &params.inspectedTexelX, 0, params.mapWidth - 1);
+                ImGui::SameLine();
+                if (ImGui::Button("+")) {
+                    params.inspectedTexelX += 1;
+                    if (params.inspectedTexelX >= params.mapWidth) params.inspectedTexelX = params.mapWidth - 1;
+                }
+                ImGui::PopID();
+
+                ImGui::PushID("inspected texel y");
+
+                if (ImGui::Button("-")) {
+                    params.inspectedTexelY -= 1;
+                    if (params.inspectedTexelY < 0) params.inspectedTexelY = 0;
+                }
+                ImGui::SameLine();
+
+                ImGui::SliderInt("Texel Y", &params.inspectedTexelY, 0, params.mapHeight - 1);
+
+                ImGui::SameLine();
+                if (ImGui::Button("+")) {
+                    params.inspectedTexelY += 1;
+                    if (params.inspectedTexelY >= params.mapHeight) params.inspectedTexelY = params.mapHeight - 1;
+                }
+                ImGui::PopID();
+
+                ImGui::Separator();
+
+
                 bool makeUVMeshMap = false;
                 makeUVMeshMap |= ImGui::Button((std::string("Make uvmesh map ") + std::to_string(state.makeUVMapFrame)).c_str());
                 makeUVMeshMap |= ImGui::Checkbox("With uvmesh edge lines pass", &params.uvmeshEdgeLinesPass);
@@ -466,6 +511,15 @@ int main(int argc, char *argv[])
         }
         if (e.state && e.key == uix::KEY_B) {
             gzitem_item.setVisible(!gzitem_item.isVisible());
+        }
+
+        if (e.state && e.key == uix::KEY_DELETE) {
+
+            if (state._modelItemID) {
+                gpuDevice->flush();
+                state._scene->deleteItem(state._modelItemID);
+                state._modelItemID = graphics::INVALID_NODE_ID;
+            }
         }
 
         bool zoomToScene = false;

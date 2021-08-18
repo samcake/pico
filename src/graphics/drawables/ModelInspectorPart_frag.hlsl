@@ -117,7 +117,7 @@ float3 colorRGBfromHSV(const float3 hsv) {
 }
 
 float3 rainbowRGB(float n, float d = 1.0f) {
-    return colorRGBfromHSV(float3((n / d) * (5.0 / 6.0), 3.0, 1.0));
+    return colorRGBfromHSV(float3((n / d) * (5.0 / 6.0), 1.0, 1.0));
 }
 
 
@@ -204,6 +204,8 @@ cbuffer UniformBlock1 : register(b1) {
     float _colorMapBlend;
 
     float _kernelRadius;
+    int _inspectedTexelX;
+    int _inspectedTexelY;
 }
 
 struct PixelShaderInput{
@@ -378,6 +380,27 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
 float4 main_connectivity(PixelShaderInput IN) : SV_Target{
     return float4(rainbowRGB(IN.TriPos.w, IN.TriPos.x), 1.0);
+}
+
+
+float4 main_kernelSamples(PixelShaderInput IN) : SV_Target{
+    float r2 = dot(IN.TriPos.yz, IN.TriPos.yz);
+    if ((r2 >= 1.0)) discard;
+
+    if (IN.TriPos.x > 0) {
+        return float4(rainbowRGB(IN.TriPos.w, IN.TriPos.x), 1.0);
+    }
+
+    float innerTest = float(r2 < 0.01);
+    float outerTest = float(r2 > 0.9);
+
+    float3 color = float3(0.5, 0.5, 0.5);
+    color = lerp(color, float3(1, 0, 0), innerTest);
+    color = lerp(color, float3(1,1,1), outerTest);
+
+    if (innerTest + outerTest < 0.1) discard;
+
+    return float4(color, innerTest + outerTest);
 }
 
 float4 main_uvmesh(PixelShaderInput IN) : SV_Target{

@@ -232,6 +232,14 @@ FaceVerts mesh_fetchFaceVerts(uint3 fvid, int vertexOffset) {
     return face;
 }
 
+FacePositions mesh_fetchFacePositions(uint3 fvid, int vertexOffset) {
+    // Fetch Face positions
+    FacePositions face;
+    for (int i = 0; i < 3; i++) {
+        face[i] = vertex_array[vertexOffset + fvid[i]].xyz;
+    }
+    return face;
+}
 FacePositions mesh_unpackFacePositions(FaceVerts fv) {
     return fv.v;
 }
@@ -301,6 +309,7 @@ bool mesh_edge_isOutline(int4 edge) { // no c1 continuity neighbor face in the m
 typedef int4 FaceEdge; // x, y and z are the 3 edge indices of the face, allowing to retreive neighbor faces
 StructuredBuffer<FaceEdge>  face_array : register(t6);
 
+
 uint3 mesh_triangle_getAdjacentTriangles(uint triangleId, int edgeOffset) {
     int3 faceEdges = face_array[triangleId].xyz;
 
@@ -317,7 +326,7 @@ int2 mesh_triangle_nextTriangleAroundFromAdjacent(int dir, uint pivotTriangle, u
     uint3 pivotTriAdj = mesh_triangle_getAdjacentTriangles(pivotTriangle, edgeOffset);
 
     int adjEdgeId = (pivotTriAdj.x == fromTriangle ? 0 :
-                        (pivotTriAdj.y == fromTriangle ? 1 : 2));
+        (pivotTriAdj.y == fromTriangle ? 1 : 2));
 
     int nextEdgeId = (adjEdgeId + dir) % 3;
 
@@ -350,12 +359,13 @@ int mesh_triangle_gatherTriangleRing(out int ring[32], uint pivotTriangle, int e
 
         if (detectAdjTriangle == 0) {
             rt = MAX_RING_LENGTH;
-        } else {
+        }
+        else {
             // found the next triangle on the ring, not an adjTri
             ring[ringLength] = currentTri;
             ringLength++;
             rt++;
-        
+
             // reached another adj triangle;
             if (detectAdjTriangle > 0) {
                 // reset the search from the center triangle
@@ -367,6 +377,66 @@ int mesh_triangle_gatherTriangleRing(out int ring[32], uint pivotTriangle, int e
     return ringLength;
 }
 
+
+int mesh_triangle_gatherTriangleRingSorted(out int ring[32], uint pivotTriangle, int edgeOffset) {
+    const int MAX_RING_LENGTH = 32;
+    uint3 adjFaces = mesh_triangle_getAdjacentTriangles(pivotTriangle, edgeOffset);
+    ring[0] = pivotTriangle;
+    ring[1] = adjFaces.x;
+    ring[2] = adjFaces.y;
+    ring[3] = adjFaces.z;
+    int ringLength = 4;
+
+    int prevTri = pivotTriangle;
+    int currentTri = adjFaces[0]; // find the other "ring" triangles from the last one
+
+    int direction = +1;
+    for (int rt = 4; rt < MAX_RING_LENGTH; ) {
+        int2 next = mesh_triangle_nextTriangleAroundFromAdjacent(direction, currentTri, prevTri, edgeOffset);
+
+        int detectAdjTriangle = mesh_triangle_detectAdjTriangle(next.x, adjFaces);
+        prevTri = currentTri;
+        currentTri = next.x;
+
+        if (detectAdjTriangle == 0) {
+            rt = MAX_RING_LENGTH;
+        }
+        else {
+            // reached another adj triangle;
+            if (detectAdjTriangle > 0) {
+                // reset the search from the center triangle
+                prevTri = pivotTriangle;
+            }
+            else {
+                // found the next triangle on the ring, not an adjTri
+                ring[ringLength] = currentTri;
+                ringLength++;
+                rt++;
+            }
+        }
+    }
+
+    return ringLength;
+}
+
+//
+// Triangle API
+// 
+// Triangle ray intersection by IQ https://iquilezles.org/
+// triangle defined by vertices v0, v1 and  v2
+float3 triangle_intersect(in float3 ro, in float3 rd, in float3 v0, in float3 v1, in float3 v2) {
+    float3 v1v0 = v1 - v0;
+    float3 v2v0 = v2 - v0;
+    float3 rov0 = ro - v0;
+    float3  n = cross(v1v0, v2v0);
+    float3  q = cross(rov0, rd);
+    float d = 1.0 / dot(rd, n);
+    float u = d * dot(-q, v2v0);
+    float v = d * dot(q, v1v0);
+    float t = d * dot(-n, rov0);
+    if (u < 0.0 || u>1.0 || v < 0.0 || (u + v)>1.0) t = -1.0;
+    return float3(t, u, v);
+}
 
 
 // Drawcall data
@@ -390,6 +460,8 @@ cbuffer UniformBlock1 : register(b1) {
     float _colorMapBlend;
 
     float _kernelRadius;
+    int _inspectedTexelX;
+    int _inspectedTexelY;
 }
 
 
@@ -427,6 +499,128 @@ struct VertexShaderOutput {
     float4 TriPos : TBPOS;
     float4 Position : SV_Position;
 };
+
+VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
+    uint tidx = vidx / 2;
+    uint tvidx = vidx % 2;
+
+    float2 texcoord = float2(float(tidx), float(tvidx));
+
+    VertexShaderOutput OUT;
+
+    OUT.Position = uvSpaceClipPos(texcoord);
+    OUT.EyePos = OUT.Position;
+
+    OUT.Normal = float3(0.0, 0.0, 1.0);
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = float4(0, 0, 0, 0);
+
+    return OUT;
+}
+
+VertexShaderOutput transformAndPackOut(float3 position, float3 normal, float2 texcoord, float4 trianglePos) {
+    VertexShaderOutput OUT;
+    // Transform
+    Transform _model = node_getWorldTransform(_nodeID);
+    position = worldFromObjectSpace(_model, position);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
+    normal = worldFromObjectSpaceDir(_model, normal);
+    normal = eyeFromWorldSpaceDir(_view, normal);
+
+    OUT.Position = clipPos;
+    OUT.EyePos = eyePosition;
+    OUT.Normal = normal;
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = trianglePos;
+
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+    }
+    else if (_drawMode & MAKE_UVMESH_MAP_BIT()) {
+        float2 uv = 2 * texcoord - float2(1.0, 1.0);
+        OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
+            float3(uv, 1.0f));
+        OUT.Position.y = -OUT.Position.y;
+    }
+    return OUT;
+}
+
+
+VertexShaderOutput transformAndPackOutSprite(int sid, float spriteSize, float3 position, float3 normal, float2 texcoord, float4 trianglePos) {
+    VertexShaderOutput OUT;
+    // Transform
+    Transform _model = node_getWorldTransform(_nodeID);
+    position = worldFromObjectSpace(_model, position);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float eyeLinearDepth = -eyePosition.z;
+
+    normal = worldFromObjectSpaceDir(_model, normal);
+    normal = eyeFromWorldSpaceDir(_view, normal);
+
+    OUT.Position = clipPos;
+    OUT.EyePos = eyePosition;
+    OUT.Normal = normal;
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = trianglePos;
+
+    // Apply scaling to the sprite coord and offset pointcloud pos
+    float2 sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
+    const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
+    float2 spriteOffset = invRes.xy * spriteSize * sprite;
+    OUT.TriPos.yz = sprite;
+    // fixed sprite pixel size in depth or perspective correct 3d size ?
+    OUT.Position.xy += spriteOffset * eyeLinearDepth;
+
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+
+        OUT.Position.xy += spriteOffset;
+    }
+
+    return OUT;
+}
+
+VertexShaderOutput transformAndPackOutSplat(int sid, float splatSize, float3 tangent, float3 cotangent, float3 position, float3 normal, float2 texcoord, float4 trianglePos) {
+    VertexShaderOutput OUT;
+    float2 sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
+
+    if (!(_drawMode & RENDER_UV_SPACE_BIT())) {
+        position = position + tangent * sprite.x * splatSize - cotangent * sprite.y * splatSize;
+    }
+
+
+    // Transform
+    Transform _model = node_getWorldTransform(_nodeID);
+    position = worldFromObjectSpace(_model, position);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float eyeLinearDepth = -eyePosition.z;
+
+    normal = worldFromObjectSpaceDir(_model, normal);
+    normal = eyeFromWorldSpaceDir(_view, normal);
+
+    OUT.Position = clipPos;
+    OUT.EyePos = eyePosition;
+    OUT.Normal = normal;
+    OUT.Texcoord = texcoord;
+    OUT.TriPos = trianglePos;
+    OUT.TriPos.yz = sprite;
+
+
+    if (_drawMode & RENDER_UV_SPACE_BIT()) {
+        OUT.Position = uvSpaceClipPos(texcoord);
+
+        // Apply scaling to the sprite coord and offset pointcloud pos
+        const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
+        float2 spriteOffset = invRes.xy * splatSize * sprite;
+        OUT.Position.xy += spriteOffset;
+    }
+
+    return OUT;
+}
 
 
 VertexShaderOutput main(uint vidx : SV_VertexID) {
@@ -478,32 +672,7 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
         trianglePos.w = -trianglePos.w;
     }
 
-    // Transform
-    Transform _model = node_getWorldTransform(_nodeID);
-
-    position = worldFromObjectSpace(_model, position);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
-
-    normal = worldFromObjectSpaceDir(_model, normal);
-    normal = eyeFromWorldSpaceDir(_view, normal);
-
-    OUT.Position = clipPos;
-    OUT.EyePos = eyePosition;
-    OUT.Normal = normal;
-    OUT.Texcoord = texcoord;
-    OUT.TriPos = trianglePos;
-
-    if (_drawMode & RENDER_UV_SPACE_BIT()) {
-        OUT.Position = uvSpaceClipPos(texcoord);
-    } else if (_drawMode & MAKE_UVMESH_MAP_BIT()) {
-        float2 uv = 2 * texcoord - float2(1.0, 1.0);
-        OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
-            float3(uv, 1.0f));
-        OUT.Position.y = -OUT.Position.y;
-    }
-
-    return OUT;
+    return transformAndPackOut(position, normal, texcoord, trianglePos);
 }
 
 
@@ -549,50 +718,155 @@ VertexShaderOutput main_connectivity(uint vid : SV_VertexID) {
     float3 normal = mesh_fetchVertexNormal(vidx, p.vertexOffset);
     float2 texcoord = mesh_fetchVertexTexcoord(vidx, p.attribOffset);
 
-    // Transform
-    Transform _model = node_getWorldTransform(_nodeID);
-    position = worldFromObjectSpace(_model, position);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
-
-    normal = worldFromObjectSpaceDir(_model, normal);
-    normal = eyeFromWorldSpaceDir(_view, normal);
-
-    OUT.Position = clipPos;
-    OUT.EyePos = eyePosition;
-    OUT.Normal = normal;
-    OUT.Texcoord = texcoord;
-    OUT.TriPos = trianglePos;
-
-    if (_drawMode & RENDER_UV_SPACE_BIT()) {
-        OUT.Position = uvSpaceClipPos(texcoord);
-    }
-    else if (_drawMode & MAKE_UVMESH_MAP_BIT()) {
-        float2 uv = 2 * texcoord - float2(1.0, 1.0);
-        OUT.Position = orthoClipFromEyeSpace(1.0f, 2.0f, 0.0f, 2.0f,
-            float3(uv, 1.0f));
-        OUT.Position.y = -OUT.Position.y;
-    }
-
-    return OUT;
+    return transformAndPackOut(position, normal, texcoord, trianglePos);
 }
 
-VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
-    uint tidx = vidx / 2;
-    uint tvidx = vidx % 2;
 
-    float2 texcoord = float2(float(tidx), float(tvidx));
-    
+static const uint numKernelSamples = 16;
+static float2 kernelDistribution_PoissonDisk[numKernelSamples] =
+{   // This is a poisson distribution for the example
+    float2(0.2770745f, 0.6951455f),
+    float2(0.1874257f, -0.02561589f),
+    float2(-0.3381929f, 0.8713168f),
+    float2(0.5867746f, 0.1087471f),
+    float2(-0.3078699f, 0.188545f),
+    float2(0.7993396f, 0.4595091f),
+    float2(-0.09242552f, 0.5260149f),
+    float2(0.3657553f, -0.5329605f),
+    float2(-0.3829718f, -0.2476171f),
+    float2(-0.01085108f, -0.6966301f),
+    float2(0.8404155f, -0.3543923f),
+    float2(-0.5186161f, -0.7624033f),
+    float2(-0.8135794f, 0.2328489f),
+    float2(-0.784665f, -0.2434929f),
+    float2(0.9920505f, 0.0855163f),
+    float2(-0.687256f, 0.6711345f)
+};
+static float2 kernelDistribution_Grid[numKernelSamples] =
+{   // This is a regular grid distribution for the example
+    float2(-0.75f, -0.75f),
+    float2(-0.75f, -0.25f),
+    float2(-0.75f, +0.25f),
+    float2(-0.75f, +0.75f),
+    float2(-0.25f, -0.75f),
+    float2(-0.25f, -0.25f),
+    float2(-0.25f, +0.25f),
+    float2(-0.25f, +0.75f),
+    float2(+0.25f, -0.75f),
+    float2(+0.25f, -0.25f),
+    float2(+0.25f, +0.25f),
+    float2(+0.25f, +0.75f),
+    float2(+0.75f, -0.75f),
+    float2(+0.75f, -0.25f),
+    float2(+0.75f, +0.25f),
+    float2(+0.75f, +0.75f),
+};
+
+VertexShaderOutput main_kernelSamples(uint vid : SV_VertexID) {
     VertexShaderOutput OUT;
+    // Which part ?
+    Part p = part_array[_partID];
 
-    OUT.Position = uvSpaceClipPos(texcoord);
-    OUT.EyePos = OUT.Position;
+    // Which inspected texel
+    uint tex_width, tex_height;
+    uvmesh_map.GetDimensions(tex_width, tex_height);
+    int2 texPos = int2(_inspectedTexelX, _inspectedTexelY);
+    float2 texUV = float2((texPos.x + 0.5f) / float(tex_width), (texPos.y + 0.5f) / float(tex_height));
+    // fetch the UVmesh
+    float4 k_uvmesh = uvmesh_map.Load(int3(texPos, 0));
 
-    OUT.Normal = float3(0.0, 0.0, 1.0);
-    OUT.Texcoord = texcoord;
-    OUT.TriPos = float4(0, 0, 0, 0);
+    uint tidx = uvmesh_triangle(k_uvmesh);
+    uint3 faceIndices = mesh_fetchFaceIndices(tidx, p.indexOffset);
 
-    return OUT;
+    FaceVerts faceVerts = mesh_fetchFaceVerts(faceIndices, p.vertexOffset);
+    FacePositions facePositions = mesh_unpackFacePositions(faceVerts);
+    FaceNormals faceNormals = mesh_unpackFaceNormals(faceVerts);
+    FaceTexcoords faceTexcoords = mesh_fetchFaceTexcoords(faceIndices, p.attribOffset);
+
+    float3 position = mesh_interpolateVertexPos(facePositions, k_uvmesh.xyz);
+    float3 normal = mesh_interpolateVertexNormal(faceNormals, k_uvmesh.xyz); // y axis
+    float2 texcoord = mesh_interpolateVertexTexcoord(faceTexcoords, k_uvmesh.xyz);
+
+    float3 faceEdge = normalize(facePositions[1] - facePositions[0]);
+    float3 cotangent = normalize(cross(faceEdge, normal)); // z axis
+    float3 tangent = normalize(cross(normal, cotangent)); // x axis
+
+    float3 offsetPosition = position + normal * 0.1;
+    float3 ks_rayDir = -normal;
+
+    float4 trianglePos = float4(numKernelSamples, 0, 0, 0);
+
+
+    int pid = vid / 3;
+    int sid = pid - 1;
+    int sprite_vid = vid % 3;
+
+    if (pid == 0) {
+        trianglePos.x = 0;      
+        return transformAndPackOutSplat(sprite_vid, _kernelRadius, tangent, cotangent, position, normal, texcoord, trianglePos);
+    }
+
+    // Collect ring of triangles
+    int tested_triangles[32];
+    int numTestedTriangles = mesh_triangle_gatherTriangleRingSorted(tested_triangles, tidx, p.edgeOffset);
+
+
+    uint ks_tid = tidx;
+    uint3 ks_indices = faceIndices;
+    float3x3  ks_positions = facePositions;
+    float numIntersects = 0;
+
+
+    uint i = sid;
+
+    {
+        float2 ks_coord = kernelDistribution_PoissonDisk[i] * _kernelRadius;
+     //   float2 ks_coord = kernelDistribution_Grid[i] * _kernelRadius;
+        float3 ks_rayOrigin = offsetPosition + tangent * ks_coord.x + cotangent * ks_coord.y;
+
+        //#define TEST_SINGLE_TRIANGLE
+#define TEST_MANY_TRIANGLES
+
+#ifdef TEST_SINGLE_TRIANGLE
+        float3 ks_intersection = triangle_intersect(ks_rayOrigin, ks_rayDir, facePositions[0], facePositions[1], facePositions[2]);
+#endif
+
+
+#ifdef TEST_MANY_TRIANGLES
+        // Brut force approach is o(n2) and doesn't finish  before the windows gpu watchdog triggers... bad!
+        float3 ks_intersection = float3(100000, 0, 0);
+        //  for (int tid = 0; tid < 100; tid++) {
+        for (int tid = 0; tid < numTestedTriangles; tid++) {
+            uint3 ti_indices = mesh_fetchFaceIndices(tested_triangles[tid], p.indexOffset);
+            FacePositions ti_positions = mesh_fetchFacePositions(ti_indices, p.vertexOffset);
+            float3 ti_intersection = triangle_intersect(ks_rayOrigin, ks_rayDir, ti_positions[0], ti_positions[1], ti_positions[2]);
+            if ((ti_intersection.x > -1) && (ti_intersection.x < ks_intersection.x)) {
+                ks_intersection = ti_intersection;
+                ks_indices = ti_indices;
+                ks_positions = ti_positions;
+                ks_tid = tested_triangles[tid];
+            }
+        }
+        ks_intersection.x = (ks_intersection.x == 100000 ? -1 : ks_intersection.x);
+#endif
+
+
+       float2 ks_uv = texcoord;
+        if ((ks_intersection.x > -1)) {
+            float3x2 ks_texcoords = mesh_fetchFaceTexcoords(ks_indices, p.attribOffset);
+
+            // A triangle and bary pos found, from this let's go fetch the signal value and accumulate
+            float3 ks_barypos = float3(1.0 - ks_intersection.y - ks_intersection.z, ks_intersection.yz);
+            texcoord = mesh_interpolateVertexTexcoord(ks_texcoords, ks_barypos);
+            position = ks_rayOrigin;
+            position = mesh_interpolateVertexPos(ks_positions, ks_barypos);
+        }
+
+    }
+
+    trianglePos = float4(float(numKernelSamples), 0, 0, float(sid));
+
+    return transformAndPackOutSprite(sprite_vid, 5.0, position, normal, texcoord, trianglePos);
 }
 
 VertexShaderOutput main_uvmesh_point(uint vidx : SV_VertexID) {
@@ -631,27 +905,7 @@ VertexShaderOutput main_uvmesh_point(uint vidx : SV_VertexID) {
     float3 cotangent = normalize(cross(faceEdge, normal)); // z axis
     float3 tangent = normalize(cross(normal, cotangent)); // x axis
 
-
-    // Full mvp transform for 3d
-    Transform _model = node_getWorldTransform(_nodeID);
-    position = worldFromObjectSpace(_model, position);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
-
-    VertexShaderOutput OUT;
-
-    OUT.Position = clipPos;
-    if (_drawMode & RENDER_UV_SPACE_BIT()) {
-        OUT.Position = uvSpaceClipPos(texcoord);
-    }
-
-    OUT.EyePos = eyePosition;
-    OUT.Normal = float3(0.0, 0.0, 1.0);
-    OUT.Texcoord = texcoord;
-    OUT.TriPos = k_uvmesh;
-
-    return OUT;
-
+    return transformAndPackOut(position, float3(0.0, 0.0, 1.0), texcoord, k_uvmesh);
 }
 
 

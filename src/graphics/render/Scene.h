@@ -53,7 +53,8 @@ namespace graphics {
 
         void deleteAllItems();  // delete all user objects
         void deleteAll();
-        void deleteItem(UserID id);
+        void deleteItem(ItemID id);
+        void deleteItemFromID(UserID id);
 
         Item getItemFromID(UserID id) const;
         Item getValidItemAt(uint32_t startIndex) const;

@@ -61,11 +61,18 @@ namespace graphics {
         bool render3DModel{ false };
         bool renderWireframe{ false };
         bool renderUVEdgeLines{ false };
-        bool renderConnectivity{ true };
+        bool renderConnectivity{ false };
+        bool renderKernelSamples{ true };
 
         bool renderUVMeshPoints{ false };
         bool renderUVSpace{ true };
   
+        int32_t inspectedTexelX{ 0 };
+        int32_t inspectedTexelY{ 0 };
+
+        int32_t mapWidth{ 0 };
+        int32_t mapHeight{ 0 };
+
         int32_t inspectedTriangle{ -1 };
         int32_t numInspectedTriangles{ 1 };
 
@@ -93,6 +100,8 @@ namespace graphics {
         bool maskOutsideUV{ true };
         float kernelRadius = 0.1f;
         float kernelRadiusMax = 1.0f;
+
+        int32_t numKernelSamples{ 16 };
 
         void setFilterKernelTechnique(uint8_t ftk) {
             if (filterKernelTechnique != ftk) {
@@ -184,6 +193,7 @@ namespace graphics {
         graphics::PipelineStatePointer _pipeline_draw_mesh;
         graphics::PipelineStatePointer _pipeline_draw_edges;
         graphics::PipelineStatePointer _pipeline_draw_connectivity;
+        graphics::PipelineStatePointer _pipeline_draw_kernelSamples;
 
         graphics::PixelFormat _uvmeshMapFormat = graphics::PixelFormat::R32G32B32A32_FLOAT;
         graphics::PipelineStatePointer _pipeline_uvmesh_makeEdge;

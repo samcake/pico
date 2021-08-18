@@ -114,16 +114,21 @@ namespace graphics {
     };
 
     class VISUALIZATION_API Node {
-        Node() { } // invalid
         friend class Scene;
         Node(const NodeStore* transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
 
         mutable const NodeStore* _transformTree { nullptr };
-        const NodeID _index { 0 };
+        mutable NodeID _index { 0 };
     public:
         static const Node null;
+        Node() {}
 
         Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
+        Node& operator= (const Node& node) {
+            _transformTree = node._transformTree;
+            _index = node._index;
+            return (*this);
+        }
 
         const NodeStore* tree() const { return _transformTree; }
         NodeID id() const { return _index; }

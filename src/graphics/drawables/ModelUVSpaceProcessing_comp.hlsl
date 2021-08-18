@@ -339,7 +339,8 @@ struct Material {
 StructuredBuffer<Material>  material_array : register(t9);
 Texture2DArray material_textures : register(t10);
 
-SamplerState uSampler0 : register(s0);
+
+SamplerState uSampler0[2] : register(s0);
 
 // 
 // UVMesh map API
@@ -370,19 +371,24 @@ cbuffer UniformBlock1 : register(b0) {
 
     int _numNodes;
     int _numParts;
+
     int _numMaterials;
     int _numEdges;
     int _drawMode;
     int _inspectedTriangle;
+    
     int _numInspectedTriangles;
 
 
     float _uvCenterX;
     float _uvCenterY;
     float _uvScale;
+
     float _colorMapBlend;
 
     float _kernelRadius;
+    int _inspectedTexelX;
+    int _inspectedTexelY;
 }
 
 
@@ -503,17 +509,19 @@ void main_imageSpaceBlur(uint3 DTid : SV_DispatchThreadID)
 
     for (uint i = 0; i < numKernelSamples; i++) {
         float2 ks_coord = kernelDistribution_PoissonDisk[i] * _kernelRadius;
-        //   float2 ks_coord = kernelDistribution_Grid[i] * _kernelRadius;
-        ks_coord += coord;
+         //  float2 ks_coord = kernelDistribution_Grid[i] * _kernelRadius;
+        ks_coord += coord + ks_coord;
 
         float weight = 1.0f;
         if (ks_coord.x < minX || ks_coord.x > maxX || ks_coord.y < minY || ks_coord.y > maxY) {
             weight = 0.0f;
         }
 
-        int2 iks_coord = int2(ks_coord);
-        float3 texel = material_textures[uint3(iks_coord, mapId)].xyz;
-        float4 uvmesh = uvmesh_map[iks_coord];
+
+        float2 ks_uv = float2(ks_coord.x / tex_width, ks_coord.y / tex_height);
+        float3 texel = material_textures.SampleLevel(uSampler0[1], float3(ks_uv , mapId), 0).xyz;
+        
+        float4 uvmesh = uvmesh_map.SampleLevel(uSampler0[0], ks_uv, 0);
 
         float mask = maskOutside * uvmesh_isOutside(uvmesh);
         texel = lerp(texel, float3(1.0, 0.0, 0.0), mask);
@@ -640,12 +648,8 @@ void main_meshSpaceBlur(uint3 DTid : SV_DispatchThreadID)
             float2 ks_uv = mesh_interpolateVertexTexcoord(ks_texcoords, ks_barypos);
 
            // ks_texel = material_textures[uint3(ks_uv.x * tex_width, ks_uv.y * tex_height, mapId)].xyz;
-            ks_texel = material_textures.SampleLevel(uSampler0[0], ks_uv.xy, mapId).xyz;
+            ks_texel = material_textures.SampleLevel(uSampler0[1], float3(ks_uv.xy, mapId), 0).xyz;
             
-
-      /*      if (_inspectedTriangle > -1) {
-                ks_texel = lerp(float3(ks_intersection.y, ks_intersection.z,1), float3(ks_intersection.y,1, ks_intersection.z), ks_tid == _inspectedTriangle);
-            }*/
         }
         accumulation += ks_texel;
     }
