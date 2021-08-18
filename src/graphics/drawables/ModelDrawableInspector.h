@@ -58,11 +58,11 @@ namespace graphics {
         bool linearSampler{ false };
         bool lightShading{ false };
 
-        bool render3DModel{ false };
+        bool render3DModel{ true };
         bool renderWireframe{ false };
         bool renderUVEdgeLines{ false };
         bool renderConnectivity{ false };
-        bool renderKernelSamples{ true };
+        bool renderKernelSamples{ false };
 
         bool renderUVMeshPoints{ false };
         bool renderUVSpace{ true };

@@ -100,7 +100,9 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
   // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-   std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
+  // std::string modelFile("C:\\Megascans/Pico/Nordic_Beach_Rock_uknoehp/Nordic_Beach_Rock_LOD1__uknoehp.gltf");
+
+   std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
   //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
@@ -136,6 +138,7 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
             state._modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
             state._modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
             state.params = state._modelDrawableInspectorFactory->getUniformsPtr();
+            state.params->setFilterKernelTechnique(graphics::ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE);
         }
         auto modelDrawableInspectorPtr = state._modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
         state._modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawableInspectorPtr);
