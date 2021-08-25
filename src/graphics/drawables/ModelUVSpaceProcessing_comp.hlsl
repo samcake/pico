@@ -18,7 +18,7 @@ int INSPECTED_MAP_OFFSET() { return 16; }
 int INSPECTED_MAP(int drawMode) { return (drawMode & INSPECTED_MAP_BITS()) >> INSPECTED_MAP_OFFSET(); }
 
 
-
+#define THREAD_GROUP_SIDE 4
 //
 // Color API
 // 
@@ -394,7 +394,8 @@ cbuffer UniformBlock1 : register(b0) {
 
 
 static const uint numKernelSamples = 16;
-static float2 kernelDistribution_PoissonDisk[numKernelSamples] =
+static const uint NUM_KERNEL_SAMPLES = 16;
+static float2 kernelDistribution_PoissonDisk[NUM_KERNEL_SAMPLES] =
 {   // This is a poisson distribution for the example
     float2(0.2770745f, 0.6951455f),
     float2(0.1874257f, -0.02561589f),
@@ -413,7 +414,7 @@ static float2 kernelDistribution_PoissonDisk[numKernelSamples] =
     float2(0.9920505f, 0.0855163f),
     float2(-0.687256f, 0.6711345f)
 };
-static float2 kernelDistribution_Grid[numKernelSamples] =
+static float2 kernelDistribution_Grid[NUM_KERNEL_SAMPLES] =
 {   // This is a regular grid distribution for the example
     float2(-0.75f, -0.75f),
     float2(-0.75f, -0.25f),
@@ -436,7 +437,7 @@ static float2 kernelDistribution_Grid[numKernelSamples] =
 // Read previous state from 
 RWTexture2D<float4> out_buffer : register(u0);
 
-[numthreads(32, 32, 1)]
+[numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
 void main_imageSpaceBlurBrutForce(uint3 DTid : SV_DispatchThreadID)
 {
     int2 pixelCoord = DTid.xy;
@@ -479,7 +480,7 @@ void main_imageSpaceBlurBrutForce(uint3 DTid : SV_DispatchThreadID)
     out_buffer[pixelCoord] = float4(color / numSamples, 1);
 }
 
-[numthreads(32, 32, 1)]
+[numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
 void main_imageSpaceBlur(uint3 DTid : SV_DispatchThreadID)
 {
     int2 pixelCoord = DTid.xy;
@@ -534,7 +535,7 @@ void main_imageSpaceBlur(uint3 DTid : SV_DispatchThreadID)
 }
 
 
-[numthreads(32, 32, 1)]
+[numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
 void main_meshSpaceBlur(uint3 DTid : SV_DispatchThreadID)
 {
     int2 pixelCoord = DTid.xy;

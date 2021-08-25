@@ -313,7 +313,8 @@ namespace graphics
 
         // First compute blur shader and pipeline
         {
-            graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlur", "", shader_comp_src, shader_comp_src_file };
+         //   graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlur", "", shader_comp_src, shader_comp_src_file };
+            graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlurBrutForce", "", shader_comp_src, shader_comp_src_file };
             graphics::ShaderPointer imageSpaceBlur_compShader = device->createShader(imageSpaceBlur_compShaderInit);
 
             // Let's describe the Compute pipeline Descriptors layout
@@ -708,6 +709,7 @@ namespace graphics
                         }
 
                         if (params->makeComputedMap) {
+                            const int NUM_COMPUTE_GROUP_THREADS = 4;
                             switch (params->filterKernelTechnique) {
                                 case ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE:
                                     batch->bindPipeline(pipeline_compute_imageSpaceBlur);
@@ -723,7 +725,7 @@ namespace graphics
                             batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                             batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
-                            batch->dispatch(computeMap->width() / 32, computeMap->height() / 32);
+                            batch->dispatch(computeMap->width() / NUM_COMPUTE_GROUP_THREADS, computeMap->height() / NUM_COMPUTE_GROUP_THREADS);
                             batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
 
                             params->makeComputedMap = false;
