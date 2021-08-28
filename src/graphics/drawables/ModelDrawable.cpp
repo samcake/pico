@@ -56,6 +56,11 @@ namespace graphics
 
     }
 
+    uint32_t ModelDrawableUniforms::makeDrawMode() const {
+
+        return displayedColor | (lightShading ? 0x80 : 0);
+    }
+
     // Custom data uniforms
     struct ModelObjectData {
         uint32_t nodeID{0};
@@ -63,6 +68,7 @@ namespace graphics
         uint32_t numNodes{ 0 };
         uint32_t numParts{ 0 };
         uint32_t numMaterials{ 0 };
+        uint32_t drawMode{ 0 };
     };
 
     void ModelDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
@@ -76,8 +82,9 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 5, 1},  // Material
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 0, 1},  // Albedo Texture
+
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1 },  // Material
+            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1 },  // Material Textures
             { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
         };
 
@@ -651,6 +658,8 @@ namespace graphics
        model._drawcall = drawCallback;
        model._drawableID = scene->createDrawable(model).id();
 
+       auto uniforms = model.getUniforms();
+
        // one drawable per part
        DrawableIDs drawables;
        for (int d = 0; d < model._partAABBs.size(); ++d) {
@@ -659,7 +668,7 @@ namespace graphics
 
             auto partNumIndices = model._parts[d].numIndices;
            // And now a render callback where we describe the rendering sequence
-           graphics::DrawObjectCallback drawCallback = [d, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
+           graphics::DrawObjectCallback drawCallback = [d, uniforms, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
                const NodeID node,
                const graphics::CameraPointer& camera,
                const graphics::SwapchainPointer& swapchain,
@@ -671,7 +680,7 @@ namespace graphics
 
                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 */
-                   ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials };
+                   ModelObjectData odata{ (int32_t)node, (int32_t)d, numNodes, numParts, numMaterials, uniforms->makeDrawMode() };
                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
                    batch->draw(partNumIndices, 0);
            };

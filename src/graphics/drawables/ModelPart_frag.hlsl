@@ -28,9 +28,9 @@ struct Material {
     uint4 textures;
 };
 
-StructuredBuffer<Material>  material_array : register(t5);
+StructuredBuffer<Material>  material_array : register(t9);
 
-Texture2DArray uTex0 : register(t0);
+Texture2DArray material_textures : register(t10);
 SamplerState uSampler0 : register(s0);
 
 //
@@ -50,9 +50,32 @@ struct Part {
 
 StructuredBuffer<Part>  part_array : register(t1);
 
+// Compute tangent space and final normal
+float3 computeNormal(float3 surfNormal, float3 normalMap, float3 eyePos, float2 uv) {
+    float3 q0 = ddx(eyePos);
+    float3 q1 = ddy(eyePos);
+    float2 st0 = ddx(uv);
+    float2 st1 = ddy(uv);
+
+    float3 S = normalize(q0 * st1.y - q1 * st0.y);
+    float3 T = normalize(-q0 * st1.x + q1 * st0.x);
+    float3 normal = surfNormal;
+    /*
+        normalMap.xy = 1.0 * normalMap.xy;
+        float3x3 tsn = float3x3(S, T, normal);
+        normal = mul(tsn, normalMap.xyz);
+        normal = normalize(normal);
+      */  return normal;
+}
+
 //
 // Main
 // 
+bool LIGHT_SHADING(int drawMode) { return (drawMode & 0x00000080) != 0; }
+
+int DISPLAYED_COLOR_BITS() { return 0x0000000F; }
+int DISPLAYED_COLOR_OFFSET() { return 0; }
+int DISPLAYED_COLOR(int drawMode) { return (drawMode & DISPLAYED_COLOR_BITS()) >> DISPLAYED_COLOR_OFFSET(); }
 
 
 cbuffer UniformBlock1 : register(b1) {
@@ -61,6 +84,7 @@ cbuffer UniformBlock1 : register(b1) {
     int _numNodes;
     int _numParts;
     int _numMaterials;
+    int _drawMode;
 }
 
 struct PixelShaderInput{
@@ -74,37 +98,33 @@ float4 main(PixelShaderInput IN) : SV_Target{
 //    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
 
-    float4 mapN = float4(0.0, 0.0, 0.0, 0.0);
+    float4 mapNor = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.y != -1) {
-        mapN = float4(uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz * 2.0 - 1.0, 1.0);
+        mapNor = float4(material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz, 1.0);
     }
-    float3 surf_normal = normalize(IN.Normal);
 
-
-    float3 q0 = ddx(IN.EyePos.xyz);
-    float3 q1 = ddy(IN.EyePos.xyz);
-    float2 st0 = ddx(IN.Texcoord.xy);
-    float2 st1 = ddy(IN.Texcoord.xy);
-
-    float3 S = normalize(q0 * st1.y - q1 * st0.y);
-    float3 T = normalize(-q0 * st1.x + q1 * st0.x);
-    float3 normal = surf_normal;
-
-    mapN.xy = 1.0 * mapN.xy;
-    float3x3 tsn = float3x3(S, T, normal);
-//    normal = mul( tsn, mapN.xyz);
- //   normal = normalize(normal);
+    float4 mapN = (mapNor * 2.0 - 1.0);
+    float3 surfNormal = normalize(IN.Normal);
+    float3 normal = computeNormal(surfNormal, mapN, IN.EyePos.xyz, IN.Texcoord.xy);
+    //normal = worldFromEyeSpaceDir(_view, normal);
 
     float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.z != -1) {
-        rmaoMap = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.z));
+        rmaoMap = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.z));
+    }
+
+    // with albedo from property or from texture
+    float3 albedo = m.color;
+    if (m.textures.x != -1) {
+        albedo = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }
 
     float3 baseColor = float3(1.0, 1.0, 1.0);
-    // with albedo from property or from texture
-    baseColor = m.color;
-    if (m.textures.x != -1) {
-        baseColor = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.x)).xyz;
+    switch (DISPLAYED_COLOR(_drawMode)) {
+    case 0: baseColor = albedo; break;
+    case 1: baseColor = normal; break;
+    case 2: baseColor = surfNormal; break;
+    case 3: baseColor = mapNor; break;
     }
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
@@ -116,23 +136,13 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
 
     float3 shading = float3(1.0, 1.0, 1.0);
-    shading = (NDotL * lightI + NDotG * globalI);
-    
-  //  normal = T;
-
-  //  baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
-  //  baseColor = normal;
-  //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
-  //  baseColor = rainbowRGB(_partID, float(_numParts));
-  //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
-  //  baseColor = float3(IN.Texcoord.x, 0.0f * IN.Texcoord.y, 0.0f);
-    
-  //   baseColor = normalMap;
-
+    if (LIGHT_SHADING(_drawMode)) {
+        shading = (NDotL * lightI + NDotG * globalI);
+    }
 
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
     if (m.textures.w != -1) {
-        emissiveColor = uTex0.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.w)).xyz;
+        emissiveColor = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
  
     float3 color = shading * baseColor + emissiveColor;

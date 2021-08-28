@@ -50,6 +50,10 @@ namespace graphics {
 
     struct VISUALIZATION_API ModelDrawableUniforms {
         int numNodes{ 0 };
+        bool lightShading{ false };
+        uint8_t displayedColor{ 0 }; // 0 for albedo, 1 for normal ...
+
+        uint32_t makeDrawMode() const;
     };
     using ModelDrawableUniformsPointer = std::shared_ptr<ModelDrawableUniforms>;
 
@@ -78,6 +82,7 @@ namespace graphics {
         // Read / write shared uniforms
         const ModelDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
         ModelDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        ModelDrawableUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
 
     protected:
         ModelDrawableUniformsPointer _sharedUniforms;
