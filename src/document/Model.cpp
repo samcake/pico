@@ -770,6 +770,28 @@ CameraArray parseCameras(const json& gltf_cameras) {
     return cameras;
 }
 
+
+SceneArray parseScenes(const json& gltf_scenes) {
+    SceneArray scenes;
+
+    if (gltf_scenes.is_array()) {
+        for (const auto& s : gltf_scenes) {
+            Scene scene;
+
+            const auto& nodes = check(s, "nodes");
+            if (nodes.is_array()) {
+                for (const auto& n : nodes) {
+                    scene._nodes.emplace_back(n.get<uint32_t>());
+                }
+            }
+
+            scenes.emplace_back(scene);
+        }
+    }
+
+    return scenes;
+}
+
 std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
     auto model = std::make_unique<Model>();
     
@@ -787,6 +809,7 @@ std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path&
     model->_textures = parseTextures(check(gltf, "textures"));
 
     model->_cameras = parseCameras(check(gltf, "cameras"));
+    model->_scenes = parseScenes(check(gltf, "scenes"));
 
     return model;
 }

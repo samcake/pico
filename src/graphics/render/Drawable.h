@@ -66,6 +66,10 @@ namespace graphics {
             _self(std::make_shared<Model<T>>(id, std::move(x))) {
         }
 
+
+        int32_t reference() { return _self->reference(); }
+        int32_t release() { return _self->release(); }
+
     public:
         Drawable() { } // invalid
         static Drawable null;
@@ -82,6 +86,10 @@ namespace graphics {
             virtual DrawObjectCallback getDrawcall() const = 0;
 
             const DrawableID _id{ INVALID_DRAWABLE_ID };
+            mutable int32_t _refCount{ 0 };
+
+            int32_t reference() const { return ++ _refCount; }
+            int32_t release() const { return -- _refCount; }
         };
         template <typename T> struct Model final : Concept {
             Model(DrawableID index, T x) : Concept(index), _data(std::move(x)) {}
@@ -114,6 +122,8 @@ namespace graphics {
         }
         
         void free(DrawableID index);
+        int32_t reference(DrawableID index);
+        int32_t release(DrawableID index);
 
         core::aabox3 getBound(DrawableID index) const { return _bounds[index]._local_box; }
         DrawObjectCallback getDrawcall(DrawableID index) const { return _drawables[index].getDrawcall(); }

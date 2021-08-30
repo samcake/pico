@@ -61,16 +61,34 @@ Drawable DrawableStore::allocate(Drawable drawable) {
 }
 
 void DrawableStore::free(DrawableID index) {
-    _indexTable.free(index);
+    if (_indexTable.isValid(index)) {
+        _indexTable.free(index);
 
-    _drawables[index] = Drawable::null;
-    _bounds[index] = { };
+        _drawables[index] = Drawable::null;
+        _bounds[index] = { };
 
-    if (index < _num_buffers_elements) {
-        reinterpret_cast<GPUDrawableBound*>(_drawables_buffer->_cpuMappedAddress)[index]._local_box = core::aabox3();
+        if (index < _num_buffers_elements) {
+            reinterpret_cast<GPUDrawableBound*>(_drawables_buffer->_cpuMappedAddress)[index]._local_box = core::aabox3();
+        }
     }
 }
 
+int32_t DrawableStore::reference(DrawableID index) {
+    if (_indexTable.isValid(index)) {
+        return _drawables[index].reference();
+    } else { 
+        return 0;
+    }
+}
+
+int32_t DrawableStore::release(DrawableID index) {
+    if (_indexTable.isValid(index)) {
+        return _drawables[index].release();
+    }
+    else {
+        return 0;
+    }
+}
 
 void DrawableStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
 

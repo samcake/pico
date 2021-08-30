@@ -59,11 +59,11 @@ namespace graphics {
         void setVisible(bool visible) { _self->setVisible(visible); }
         bool isVisible() const { return _self->isVisible(); }
 
-     //   void setNode(Node node) { _self->setNode(node); }
         NodeID getNodeID() const { return _self->getNodeID(); }
 
-      //  void setDrawable(Drawable drawable) { _self->setDrawable(drawable); }
         DrawableID getDrawableID() const { return _self->getDrawableID(); }
+
+        ItemID getGroupID() const { return _self->getGroupID(); }
 
         core::aabox3 fetchWorldBound() const { return _self->fetchWorldBound(); }
 
@@ -90,6 +90,7 @@ namespace graphics {
             NodeID getNodeID() const;
             void setDrawable(Drawable drawable);
             DrawableID getDrawableID() const;
+            ItemID getGroupID() const;
 
             core::aabox3 fetchWorldBound() const;
         };
@@ -102,21 +103,22 @@ namespace graphics {
     };
 
     using Items = std::vector<Item>;
+    using ItemIDMap = std::unordered_map<ItemID, Items>;
 
     class ItemStore {
         ItemID newID();
-        Item allocate(const Scene* scene, NodeID node, DrawableID drawable);
+        Item allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
     public:
 
         struct ItemInfo {
             NodeID _nodeID{ INVALID_NODE_ID };
             DrawableID _drawableID{ INVALID_DRAWABLE_ID };
+            ItemID _groupID{ INVALID_ITEM_ID };
             uint32_t _isVisible{ true };
-            uint32_t spareB;
         };
 
-        Item createItem(const Scene* scene, Node node, Drawable drawable);
-        Item createItem(const Scene* scene, NodeID node, DrawableID drawable);
+        Item createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner = INVALID_ITEM_ID);
+        Item createItem(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
         void free(ItemID index);
         void freeAll();
 
@@ -126,6 +128,7 @@ namespace graphics {
         const Items& getItems() const { return _items; };
         const ItemInfo& getInfo(ItemID index) const { return _itemInfos[index]; }
 
+        ItemIDs getItemGroup(ItemID owner) const;
     protected:
         friend class Item;
         friend class Scene;
@@ -147,6 +150,7 @@ namespace graphics {
     inline bool Item::Concept::isVisible() const { return _store->getInfo(_id)._isVisible; }
     inline NodeID Item::Concept::getNodeID() const { return _store->getInfo(_id)._nodeID; }
     inline DrawableID Item::Concept::getDrawableID() const { return _store->getInfo(_id)._drawableID; }
+    inline ItemID Item::Concept::getGroupID() const { return _store->getInfo(_id)._groupID; }
 
 
     using IDToIndices = std::unordered_map<ItemID, uint32_t>;

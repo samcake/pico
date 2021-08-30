@@ -185,6 +185,7 @@ namespace graphics {
         // instanciating a model in the scene 
         std::vector<core::mat4x3> _localNodeTransforms;
         std::vector<uint32_t> _localNodeParents;
+        std::vector<uint32_t> _localRootNodes;
 
         // Local Items used to create the list of items in the scene when instanciating the model 
         std::vector<ModelItem> _localItems;

@@ -60,7 +60,7 @@ namespace graphics {
         return _indexTable.allocate();
     }
 
-    Item ItemStore::allocate(const Scene* scene, NodeID node, DrawableID drawable) {
+    Item ItemStore::allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner) {
 
         ItemID new_id = newID();
         Item item(new Item::Concept(scene, this, new_id));
@@ -69,11 +69,11 @@ namespace graphics {
 
         if (allocated) {
             _items.push_back(item);
-            _itemInfos.push_back({node, drawable, true});
+            _itemInfos.push_back({node, drawable, owner, true});
         }
         else {
             _items[new_id] = (item);
-            _itemInfos[new_id] = { node, drawable, true };
+            _itemInfos[new_id] = { node, drawable, owner, true };
         }
 
         _touchedElements.push_back(new_id);
@@ -81,24 +81,35 @@ namespace graphics {
         return item;
     }
 
-    Item ItemStore::createItem(const Scene* scene, Node node, Drawable drawable) {
-        return allocate(scene, node.id(), drawable.id());
+    Item ItemStore::createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner) {
+        return allocate(scene, node.id(), drawable.id(), owner);
     }
-    Item ItemStore::createItem(const Scene* scene, NodeID node, DrawableID drawable) {
-        return allocate(scene, node, drawable);
+    Item ItemStore::createItem(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner) {
+        return allocate(scene, node, drawable, owner);
     }
 
     void ItemStore::free(ItemID index) {
-        _indexTable.free(index);
-
-        _items[index] = Item::null;
-        _itemInfos[index] = ItemInfo();
-
-        _touchedElements.push_back(index);
+        if (_indexTable.isValid(index)) {
+            _indexTable.free(index);
+            _items[index] = Item::null;
+            _itemInfos[index] = ItemInfo();
+            _touchedElements.push_back(index);
+        }
     }
 
     void ItemStore::freeAll() {
 
+    }
+
+
+    ItemIDs ItemStore::getItemGroup(ItemID group) const {
+        ItemIDs itemGroup;
+        for (uint32_t i = 0; i < _items.size(); ++i) {
+            if (_items[i].isValid() && _itemInfos[i]._groupID == group) {
+                itemGroup.emplace_back(i);
+            }
+        }
+        return itemGroup;
     }
 
     Item ItemStore::getValidItemAt(ItemID startIndex) const {

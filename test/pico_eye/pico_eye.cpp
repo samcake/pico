@@ -125,8 +125,6 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
     state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
 
-    auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
-
     graphics::ItemIDs modelItemIDs;
 
     modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);

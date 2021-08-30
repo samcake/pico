@@ -50,6 +50,8 @@ namespace graphics {
         
         Item createItem(Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
         Item createItem(NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
+        Item createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
+        Item createSubItem(ItemID group, Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
 
         void deleteAllItems();  // delete all user objects
         void deleteAll();

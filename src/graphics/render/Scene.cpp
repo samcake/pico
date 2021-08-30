@@ -35,6 +35,7 @@ Scene::~Scene() {
     deleteAll();
 }
 
+
 Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
     return createItem(node.id(), drawable.id(), userID);
 }
@@ -42,12 +43,32 @@ Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
 Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
 
     Item newItem = _items.createItem(this, node, drawable);
+    
+    _nodes.reference(node);
+    _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
         _idToIndices[userID] = newItem.id();
     }
 
     return newItem;
+}
+
+Item Scene::createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID) {
+    Item newItem = _items.createItem(this, node, drawable, group);
+
+    _nodes.reference(node);
+    _drawables.reference(drawable);
+
+    if (userID != INVALID_ITEM_ID) {
+        _idToIndices[userID] = newItem.id();
+    }
+
+    return newItem;
+}
+
+Item Scene::createSubItem(ItemID group, Node node, Drawable drawable, UserID userID) {
+    return createSubItem(group, node.id(), drawable.id(), userID);
 }
 
 Item Scene::getItem(ItemID id) const {
@@ -72,7 +93,28 @@ void Scene::deleteAllItems() {
 
 
 void Scene::deleteItem(ItemID id) {
+    if (!_nodes._tree._indexTable.isValid(id))
+        return;
+
+    // If item is a group item then also delete group items;
+    auto group = _items.getItemGroup(id);
+    for (auto subItem : group) {
+        deleteItem(subItem);
+    }
+
+    auto item = _items.getItem(id);
+    auto nodeID = item.getNodeID();
+    auto drawableID = item.getDrawableID();
+
+    if (_nodes.release(nodeID) <= 0) {
+        _nodes.deleteNode(nodeID);
+    }
+    if (_drawables.release(drawableID) <= 0) {
+        _drawables.free(drawableID);
+    }
+
     _items.free(id);
+
 }
 
 void Scene::deleteItemFromID(UserID id) {

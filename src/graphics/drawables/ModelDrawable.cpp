@@ -132,6 +132,9 @@ namespace graphics
 
         auto modelDrawable = new graphics::ModelDrawable();
 
+        if (model->_scenes.size())
+            modelDrawable->_localRootNodes = model->_scenes[0]._nodes;
+
         // Define the local nodes used by the model with the original transforms and the parents
         modelDrawable->_localNodeTransforms.reserve(model->_nodes.size());
         modelDrawable->_localNodeParents.reserve(model->_nodes.size());
@@ -700,23 +703,23 @@ namespace graphics
                     const graphics::ScenePointer& scene,
                     graphics::ModelDrawable& model) {
    
-        auto rootNode = scene->createNode(core::mat4x3(), root);
+        auto rootNodeID = scene->createNode(core::mat4x3(), root).id();
 
-        
         // Allocating the new instances of scene::nodes, one per local node
-        auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
+        auto modelNodes = scene->createNodeBranch(rootNodeID, model._localNodeTransforms, model._localNodeParents);
 
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
         
-        // first item is the model drawable
-        items.emplace_back(scene->createItem(rootNode.id(), model._drawableID).id());
+        // first item is the model drawable itself 
+        auto rootItemId = scene->createItem(rootNodeID, model._drawableID).id();
+        items.emplace_back(rootItemId);
 
         for (const auto& li : model._localItems) {
             if (li.shape != MODEL_INVALID_INDEX) {
                 const auto& s = model._shapes[li.shape];
                 for (uint32_t si = 0; si < s.numParts; ++si) {
-                    items.emplace_back(scene->createItem(modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
+                    items.emplace_back(scene->createSubItem(rootItemId, modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
                 }
             }
             if (li.camera != MODEL_INVALID_INDEX) {

@@ -86,11 +86,13 @@ TransformTree::NodeIDs TransformTree::allocateBranch(NodeID rootParent, const st
 }
 
 void TransformTree::free(NodeID nodeId) {
-    _indexTable.free(nodeId);
+    if (_indexTable.isValid(nodeId)) {
+        _indexTable.free(nodeId);
 
-    _treeNodes[nodeId] = Node();
-    _nodeTransforms[nodeId] = core::mat4x3();
-    _worldTransforms[nodeId] = core::mat4x3();
+        _treeNodes[nodeId] = Node();
+        _nodeTransforms[nodeId] = core::mat4x3();
+        _worldTransforms[nodeId] = core::mat4x3();
+    }
 }
 
 void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
@@ -152,6 +154,25 @@ void TransformTree::detachNode(NodeID node_id) {
 
     the_node.parent = INVALID_ID;
     the_node.sybling = INVALID_ID;
+}
+
+int32_t TransformTree::reference(NodeID nodeId) {
+    if (_indexTable.isValid(nodeId)) {
+        auto& the_node = _treeNodes[nodeId];
+        the_node.refCount++;
+        return the_node.refCount;
+    } else {
+        return 0;
+    }
+}
+int32_t TransformTree::release(NodeID nodeId) {
+    if (_indexTable.isValid(nodeId)) {
+        auto& the_node = _treeNodes[nodeId];
+        the_node.refCount--;
+        return the_node.refCount;
+    } else {
+        return 0;
+    }
 }
 
 void TransformTree::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {
@@ -274,6 +295,14 @@ void NodeStore::attachNode(NodeID child, NodeID parent) {
 
 void NodeStore::detachNode(NodeID child) {
     _tree.detachNode(child);
+}
+
+
+int32_t NodeStore::reference(NodeID nodeId) {
+    return _tree.reference(nodeId);
+}
+int32_t NodeStore::release(NodeID nodeId) {
+    return _tree.release(nodeId);
 }
 
 void NodeStore::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {

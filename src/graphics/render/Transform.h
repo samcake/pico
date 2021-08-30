@@ -59,7 +59,7 @@ namespace graphics {
             NodeID sybling{ INVALID_ID };
             NodeID children_head{ INVALID_ID };
             uint16_t num_children{ 0 };
-            uint16_t spare{ 0 };
+            uint16_t refCount{ 0 };
 
             Node(NodeID p): parent(p) {}
             Node() {}
@@ -76,6 +76,9 @@ namespace graphics {
         void attachNode(NodeID child, NodeID parent);
         void detachNode(NodeID child);
 
+
+        int32_t reference(NodeID nodeId);
+        int32_t release(NodeID nodeId);
 
         core::IndexTable _indexTable;
         std::vector<Node> _treeNodes;
@@ -111,6 +114,9 @@ namespace graphics {
 
         void editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor);
         void updateTransforms();
+
+        int32_t reference(NodeID nodeId);
+        int32_t release(NodeID nodeId);
     };
 
     class VISUALIZATION_API Node {
@@ -118,7 +124,7 @@ namespace graphics {
         Node(const NodeStore* transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
 
         mutable const NodeStore* _transformTree { nullptr };
-        mutable NodeID _index { 0 };
+        mutable NodeID _index { INVALID_NODE_ID };
     public:
         static const Node null;
         Node() {}

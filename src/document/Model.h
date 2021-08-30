@@ -42,6 +42,12 @@ namespace model {
     constexpr Index INVALID_INDEX{(uint32_t)-1};
     using IndexArray = std::vector<Index>;
 
+    class Scene {
+    public:
+        IndexArray _nodes;
+    };
+    using SceneArray = std::vector<Scene>;
+
     class Node {
     public:
         std::string _name;
@@ -220,7 +226,7 @@ namespace model {
         static std::unique_ptr<Model> createFromGLTF(const std::string& filename);
 
 
-        
+        SceneArray _scenes;
         NodeArray _nodes;
 
         ItemArray _items;
