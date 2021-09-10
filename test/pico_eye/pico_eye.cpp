@@ -279,6 +279,16 @@ int main(int argc, char *argv[])
             }
         }
         ImGui::End();
+        if (ImGui::Begin("Scene")) {
+            static char buffer[512] = "";
+            int buffer_size = 512;
+            if (ImGui::InputText("Open...", buffer, buffer_size)) {
+                std::clog << "? " << buffer << std::endl;
+            }
+
+        }
+        ImGui::End();
+
 
         scene->_items.syncBuffer();
         scene->_nodes.updateTransforms();
