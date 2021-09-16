@@ -68,53 +68,14 @@ struct AppState {
 AppState state;
 
 //--------------------------------------------------------------------------------------
-// pico model:
+// pico eye:
 //  Explore the definition of a document::model created from loading a gltf file
 //  and its drawable counterpart, MOdelDrawable
 //--------------------------------------------------------------------------------------
 
-document::ModelPointer lmodel;
 
 
-graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
-
- //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
- //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
- //   std::string modelFile("../asset/gltf/Sponza.gltf");
-  //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
-  // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
-  //  std::string modelFile("../asset/gltf/buggy.gltf");
-   //   std::string modelFile("../asset/gltf/VC.gltf");
-    //  std::string modelFile("../asset/gltf/duck.gltf");
-   // std::string modelFile("../asset/gltf/OrientationTest.gltf");
-   // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
-  // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
-    
-   //  std::string modelFile("../asset/gltf/Rusted Metal Barrel_teufceuda_Metal/Rusted Metal Barrel_LOD2__teufceuda.gltf");
-   //  std::string modelFile("../asset/gltf/Castle Parapet Wall_sbxuw_3D Asset/Castle Parapet Wall_LOD0__sbxuw.gltf");
-   // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
-
-   std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-   //std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
-
-  // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
-   // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
-  //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
-   // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
-   // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
-  //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
-  //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
-
-  // 
-    
-
-
-
- //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
-
-    
-    
-    lmodel = document::model::Model::createFromGLTF(modelFile);
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
@@ -132,6 +93,48 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
     return modelItemIDs;
 }
 
+document::ModelPointer loadModel() {
+    document::ModelPointer lmodel;
+    //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
+    //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
+    //   std::string modelFile("../asset/gltf/Sponza.gltf");
+    //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
+    // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+    //  std::string modelFile("../asset/gltf/buggy.gltf");
+    //   std::string modelFile("../asset/gltf/VC.gltf");
+    //  std::string modelFile("../asset/gltf/duck.gltf");
+    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
+    // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
+    // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
+
+    //  std::string modelFile("../asset/gltf/Rusted Metal Barrel_teufceuda_Metal/Rusted Metal Barrel_LOD2__teufceuda.gltf");
+    //  std::string modelFile("../asset/gltf/Castle Parapet Wall_sbxuw_3D Asset/Castle Parapet Wall_LOD0__sbxuw.gltf");
+    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+
+    std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
+    //std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+
+    // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
+
+    // 
+
+
+
+
+    //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
+
+
+
+    lmodel = document::model::Model::createFromGLTF(modelFile);
+
+    return lmodel;
+}
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -193,7 +196,7 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     state._modelRootNode = scene->createNode(core::mat4x3(), -1);
 
-    auto modelItemIDs = generateModel(gpuDevice, scene, camera, state._modelRootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, scene, camera, state._modelRootNode);
     if (modelItemIDs.size()) {
          state._modelItemID = modelItemIDs[0];
     }
@@ -356,6 +359,20 @@ int main(int argc, char *argv[])
         }
     };
  
+    windowHandler->_onDropFilesDelegate = [&](const uix::DropFilesEvent& e) {
+        
+        if (e.fileUrls.size()) {
+            e.fileUrls;
+            // let's try to load the model
+
+            document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
+            if (lmodel) {
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, scene, camera, state._modelRootNode);
+            }
+        }
+        return;
+    };
+
     // Render Loop 
     bool keepOnGoing = true;
     while (keepOnGoing) {

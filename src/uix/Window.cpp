@@ -265,6 +265,8 @@ public:
         _sysWindowMap[sysWindow] = window;
         window->innerHandleResize(true);
 
+    //    DragAcceptFiles(sysWindow, TRUE);
+
         return window;
     }
 
