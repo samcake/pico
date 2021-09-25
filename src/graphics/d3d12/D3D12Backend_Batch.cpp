@@ -67,6 +67,8 @@ BatchPointer D3D12Backend::createBatch(const BatchInit & init) {
     batch->_commandList = CreateCommandList(_device,
         batch->_commandAllocators[batch->_currentBackBufferIndex], D3D12_COMMAND_LIST_TYPE_DIRECT);
 
+    batch->_descriptorHeap = _descriptorHeap;
+
     return BatchPointer(batch);
 }
 
@@ -99,6 +101,22 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
         _commandList->OMSetRenderTargets(1, &rtv, TRUE, &dsv);
     } else {
         _commandList->OMSetRenderTargets(1, &rtv, TRUE, nullptr);
+    }
+
+
+    uint32_t descriptor_heap_count = 0;
+    ID3D12DescriptorHeap* descriptor_heaps[2];
+    if (NULL != _descriptorHeap->_cbvsrvuav_heap) {
+        descriptor_heaps[descriptor_heap_count] = _descriptorHeap->_cbvsrvuav_heap.Get();
+        ++descriptor_heap_count;
+    }
+    if (NULL != _descriptorHeap->_sampler_heap) {
+        descriptor_heaps[descriptor_heap_count] = _descriptorHeap->_sampler_heap.Get();
+        ++descriptor_heap_count;
+    }
+
+    if (descriptor_heap_count > 0) {
+        _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
     }
 }
 
@@ -228,7 +246,7 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
 
 void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {
     auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
-
+/*
     uint32_t descriptor_heap_count = 0;
     ID3D12DescriptorHeap* descriptor_heaps[2];
     if (NULL != dxds->_cbvsrvuav_heap) {
@@ -243,6 +261,7 @@ void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSet
     if (descriptor_heap_count > 0) {
         _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
     }
+    */
 
     for (uint32_t i = 0; i < dxds->_dxRootParameterIndices.size(); ++i) {
         auto rooParameterIndex = dxds->_dxRootParameterIndices[i];

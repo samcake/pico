@@ -35,6 +35,8 @@
 #include "gpu/Shader.h"
 #include "gpu/Descriptor.h"
 
+#include <core/stl/IndexTable.h>
+
 #ifdef _WINDOWS
 
 // Windows Runtime Library. Needed for Microsoft::WRL::ComPtr<> template class.
@@ -47,6 +49,8 @@ using namespace Microsoft::WRL;
 #include <d3dcompiler.h>
 
 namespace graphics {
+    class D3D12DescriptorHeapBackend;
+    using D3D12DescriptorHeapBackendPointer = std::shared_ptr<D3D12DescriptorHeapBackend>;
     
     class D3D12Backend : public DeviceBackend {
     public:
@@ -71,6 +75,10 @@ namespace graphics {
         uint64_t _fenceValue = 0;
         uint64_t _frameFenceValues[D3D12Backend::CHAIN_NUM_FRAMES] = {};
         HANDLE _fenceEvent;
+
+        // Memory management
+        D3D12DescriptorHeapBackendPointer _descriptorHeap;
+        D3D12DescriptorHeapBackendPointer CreateDescriptorHeap();
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
@@ -105,7 +113,7 @@ namespace graphics {
         bool compileShader(Shader* shader, const std::string& src);
         bool realizePipelineState(PipelineState* pipeline);
 
-        // When we modify d3d11 objects already in use, we need to garbage collect
+        // When we modify d3d12 objects already in use, we need to garbage collect
         // them to be destroyed at a later time
         void garbageCollect(const ComPtr<ID3D12DeviceChild>& child);
         std::list< ComPtr<ID3D12DeviceChild> > _garbageObjects;
@@ -196,6 +204,8 @@ namespace graphics {
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 
         UINT _currentBackBufferIndex { 0 };
+
+        D3D12DescriptorHeapBackendPointer _descriptorHeap;
 
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
@@ -288,8 +298,6 @@ namespace graphics {
         D3D12DescriptorSetBackend();
         virtual ~D3D12DescriptorSetBackend();
 
-        ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
-        ComPtr < ID3D12DescriptorHeap> _sampler_heap;
         std::vector< uint32_t > _dxHeapOffsets;
         //std::vector< D3D12_CPU_DESCRIPTOR_HANDLE > _dxCPUHandles;
         std::vector< D3D12_GPU_DESCRIPTOR_HANDLE > _dxGPUHandles;
@@ -297,6 +305,31 @@ namespace graphics {
         uint32_t cbvsrvuav_count = 0;
         uint32_t sampler_count = 0;
         uint32_t push_count = 0;
+    };
+
+    class D3D12DescriptorHeapBackend {
+       public:
+       friend class D3D12Backend;
+       D3D12DescriptorHeapBackend();
+       ~D3D12DescriptorHeapBackend();
+
+       UINT _descriptor_increment_size;
+       UINT _sampler_increment_size;
+
+       UINT _descriptor_capacity;
+       UINT _sampler_capacity;
+
+       ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
+       ComPtr < ID3D12DescriptorHeap> _sampler_heap;
+
+       core::IndexTable _descriptor_table;
+       core::IndexTable _sampler_table;
+
+       D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t offset) const;
+       D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle(uint32_t offset) const;
+
+       D3D12_GPU_DESCRIPTOR_HANDLE gpuSamplerHandle(uint32_t offset) const;
+       D3D12_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle(uint32_t offset) const;
     };
 
 }

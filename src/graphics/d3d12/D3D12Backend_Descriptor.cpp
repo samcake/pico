@@ -274,40 +274,26 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
     uint32_t numDescriptors = (uint32_t) layout->_init._layouts.size();
     uint32_t cbvsrvuav_count = layout->cbvsrvuav_count;
     uint32_t sampler_count = layout->sampler_count;
-
-    if (cbvsrvuav_count > 0) {
-        D3D12_DESCRIPTOR_HEAP_DESC desc;
-        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        desc.NumDescriptors = cbvsrvuav_count;
-        desc.NodeMask = 0;
-        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        HRESULT hres = _device->CreateDescriptorHeap(&desc,
-            __uuidof(descriptorSet->_cbvsrvuav_heap), (void**)&((descriptorSet->_cbvsrvuav_heap)));
-    }
-
-    if (sampler_count > 0) {
-        D3D12_DESCRIPTOR_HEAP_DESC desc;
-        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
-        desc.NumDescriptors = sampler_count;
-        desc.NodeMask = 0;
-        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        HRESULT hres = _device->CreateDescriptorHeap(&desc,
-            __uuidof(descriptorSet->_sampler_heap), (void**)&((descriptorSet->_sampler_heap)));
-        
-    }
+    auto allocatedDescriptors = _descriptorHeap->_descriptor_table.allocate(cbvsrvuav_count);
+    auto allocatedSamplers = _descriptorHeap->_sampler_table.allocate(sampler_count);
 
     // Assign heap offsets
-    uint32_t cbvsrvuav_heap_offset = 0;
-    uint32_t sampler_heap_offset = 0;
+    uint32_t cbvsrvuav_heap_offset = (allocatedDescriptors.empty() ? 0 : allocatedDescriptors[0]);
+    uint32_t sampler_heap_offset = (allocatedSamplers.empty() ? 0 : allocatedSamplers[0]);
 
     // for each descriptor we need an offset even if not used:
     descriptorSet->_dxHeapOffsets.resize(numDescriptors, 0);
+
+    descriptorSet->_dxGPUHandles.resize(numDescriptors);
+    descriptorSet->_dxRootParameterIndices.resize(numDescriptors, -1);
 
     for (uint32_t i = 0; i < numDescriptors; ++i) {
         const auto& desc = layout->_init._layouts[i];
         switch (desc._type) {
             case DescriptorType::SAMPLER: {
                 descriptorSet->_dxHeapOffsets[i] = sampler_heap_offset;
+                descriptorSet->_dxGPUHandles[i] = _descriptorHeap->gpuSamplerHandle(descriptorSet->_dxHeapOffsets[i]);
+                descriptorSet->_dxRootParameterIndices[i] = layout->_dxParamIndices[i];
                 sampler_heap_offset += desc._count;
             }
                                            break;
@@ -320,6 +306,8 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
             case DescriptorType::UNIFORM_TEXEL_BUFFER_SRV:
             case DescriptorType::STORAGE_TEXEL_BUFFER_UAV: {
                 descriptorSet->_dxHeapOffsets[i] = cbvsrvuav_heap_offset;
+                descriptorSet->_dxGPUHandles[i] = _descriptorHeap->gpuHandle(descriptorSet->_dxHeapOffsets[i]);
+                descriptorSet->_dxRootParameterIndices[i] = layout->_dxParamIndices[i];
                 cbvsrvuav_heap_offset += desc._count;
             }
                                                break;
@@ -328,8 +316,6 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
 
     descriptorSet->cbvsrvuav_count = cbvsrvuav_count;
     descriptorSet->sampler_count = sampler_count;
-    descriptorSet->_dxGPUHandles.resize(numDescriptors);
-    descriptorSet->_dxRootParameterIndices.resize(numDescriptors, -1);
 
 
     return DescriptorSetPointer(descriptorSet);
@@ -338,17 +324,6 @@ DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& 
 
 void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) {
     auto dxDescriptorSet = static_cast<D3D12DescriptorSetBackend*> (descriptorSet.get());
-
-    // Not really efficient, just write less frequently ;)
-/*
-    uint32_t write_count = 0;
-    for (uint32_t i = 0; i < p_descriptor_set->descriptor_count; ++i) {
-        tr_descriptor* descriptor = &(p_descriptor_set->descriptors[i]);
-        if ((NULL != descriptor->samplers) || (NULL != descriptor->textures) || (NULL != descriptor->uniform_buffers)) {
-            ++write_count;
-        }
-    }
-*/
 
     
     uint32_t write_count = (uint32_t) objects.size();
@@ -371,25 +346,11 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         auto& descriptorObject = objects[objectId];
         objectId++;
 
-  /*      if ((NULL == descriptor->samplers) && (NULL == descriptor->textures) && (NULL == descriptor->uniform_buffers)) {
-            continue;
-        }
-*/
-
         switch (descriptorLayout._type) {
         case DescriptorType::SAMPLER : {
             picoAssert(descriptorObject._samplers.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_sampler_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_sampler_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
-
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuSamplerHandle(dxDescriptorSet->_dxHeapOffsets[i]);
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._samplers[j].get()));
@@ -397,22 +358,15 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
 
                 D3D12_SAMPLER_DESC* sampler_desc = &(dxSampler->_samplerDesc);
                 _device->CreateSampler(sampler_desc, cpuHandle);
-                cpuHandle.ptr += handle_inc_size;
+
+                cpuHandle.ptr += _descriptorHeap->_sampler_increment_size;
             }
         } break;
 
         case DescriptorType::UNIFORM_BUFFER: {
             picoAssert(descriptorObject._uniformBuffers.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuHandle(dxDescriptorSet->_dxHeapOffsets[i]);
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._uniformBuffers[j].get()));
@@ -421,22 +375,15 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 ID3D12Resource* resource = dxUbo->_resource.Get();
                 D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
                 _device->CreateConstantBufferView(view_desc, cpuHandle);
-                cpuHandle.ptr += handle_inc_size;
+
+                cpuHandle.ptr += _descriptorHeap->_descriptor_increment_size;
             }
         } break;
 
         case DescriptorType::RESOURCE_BUFFER: {
             picoAssert(descriptorObject._buffers.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuHandle(dxDescriptorSet->_dxHeapOffsets[i]);
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._buffers[j].get()));
@@ -461,7 +408,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                    // }*/
                     _device->CreateShaderResourceView(nullptr, &view_desc, cpuHandle);
                 }
-                cpuHandle.ptr += handle_inc_size;
+                cpuHandle.ptr += _descriptorHeap->_descriptor_increment_size;
             }
         }
         break;
@@ -470,15 +417,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         {
             picoAssert(descriptorObject._buffers.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuHandle(dxDescriptorSet->_dxHeapOffsets[i]);
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._buffers[j].get()));
@@ -493,22 +432,14 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 } else*/ {
                     _device->CreateUnorderedAccessView(resource, NULL, view_desc, cpuHandle);
                 }
-                cpuHandle.ptr += handle_inc_size;
+                cpuHandle.ptr += _descriptorHeap->_descriptor_increment_size;
             }
         }
                                                         break;
         case DescriptorType::RESOURCE_TEXTURE: {
             picoAssert(descriptorObject._textures.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuHandle(dxDescriptorSet->_dxHeapOffsets[i]);
 
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._textures[j].get()));
@@ -533,7 +464,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                     // }*/
                     _device->CreateShaderResourceView(nullptr, &view_desc, cpuHandle);
                 }
-                cpuHandle.ptr += handle_inc_size;
+                cpuHandle.ptr += _descriptorHeap->_descriptor_increment_size;
             }
         }
         break;
@@ -542,16 +473,8 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         {
             picoAssert(descriptorObject._textures.size() >= descriptorLayout._count);
 
-            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
-            D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = dxDescriptorSet->_cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
-            UINT handle_inc_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
-            cpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-            gpuHandle.ptr += dxDescriptorSet->_dxHeapOffsets[i] * handle_inc_size;
-
-            dxDescriptorSet->_dxGPUHandles[i] = gpuHandle;
-            dxDescriptorSet->_dxRootParameterIndices[i] = dxDescriptorSetLayout->_dxParamIndices[i];
-
+            D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _descriptorHeap->cpuHandle(dxDescriptorSet->_dxHeapOffsets[i]);
+            
             for (uint32_t j = 0; j < descriptorLayout._count; ++j) {
                 picoAssert((descriptorObject._textures[j].get()));
                 auto dxTex = static_cast<D3D12TextureBackend*> (descriptorObject._textures[j].get());
@@ -564,7 +487,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
                 else {
                     // this is an empty descriptor slot, probably bad
                 }
-                cpuHandle.ptr += handle_inc_size;
+                cpuHandle.ptr += _descriptorHeap->_descriptor_increment_size;
             }
         }
         break;
@@ -575,6 +498,74 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
     //assuming everything went well, update the objects stored in the descriptorSet
 
     descriptorSet->_objects = objects;
+}
+
+
+D3D12DescriptorHeapBackend::D3D12DescriptorHeapBackend() {
+}
+
+D3D12DescriptorHeapBackend::~D3D12DescriptorHeapBackend() {
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeapBackend::gpuHandle(uint32_t offset) const {
+    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = _cbvsrvuav_heap->GetGPUDescriptorHandleForHeapStart();
+    gpuHandle.ptr += offset * _descriptor_increment_size;
+    return gpuHandle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeapBackend::cpuHandle(uint32_t offset) const {
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _cbvsrvuav_heap->GetCPUDescriptorHandleForHeapStart();
+    cpuHandle.ptr += offset * _descriptor_increment_size;
+    return cpuHandle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorHeapBackend::gpuSamplerHandle(uint32_t offset) const {
+    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = _sampler_heap->GetGPUDescriptorHandleForHeapStart();
+    gpuHandle.ptr += offset * _sampler_increment_size;
+    return gpuHandle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorHeapBackend::cpuSamplerHandle(uint32_t offset) const {
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = _sampler_heap->GetCPUDescriptorHandleForHeapStart();
+    cpuHandle.ptr += offset * _sampler_increment_size;
+    return cpuHandle;
+}
+
+
+D3D12DescriptorHeapBackendPointer D3D12Backend::CreateDescriptorHeap() {
+    auto heap = std::make_shared<D3D12DescriptorHeapBackend>();
+
+    int32_t cbvsrvuav_count = 10000;
+    int32_t sampler_count = 32;
+
+    if (cbvsrvuav_count > 0) {
+        D3D12_DESCRIPTOR_HEAP_DESC desc;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        desc.NumDescriptors = cbvsrvuav_count;
+        desc.NodeMask = 0;
+        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        HRESULT hres = _device->CreateDescriptorHeap(&desc,
+            __uuidof(heap->_cbvsrvuav_heap), (void**)&((heap->_cbvsrvuav_heap)));
+    }
+
+    if (sampler_count > 0) {
+        D3D12_DESCRIPTOR_HEAP_DESC desc;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER;
+        desc.NumDescriptors = sampler_count;
+        desc.NodeMask = 0;
+        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        HRESULT hres = _device->CreateDescriptorHeap(&desc,
+            __uuidof(heap->_sampler_heap), (void**)&((heap->_sampler_heap)));
+    }
+
+
+    heap->_descriptor_capacity = cbvsrvuav_count;
+    heap->_sampler_capacity = sampler_count;
+
+    heap->_descriptor_increment_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+    heap->_sampler_increment_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER);
+
+    return heap;
 }
 
 #endif
