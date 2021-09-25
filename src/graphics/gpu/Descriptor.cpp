@@ -36,6 +36,14 @@ DescriptorSetLayout::~DescriptorSetLayout() {
 
 }
 
+RootDescriptorsLayout::RootDescriptorsLayout() {
+
+}
+
+RootDescriptorsLayout::~RootDescriptorsLayout() {
+
+}
+
 DescriptorSet::DescriptorSet() {
 
 }

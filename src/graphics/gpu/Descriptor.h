@@ -32,6 +32,7 @@
 
 namespace graphics {
 
+    // A descriptor layout for an individual resource
     struct VISUALIZATION_API DescriptorLayout {
         DescriptorType  _type;
         ShaderStage     _shaderStage;
@@ -41,11 +42,10 @@ namespace graphics {
 
     using DescriptorLayouts = std::vector<DescriptorLayout>;
 
+    // DescriptorSet Layout
+    // N Descriptor Layouts for N sequential resource descriptors in the DescriptorHeap
     struct VISUALIZATION_API DescriptorSetLayoutInit {
-#pragma warning(push)
-#pragma warning(disable: 4251)
         DescriptorLayouts _layouts;
-#pragma warning(pop)
     };
 
     class VISUALIZATION_API DescriptorSetLayout {
@@ -58,6 +58,31 @@ namespace graphics {
 
         DescriptorSetLayoutInit _init;
     };
+    using DescriptorSetLayouts = std::vector<DescriptorSetLayout>;
+
+
+    // Root Descriptors Layout
+    // A DescriptorLayout for push constants
+    // N DescriptorSetLayouts for resources
+    struct VISUALIZATION_API RootDescriptorsLayoutInit {
+        DescriptorLayout     _pushLayout;
+        DescriptorSetLayouts _setLayouts;
+    };
+
+    class VISUALIZATION_API RootDescriptorsLayout {
+    protected:
+        friend class Device;
+        RootDescriptorsLayout();
+
+    public:
+        virtual ~RootDescriptorsLayout();
+
+        RootDescriptorsLayoutInit _init;
+    };
+
+
+
+
 
     struct VISUALIZATION_API DescriptorObject{
 #pragma warning(push)
@@ -72,10 +97,8 @@ namespace graphics {
 
 
     struct VISUALIZATION_API DescriptorSetInit {
-#pragma warning(push)
-#pragma warning(disable: 4251)
        DescriptorSetLayoutPointer _layout;
-#pragma warning(pop)
+       int32_t _rootSetIndex;
     };
 
     class VISUALIZATION_API DescriptorSet {
@@ -89,9 +112,7 @@ namespace graphics {
 
         DescriptorSetInit _init;
 
-#pragma warning(push)
-#pragma warning(disable: 4251)
         DescriptorObjects _objects;
-#pragma warning(pop)
+
     };
 }

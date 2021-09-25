@@ -343,7 +343,6 @@ void Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
     WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
 }
 
-
 D3D12Backend::D3D12Backend() {
     ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
 
@@ -377,6 +376,9 @@ D3D12Backend::D3D12Backend() {
 
     _fence = CreateFence(_device);
     _fenceEvent = CreateEventHandle();
+
+    // Allocate a global descriptor heap
+    _descriptorHeap = CreateDescriptorHeap();
 }
 
 D3D12Backend::~D3D12Backend() {
