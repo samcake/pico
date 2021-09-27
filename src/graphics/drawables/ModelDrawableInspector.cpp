@@ -85,14 +85,15 @@ namespace graphics
 
     ModelObjectData makeModelObjectData(const ModelDrawableInspectorUniforms& params, int32_t node, uint32_t flags) {
         ModelObjectData odata{
-            node, (int32_t)0,
-            params.numNodes, params.numParts, params.numMaterials, params.numEdges,
+            (uint32_t) node, (uint32_t)0,
+            (uint32_t) params.numNodes, (uint32_t) params.numParts,
+            (uint32_t) params.numMaterials, (uint32_t) params.numEdges,
             flags,
-            params.inspectedTriangle, params.numInspectedTriangles,
+            (int32_t)params.inspectedTriangle, (int32_t) params.numInspectedTriangles,
             params.uvSpaceCenterX, params.uvSpaceCenterY,
             params.uvSpaceScale, params.colorMapBlend,
             params.kernelRadius,
-            params.inspectedTexelX, params.inspectedTexelY
+            (int32_t)params.inspectedTexelX, (int32_t) params.inspectedTexelY
         };
         return (odata);
     }
@@ -101,9 +102,12 @@ namespace graphics
     void ModelDrawableInspectorFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the draw pipeline Descriptors layout
-        graphics::DescriptorLayouts draw_descriptorLayouts{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
+        graphics::RootDescriptorLayoutInit draw_descriptorLayoutInit{
+            {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
+            },
+            {{
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
@@ -116,33 +120,38 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 11, 1},  // UVMesh Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
+            }},
+            {
             { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
+            }
         };
-
-        graphics::DescriptorSetLayoutInit draw_descriptorSetLayoutInit{ draw_descriptorLayouts };
-        auto draw_descriptorSetLayout = device->createDescriptorSetLayout(draw_descriptorSetLayoutInit);
+        auto draw_rootDescriptorLayout = device->createRootDescriptorLayout(draw_descriptorLayoutInit);
 
         // Let's describe the uvmesh pipeline Descriptors layout
-        graphics::DescriptorLayouts uvmesh_descriptorLayouts{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},// Camera
+         graphics::RootDescriptorLayoutInit uvmesh_descriptorLayoutInit{
+            {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
+            },
+            {{
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Edge
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
 
+            }}
         };
-
-        graphics::DescriptorSetLayoutInit uvmesh_descriptorSetLayoutInit{ uvmesh_descriptorLayouts };
-        auto uvmesh_descriptorSetLayout = device->createDescriptorSetLayout(uvmesh_descriptorSetLayoutInit);
+        auto uvmesh_rootDescriptorLayout = device->createRootDescriptorLayout(uvmesh_descriptorLayoutInit);
 
         // Let's describe the pipeline Descriptors layout for compute pass
-        graphics::DescriptorLayouts compute_descriptorLayouts{
+        graphics::RootDescriptorLayoutInit compute_descriptorLayoutInit{
+            {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::COMPUTE, 0, sizeof(ModelObjectData) >> 2},
-
+            },
+            {{
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 1, 1}, // Part
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 2, 1}, // Index
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 3, 1}, // Vertex
@@ -153,13 +162,15 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::COMPUTE, 9, 1},  // Material
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 10, 1},  // Albedo Texture
             { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 11, 1},  // UVTool Texture
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 2},
 
             { graphics::DescriptorType::RW_RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 0, 1}, // render target!
+            }},
+            {
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 2},
+            }
         };
+        auto compute_rootDescriptorLayout = device->createRootDescriptorLayout(compute_descriptorLayoutInit);
 
-        graphics::DescriptorSetLayoutInit compute_descriptorSetLayoutInit{ compute_descriptorLayouts };
-        auto compute_descriptorSetLayout = device->createDescriptorSetLayout(compute_descriptorSetLayoutInit);
 
         // And a Pipeline
 
@@ -182,9 +193,9 @@ namespace graphics
         // Default pipeline draw faces
         graphics::GraphicsPipelineStateInit draw_pipelineInit{
                     draw_program,
+                    draw_rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    draw_descriptorSetLayout,
                     RasterizerState().withCullBack(),
                     true, // enable depth
                     BlendState()
@@ -194,9 +205,9 @@ namespace graphics
         // Draw mesh seam edges
         graphics::GraphicsPipelineStateInit draw_edges_pipelineInit{
                     draw_program,
+                    draw_rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
-                    draw_descriptorSetLayout,
                     RasterizerState(),//.withAntialiasedLine().withConservativeRasterizer(),
                     true, // enable depth
                     BlendState()
@@ -215,9 +226,9 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit draw_connectivity_pipelineInit{
                     draw_connectivity_program,
+                    draw_rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    draw_descriptorSetLayout,
                     RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
                     true, // enable depth
                     BlendState()
@@ -236,9 +247,9 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit draw_kernelSamples_pipelineInit{
                     draw_kernelSamples_program,
+                    draw_rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    draw_descriptorSetLayout,
                     RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
                     true, // enable depth
                     BlendState()
@@ -257,9 +268,9 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit uvspace_pipelineInit{
             uvspace_program,
+            draw_rootDescriptorLayout,
             StreamLayout(),
             graphics::PrimitiveTopology::TRIANGLE_STRIP,
-            draw_descriptorSetLayout,
             RasterizerState(),
             false,
             BlendState()
@@ -278,9 +289,9 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit pipeline_draw_uvmesh_point{
             draw_uvmesh_point_program,
+            draw_rootDescriptorLayout,
             StreamLayout(),
             graphics::PrimitiveTopology::POINT,
-            draw_descriptorSetLayout,
             RasterizerState(),
             true, // enable depth
             BlendState()
@@ -298,9 +309,9 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit make_uvmesh_pipelineInit{
                     make_uvmesh_program,
+                    uvmesh_rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    uvmesh_descriptorSetLayout,
                     RasterizerState().withConservativeRasterizer().withMultisample(),
                     false,
                     BlendState(),
@@ -320,7 +331,7 @@ namespace graphics
             // Let's describe the Compute pipeline Descriptors layout
             graphics::ComputePipelineStateInit imageSpaceBlur_compPipelineInit{
                 imageSpaceBlur_compShader,
-                compute_descriptorSetLayout
+                compute_rootDescriptorLayout
             };
 
             _pipeline_compute_imageSpaceBlur = device->createComputePipelineState(imageSpaceBlur_compPipelineInit);
@@ -331,7 +342,7 @@ namespace graphics
 
             _pipeline_compute_meshSpaceBlur = device->createComputePipelineState({
                 meshSpaceBlur_compShader,
-                compute_descriptorSetLayout
+                compute_rootDescriptorLayout
             });
         }
     }
@@ -429,66 +440,35 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline_draw_mesh->getDescriptorSetLayout()
+                _pipeline_draw_mesh->getRootDescriptorLayout(),
+                0
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet = descriptorSet;
 
             // Assign the Camera UBO just created as the resource of the descriptorSet
-            // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-            graphics::DescriptorObject camera_uboDescriptorObject;
-            camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
-            graphics::DescriptorObject transform_rboDescriptorObject;
-            transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
-
-            graphics::DescriptorObject pb_rboDescriptorObject;
-            pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
-            graphics::DescriptorObject ib_rboDescriptorObject;
-            ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
-            graphics::DescriptorObject vb_rboDescriptorObject;
-            vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
-            graphics::DescriptorObject ab_rboDescriptorObject;
-            ab_rboDescriptorObject._buffers.push_back(model.getVertexAttribBuffer());
-
-            graphics::DescriptorObject eb_rboDescriptorObject;
-            eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
-            graphics::DescriptorObject fb_rboDescriptorObject;
-            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
-
-            graphics::DescriptorObject mb_rboDescriptorObject;
-            mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
-            graphics::DescriptorObject texDescriptorObject;
-            texDescriptorObject._textures.push_back(model.getAlbedoTexture());
-            graphics::DescriptorObject computeDescriptorObject;
-            computeDescriptorObject._textures.push_back(model._texture_compute);
-
-            graphics::DescriptorObject uvtoolDescriptorObject;
-            uvtoolDescriptorObject._textures.push_back(model._texture_uvmesh);
-            
-            graphics::DescriptorObject samplerDescriptorObject;
             graphics::SamplerInit samplerInit{};
             auto sampler = device->createSampler(samplerInit);
-            samplerDescriptorObject._samplers.push_back(sampler);
 
             samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
             auto samplerL = device->createSampler(samplerInit);
-            samplerDescriptorObject._samplers.push_back(samplerL);
 
-            graphics::DescriptorObjects descriptorObjects = {
-                camera_uboDescriptorObject,
-                transform_rboDescriptorObject, 
-                pb_rboDescriptorObject,
-                ib_rboDescriptorObject,
-                vb_rboDescriptorObject,
-                ab_rboDescriptorObject,
-                eb_rboDescriptorObject,
-                fb_rboDescriptorObject,
 
-                mb_rboDescriptorObject,
-                texDescriptorObject,
-                uvtoolDescriptorObject,
-                computeDescriptorObject,
-                samplerDescriptorObject
+            graphics::DescriptorObjects descriptorObjects {
+                { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getEdgeBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getFaceBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getMaterialBuffer() },
+                { graphics::DescriptorType::RESOURCE_TEXTURE, model.getAlbedoTexture() },
+                { graphics::DescriptorType::RESOURCE_TEXTURE, model._texture_uvmesh },
+                { graphics::DescriptorType::RESOURCE_TEXTURE, model._texture_compute },
+                { sampler },
+                { samplerL }
             };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
@@ -497,42 +477,22 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline_uvmesh_makeEdge->getDescriptorSetLayout()
+                _pipeline_uvmesh_makeEdge->getRootDescriptorLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_uvmesh = descriptorSet;
 
             // Assign the Camera UBO just created as the resource of the descriptorSet
-            // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-            graphics::DescriptorObject camera_uboDescriptorObject;
-            camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
-            graphics::DescriptorObject transform_rboDescriptorObject;
-            transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
-
-            graphics::DescriptorObject pb_rboDescriptorObject;
-            pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
-            graphics::DescriptorObject ib_rboDescriptorObject;
-            ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
-            graphics::DescriptorObject vb_rboDescriptorObject;
-            vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
-            graphics::DescriptorObject ab_rboDescriptorObject;
-            ab_rboDescriptorObject._buffers.push_back(model.getVertexAttribBuffer());
-
-            graphics::DescriptorObject eb_rboDescriptorObject;
-            eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
-            graphics::DescriptorObject fb_rboDescriptorObject;
-            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
-
-            graphics::DescriptorObjects descriptorObjects = {
-                camera_uboDescriptorObject,
-                transform_rboDescriptorObject,
-                pb_rboDescriptorObject,
-                ib_rboDescriptorObject,
-                vb_rboDescriptorObject,
-                ab_rboDescriptorObject,
-                eb_rboDescriptorObject,
-                fb_rboDescriptorObject
-            };
+            graphics::DescriptorObjects descriptorObjects = { {
+                { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getEdgeBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getFaceBuffer() }
+            } };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
 
@@ -540,60 +500,32 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline_compute_imageSpaceBlur->getDescriptorSetLayout()
+                _pipeline_compute_imageSpaceBlur->getRootDescriptorLayout()
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_compute = descriptorSet;
 
-
-            graphics::DescriptorObject pb_rboDescriptorObject;
-            pb_rboDescriptorObject._buffers.push_back(model.getPartBuffer());
-            graphics::DescriptorObject ib_rboDescriptorObject;
-            ib_rboDescriptorObject._buffers.push_back(model.getIndexBuffer());
-            graphics::DescriptorObject vb_rboDescriptorObject;
-            vb_rboDescriptorObject._buffers.push_back(model.getVertexBuffer());
-            graphics::DescriptorObject ab_rboDescriptorObject;
-            ab_rboDescriptorObject._buffers.push_back(model.getVertexAttribBuffer());
-
-            graphics::DescriptorObject eb_rboDescriptorObject;
-            eb_rboDescriptorObject._buffers.push_back(model.getEdgeBuffer());
-            graphics::DescriptorObject fb_rboDescriptorObject;
-            fb_rboDescriptorObject._buffers.push_back(model.getFaceBuffer());
-
-            graphics::DescriptorObject mb_rboDescriptorObject;
-            mb_rboDescriptorObject._buffers.push_back(model.getMaterialBuffer());
-            graphics::DescriptorObject texDescriptorObject;
-            texDescriptorObject._textures.push_back(model.getAlbedoTexture());
-
-            graphics::DescriptorObject uvtoolDescriptorObject;
-            uvtoolDescriptorObject._textures.push_back(model._texture_uvmesh);
-
-            graphics::DescriptorObject samplerDescriptorObject;
+            // Assign the Camera UBO just created as the resource of the descriptorSet
             graphics::SamplerInit samplerInit{};
             auto sampler = device->createSampler(samplerInit);
-            samplerDescriptorObject._samplers.push_back(sampler);
 
             samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
             auto samplerL = device->createSampler(samplerInit);
-            samplerDescriptorObject._samplers.push_back(samplerL);
 
-            graphics::DescriptorObject dest_DescriptorObject;
-            dest_DescriptorObject._textures.push_back(model._texture_compute);
 
             graphics::DescriptorObjects descriptorObjects = {
-                pb_rboDescriptorObject,
-                ib_rboDescriptorObject,
-                vb_rboDescriptorObject,
-                ab_rboDescriptorObject,
-                eb_rboDescriptorObject,
-                fb_rboDescriptorObject,
-
-                mb_rboDescriptorObject,
-                texDescriptorObject,
-                uvtoolDescriptorObject,
-                samplerDescriptorObject,
-
-                dest_DescriptorObject
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getEdgeBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getFaceBuffer() },
+                { graphics::DescriptorType::RESOURCE_BUFFER, model.getMaterialBuffer() },
+                { graphics::DescriptorType::RESOURCE_TEXTURE, model.getAlbedoTexture() },
+                { graphics::DescriptorType::RESOURCE_TEXTURE, model._texture_uvmesh },
+                { graphics::DescriptorType::RW_RESOURCE_TEXTURE, model._texture_compute },
+                { sampler },
+                { samplerL }
             };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
@@ -670,7 +602,7 @@ namespace graphics
 
                             for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
  
                                 auto partNumIndices = pmodel->_parts[d].numIndices;
                                 batch->draw(partNumIndices, 0);
@@ -685,7 +617,7 @@ namespace graphics
 
                                 for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                     odata.partID = d;
-                                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                                     auto partNumEdges = pmodel->_parts[d].numEdges;
                                     batch->draw(partNumEdges * 2, 0);
                                 }
@@ -740,7 +672,7 @@ namespace graphics
                             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                             ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                             batch->draw(4, 0); // draw quad
                         }
@@ -758,7 +690,7 @@ namespace graphics
 
                             for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                                 auto partNumIndices = pmodel->_parts[d].numIndices;
                                 batch->draw((params->numInspectedTriangles) * 3, 0);
                             }
@@ -772,7 +704,7 @@ namespace graphics
                             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                             ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                             batch->draw((params->numKernelSamples + 1) * 3, 0); // draw num samples per primitive
                         }
@@ -827,7 +759,7 @@ namespace graphics
                             if (params->render3DModel) {
                                 ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                                 batch->draw(partNumIndices, 0);
                             }
@@ -875,7 +807,7 @@ namespace graphics
 
                         for (int d = 0; d < pmodel->_parts.size(); ++d) {
                             odata.partID = d;
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                             auto partNumEdges = pmodel->_parts[d].numEdges;
                             batch->draw(partNumEdges * 2, 0);
                         }
@@ -891,7 +823,7 @@ namespace graphics
                         batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                         ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
                         batch->draw(uvmeshMap->width() * uvmeshMap->height(), 0); // draw point cloud
                     }

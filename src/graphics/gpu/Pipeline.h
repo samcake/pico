@@ -38,9 +38,10 @@ namespace graphics {
 
     struct VISUALIZATION_API GraphicsPipelineStateInit {
         ShaderPointer program;
+        RootDescriptorLayoutPointer rootDescriptorLayout;
+
         StreamLayout streamLayout;
         PrimitiveTopology primitiveTopology{ PrimitiveTopology::POINT };
-        DescriptorSetLayoutPointer descriptorSetLayout;
         RasterizerState rasterizer;
         DepthStencilState depthStencil;
         BlendState blend;
@@ -53,7 +54,7 @@ namespace graphics {
 
     struct VISUALIZATION_API ComputePipelineStateInit {
         ShaderPointer program;
-        DescriptorSetLayoutPointer descriptorSetLayout;
+        RootDescriptorLayoutPointer rootDescriptorLayout;
         
         std::string watch_name;
     };
@@ -72,7 +73,7 @@ namespace graphics {
 
 
         ShaderPointer _program;
-        DescriptorSetLayoutPointer _descriptorSetLayout;
+        RootDescriptorLayoutPointer _rootDescriptorLayout;
 
         PipelineRealizer _pipelineRealizer;
 
@@ -85,8 +86,7 @@ namespace graphics {
         virtual ~PipelineState();
 
         PipelineType getType() const;
-        DescriptorSetLayoutPointer getDescriptorSetLayout() const;
-
+        RootDescriptorLayoutPointer getRootDescriptorLayout() const;
 
         bool realize();
 

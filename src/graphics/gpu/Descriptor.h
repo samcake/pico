@@ -40,70 +40,97 @@ namespace graphics {
         uint32_t        _count;
     };
 
-    using DescriptorLayouts = std::vector<DescriptorLayout>;
-
     // DescriptorSet Layout
     // N Descriptor Layouts for N sequential resource descriptors in the DescriptorHeap
-    struct VISUALIZATION_API DescriptorSetLayoutInit {
-        DescriptorLayouts _layouts;
-    };
+    using DescriptorSetLayout = std::vector<DescriptorLayout>;
 
-    class VISUALIZATION_API DescriptorSetLayout {
-    protected:
-        friend class Device;
-        DescriptorSetLayout();
-
-    public:
-        virtual ~DescriptorSetLayout();
-
-        DescriptorSetLayoutInit _init;
-    };
+    // Several DescriptorSet Layout
     using DescriptorSetLayouts = std::vector<DescriptorSetLayout>;
 
 
-    // Root Descriptors Layout
+    // Root Descriptor Layout
     // A DescriptorLayout for push constants
     // N DescriptorSetLayouts for resources
-    struct VISUALIZATION_API RootDescriptorsLayoutInit {
-        DescriptorLayout     _pushLayout;
+    struct VISUALIZATION_API RootDescriptorLayoutInit {
+        DescriptorSetLayout  _pushLayout;
         DescriptorSetLayouts _setLayouts;
+        DescriptorSetLayout  _samplerLayout;
     };
 
-    class VISUALIZATION_API RootDescriptorsLayout {
+    class VISUALIZATION_API RootDescriptorLayout {
     protected:
         friend class Device;
-        RootDescriptorsLayout();
+        RootDescriptorLayout();
 
     public:
-        virtual ~RootDescriptorsLayout();
+        virtual ~RootDescriptorLayout();
 
-        RootDescriptorsLayoutInit _init;
+
+        RootDescriptorLayoutInit _init;
     };
 
-
-
-
-
+    // Descriptor Object
+    // the actual descriptor of a resource
+    // Specify the descriptor type and the resource
+    //
     struct VISUALIZATION_API DescriptorObject{
-#pragma warning(push)
-#pragma warning(disable: 4251)
-        std::vector<BufferPointer> _uniformBuffers;
-        std::vector<BufferPointer> _buffers;
-        std::vector<TexturePointer> _textures;
-        std::vector<SamplerPointer> _samplers;
-#pragma warning(pop)
+        DescriptorType  _type = DescriptorType::UNDEFINED;
+        union {
+            BufferPointer _buffer;
+            TexturePointer _texture;
+            SamplerPointer _sampler;
+        };
+        DescriptorObject() {}
+        DescriptorObject(const DescriptorObject& src) : _type(src._type), _buffer(src._buffer) {}
+        DescriptorObject& operator = (const DescriptorObject& src) { _type = (src._type); _buffer = (src._buffer); return *this; }
+        DescriptorObject(DescriptorType type, BufferPointer b) : _type(type), _buffer(b) {}
+        DescriptorObject(DescriptorType type, TexturePointer t) : _type(type), _texture(t) {}
+        DescriptorObject(SamplerPointer s) : _type(DescriptorType::SAMPLER), _sampler(s) {}
+
+        ~DescriptorObject() {}
     };
     using DescriptorObjects = std::vector<DescriptorObject>;
 
+    // Descriptor Heap
+    // Stores the decriptor object (aka view) on resource which are addressable by shaders
+    // Register a resource in the heap to describing a view on it to get it's offset position in the heap
+    // From this 
+    // 
+    // There is one Global Descriptor heap bound on the Device
+    // 
+    struct VISUALIZATION_API DescriptorHeapInit {
+        int32_t _numDescritors = 1000;
+        int32_t _numSamplers = 32;
+    };
 
+    class VISUALIZATION_API DescriptorHeap {
+    protected:
+        friend class Device;
+        DescriptorHeap();
+
+    public:
+        virtual ~DescriptorHeap();
+
+        DescriptorHeapInit _init;
+
+        // allocate explicitely N consecutive descriptors
+        // return the index of the descriptor in the heap
+        // or -1 if couldn't fit
+        virtual int32_t allocateDescriptors(int32_t numDescriptors) = 0;
+        virtual int32_t allocateSamplers(int32_t numSamplers) = 0;
+    };
+
+
+    // Descriptor Set
+    // reference a range of descriptors in the heap
+    // and a matching descriptor set layout
     struct VISUALIZATION_API DescriptorSetInit {
-       DescriptorSetLayoutPointer _layout;
-       int32_t _rootSetIndex;
+        RootDescriptorLayoutPointer _rootLayout;
+        int32_t _slot;
     };
 
     class VISUALIZATION_API DescriptorSet {
     protected:
-        // Buffer is created from the device
         friend class Device;
         DescriptorSet();
 
@@ -112,7 +139,10 @@ namespace graphics {
 
         DescriptorSetInit _init;
 
-        DescriptorObjects _objects;
+        int32_t _descriptorOffset; // offset of the first descriptor in the heap
+        int32_t _samplerOffset; // offset of the first sampler descriptor in the heap
+        int32_t _numDescriptors;   // numbers of descriptors 
 
+        DescriptorObjects _objects;
     };
 }

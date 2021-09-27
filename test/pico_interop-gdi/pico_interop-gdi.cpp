@@ -221,7 +221,9 @@ int main(int argc, char *argv[])
     auto gdcRenderer = std::make_shared<GDCRenderer>();
     gdcRenderer->resize(gpuDevice, GetDC((HWND)window->nativeWindow()), window->width(), window->height());
 
-    graphics::TextureInit textureInit { window->width(), window->height() };
+    graphics::TextureInit textureInit;
+    textureInit.width = window->width();
+    textureInit.height = window->height();
     auto textureForGDI = gpuDevice->createTexture(textureInit);
 
     graphics::SamplerInit samplerInit {};
@@ -269,13 +271,17 @@ int main(int argc, char *argv[])
 
 
     // Let's describe the pipeline Descriptors layout
-    graphics::DescriptorLayouts descriptorLayouts{
+    graphics::RootDescriptorLayoutInit descriptorLayoutInit{ 
+        {
+        },
+        {{
         { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 0, 1},
+        }},
+        {
         { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
+        }
     };
-
-    graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
-    auto descriptorSetLayout = gpuDevice->createDescriptorSetLayout(descriptorSetLayoutInit);
+    auto descriptorLayout = gpuDevice->createRootDescriptorLayout(descriptorLayoutInit);
 
     // And a Pipeline
     graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "./vertex.hlsl" };
@@ -289,26 +295,23 @@ int main(int argc, char *argv[])
 
     graphics::GraphicsPipelineStateInit pipelineInit{
         programShader,
+        descriptorLayout,
         vertexLayout,
         graphics::PrimitiveTopology::TRIANGLE,
-        descriptorSetLayout
     };
     graphics::PipelineStatePointer pipeline = gpuDevice->createGraphicsPipelineState(pipelineInit);
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a texture and sampler
     graphics::DescriptorSetInit descriptorSetInit{
-        descriptorSetLayout
+        descriptorLayout,
+        0
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
-
-    graphics::DescriptorObject texDescriptorObject;
-    texDescriptorObject._textures.push_back(textureForGDI);
-    graphics::DescriptorObject samplerDescriptorObject;
-    samplerDescriptorObject._samplers.push_back(sampler);
     graphics::DescriptorObjects descriptorObjects = {
-        texDescriptorObject, samplerDescriptorObject
+        { graphics::DescriptorType::RESOURCE_TEXTURE, textureForGDI},
+        { sampler }
     };
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
 

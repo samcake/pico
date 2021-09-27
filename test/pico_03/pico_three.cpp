@@ -152,7 +152,7 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 }
 )HLSL");
 
-graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout vertexLayout, const graphics::DescriptorSetLayoutPointer& descriptorSetLayout) {
+graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout vertexLayout, const graphics::RootDescriptorLayoutPointer& rootDescriptorLayout) {
 
     graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
     graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
@@ -166,9 +166,9 @@ graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer
 
     graphics::GraphicsPipelineStateInit pipelineInit{
         programShader,
+        rootDescriptorLayout,
         vertexLayout,
         graphics::PrimitiveTopology::POINT,
-        descriptorSetLayout
     };
     graphics::PipelineStatePointer pipeline = device->createGraphicsPipelineState(pipelineInit);
 
@@ -232,21 +232,23 @@ int main(int argc, char *argv[])
     auto numVertices = mesh->getNumVertices();
 
     // Let's describe the pipeline Descriptors layout
-    graphics::DescriptorLayouts descriptorLayouts {
+    graphics::RootDescriptorLayoutInit descriptorLayoutInit{
+    {},
+    {{
         { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}
+    }}
     };
-
-    graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
-    auto descriptorSetLayout = gpuDevice->createDescriptorSetLayout(descriptorSetLayoutInit);
+    auto descriptorLayout = gpuDevice->createRootDescriptorLayout(descriptorLayoutInit);
 
     // And a Pipeline
-    graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, mesh->_vertexStream._streamLayout, descriptorSetLayout);
+    graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, mesh->_vertexStream._streamLayout, descriptorLayout);
 
 
     // It s time to create a descriptorSet that matches the expected pipeline descriptor set
     // then we will assign a uniform buffer in it
     graphics::DescriptorSetInit descriptorSetInit{
-        descriptorSetLayout
+        descriptorLayout,
+        0
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
@@ -277,12 +279,8 @@ int main(int argc, char *argv[])
     memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
 
     // Assign the UBO just created as the resource of the descriptorSet
-    // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-
-    graphics::DescriptorObject uboDescriptorObject;
-    uboDescriptorObject._uniformBuffers.push_back( cameraUBO );
     graphics::DescriptorObjects descriptorObjects = {
-        uboDescriptorObject,
+        { graphics::DescriptorType::UNIFORM_BUFFER, cameraUBO },
     };
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
     

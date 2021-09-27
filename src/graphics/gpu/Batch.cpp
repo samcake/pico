@@ -62,6 +62,7 @@ void Batch::setScissor(const core::vec4& scissor) {}
 
 void Batch::bindFramebuffer(const FramebufferPointer& framebuffer) {}
 
+void Batch::bindRootDescriptorLayout(PipelineType type, const RootDescriptorLayoutPointer& rootLayout) {}
 void Batch::bindPipeline(const PipelineStatePointer& pipeline) {}
 void Batch::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {}
 void Batch::bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) {}

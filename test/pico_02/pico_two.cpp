@@ -115,7 +115,7 @@ graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer
 
 
 
-    graphics::GraphicsPipelineStateInit pipelineInit { programShader,  streamLayout, graphics::PrimitiveTopology::TRIANGLE };
+    graphics::GraphicsPipelineStateInit pipelineInit { programShader, nullptr, streamLayout, graphics::PrimitiveTopology::TRIANGLE };
     graphics::PipelineStatePointer pipeline = device->createGraphicsPipelineState(pipelineInit);
 
     return pipeline;

@@ -377,8 +377,12 @@ D3D12Backend::D3D12Backend() {
     _fence = CreateFence(_device);
     _fenceEvent = CreateEventHandle();
 
-    // Allocate a global descriptor heap
-    _descriptorHeap = CreateDescriptorHeap();
+    // Allocate a global descriptor heap referenced form this backend
+    DescriptorHeapInit descriptorHeapInit {
+        10000,
+        1000
+    };
+    _descriptorHeap = this->createDescriptorHeap(descriptorHeapInit);
 }
 
 D3D12Backend::~D3D12Backend() {

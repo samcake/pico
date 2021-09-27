@@ -57,8 +57,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
         // Create an empty root signature if none provided.
         if (pso->_rootSignature) {
             rootSignature = pso->_rootSignature;
-        } else if (init.descriptorSetLayout) {
-            auto dxDescLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (init.descriptorSetLayout.get());
+        } else if (init.rootDescriptorLayout) {
+            auto dxDescLayout = static_cast<D3D12RootDescriptorLayoutBackend*> (init.rootDescriptorLayout.get());
             rootSignature = dxDescLayout->_rootSignature;
         }
         else {
@@ -155,8 +155,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
         if (pso->_rootSignature) {
             rootSignature = pso->_rootSignature;
         }
-        else if (init.descriptorSetLayout) {
-            auto dxDescLayout = static_cast<D3D12DescriptorSetLayoutBackend*> (init.descriptorSetLayout.get());
+        else if (init.rootDescriptorLayout) {
+            auto dxDescLayout = static_cast<D3D12RootDescriptorLayoutBackend*> (init.rootDescriptorLayout.get());
             rootSignature = dxDescLayout->_rootSignature;
         }
         else {
@@ -204,7 +204,7 @@ PipelineStatePointer D3D12Backend::createGraphicsPipelineState(const GraphicsPip
     pso->_type = PipelineType::GRAPHICS;
     pso->_graphics = init;
     pso->_program = init.program;
-    pso->_descriptorSetLayout = init.descriptorSetLayout;
+    pso->_rootDescriptorLayout = init.rootDescriptorLayout;
 
     if (realizePipelineState(pso.get())) {
 
@@ -227,7 +227,7 @@ PipelineStatePointer D3D12Backend::createComputePipelineState(const ComputePipel
     pso->_type = PipelineType::COMPUTE;
     pso->_compute = init;
     pso->_program = init.program;
-    pso->_descriptorSetLayout = init.descriptorSetLayout;
+    pso->_rootDescriptorLayout = init.rootDescriptorLayout;
 
 
     if (realizePipelineState(pso.get())) {

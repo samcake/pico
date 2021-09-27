@@ -50,8 +50,31 @@ using namespace Microsoft::WRL;
 
 namespace graphics {
     class D3D12DescriptorHeapBackend;
-    using D3D12DescriptorHeapBackendPointer = std::shared_ptr<D3D12DescriptorHeapBackend>;
-    
+
+    class D3D12DescriptorHeapBackend : public DescriptorHeap {
+    public:
+        D3D12DescriptorHeapBackend();
+        virtual ~D3D12DescriptorHeapBackend();
+
+        int32_t allocateDescriptors(int32_t numDescriptors) override;
+        int32_t allocateSamplers(int32_t numSamplers) override;
+
+        core::IndexTable _descriptor_table;
+        core::IndexTable _sampler_table;
+
+        UINT _descriptor_increment_size;
+        UINT _sampler_increment_size;
+
+        ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
+        ComPtr < ID3D12DescriptorHeap> _sampler_heap;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t offset) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle(uint32_t offset) const;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE gpuSamplerHandle(uint32_t offset) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle(uint32_t offset) const;
+    };
+
     class D3D12Backend : public DeviceBackend {
     public:
         D3D12Backend();
@@ -77,8 +100,7 @@ namespace graphics {
         HANDLE _fenceEvent;
 
         // Memory management
-        D3D12DescriptorHeapBackendPointer _descriptorHeap;
-        D3D12DescriptorHeapBackendPointer CreateDescriptorHeap();
+        DescriptorHeapPointer _descriptorHeap;
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
@@ -99,9 +121,12 @@ namespace graphics {
         PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) override;
         PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) override;
    
-        DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) override;
+        RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init) override;
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) override;
+
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
+        DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) override;
+        DescriptorHeapPointer getDescriptorHeap() override;
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
@@ -184,9 +209,13 @@ namespace graphics {
         void setViewport(const core::vec4& viewport) override;
         void setScissor(const core::vec4& scissor) override;
 
+        void bindDescriptorHeap(const DescriptorHeapPointer& descriptorHeap);
+
         void bindFramebuffer(const FramebufferPointer& framebuffer) override;
 
+        void bindRootDescriptorLayout(PipelineType type, const RootDescriptorLayoutPointer& rootDescriptorLayout) override;
         void bindPipeline(const PipelineStatePointer& pipeline) override;
+
         void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) override;
         void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data) override;
 
@@ -205,7 +234,7 @@ namespace graphics {
 
         UINT _currentBackBufferIndex { 0 };
 
-        D3D12DescriptorHeapBackendPointer _descriptorHeap;
+        DescriptorHeapPointer _descriptorHeap;
 
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
@@ -278,18 +307,22 @@ namespace graphics {
         static void fill_blend_desc(const BlendState& src, D3D12_BLEND_DESC& dst);
     };
 
-    class D3D12DescriptorSetLayoutBackend : public DescriptorSetLayout {
+
+    class D3D12RootDescriptorLayoutBackend : public RootDescriptorLayout {
     public:
         friend class D3D12Backend;
-        D3D12DescriptorSetLayoutBackend();
-        virtual ~D3D12DescriptorSetLayoutBackend();
-
-        std::vector< uint32_t > _dxParamIndices;
+        D3D12RootDescriptorLayoutBackend();
+        virtual ~D3D12RootDescriptorLayoutBackend();
 
         ComPtr<ID3D12RootSignature> _rootSignature;
+      
+        std::vector< uint32_t > _dxPushParamIndices;
+        std::vector< uint32_t > _dxSetParamIndices;
+        std::vector< uint32_t > _dxSamplerParamIndices;
+
+        uint32_t push_count = 0;
         uint32_t cbvsrvuav_count = 0;
         uint32_t sampler_count = 0;
-        uint32_t push_count = 0;
     };
 
     class D3D12DescriptorSetBackend : public DescriptorSet {
@@ -306,32 +339,6 @@ namespace graphics {
         uint32_t sampler_count = 0;
         uint32_t push_count = 0;
     };
-
-    class D3D12DescriptorHeapBackend {
-       public:
-       friend class D3D12Backend;
-       D3D12DescriptorHeapBackend();
-       ~D3D12DescriptorHeapBackend();
-
-       UINT _descriptor_increment_size;
-       UINT _sampler_increment_size;
-
-       UINT _descriptor_capacity;
-       UINT _sampler_capacity;
-
-       ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
-       ComPtr < ID3D12DescriptorHeap> _sampler_heap;
-
-       core::IndexTable _descriptor_table;
-       core::IndexTable _sampler_table;
-
-       D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t offset) const;
-       D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle(uint32_t offset) const;
-
-       D3D12_GPU_DESCRIPTOR_HANDLE gpuSamplerHandle(uint32_t offset) const;
-       D3D12_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle(uint32_t offset) const;
-    };
-
 }
 
 #endif _WINDOWS
