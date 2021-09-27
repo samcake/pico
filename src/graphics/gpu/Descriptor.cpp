@@ -28,19 +28,11 @@
 
 using namespace graphics;
 
-DescriptorSetLayout::DescriptorSetLayout() {
+RootDescriptorLayout::RootDescriptorLayout() {
 
 }
 
-DescriptorSetLayout::~DescriptorSetLayout() {
-
-}
-
-RootDescriptorsLayout::RootDescriptorsLayout() {
-
-}
-
-RootDescriptorsLayout::~RootDescriptorsLayout() {
+RootDescriptorLayout::~RootDescriptorLayout() {
 
 }
 
@@ -49,5 +41,13 @@ DescriptorSet::DescriptorSet() {
 }
 
 DescriptorSet::~DescriptorSet() {
+
+}
+
+DescriptorHeap::DescriptorHeap() {
+
+}
+
+DescriptorHeap::~DescriptorHeap() {
 
 }

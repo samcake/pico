@@ -104,20 +104,7 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
     }
 
 
-    uint32_t descriptor_heap_count = 0;
-    ID3D12DescriptorHeap* descriptor_heaps[2];
-    if (NULL != _descriptorHeap->_cbvsrvuav_heap) {
-        descriptor_heaps[descriptor_heap_count] = _descriptorHeap->_cbvsrvuav_heap.Get();
-        ++descriptor_heap_count;
-    }
-    if (NULL != _descriptorHeap->_sampler_heap) {
-        descriptor_heaps[descriptor_heap_count] = _descriptorHeap->_sampler_heap.Get();
-        ++descriptor_heap_count;
-    }
-
-    if (descriptor_heap_count > 0) {
-        _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
-    }
+    bindDescriptorHeap(_descriptorHeap);
 }
 
 void D3D12BatchBackend::endPass() {
@@ -223,10 +210,43 @@ void D3D12BatchBackend::setScissor(const core::vec4 & scissor) {
     _commandList->RSSetScissorRects(1, &dxRect);
 }
 
+void D3D12BatchBackend::bindDescriptorHeap(const DescriptorHeapPointer& descriptorHeap) {
+    auto dh = static_cast<D3D12DescriptorHeapBackend*>(descriptorHeap.get());
+
+    uint32_t descriptor_heap_count = 0;
+    ID3D12DescriptorHeap* descriptor_heaps[2];
+    if (NULL != dh->_cbvsrvuav_heap) {
+        descriptor_heaps[descriptor_heap_count] = dh->_cbvsrvuav_heap.Get();
+        ++descriptor_heap_count;
+    }
+    if (NULL != dh->_sampler_heap) {
+        descriptor_heaps[descriptor_heap_count] = dh->_sampler_heap.Get();
+        ++descriptor_heap_count;
+    }
+
+    if (descriptor_heap_count > 0) {
+        _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
+    }
+}
+
 void D3D12BatchBackend::bindFramebuffer(const FramebufferPointer& framebuffer) {
     auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
 
     _commandList->OMSetRenderTargets(fbo->_numRenderTargets, &fbo->_rtvs, TRUE, (fbo->_dsvDescriptorSize ? &fbo->_dsv : nullptr));
+}
+
+
+void D3D12BatchBackend::bindRootDescriptorLayout(PipelineType type, const RootDescriptorLayoutPointer& rootDescriptorLayout) {
+    auto rdl = static_cast<D3D12RootDescriptorLayoutBackend*>(rootDescriptorLayout.get());
+    auto dxRS = rdl->_rootSignature;
+    switch (type) {
+    case PipelineType::GRAPHICS: {
+        _commandList->SetGraphicsRootSignature(dxRS.Get());
+    } break;
+    case PipelineType::COMPUTE: {
+        _commandList->SetComputeRootSignature(dxRS.Get());
+    } break;
+    }
 }
 
 void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
@@ -246,22 +266,6 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
 
 void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {
     auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
-/*
-    uint32_t descriptor_heap_count = 0;
-    ID3D12DescriptorHeap* descriptor_heaps[2];
-    if (NULL != dxds->_cbvsrvuav_heap) {
-        descriptor_heaps[descriptor_heap_count] = dxds->_cbvsrvuav_heap.Get();
-        ++descriptor_heap_count;
-    }
-    if (NULL != dxds->_sampler_heap) {
-        descriptor_heaps[descriptor_heap_count] = dxds->_sampler_heap.Get();
-        ++descriptor_heap_count;
-    }
-
-    if (descriptor_heap_count > 0) {
-        _commandList->SetDescriptorHeaps(descriptor_heap_count, descriptor_heaps);
-    }
-    */
 
     for (uint32_t i = 0; i < dxds->_dxRootParameterIndices.size(); ++i) {
         auto rooParameterIndex = dxds->_dxRootParameterIndices[i];

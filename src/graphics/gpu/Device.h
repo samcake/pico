@@ -59,8 +59,13 @@ namespace graphics {
         virtual PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) = 0;
         virtual PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) = 0;
 
-        virtual DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init) = 0;
+        virtual RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init) = 0;
+        
+        virtual DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) = 0;
+        virtual DescriptorHeapPointer getDescriptorHeap() = 0;
+
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
+
         virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
 
         virtual void executeBatch(const BatchPointer& batch) = 0;
@@ -103,7 +108,11 @@ namespace graphics {
         PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init);
         PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init);
 
-        DescriptorSetLayoutPointer createDescriptorSetLayout(const DescriptorSetLayoutInit& init);
+        RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init);
+
+        DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init);
+        DescriptorHeapPointer getDescriptorHeap();
+
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);
 
         // Operations

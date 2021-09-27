@@ -86,9 +86,16 @@ PipelineStatePointer Device::createComputePipelineState(const ComputePipelineSta
     return _backend->createComputePipelineState(init);
 }
 
-DescriptorSetLayoutPointer Device::createDescriptorSetLayout(const DescriptorSetLayoutInit& init) {
-    return _backend->createDescriptorSetLayout(init);
+RootDescriptorLayoutPointer Device::createRootDescriptorLayout(const RootDescriptorLayoutInit& init) {
+    return _backend->createRootDescriptorLayout(init);
 }
+DescriptorHeapPointer Device::createDescriptorHeap(const DescriptorHeapInit& init) {
+    return _backend->createDescriptorHeap(init);
+}
+DescriptorHeapPointer Device::getDescriptorHeap() {
+    return _backend->getDescriptorHeap();
+}
+
 DescriptorSetPointer Device::createDescriptorSet(const DescriptorSetInit& init) {
     return _backend->createDescriptorSet(init);
 }

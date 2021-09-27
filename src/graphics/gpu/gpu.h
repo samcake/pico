@@ -190,9 +190,13 @@ namespace graphics {
     struct ShaderInit;
     struct ProgramInit;
 
-    class DescriptorSetLayout;
-    using DescriptorSetLayoutPointer = std::shared_ptr<DescriptorSetLayout>;
-    struct DescriptorSetLayoutInit;
+    class RootDescriptorLayout;
+    using RootDescriptorLayoutPointer = std::shared_ptr<RootDescriptorLayout>;
+    struct RootDescriptorLayoutInit;
+
+    class DescriptorHeap;
+    using DescriptorHeapPointer = std::shared_ptr<DescriptorHeap>;
+    struct DescriptorHeapInit;
 
     class DescriptorSet;
     using DescriptorSetPointer = std::shared_ptr<DescriptorSet>;
@@ -262,8 +266,6 @@ namespace graphics {
         UNIFORM_BUFFER,            // CBV | VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
         RESOURCE_BUFFER,        // SRV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
         RW_RESOURCE_BUFFER,        // UAV | VK_DESCRIPTOR_TYPE_STORAGE_BUFFER
-        UNIFORM_TEXEL_BUFFER_SRV,  // SRV | VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
-        STORAGE_TEXEL_BUFFER_UAV,  // UAV | VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
         RESOURCE_TEXTURE,               // SRV | VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
         RW_RESOURCE_TEXTURE,               // UAV | VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
         PUSH_UNIFORM,             // CONSTANT | PUSH_CONSTANT

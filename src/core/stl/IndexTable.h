@@ -40,9 +40,10 @@ namespace core {
         using Indices = std::vector<Index>;
         static const Index INVALID_INDEX{ (Index) -1 };
 
-        IndexTable() {}
+        IndexTable(Index capacity = (Index)-1) : _capacity(capacity) {}
         ~IndexTable() {}
 
+        Index getCapacity() const { return _capacity; }
         Index getNumElements() const { return _num_allocated_elements - (Index) _invalid_elements.size(); }
         Index getNumAllocatedElements() const { return _num_allocated_elements; }
 
@@ -78,6 +79,15 @@ namespace core {
             return std::move(allocated);
         }
 
+        Index allocateContiguous(Index num_elements) {
+            Index new_index = _num_allocated_elements;
+            if (new_index + num_elements < getCapacity()) {
+                _num_allocated_elements += num_elements;
+                return new_index;
+            }
+            return INVALID_INDEX;
+        }
+
         void free(Index index) {
             _invalid_elements.push_back(index);
         }
@@ -89,7 +99,7 @@ namespace core {
     private:
         Index _num_allocated_elements{ (Index) 0 };
         std::vector<Index> _invalid_elements;
-
+        const Index _capacity{ (Index) -1 };
     };
 
 }

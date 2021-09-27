@@ -68,16 +68,17 @@ namespace graphics
 
     void PointCloudDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
-        // Let's describe the pipeline Descriptors layout
-        graphics::DescriptorLayouts descriptorLayouts{
+        graphics::RootDescriptorLayoutInit descriptorLayoutInit{
+            {
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PCObjectData) >> 2}
+            },
+            {{
             { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PCObjectData) >> 2},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
+            }}
         };
-
-        graphics::DescriptorSetLayoutInit descriptorSetLayoutInit{ descriptorLayouts };
-        auto descriptorSetLayout = device->createDescriptorSetLayout(descriptorSetLayoutInit);
+        auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
 
         // And a Pipeline
 
@@ -106,9 +107,9 @@ namespace graphics
       */
         graphics::GraphicsPipelineStateInit pipelineInit{
                     programShader,
+                    rootDescriptorLayout,
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
-                    descriptorSetLayout,
                     RasterizerState(),
                     true, // enable depth
                     { graphics::BlendFunction(true,
@@ -178,21 +179,16 @@ namespace graphics
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
-            _pipeline->getDescriptorSetLayout()
+            _pipeline->getRootDescriptorLayout(),
+            0
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
         // Assign the Camera UBO just created as the resource of the descriptorSet
-        // auto descriptorObjects = descriptorSet->buildDescriptorObjects();
-        graphics::DescriptorObject camera_uboDescriptorObject;
-        camera_uboDescriptorObject._uniformBuffers.push_back(camera->getGPUBuffer());
-        graphics::DescriptorObject transform_rboDescriptorObject;
-        transform_rboDescriptorObject._buffers.push_back(scene->_nodes._transforms_buffer);
-        graphics::DescriptorObject mesh_rboDescriptorObject;
-        mesh_rboDescriptorObject._buffers.push_back(pointcloud.getVertexBuffer());
-
         graphics::DescriptorObjects descriptorObjects = {
-            camera_uboDescriptorObject, transform_rboDescriptorObject, mesh_rboDescriptorObject
+           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
+           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
+           { graphics::DescriptorType::RESOURCE_BUFFER, pointcloud.getVertexBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
@@ -212,7 +208,7 @@ namespace graphics
 
             auto uniforms = ppointcloud->getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 1, sizeof(PCObjectData), (const uint8_t*) &odata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
 
             batch->draw(3 * numVertices, 0);
         };

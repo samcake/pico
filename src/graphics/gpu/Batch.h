@@ -72,7 +72,9 @@ namespace graphics {
 
         virtual void bindFramebuffer(const FramebufferPointer& framebuffer);
 
+        virtual void bindRootDescriptorLayout(PipelineType type, const RootDescriptorLayoutPointer& rootDescriptorLayout);
         virtual void bindPipeline(const PipelineStatePointer& pipeline);
+
         virtual void bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet);
         virtual void bindPushUniform(PipelineType type, uint32_t slot, uint32_t size, const uint8_t* data);
 
