@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
     // then we will assign a texture and sampler
     graphics::DescriptorSetInit descriptorSetInit{
         descriptorLayout,
-        0
+        0, true
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 

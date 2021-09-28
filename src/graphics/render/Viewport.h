@@ -47,8 +47,6 @@ namespace graphics {
 
         void renderScene(const CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch);
 
-#pragma warning(push)
-#pragma warning(disable: 4251)
         ScenePointer _scene;
         CameraPointer _camera;
         DevicePointer _device;
@@ -58,7 +56,8 @@ namespace graphics {
 
         // Measuring framerate
         core::FrameTimer _frameTimer;
-#pragma warning(pop)
+
+        DescriptorSetPointer _viewPassDescriptorSet;
 
     };
 }

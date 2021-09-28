@@ -236,6 +236,11 @@ namespace graphics {
 
         DescriptorHeapPointer _descriptorHeap;
 
+        UINT _currentGraphicsRootLayout_setRootIndex = 0;
+        UINT _currentGraphicsRootLayout_samplerRootIndex = 0;
+        UINT _currentComputeRootLayout_setRootIndex = 0;
+        UINT _currentComputeRootLayout_samplerRootIndex = 0;
+
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
 
@@ -317,12 +322,16 @@ namespace graphics {
         ComPtr<ID3D12RootSignature> _rootSignature;
       
         std::vector< uint32_t > _dxPushParamIndices;
+        
+        int32_t _cbvsrvuav_rootIndex = -1;
         std::vector< uint32_t > _dxSetParamIndices;
-        std::vector< uint32_t > _dxSamplerParamIndices;
 
-        uint32_t push_count = 0;
-        uint32_t cbvsrvuav_count = 0;
-        uint32_t sampler_count = 0;
+        int32_t _sampler_rootIndex = -1;
+
+        uint32_t _push_count = 0;
+        uint32_t _cbvsrvuav_count = 0;
+        std::vector< uint32_t > _cbvsrvuav_counts;
+        uint32_t _sampler_count = 0;
     };
 
     class D3D12DescriptorSetBackend : public DescriptorSet {
@@ -331,13 +340,14 @@ namespace graphics {
         D3D12DescriptorSetBackend();
         virtual ~D3D12DescriptorSetBackend();
 
-        std::vector< uint32_t > _dxHeapOffsets;
-        //std::vector< D3D12_CPU_DESCRIPTOR_HANDLE > _dxCPUHandles;
-        std::vector< D3D12_GPU_DESCRIPTOR_HANDLE > _dxGPUHandles;
-        std::vector< uint32_t > _dxRootParameterIndices;
-        uint32_t cbvsrvuav_count = 0;
-        uint32_t sampler_count = 0;
-        uint32_t push_count = 0;
+        int32_t _cbvsrvuav_rootIndex = -1;
+        int32_t _sampler_rootIndex = -1;
+
+        uint32_t _cbvsrvuav_count = 0;
+        uint32_t _sampler_count = 0;
+
+        D3D12_GPU_DESCRIPTOR_HANDLE _cbvsrvuav_GPUHandle;
+        D3D12_GPU_DESCRIPTOR_HANDLE _sampler_GPUHandle;
     };
 }
 

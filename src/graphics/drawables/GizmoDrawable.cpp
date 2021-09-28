@@ -241,9 +241,10 @@ namespace graphics
        // Assign the Camera UBO just created as the resource of the descriptorSet
        graphics::DescriptorObjects descriptorObjects = {{
             { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items._items_buffer },
             { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
             { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items._items_buffer },
+
        }};
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 

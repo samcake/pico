@@ -97,7 +97,9 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
         featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
     }
 
-    uint32_t numDescriptors = 0;
+    uint32_t numSets = 0;
+    uint32_t numSetResources = 0;
+    uint32_t numSetDescriptors = 0;
     uint32_t numPushs = 0;
     uint32_t numSamplers = 0;
     struct DXSetDesc {
@@ -113,8 +115,10 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
             uint32_t count = dsl[i]._count;
             setDesc.count += count;
             setDesc.desc_offsets.emplace_back(i);
-            numDescriptors++;
+            numSetDescriptors++;
         }
+        numSets++;
+        numSetResources += setDesc.count;
         descriptor_setDescs.emplace_back(std::move(setDesc));
     }
 
@@ -145,80 +149,148 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
 
     // Allocate the param indices (one per descriptor)
     descriptorLayout->_init = init;
+
     descriptorLayout->_dxPushParamIndices.resize(numPushs);
-    descriptorLayout->_dxSetParamIndices.resize(numDescriptors);
-    descriptorLayout->_dxSamplerParamIndices.resize(numSamplers);
-    descriptorLayout->push_count = push_setDesc.count;
-    descriptorLayout->sampler_count = sampler_setDesc.count;
-    descriptorLayout->cbvsrvuav_count = (!numDescriptors ? 0 : descriptor_setDescs[0].count);
+    descriptorLayout->_push_count = push_setDesc.count;
+
+    descriptorLayout->_dxSetParamIndices.resize(numSets);
+    descriptorLayout->_cbvsrvuav_count = (!numSets ? 0 : numSetResources);
+    descriptorLayout->_cbvsrvuav_counts.resize(numSets);
+    descriptorLayout->_cbvsrvuav_rootIndex = -1;
+
+    descriptorLayout->_sampler_count = sampler_setDesc.count;
+    descriptorLayout->_sampler_rootIndex = -1;
 
     // Allocate everything with an upper bound of descriptor counts
     uint32_t range_count = 0;
     uint32_t parameter_count = 0;
 
-    auto ranges_11 = std::vector<D3D12_DESCRIPTOR_RANGE1>(numDescriptors + numSamplers + numPushs);
-    auto ranges_10 = std::vector<D3D12_DESCRIPTOR_RANGE>(numDescriptors + numSamplers + numPushs);
+    auto ranges_11 = std::vector<D3D12_DESCRIPTOR_RANGE1>(numSetDescriptors + numSamplers);
+    auto ranges_10 = std::vector<D3D12_DESCRIPTOR_RANGE>(numSetDescriptors + numSamplers);
 
-    auto parameters_11 = std::vector<D3D12_ROOT_PARAMETER1>(numDescriptors + numSamplers + numPushs);
-    auto parameters_10 = std::vector<D3D12_ROOT_PARAMETER>(numDescriptors + numSamplers + numPushs);
+    auto parameters_11 = std::vector<D3D12_ROOT_PARAMETER1>(numSets + (numSamplers > 0) + numPushs);
+    auto parameters_10 = std::vector<D3D12_ROOT_PARAMETER>(numSets + (numSamplers > 0) + numPushs);
 
     // Build ranges
-    for (uint32_t descriptor_index = 0; descriptor_index < numPushs; ++descriptor_index) {
-        const auto& descriptor = init._pushLayout[descriptor_index];
-        D3D12_DESCRIPTOR_RANGE1* range_11 = &ranges_11[range_count];
-        D3D12_DESCRIPTOR_RANGE* range_10 = &ranges_10[range_count];
-        D3D12_ROOT_PARAMETER1* param_11 = &parameters_11[parameter_count];
-        D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
-        param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
-        param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+    if (numPushs) {
+        for (uint32_t descriptor_index = 0; descriptor_index < numPushs; ++descriptor_index) {
+            const auto& descriptor = init._pushLayout[descriptor_index];
+            D3D12_ROOT_PARAMETER1* param_11 = &parameters_11[parameter_count];
+            D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
+            param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
+            param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS;
 
-        param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility(descriptor._shaderStage);
+            param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility(descriptor._shaderStage);
 
-         // case DescriptorType::PUSH_UNIFORM: {
-             param_11->Constants.RegisterSpace = 0;
-             param_11->Constants.Num32BitValues = descriptor._count;
-             param_11->Constants.ShaderRegister = descriptor._binding;
-             param_10->Constants.RegisterSpace = 0;
-             param_10->Constants.Num32BitValues = descriptor._count;
-             param_10->Constants.ShaderRegister = descriptor._binding;
-        // }
+            param_11->Constants.RegisterSpace = 0;
+            param_11->Constants.Num32BitValues = descriptor._count;
+            param_11->Constants.ShaderRegister = descriptor._binding;
+            param_10->Constants.RegisterSpace = 0;
+            param_10->Constants.Num32BitValues = descriptor._count;
+            param_10->Constants.ShaderRegister = descriptor._binding;
 
-        descriptorLayout->_dxPushParamIndices[descriptor_index] = parameter_count;
-        ++parameter_count;
+            descriptorLayout->_dxPushParamIndices[descriptor_index] = parameter_count;
+            ++parameter_count;
+        }
     }
 
-    for (uint32_t descriptor_index = 0; descriptor_index < numDescriptors; ++descriptor_index) {
-        const auto& descriptor = init._setLayouts[0][descriptor_index];
-        D3D12_DESCRIPTOR_RANGE1* range_11 = &ranges_11[range_count];
-        D3D12_DESCRIPTOR_RANGE* range_10 = &ranges_10[range_count];
+    if (numSets) {
+        descriptorLayout->_cbvsrvuav_rootIndex = parameter_count; // grab the parameter index for the first set
+
+        for (uint32_t set_index = 0; set_index < numSets; ++set_index) {
+            const auto& setLayout = init._setLayouts[set_index];
+            // One more root table for this set
+            D3D12_ROOT_PARAMETER1* param_11 = &parameters_11[parameter_count];
+            D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
+            param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+            param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+
+            // add ranges to hold the n descriptors of this set
+            uint32_t numDescriptors = setLayout.size();
+            D3D12_DESCRIPTOR_RANGE1* begin_range_11 = &ranges_11[range_count];
+            D3D12_DESCRIPTOR_RANGE* begin_range_10 = &ranges_10[range_count];
+
+            uint32_t shaderStageVisibility = 0;
+
+            for (uint32_t descriptor_index = 0; descriptor_index < numDescriptors; ++descriptor_index) {
+                const auto& descriptor = setLayout[descriptor_index];
+                D3D12_DESCRIPTOR_RANGE1* range_11 = &ranges_11[range_count];
+                D3D12_DESCRIPTOR_RANGE* range_10 = &ranges_10[range_count];
+
+                shaderStageVisibility |= (uint32_t)descriptor._shaderStage;
+
+                switch (descriptor._type) {
+                case DescriptorType::RESOURCE_BUFFER:
+                case DescriptorType::RESOURCE_TEXTURE: {
+                    range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+                    range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+                }
+                break;
+                case DescriptorType::UNIFORM_BUFFER: {
+                    range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+                    range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+                }
+                break;
+                case DescriptorType::RW_RESOURCE_BUFFER:
+                case DescriptorType::RW_RESOURCE_TEXTURE: {
+                    range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+                    range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+                }
+                break;
+                }
+
+                range_11->NumDescriptors = descriptor._count;
+                range_11->BaseShaderRegister = descriptor._binding;
+                range_11->RegisterSpace = 0;
+                range_11->Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
+                range_11->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+                range_10->NumDescriptors = descriptor._count;
+                range_10->BaseShaderRegister = descriptor._binding;
+                range_10->RegisterSpace = 0;
+                range_10->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+                // COunt the number of resources expected total in the set
+                descriptorLayout->_cbvsrvuav_counts[set_index] += descriptor._count;
+
+                ++range_count;
+            }
+            param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility((graphics::ShaderStage)shaderStageVisibility);
+
+            param_11->DescriptorTable.pDescriptorRanges = begin_range_11;
+            param_11->DescriptorTable.NumDescriptorRanges = numDescriptors;
+
+            param_10->DescriptorTable.pDescriptorRanges = begin_range_10;
+            param_10->DescriptorTable.NumDescriptorRanges = numDescriptors;
+
+            descriptorLayout->_dxSetParamIndices[set_index] = parameter_count;
+            ++parameter_count;
+        }
+    }
+
+    if (numSamplers) {
+        // One more root table for samplers
         D3D12_ROOT_PARAMETER1* param_11 = &parameters_11[parameter_count];
         D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
         param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
         param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
 
-        param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility(descriptor._shaderStage);
+        // add ranges to hold the n samplers
+        D3D12_DESCRIPTOR_RANGE1* begin_range_11 = &ranges_11[range_count];
+        D3D12_DESCRIPTOR_RANGE* begin_range_10 = &ranges_10[range_count];
 
-        switch (descriptor._type) {
-        case DescriptorType::RESOURCE_BUFFER:
-        case DescriptorType::RESOURCE_TEXTURE: {
-            range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-            range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-        }
-        break;
-        case DescriptorType::UNIFORM_BUFFER: {
-            range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-            range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-        }
-        break;
-        case DescriptorType::RW_RESOURCE_BUFFER:
-        case DescriptorType::RW_RESOURCE_TEXTURE: {
-            range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-            range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-        }
-        break;
-        }
+        uint32_t shaderStageVisibility = 0;
 
-        {
+        for (uint32_t descriptor_index = 0; descriptor_index < numSamplers; ++descriptor_index) {
+            const auto& descriptor = init._samplerLayout[descriptor_index];
+            D3D12_DESCRIPTOR_RANGE1* range_11 = &ranges_11[range_count];
+            D3D12_DESCRIPTOR_RANGE* range_10 = &ranges_10[range_count];
+
+            shaderStageVisibility |= (uint32_t) descriptor._shaderStage;
+
+            range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+            range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
+
             range_11->NumDescriptors = descriptor._count;
             range_11->BaseShaderRegister = descriptor._binding;
             range_11->RegisterSpace = 0;
@@ -230,58 +302,22 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
             range_10->RegisterSpace = 0;
             range_10->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
-            param_11->DescriptorTable.pDescriptorRanges = range_11;
-            param_11->DescriptorTable.NumDescriptorRanges = 1;
-
-            param_10->DescriptorTable.pDescriptorRanges = range_10;
-            param_10->DescriptorTable.NumDescriptorRanges = 1;
             ++range_count;
         }
 
-        descriptorLayout->_dxSetParamIndices[descriptor_index] = parameter_count;
+        param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility((graphics::ShaderStage) shaderStageVisibility);
+
+        param_11->DescriptorTable.pDescriptorRanges = begin_range_11;
+        param_11->DescriptorTable.NumDescriptorRanges = numSamplers;
+
+        param_10->DescriptorTable.pDescriptorRanges = begin_range_10;
+        param_10->DescriptorTable.NumDescriptorRanges = numSamplers;
+        
+        descriptorLayout->_sampler_rootIndex = parameter_count;
+
         ++parameter_count;
     }
 
-
-    for (uint32_t descriptor_index = 0; descriptor_index < numSamplers; ++descriptor_index) {
-        const auto& descriptor = init._samplerLayout[descriptor_index];
-        D3D12_DESCRIPTOR_RANGE1* range_11 = &ranges_11[range_count];
-        D3D12_DESCRIPTOR_RANGE* range_10 = &ranges_10[range_count];
-        D3D12_ROOT_PARAMETER1* param_11 = &parameters_11[parameter_count];
-        D3D12_ROOT_PARAMETER* param_10 = &parameters_10[parameter_count];
-        param_11->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-        param_10->ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-
-        param_10->ShaderVisibility = param_11->ShaderVisibility = EvalShaderVisibility(descriptor._shaderStage);
-
-        // case DescriptorType::SAMPLER: {
-        range_11->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        range_10->RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER;
-        // }
-
-        range_11->NumDescriptors = descriptor._count;
-        range_11->BaseShaderRegister = descriptor._binding;
-        range_11->RegisterSpace = 0;
-        range_11->Flags = D3D12_DESCRIPTOR_RANGE_FLAG_NONE;
-        range_11->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-        range_10->NumDescriptors = descriptor._count;
-        range_10->BaseShaderRegister = descriptor._binding;
-        range_10->RegisterSpace = 0;
-        range_10->OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-        param_11->DescriptorTable.pDescriptorRanges = range_11;
-        param_11->DescriptorTable.NumDescriptorRanges = 1;
-
-        param_10->DescriptorTable.pDescriptorRanges = range_10;
-        param_10->DescriptorTable.NumDescriptorRanges = 1;
-        ++range_count;
-
-        // }
-
-        descriptorLayout->_dxSamplerParamIndices[descriptor_index] = parameter_count;
-        ++parameter_count;
-    }
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc;
     if (D3D_ROOT_SIGNATURE_VERSION_1_1 == featureData.HighestVersion) {
@@ -335,56 +371,61 @@ D3D12DescriptorSetBackend::~D3D12DescriptorSetBackend() {
 
 DescriptorSetPointer D3D12Backend::createDescriptorSet(const DescriptorSetInit& init) {
 
+    auto rootLayout = static_cast<const D3D12RootDescriptorLayoutBackend*>(init._rootLayout.get());
+    auto rootSlot = init._bindSetSlot;
+    bool fromRootLayout = (rootLayout);
+    bool fromSettLayout = (!init._descriptorSetLayout.empty());
+
+    int32_t  cbvsrvuav_root_index = -1;
+    uint32_t cbvsrvuav_count = 0;
+
+    int32_t  sampler_root_index = -1;
+    uint32_t sampler_count = 0;
+
+    if (fromRootLayout) {
+        if (rootSlot >= 0 && rootSlot < rootLayout->_dxSetParamIndices.size()) {
+            cbvsrvuav_root_index = rootLayout->_dxSetParamIndices[rootSlot];
+            cbvsrvuav_count = rootLayout->_cbvsrvuav_counts[rootSlot];
+        }
+
+        if (init._bindSamplers && rootLayout->_sampler_count) {
+            sampler_root_index = rootLayout->_sampler_rootIndex;
+            sampler_count = rootLayout->_sampler_count;
+        }
+    } else if (fromSettLayout) {
+        if (rootSlot >= 0) {
+            cbvsrvuav_root_index = rootSlot;
+            for (const auto& desc : init._descriptorSetLayout) {
+                cbvsrvuav_count += desc._count;
+            }
+        }
+    }
+
+    if (cbvsrvuav_count == 0 && sampler_root_index == 0) {
+        return nullptr;
+    }
+
     auto descriptorSet = new D3D12DescriptorSetBackend();
     descriptorSet->_init = init;
 
-    auto rootLayout = static_cast<const D3D12RootDescriptorLayoutBackend*>(init._rootLayout.get());
-    auto rootSlot = init._slot;
-    uint32_t numSetDescriptors = (uint32_t)rootLayout->_dxSetParamIndices.size();
-    uint32_t numSamplerDescriptors = (uint32_t) rootLayout->_dxSamplerParamIndices.size();
-    uint32_t cbvsrvuav_count = rootLayout->cbvsrvuav_count;
-    uint32_t sampler_count = rootLayout->sampler_count;
+    descriptorSet->_cbvsrvuav_rootIndex = cbvsrvuav_root_index;
+    descriptorSet->_sampler_rootIndex = sampler_root_index;
+  
+    descriptorSet->_cbvsrvuav_count = cbvsrvuav_count;
+    descriptorSet->_sampler_count = sampler_count;
+    descriptorSet->_numDescriptors = cbvsrvuav_count + sampler_count;
+
+    // ALLOCATE DESCRIPTORS IN HEAP
     auto allocatedDescriptors = _descriptorHeap->allocateDescriptors(cbvsrvuav_count);
     auto allocatedSamplers = _descriptorHeap->allocateSamplers(sampler_count);
     auto descriptorHeap = static_cast<D3D12DescriptorHeapBackend*> (_descriptorHeap.get());
+
     // Assign heap offsets
-    uint32_t cbvsrvuav_heap_offset = allocatedDescriptors;
-    uint32_t sampler_heap_offset = allocatedSamplers;
+    descriptorSet->_descriptorOffset = allocatedDescriptors;
+    descriptorSet->_samplerOffset = allocatedSamplers;
 
-    descriptorSet->_descriptorOffset = cbvsrvuav_heap_offset;
-    descriptorSet->_samplerOffset = sampler_heap_offset;
-
-    // TODO: THis will need to change ^ 
-   
-    // for each descriptor we need an offset even if not used:
-    descriptorSet->_dxHeapOffsets.resize(numSetDescriptors + numSamplerDescriptors, 0);
-
-    descriptorSet->_dxGPUHandles.resize(numSetDescriptors + numSamplerDescriptors);
-    descriptorSet->_dxRootParameterIndices.resize(numSetDescriptors + numSamplerDescriptors, -1);
-
-    for (uint32_t i = 0; i < numSetDescriptors; ++i) {
-        descriptorSet->_dxHeapOffsets[i] = cbvsrvuav_heap_offset;
-        descriptorSet->_dxGPUHandles[i] = descriptorHeap->gpuHandle(descriptorSet->_dxHeapOffsets[i]);
-        descriptorSet->_dxRootParameterIndices[i] = rootLayout->_dxSetParamIndices[i];
-        cbvsrvuav_heap_offset += rootLayout->_init._setLayouts[0][i]._count;
-    }
-
-
-    for (uint32_t i = 0; i < numSamplerDescriptors; ++i) {
-        uint32_t is = i + numSetDescriptors;
-        descriptorSet->_dxHeapOffsets[is] = sampler_heap_offset;
-        descriptorSet->_dxGPUHandles[is] = descriptorHeap->gpuSamplerHandle(sampler_heap_offset);
-        descriptorSet->_dxRootParameterIndices[is] = rootLayout->_dxSamplerParamIndices[i];
-        sampler_heap_offset += rootLayout->_init._samplerLayout[i]._count;
-    }
-
-
-
-    descriptorSet->cbvsrvuav_count = cbvsrvuav_count;
-    descriptorSet->sampler_count = sampler_count;
-
-    descriptorSet->_numDescriptors = cbvsrvuav_count + sampler_count;
-
+    descriptorSet->_cbvsrvuav_GPUHandle = descriptorHeap->gpuHandle(descriptorSet->_descriptorOffset);
+    descriptorSet->_sampler_GPUHandle = descriptorHeap->gpuSamplerHandle(descriptorSet->_samplerOffset);
 
     return DescriptorSetPointer(descriptorSet);
 }
@@ -401,11 +442,11 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         return;
     }
 
-    if (write_count != dxDescriptorSet->cbvsrvuav_count + dxDescriptorSet->sampler_count) {
+    if (write_count != dxDescriptorSet->_cbvsrvuav_count + dxDescriptorSet->_sampler_count) {
+        picoLog() << "Number of objects assigned on descriptor set does NOT match";
         return;
     }
 
-    auto descriptorHeapOffset = dxDescriptorSet->_dxHeapOffsets[0];
     D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = dxDescriptorHeap->cpuHandle(dxDescriptorSet->_descriptorOffset);
     D3D12_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle = dxDescriptorHeap->cpuSamplerHandle(dxDescriptorSet->_samplerOffset);
 

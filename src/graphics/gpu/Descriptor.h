@@ -126,7 +126,9 @@ namespace graphics {
     // and a matching descriptor set layout
     struct VISUALIZATION_API DescriptorSetInit {
         RootDescriptorLayoutPointer _rootLayout;
-        int32_t _slot;
+        int32_t _bindSetSlot = -1; // the set slot bound by this descriptor (-1 can be used for just samplers)
+        bool _bindSamplers = false;
+        DescriptorSetLayout _descriptorSetLayout;
     };
 
     class VISUALIZATION_API DescriptorSet {
@@ -139,9 +141,9 @@ namespace graphics {
 
         DescriptorSetInit _init;
 
-        int32_t _descriptorOffset; // offset of the first descriptor in the heap
-        int32_t _samplerOffset; // offset of the first sampler descriptor in the heap
-        int32_t _numDescriptors;   // numbers of descriptors 
+        int32_t _descriptorOffset = -1; // offset of the first descriptor in the heap
+        int32_t _samplerOffset = -1; // offset of the first sampler descriptor in the heap
+        int32_t _numDescriptors = 0;   // numbers of descriptors
 
         DescriptorObjects _objects;
     };

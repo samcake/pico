@@ -441,7 +441,7 @@ namespace graphics
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
                 _pipeline_draw_mesh->getRootDescriptorLayout(),
-                0
+                0, true
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet = descriptorSet;
@@ -477,7 +477,8 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline_uvmesh_makeEdge->getRootDescriptorLayout()
+                _pipeline_uvmesh_makeEdge->getRootDescriptorLayout(),
+                0
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_uvmesh = descriptorSet;
@@ -500,7 +501,8 @@ namespace graphics
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
-                _pipeline_compute_imageSpaceBlur->getRootDescriptorLayout()
+                _pipeline_compute_imageSpaceBlur->getRootDescriptorLayout(),
+                0, true
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_compute = descriptorSet;

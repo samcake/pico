@@ -56,6 +56,25 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
          [this] (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
              this->_renderCallback(camera, swapchain, device, batch); 
           });
+
+    // Allocate a rootLayout just for the scene descriptor set
+    DescriptorSetLayout descriptorLayout = {
+        { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+        { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
+    };
+    DescriptorSetInit dsInit = {
+        nullptr,
+        0, false,
+        descriptorLayout
+    };
+    _viewPassDescriptorSet = _device->createDescriptorSet(dsInit);
+
+    DescriptorObjects descriptorObjects = {
+        { graphics::DescriptorType::UNIFORM_BUFFER, _camera->getGPUBuffer() },
+        { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_nodes._transforms_buffer },
+    };
+    _device->updateDescriptorSet(_viewPassDescriptorSet, descriptorObjects);
+
 }
 
 Viewport::~Viewport() {
