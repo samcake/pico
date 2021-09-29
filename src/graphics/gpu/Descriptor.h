@@ -49,8 +49,9 @@ namespace graphics {
 
 
     // Root Descriptor Layout
-    // A DescriptorLayout for push constants
+    // 1 DescriptorLayout for push constants
     // N DescriptorSetLayouts for resources
+    // 1 DescriptorSetLayout for samplers
     struct VISUALIZATION_API RootDescriptorLayoutInit {
         DescriptorSetLayout  _pushLayout;
         DescriptorSetLayouts _setLayouts;

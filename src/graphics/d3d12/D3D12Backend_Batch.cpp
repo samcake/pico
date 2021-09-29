@@ -268,16 +268,11 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
-    auto rdl = pipeline->getRootDescriptorLayout();
-    if (rdl)
-        bindRootDescriptorLayout(dpso->getType(), rdl);
-
-    auto dxRS = dpso->_rootSignature;
+    bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
+ 
     if (dpso->getType() == PipelineType::GRAPHICS) {
-     //   _commandList->SetGraphicsRootSignature(dxRS.Get());
         _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
     } else if (dpso->getType() == PipelineType::COMPUTE) {
-     //   _commandList->SetComputeRootSignature(dxRS.Get());
     }
 }
 
