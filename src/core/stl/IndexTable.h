@@ -80,10 +80,12 @@ namespace core {
         }
 
         Index allocateContiguous(Index num_elements) {
-            Index new_index = _num_allocated_elements;
-            if (new_index + num_elements < getCapacity()) {
-                _num_allocated_elements += num_elements;
-                return new_index;
+            if (num_elements) {
+                Index new_index = _num_allocated_elements;
+                if (new_index + num_elements < getCapacity()) {
+                    _num_allocated_elements += num_elements;
+                    return new_index;
+                }
             }
             return INVALID_INDEX;
         }

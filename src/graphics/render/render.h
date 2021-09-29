@@ -37,6 +37,7 @@ namespace graphics {
     class Camera;
     using CameraPointer = std::shared_ptr<Camera>;
 
+    struct RenderArgs;
     class Renderer;
     using RendererPointer = std::shared_ptr<Renderer>;
 

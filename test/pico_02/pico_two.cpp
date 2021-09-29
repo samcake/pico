@@ -188,18 +188,18 @@ int main(int argc, char *argv[])
     graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
 
     // And now a render callback where we describe the rendering sequence
-    graphics::RenderCallback renderCallback = [&](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&](graphics::RenderArgs& args) {
         core::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
 
-        auto currentIndex = swapchain->currentIndex();
+        auto currentIndex = args.swapchain->currentIndex();
 
-        batch->begin(currentIndex);
+        args.batch->begin(currentIndex);
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::PRESENT,
             graphics::ResourceState::RENDER_TARGET,
-            swapchain, currentIndex, -1);
+            args.swapchain, currentIndex, -1);
 
         static float time = 0.0f;
         time += 1.0f / 60.0f;
@@ -207,35 +207,35 @@ int main(int argc, char *argv[])
         time = modf(time, &intPart);
        // graphics::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
-        batch->clear(swapchain, currentIndex, clearColor);
+        args.batch->clear(args.swapchain, currentIndex, clearColor);
 
-        batch->beginPass(swapchain, currentIndex);
+        args.batch->beginPass(args.swapchain, currentIndex);
 
-        batch->bindPipeline(pipeline);
+        args.batch->bindPipeline(pipeline);
 
-        batch->bindIndexBuffer(indexBuffer);
-        batch->bindVertexBuffers(1, &vertexBuffer);
+        args.batch->bindIndexBuffer(indexBuffer);
+        args.batch->bindVertexBuffers(1, &vertexBuffer);
 
-        batch->setViewport(viewportRect);
-        batch->setScissor(viewportRect);
+        args.batch->setViewport(viewportRect);
+        args.batch->setScissor(viewportRect);
 
-        batch->drawIndexed(6, 0);
+        args.batch->drawIndexed(6, 0);
 
-        uix::Imgui::draw(batch);
+        uix::Imgui::draw(args.batch);
 
-        batch->endPass();
+        args.batch->endPass();
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::RENDER_TARGET,
             graphics::ResourceState::PRESENT,
-            swapchain, currentIndex, -1);
+            args.swapchain, currentIndex, -1);
 
-        batch->end();
+        args.batch->end();
 
-        device->executeBatch(batch);
+        args.device->executeBatch(args.batch);
 
-        device->presentSwapchain(swapchain);
+        args.device->presentSwapchain(args.swapchain);
     };
 
 

@@ -43,12 +43,10 @@ namespace graphics {
         core::FrameTimer::Sample lastFrameTimerSample() const;
 
     protected:
-        void _renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch);
+        void _renderCallback(RenderArgs& args);
 
-        void renderScene(const CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch);
+        void renderScene(RenderArgs& args);
 
-#pragma warning(push)
-#pragma warning(disable: 4251)
         ScenePointer _scene;
         CameraPointer _camera;
         DevicePointer _device;
@@ -58,7 +56,9 @@ namespace graphics {
 
         // Measuring framerate
         core::FrameTimer _frameTimer;
-#pragma warning(pop)
+
+        DescriptorSetPointer _viewPassDescriptorSet;
+        RootDescriptorLayoutPointer _viewPassRootLayout;
 
     };
 }

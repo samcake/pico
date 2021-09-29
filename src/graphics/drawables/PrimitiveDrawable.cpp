@@ -71,10 +71,12 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PrimitiveObjectData) >> 2}
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            }}
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                },
+            }
          };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootLayoutInit);
 
@@ -114,37 +116,21 @@ namespace graphics
         const graphics::CameraPointer& camera,
         graphics::PrimitiveDrawable& prim)
     {
-        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-        // then we will assign a uniform buffer in it
-        graphics::DescriptorSetInit descriptorSetInit{
-            _primitivePipeline->getRootDescriptorLayout(),
-            0
-        };
-        auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
-
-        // Assign the Camera UBO just created as the resource of the descriptorSet
-        graphics::DescriptorObjects descriptorObjects = {
-            { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer }
-        };
-        device->updateDescriptorSet(descriptorSet, descriptorObjects);
-
         auto prim_ = &prim;
         auto pipeline = this->_primitivePipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             PrimitiveObjectData odata{ node, prim_->_size.x * 0.5f, prim_->_size.y * 0.5f, prim_->_size.z * 0.5f };
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
             // A box is 6 faces * 2 trianglestrip * 4 verts + -1
-            batch->draw(6 * 2 * 3, 0);
+            args.batch->draw(6 * 2 * 3, 0);
         };
         prim._drawcall = drawCallback;
     }

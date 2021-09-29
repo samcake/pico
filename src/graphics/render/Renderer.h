@@ -31,7 +31,15 @@
 
 namespace graphics {
 
-    using RenderCallback = std::function<void(const CameraPointer & camera, const SwapchainPointer & swapchain, const DevicePointer & device, const BatchPointer & batch)>;
+    struct RenderArgs {
+        DevicePointer device;
+        BatchPointer batch;
+        SwapchainPointer swapchain;
+        CameraPointer camera;
+        DescriptorSetPointer viewPassDescriptorSet;
+    };
+
+    using RenderCallback = std::function<void(RenderArgs& renderArgs)>;
 
     class VISUALIZATION_API Renderer {
     public:
@@ -41,12 +49,9 @@ namespace graphics {
         void render(const CameraPointer& camera, const SwapchainPointer& swapchain, RenderCallback callback = nullptr);
 
     protected:
-#pragma warning(push)
-#pragma warning(disable: 4251)
         DevicePointer _device;
         BatchPointer _batch;
         RenderCallback _callback;
 
-#pragma warning(pop)
     };
 }

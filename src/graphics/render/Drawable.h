@@ -38,10 +38,7 @@ namespace graphics {
 
     using DrawObjectCallback = std::function<void(
         const NodeID node,
-        const CameraPointer& camera,
-        const SwapchainPointer& swapchain,
-        const DevicePointer& device,
-        const BatchPointer& batch)>;
+        RenderArgs& args)>;
 
     // Here we define the DrawcallObject as the container of the various pico gpu objects we need to render an item.
     // this will evolve and probably clean up over time and move the genralized concepts in the visualization library

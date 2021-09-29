@@ -77,11 +77,15 @@ namespace graphics
             { // Push uniforms layout
                 { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(HeightmapObjectData) >> 2}
             },
-            {{ // Descriptor set Layouts
+            {
+                { // ViewPass descriptorSet Layout
                 { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                { // Descriptor set Layouts
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1}
-            }}
+                }
+            }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootLayoutInit);
 
@@ -168,8 +172,6 @@ namespace graphics
        auto heightmap = &drawable;
        bool doCompute = heightmap->_heightmap.heights.empty();
 
-       // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-       // then we will assign a uniform buffer in it
        graphics::DescriptorSetInit compDescriptorSetInit{
            _computePipeline->getRootDescriptorLayout(),
            0
@@ -183,18 +185,14 @@ namespace graphics
            device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
        }
 
-        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-        // then we will assign a uniform buffer in it
+        // Create DescriptorSet #1, #0 is ViewPassDS
         graphics::DescriptorSetInit descriptorSetInit{
             _HeightmapPipeline->getRootDescriptorLayout(),
-            0
+            1
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-        // Assign the Camera UBO just created as the resource of the descriptorSet
         graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
            { graphics::DescriptorType::RESOURCE_BUFFER, drawable.getHeightBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
@@ -202,9 +200,9 @@ namespace graphics
         auto pipeline = this->_HeightmapPipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
     
             static uint32_t frameNum = 0;
             frameNum++;
@@ -212,22 +210,23 @@ namespace graphics
                                        heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
 
             if (doCompute) {
-                batch->bindPipeline(compute_pipeline);
-                batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
-                batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+                args.batch->bindPipeline(compute_pipeline);
+                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
+                args.batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
             
-            //   batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
-                batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
-                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+            //   args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
+                args.batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
             }
 
             odata.nodeID = node;
-            batch->bindPipeline(pipeline);
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+            args.batch->bindPipeline(pipeline);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
 
             // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
-            batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
+            args.batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
         };
         drawable._drawcall = drawCallback;
     }

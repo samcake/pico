@@ -75,7 +75,7 @@ public:
             WINDOW_CLASS = "WIN_WINDOW";
 
             WNDCLASS wcex;
-            wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC | CS_DBLCLKS;
+            wcex.style = /*CS_HREDRAW | CS_VREDRAW | CS_OWNDC |*/ CS_DBLCLKS;
             wcex.lpfnWndProc = WIN32WindowBackend::windowProc;
             wcex.lpszClassName = "WIN_WINDOW";
             wcex.cbClsExtra = 0;

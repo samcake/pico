@@ -285,13 +285,13 @@ int main(int argc, char *argv[])
     gpuDevice->updateDescriptorSet(descriptorSet, descriptorObjects);
     
     // And now a render callback where we describe the rendering sequence
-    graphics::RenderCallback renderCallback = [&](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&](graphics::RenderArgs& args) {
         static float time = 0.0f;
         time += 1.0f / 60.0f;
         float intPart;
         float timeNorm = modf(time, &intPart);
 
-        auto currentIndex = swapchain->currentIndex();
+        auto currentIndex = args.swapchain->currentIndex();
 
         if (cameraData._stuff.x) {
             cameraData._focal = 0.15f + 0.1f * sinf(0.1f * time);
@@ -299,43 +299,43 @@ int main(int argc, char *argv[])
 
         memcpy(cameraUBO->_cpuMappedAddress, &cameraData, sizeof(CameraUB));
 
-        batch->begin(currentIndex);
+        args.batch->begin(currentIndex);
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::PRESENT,
             graphics::ResourceState::RENDER_TARGET,
-            swapchain, currentIndex, -1);
+            args.swapchain, currentIndex, -1);
 
         core::vec4 clearColor(14.f/255.f, 14.f / 255.f, 14.f / 255.f, 1.f);
-        batch->clear(swapchain, currentIndex, clearColor);
+        args.batch->clear(args.swapchain, currentIndex, clearColor);
 
-        batch->beginPass(swapchain, currentIndex);
+        args.batch->beginPass(args.swapchain, currentIndex);
 
-        batch->bindPipeline(pipeline);
+        args.batch->bindPipeline(pipeline);
 
-        batch->bindVertexBuffers(1, &vertexBuffer);
+        args.batch->bindVertexBuffers(1, &vertexBuffer);
 
-        batch->setViewport(viewportRect);
-        batch->setScissor(viewportRect);
+        args.batch->setViewport(viewportRect);
+        args.batch->setScissor(viewportRect);
 
-        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-        batch->draw(numVertices, 0);
+        args.batch->draw(numVertices, 0);
 
-        batch->endPass();
+        args.batch->endPass();
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::RENDER_TARGET,
             graphics::ResourceState::PRESENT,
-            swapchain, currentIndex, -1);
+            args.swapchain, currentIndex, -1);
 
-        batch->end();
+        args.batch->end();
 
-        device->executeBatch(batch);
+        args.device->executeBatch(args.batch);
 
-        device->presentSwapchain(swapchain);
+        args.device->presentSwapchain(args.swapchain);
     };
 
 

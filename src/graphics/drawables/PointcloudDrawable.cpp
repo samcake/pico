@@ -72,11 +72,15 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PCObjectData) >> 2}
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
-            }}
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
+                }
+            }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
 
@@ -176,18 +180,13 @@ namespace graphics
         const graphics::CameraPointer& camera,
         graphics::PointCloudDrawable& pointcloud)
     {
-        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-        // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
             _pipeline->getRootDescriptorLayout(),
-            0
+            1
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-        // Assign the Camera UBO just created as the resource of the descriptorSet
         graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
            { graphics::DescriptorType::RESOURCE_BUFFER, pointcloud.getVertexBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
@@ -198,19 +197,20 @@ namespace graphics
         auto pipeline = this->_pipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-     //       batch->bindVertexBuffers(1, &vertexBuffer);
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+     //       args.batch->bindVertexBuffers(1, &vertexBuffer);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto uniforms = ppointcloud->getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
 
-            batch->draw(3 * numVertices, 0);
+            args.batch->draw(3 * numVertices, 0);
         };
         pointcloud._drawcall = drawCallback;
     }

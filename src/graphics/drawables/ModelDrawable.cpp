@@ -78,17 +78,20 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
-
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1 },  // Material
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1 },  // Material Textures
-            }},
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1 },  // Material
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1 },  // Material Textures
+                }
+            },
             {
             { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
             }
@@ -583,7 +586,8 @@ namespace graphics
         // then we will assign a uniform buffer in it
        graphics::DescriptorSetInit descriptorSetInit{
            _pipeline->getRootDescriptorLayout(),
-           0
+           1,
+           true
        };
        auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
        model._descriptorSet = descriptorSet;
@@ -593,10 +597,7 @@ namespace graphics
        auto sampler = device->createSampler(samplerInit);
 
        graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
-
-            { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
+            { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer()},
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
@@ -621,27 +622,24 @@ namespace graphics
 
        // And now a render callback where we describe the rendering sequence
        graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline, albedoTex](
-           const NodeID node,
-           const graphics::CameraPointer& camera,
-           const graphics::SwapchainPointer& swapchain,
-           const graphics::DevicePointer& device,
-           const graphics::BatchPointer& batch) {
+           const NodeID node, RenderArgs& args) {
             
             static bool first{ true };
             if (first) {
                 first = false;
                 if (albedoTex) {
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                    batch->uploadTextureFromInitdata(device, albedoTex);
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                    args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
                 }
             }
 
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
        };
        model._drawcall = drawCallback;
        model._drawableID = scene->createDrawable(model).id();
@@ -657,20 +655,10 @@ namespace graphics
             auto partNumIndices = model._parts[d].numIndices;
            // And now a render callback where we describe the rendering sequence
            graphics::DrawObjectCallback drawCallback = [d, uniforms, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
-               const NodeID node,
-               const graphics::CameraPointer& camera,
-               const graphics::SwapchainPointer& swapchain,
-               const graphics::DevicePointer& device,
-               const graphics::BatchPointer& batch) {
-               /*    batch->bindPipeline(pipeline);
-                   batch->setViewport(camera->getViewportRect());
-                   batch->setScissor(camera->getViewportRect());
-
-                   batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-*/
+               const NodeID node, RenderArgs& args) {
                    ModelObjectData odata{ (uint32_t)node, (uint32_t)d, (uint32_t)numNodes, (uint32_t)numParts, (uint32_t)numMaterials, (uint32_t)uniforms->makeDrawMode() };
-                   batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                   batch->draw(partNumIndices, 0);
+                   args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                   args.batch->draw(partNumIndices, 0);
            };
 
            part->_drawcall = drawCallback;

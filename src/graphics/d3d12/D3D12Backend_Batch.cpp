@@ -105,11 +105,20 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
 
 
     bindDescriptorHeap(_descriptorHeap);
+
+    _currentGraphicsRootLayout_setRootIndex = 0;
+    _currentGraphicsRootLayout_samplerRootIndex = 0;
+    _currentComputeRootLayout_setRootIndex = 0;
+    _currentComputeRootLayout_samplerRootIndex = 0;
 }
 
 void D3D12BatchBackend::endPass() {
     _commandList->OMSetRenderTargets(0, nullptr, TRUE, nullptr); // needed ?
 
+    _currentGraphicsRootLayout_setRootIndex = 0;
+    _currentGraphicsRootLayout_samplerRootIndex = 0;
+    _currentComputeRootLayout_setRootIndex = 0;
+    _currentComputeRootLayout_samplerRootIndex = 0;
 }
 
 void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {
@@ -241,9 +250,13 @@ void D3D12BatchBackend::bindRootDescriptorLayout(PipelineType type, const RootDe
     auto dxRS = rdl->_rootSignature;
     switch (type) {
     case PipelineType::GRAPHICS: {
+        _currentGraphicsRootLayout_setRootIndex = rdl->_cbvsrvuav_rootIndex;
+        _currentGraphicsRootLayout_samplerRootIndex = rdl->_sampler_rootIndex;
         _commandList->SetGraphicsRootSignature(dxRS.Get());
     } break;
     case PipelineType::COMPUTE: {
+        _currentComputeRootLayout_setRootIndex = rdl->_cbvsrvuav_rootIndex;
+        _currentComputeRootLayout_samplerRootIndex = rdl->_sampler_rootIndex;
         _commandList->SetComputeRootSignature(dxRS.Get());
     } break;
     }
@@ -255,32 +268,47 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
+    auto rdl = pipeline->getRootDescriptorLayout();
+    if (rdl)
+        bindRootDescriptorLayout(dpso->getType(), rdl);
+
     auto dxRS = dpso->_rootSignature;
     if (dpso->getType() == PipelineType::GRAPHICS) {
-        _commandList->SetGraphicsRootSignature(dxRS.Get());
+     //   _commandList->SetGraphicsRootSignature(dxRS.Get());
         _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
     } else if (dpso->getType() == PipelineType::COMPUTE) {
-        _commandList->SetComputeRootSignature(dxRS.Get());
+     //   _commandList->SetComputeRootSignature(dxRS.Get());
     }
 }
 
 void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSetPointer& descriptorSet) {
     auto dxds = static_cast<D3D12DescriptorSetBackend*>(descriptorSet.get());
 
-    for (uint32_t i = 0; i < dxds->_dxRootParameterIndices.size(); ++i) {
-        auto rooParameterIndex = dxds->_dxRootParameterIndices[i];
-        if (-1 == rooParameterIndex) {
-            continue;
+    switch (type) {
+    case PipelineType::GRAPHICS: {
+        if (dxds->_cbvsrvuav_rootIndex >= 0) {
+            _commandList->SetGraphicsRootDescriptorTable(
+                _currentGraphicsRootLayout_setRootIndex + descriptorSet->_init._bindSetSlot,
+                dxds->_cbvsrvuav_GPUHandle);
         }
-
-        switch (type) {
-            case PipelineType::GRAPHICS: {
-                _commandList->SetGraphicsRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
-            } break;
-            case PipelineType::COMPUTE: {
-                _commandList->SetComputeRootDescriptorTable(rooParameterIndex, dxds->_dxGPUHandles[i]);
-            } break;
+        if (dxds->_sampler_rootIndex >= 0) {
+            _commandList->SetGraphicsRootDescriptorTable(
+                _currentGraphicsRootLayout_samplerRootIndex,
+                dxds->_sampler_GPUHandle);
         }
+    } break;
+    case PipelineType::COMPUTE: {
+        if (dxds->_cbvsrvuav_rootIndex >= 0) {
+            _commandList->SetComputeRootDescriptorTable(
+                _currentComputeRootLayout_setRootIndex + descriptorSet->_init._bindSetSlot,
+                dxds->_cbvsrvuav_GPUHandle);
+        }
+        if (dxds->_sampler_rootIndex >= 0) {
+            _commandList->SetComputeRootDescriptorTable(
+                _currentComputeRootLayout_samplerRootIndex,
+                dxds->_sampler_GPUHandle);
+        }
+    } break;
     }
 }
 

@@ -305,7 +305,7 @@ int main(int argc, char *argv[])
     // then we will assign a texture and sampler
     graphics::DescriptorSetInit descriptorSetInit{
         descriptorLayout,
-        0
+        0, true
     };
     auto descriptorSet = gpuDevice->createDescriptorSet(descriptorSetInit);
 
@@ -317,18 +317,18 @@ int main(int argc, char *argv[])
 
 
     // And now a render callback where we describe the rendering sequence
-    graphics::RenderCallback renderCallback = [&, gdcRenderer, textureForGDI](const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+    graphics::RenderCallback renderCallback = [&, gdcRenderer, textureForGDI](graphics::RenderArgs& args) {
         core::vec4 viewportRect{ 0.0f, 0.0f, 640.0f, 480.f };
 
         auto currentIndex = swapchain->currentIndex();
 
-        batch->begin(currentIndex);
+        args.batch->begin(currentIndex);
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::PRESENT,
             graphics::ResourceState::RENDER_TARGET,
-            swapchain, currentIndex, -1);
+            args.swapchain, currentIndex, -1);
 
         static float time = 0.0f;
         time += 1.0f / 60.0f;
@@ -336,40 +336,40 @@ int main(int argc, char *argv[])
         time = modf(time, &intPart);
         // graphics::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
-        batch->clear(swapchain, currentIndex, clearColor);
+        args.batch->clear(args.swapchain, currentIndex, clearColor);
 
-        batch->beginPass(swapchain, currentIndex);
+        args.batch->beginPass(args.swapchain, currentIndex);
 
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
+        args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
         graphics::Batch::UploadSubresourceLayoutArray layouts = { { 0, 0, gdcRenderer->pixelBuffer->_bufferSize}};
-        batch->uploadTexture(textureForGDI, layouts, gdcRenderer->pixelBuffer);
-        batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
+        args.batch->uploadTexture(textureForGDI, layouts, gdcRenderer->pixelBuffer);
+        args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
     
 
-        batch->bindPipeline(pipeline);
-        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+        args.batch->bindPipeline(pipeline);
+        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-        batch->bindIndexBuffer(indexBuffer);
-        batch->bindVertexBuffers(1, &vertexBuffer);
+        args.batch->bindIndexBuffer(indexBuffer);
+        args.batch->bindVertexBuffers(1, &vertexBuffer);
 
-        batch->setViewport(viewportRect);
-        batch->setScissor(viewportRect);
+        args.batch->setViewport(viewportRect);
+        args.batch->setScissor(viewportRect);
 
-        batch->drawIndexed(6, 0);
+        args.batch->drawIndexed(6, 0);
 
-        batch->endPass();
+        args.batch->endPass();
 
-        batch->resourceBarrierTransition(
+        args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,
             graphics::ResourceState::RENDER_TARGET,
             graphics::ResourceState::PRESENT,
             swapchain, currentIndex, -1);
 
-        batch->end();
+        args.batch->end();
 
-        device->executeBatch(batch);
+        args.device->executeBatch(args.batch);
 
-        device->presentSwapchain(swapchain);
+        args.device->presentSwapchain(args.swapchain);
     };
 
 
