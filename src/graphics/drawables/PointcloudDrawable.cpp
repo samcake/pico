@@ -177,7 +177,6 @@ namespace graphics
     void PointCloudDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::PointCloudDrawable& pointcloud)
     {
         graphics::DescriptorSetInit descriptorSetInit{
