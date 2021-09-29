@@ -106,21 +106,25 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
 
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1},  // Material
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 11, 1},  // UVMesh Texture
-            { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
-            }},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1},  // Material
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1},  // Albedo Texture
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 11, 1},  // UVMesh Texture
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 12, 1},  // compute Texture
+                }
+            },
             {
             { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
             }
@@ -132,17 +136,20 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1}, // Camera
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
-
-            }}
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 5, 1}, // Edge
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 6, 1}, // Face
+                }
+            }
         };
         auto uvmesh_rootDescriptorLayout = device->createRootDescriptorLayout(uvmesh_descriptorLayoutInit);
 
@@ -441,7 +448,7 @@ namespace graphics
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
                 _pipeline_draw_mesh->getRootDescriptorLayout(),
-                0, true
+                1, true
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet = descriptorSet;
@@ -455,8 +462,6 @@ namespace graphics
 
 
             graphics::DescriptorObjects descriptorObjects {
-                { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-                { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
@@ -478,22 +483,20 @@ namespace graphics
             // then we will assign a uniform buffer in it
             graphics::DescriptorSetInit descriptorSetInit{
                 _pipeline_uvmesh_makeEdge->getRootDescriptorLayout(),
-                0
+                1
             };
             auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
             model._descriptorSet_uvmesh = descriptorSet;
 
             // Assign the Camera UBO just created as the resource of the descriptorSet
-            graphics::DescriptorObjects descriptorObjects = { {
-                { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-                { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
+            graphics::DescriptorObjects descriptorObjects = {
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getEdgeBuffer() },
                 { graphics::DescriptorType::RESOURCE_BUFFER, model.getFaceBuffer() }
-            } };
+            };
             device->updateDescriptorSet(descriptorSet, descriptorObjects);
         }
 

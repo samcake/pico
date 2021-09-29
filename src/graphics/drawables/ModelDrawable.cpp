@@ -79,11 +79,11 @@ namespace graphics
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::ALL_GRAPHICS, 1, sizeof(ModelObjectData) >> 2},
             },
             {
-                {
+                { // ViewPass descriptorSet Layout
                 { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
- //               },
-  //              {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 1, 1}, // Part
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
@@ -586,7 +586,7 @@ namespace graphics
         // then we will assign a uniform buffer in it
        graphics::DescriptorSetInit descriptorSetInit{
            _pipeline->getRootDescriptorLayout(),
-           0,
+           1,
            true
        };
        auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
@@ -597,10 +597,7 @@ namespace graphics
        auto sampler = device->createSampler(samplerInit);
 
        graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
-
-            { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer() },
+            { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer()},
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },

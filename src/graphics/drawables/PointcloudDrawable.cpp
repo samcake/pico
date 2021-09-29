@@ -72,11 +72,15 @@ namespace graphics
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PCObjectData) >> 2}
             },
-            {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
-            }}
+            {
+                { // ViewPass descriptorSet Layout
+                { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                {
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
+                }
+            }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
 
@@ -176,18 +180,13 @@ namespace graphics
         const graphics::CameraPointer& camera,
         graphics::PointCloudDrawable& pointcloud)
     {
-        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-        // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
             _pipeline->getRootDescriptorLayout(),
-            0
+            1
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-        // Assign the Camera UBO just created as the resource of the descriptorSet
         graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
            { graphics::DescriptorType::RESOURCE_BUFFER, pointcloud.getVertexBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);

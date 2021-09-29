@@ -62,6 +62,16 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
         { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
         { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
     };
+
+    RootDescriptorLayoutPointer rootLayout = _device->createRootDescriptorLayout({
+    {
+    { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, 48},
+    },
+    { descriptorLayout },
+    {}
+    });
+    _viewPassRootLayout = rootLayout;
+
     DescriptorSetInit dsInit = {
         nullptr,
         0, false,
@@ -138,6 +148,10 @@ void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPoint
 }
 
 void Viewport::renderScene(const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+
+    batch->bindRootDescriptorLayout(graphics::PipelineType::GRAPHICS, _viewPassRootLayout);
+    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, _viewPassDescriptorSet);
+
     for (int i = 1; i < _scene->getItems().size(); i++) {
         auto& item = _scene->getItems()[i];
         if (item.isValid() && item.isVisible()) {

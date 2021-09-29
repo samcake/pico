@@ -77,11 +77,15 @@ namespace graphics
             { // Push uniforms layout
                 { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(HeightmapObjectData) >> 2}
             },
-            {{ // Descriptor set Layouts
+            {
+                { // ViewPass descriptorSet Layout
                 { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+                },
+                { // Descriptor set Layouts
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1}
-            }}
+                }
+            }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootLayoutInit);
 
@@ -168,8 +172,6 @@ namespace graphics
        auto heightmap = &drawable;
        bool doCompute = heightmap->_heightmap.heights.empty();
 
-       // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-       // then we will assign a uniform buffer in it
        graphics::DescriptorSetInit compDescriptorSetInit{
            _computePipeline->getRootDescriptorLayout(),
            0
@@ -183,18 +185,14 @@ namespace graphics
            device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
        }
 
-        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
-        // then we will assign a uniform buffer in it
+        // Create DescriptorSet #1, #0 is ViewPassDS
         graphics::DescriptorSetInit descriptorSetInit{
             _HeightmapPipeline->getRootDescriptorLayout(),
-            0
+            1
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-        // Assign the Camera UBO just created as the resource of the descriptorSet
         graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-           { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
            { graphics::DescriptorType::RESOURCE_BUFFER, drawable.getHeightBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);

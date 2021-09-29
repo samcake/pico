@@ -58,6 +58,6 @@ namespace graphics {
         core::FrameTimer _frameTimer;
 
         DescriptorSetPointer _viewPassDescriptorSet;
-
+        RootDescriptorLayoutPointer _viewPassRootLayout;
     };
 }

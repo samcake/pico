@@ -74,12 +74,16 @@ namespace graphics
         {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(TSObjectData) >> 2}
         },
-        {{
-            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
+        {
+            { // ViewPass descriptorSet Layout
+            { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+            { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+            },
+            {
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
             { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
-        }}
+            }
+        }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootDescriptorLayoutInit);
 
@@ -191,17 +195,15 @@ namespace graphics
         // then we will assign a uniform buffer in it
         graphics::DescriptorSetInit descriptorSetInit{
             _pipeline->getRootDescriptorLayout(),
-            0
+            1
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
         // Assign the Camera UBO just created as the resource of the descriptorSet
-        graphics::DescriptorObjects descriptorObjects = { {
-            { graphics::DescriptorType::UNIFORM_BUFFER, camera->getGPUBuffer() },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_nodes._transforms_buffer },
+        graphics::DescriptorObjects descriptorObjects = {
             { graphics::DescriptorType::RESOURCE_BUFFER, triangleSoup.getVertexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, triangleSoup.getIndexBuffer() }
-        }};
+        };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
