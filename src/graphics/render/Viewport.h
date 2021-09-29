@@ -59,5 +59,6 @@ namespace graphics {
 
         DescriptorSetPointer _viewPassDescriptorSet;
         RootDescriptorLayoutPointer _viewPassRootLayout;
+
     };
 }
