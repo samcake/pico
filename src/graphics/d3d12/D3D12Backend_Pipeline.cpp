@@ -54,7 +54,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
 
-        // Grab the root signature from the associated pipaline layout.
+        // Grab the root signature from the associated pipeline layout.
         if (pso->_rootSignature) {
             rootSignature = pso->_rootSignature;
         } else {
@@ -139,26 +139,13 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
 
-        // Create an empty root signature if none provided.
+        // Grab the root signature from the associated pipeline layout.
         if (pso->_rootSignature) {
             rootSignature = pso->_rootSignature;
         }
         else if (init.rootDescriptorLayout) {
             auto dxDescLayout = static_cast<D3D12RootDescriptorLayoutBackend*> (init.rootDescriptorLayout.get());
             rootSignature = dxDescLayout->_rootSignature;
-        }
-        else {
-            D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-            rootSignatureDesc.NumParameters = 0;
-            rootSignatureDesc.pParameters = nullptr;
-            rootSignatureDesc.NumStaticSamplers = 0;
-            rootSignatureDesc.pStaticSamplers = nullptr;
-            rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-
-            ComPtr<ID3DBlob> signature;
-            ComPtr<ID3DBlob> error;
-            ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-            ThrowIfFailed(_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
         }
 
         D3D12_COMPUTE_PIPELINE_STATE_DESC psoDesc = {};
@@ -192,7 +179,7 @@ PipelineStatePointer D3D12Backend::createGraphicsPipelineState(const GraphicsPip
     pso->_type = PipelineType::GRAPHICS;
     pso->_graphics = init;
     pso->_program = init.program;
-    pso->_rootDescriptorLayout = ( init.rootDescriptorLayout ? init.rootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout
+    pso->_rootDescriptorLayout = ( init.rootDescriptorLayout ? init.rootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout if none specified
 
     if (realizePipelineState(pso.get())) {
 
@@ -215,7 +202,7 @@ PipelineStatePointer D3D12Backend::createComputePipelineState(const ComputePipel
     pso->_type = PipelineType::COMPUTE;
     pso->_compute = init;
     pso->_program = init.program;
-    pso->_rootDescriptorLayout = (init.rootDescriptorLayout ? init.rootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout
+    pso->_rootDescriptorLayout = (init.rootDescriptorLayout ? init.rootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout if none specified
 
 
     if (realizePipelineState(pso.get())) {
