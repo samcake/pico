@@ -74,8 +74,7 @@ namespace graphics
     }
 
     void GizmoDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
-
-        // Let's describe the pipeline Descriptors layout same for both node and item
+        // Let's describe the pipeline Descriptors for _node
         graphics::RootDescriptorLayoutInit rootDescriptorLayoutInit{
             {
             { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(GizmoObjectData) >> 2},
@@ -84,14 +83,20 @@ namespace graphics
                 { // ViewPass descriptorSet Layout
                 { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-                },
+                }
+            }
+        };
+        auto rootDescriptorLayout_node = device->createRootDescriptorLayout(rootDescriptorLayoutInit);
+
+        // Let's describe the pipeline Descriptors layout same as _node + another descriptorset
+        rootDescriptorLayoutInit._setLayouts.push_back(
                 {
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
                 }
-            }
-        };
-        auto rootDescriptorLayout = device->createRootDescriptorLayout(rootDescriptorLayoutInit);
+                );
+
+        auto rootDescriptorLayout_item = device->createRootDescriptorLayout(rootDescriptorLayoutInit);
 
         // And a Pipeline
 
@@ -115,7 +120,7 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit pipelineInit_node{
                     programShader_node,
-                    rootDescriptorLayout,
+                    rootDescriptorLayout_node,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     RasterizerState(),
@@ -126,7 +131,7 @@ namespace graphics
 
         graphics::GraphicsPipelineStateInit pipelineInit_item{
                     programShader_item,
-                    rootDescriptorLayout,
+                    rootDescriptorLayout_item,
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     RasterizerState(),
@@ -166,18 +171,18 @@ namespace graphics
         auto pipeline = this->_nodePipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [pgizmo, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [pgizmo, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-            // Rely on ViewPass descriptorSet bound
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
 
             auto flags = pgizmo->getUniforms()->buildFlags();
             GizmoObjectData odata{ node, flags, 0, 0};
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-            batch->draw(pgizmo->nodes.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawableUniforms::SHOW_BRANCH_BIT) * 1), 0);
+            args.batch->draw(pgizmo->nodes.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawableUniforms::SHOW_BRANCH_BIT) * 1), 0);
         };
         gizmo._drawcall = drawCallback;
     }
@@ -207,19 +212,20 @@ namespace graphics
        auto pipeline = this->_itemPipeline;
 
        // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+       graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
            
-           batch->bindPipeline(pipeline);
-           batch->setViewport(camera->getViewportRect());
-           batch->setScissor(camera->getViewportRect());
+           args.batch->bindPipeline(pipeline);
+           args.batch->setViewport(args.camera->getViewportRect());
+           args.batch->setScissor(args.camera->getViewportRect());
 
-           batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
            auto flags = pgizmo->getUniforms()->buildFlags();
            GizmoObjectData odata{ node, flags, 0, 0 };
-           batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+           args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-           batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
+           args.batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };
        gizmo._drawcall = drawCallback;
    }

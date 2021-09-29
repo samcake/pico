@@ -53,8 +53,8 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
     //auto render = std::bind(&Viewport::_renderCallback, this);
 
     _renderer = std::make_shared<Renderer>(device,
-         [this] (const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
-             this->_renderCallback(camera, swapchain, device, batch); 
+         [this] (RenderArgs& args) {
+             this->_renderCallback(args);
           });
 
     // Allocate a rootLayout just for the scene descriptor set
@@ -100,65 +100,66 @@ void Viewport::present(const SwapchainPointer& swapchain) {
     _renderer->render(_camera, swapchain);
 }
 
-void Viewport::_renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch) {
+void Viewport::_renderCallback(RenderArgs& args) {
     _frameTimer.beginFrame();
 
-    auto currentIndex = swapchain->currentIndex();
-    camera->updateGPUData();
+    auto currentIndex = args.swapchain->currentIndex();
+    args.camera->updateGPUData();
 
-    batch->begin(currentIndex);
+    args.batch->begin(currentIndex);
 
-    batch->resourceBarrierTransition(
+    args.batch->resourceBarrierTransition(
         graphics::ResourceBarrierFlag::NONE,
         graphics::ResourceState::PRESENT,
         graphics::ResourceState::RENDER_TARGET,
-        swapchain, currentIndex, -1);
+        args.swapchain, currentIndex, -1);
 
    // core::vec4 clearColor(14 / 255.f, 14.f / 255.f, 45.f / 255.f, 1.f);
     core::vec4 clearColor(128.f / 255.f, 128.f / 255.f, 128.f / 255.f, 1.f);
-    batch->clear(swapchain, currentIndex, clearColor);
+    args.batch->clear(args.swapchain, currentIndex, clearColor);
 
-    batch->beginPass(swapchain, currentIndex);
+    args.batch->beginPass(args.swapchain, currentIndex);
 
-    batch->setViewport(camera->getViewportRect());
-    batch->setScissor(camera->getViewportRect());
+    args.batch->setViewport(args.camera->getViewportRect());
+    args.batch->setScissor(args.camera->getViewportRect());
 
-    this->renderScene(camera, swapchain, device, batch);
+    this->renderScene(args);
 
 
     if (_postSceneRC) {
-        this->_postSceneRC(camera, swapchain, device, batch);
+        this->_postSceneRC(args);
     }
 
-    batch->endPass();
+    args.batch->endPass();
 
-    batch->resourceBarrierTransition(
+    args.batch->resourceBarrierTransition(
         graphics::ResourceBarrierFlag::NONE,
         graphics::ResourceState::RENDER_TARGET,
         graphics::ResourceState::PRESENT,
-        swapchain, currentIndex, -1);
+        args.swapchain, currentIndex, -1);
 
-    batch->end();
+    args.batch->end();
 
-    device->executeBatch(batch);
+    args.device->executeBatch(args.batch);
 
     _frameTimer.endFrame();
 
-    device->presentSwapchain(swapchain);
+    args.device->presentSwapchain(args.swapchain);
 }
 
-void Viewport::renderScene(const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
+void Viewport::renderScene(RenderArgs& args) {
 
-    batch->bindRootDescriptorLayout(graphics::PipelineType::GRAPHICS, _viewPassRootLayout);
-    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, _viewPassDescriptorSet);
+    args.batch->bindRootDescriptorLayout(graphics::PipelineType::GRAPHICS, _viewPassRootLayout);
+    args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, _viewPassDescriptorSet);
 
+    args.viewPassDescriptorSet = _viewPassDescriptorSet;
     for (int i = 1; i < _scene->getItems().size(); i++) {
         auto& item = _scene->getItems()[i];
         if (item.isValid() && item.isVisible()) {
             auto drawable = item.getDrawableID();
             if (drawable != INVALID_DRAWABLE_ID) {
                 auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item.getNodeID(), camera, swapchain, device, batch);
+                drawcall(item.getNodeID(), args);
             }
         }
     }
@@ -169,7 +170,7 @@ void Viewport::renderScene(const graphics::CameraPointer& camera, const graphics
             auto drawable = item0.getDrawableID();
             if (drawable != INVALID_DRAWABLE_ID) {
                 auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item0.getNodeID(), camera, swapchain, device, batch);
+                drawcall(item0.getNodeID(), args);
             }
         }
     }

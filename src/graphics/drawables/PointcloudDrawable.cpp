@@ -197,19 +197,20 @@ namespace graphics
         auto pipeline = this->_pipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-     //       batch->bindVertexBuffers(1, &vertexBuffer);
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+     //       args.batch->bindVertexBuffers(1, &vertexBuffer);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto uniforms = ppointcloud->getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
 
-            batch->draw(3 * numVertices, 0);
+            args.batch->draw(3 * numVertices, 0);
         };
         pointcloud._drawcall = drawCallback;
     }

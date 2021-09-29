@@ -30,6 +30,8 @@
 //
 #include "Imgui.h"
 
+#include <graphics/render/Renderer.h>
+
 #ifdef WIN32
 
 #define ImTextureID D3D12_GPU_DESCRIPTOR_HANDLE *
@@ -107,13 +109,10 @@ void Imgui::invalidateDeviceObjects() {
 }
 
 void Imgui::standardPostSceneRenderCallback(
-    const graphics::CameraPointer& camera,
-    const graphics::SwapchainPointer& swapchain,
-    const graphics::DevicePointer& device,
-    const graphics::BatchPointer& batch) {
+    graphics::RenderArgs& args) {
 
     ImGui::Render();
-    draw(batch);
+    draw(args.batch);
 }
 
 

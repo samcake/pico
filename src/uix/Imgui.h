@@ -54,10 +54,7 @@ public:
     static bool customEventCallback(HWND win, UINT msg, WPARAM wparam, LPARAM lparam);
 #endif
 
-    static void standardPostSceneRenderCallback(const graphics::CameraPointer& camera,
-                                                const graphics::SwapchainPointer& swapchain,
-                                                const graphics::DevicePointer& device,
-                                                const graphics::BatchPointer& batch);
+    static void standardPostSceneRenderCallback(graphics::RenderArgs& args);
 
 };
 }

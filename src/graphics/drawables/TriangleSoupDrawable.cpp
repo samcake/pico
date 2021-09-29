@@ -217,22 +217,20 @@ namespace graphics
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [ptriangleSoup, descriptorSet, numVertices, numIndices, vertexStride, pipeline](
             const NodeID node,
-            const graphics::CameraPointer& camera, 
-            const graphics::SwapchainPointer& swapchain, 
-            const graphics::DevicePointer& device, 
-            const graphics::BatchPointer& batch) {
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+            RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-            //       batch->bindVertexBuffers(1, &vertexBuffer);
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            //       args.batch->bindVertexBuffers(1, &vertexBuffer);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
             auto uniforms = ptriangleSoup->getUniforms();
             TSObjectData odata{ { (int32_t)node }, numVertices, numIndices, vertexStride, uniforms->triangleScale };
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(TSObjectData), (const uint8_t*)&odata);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(TSObjectData), (const uint8_t*)&odata);
 
-            batch->draw(numIndices, 0);
+            args.batch->draw(numIndices, 0);
         };
         triangleSoup._drawcall = drawCallback;
 

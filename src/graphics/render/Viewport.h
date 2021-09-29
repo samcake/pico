@@ -43,9 +43,9 @@ namespace graphics {
         core::FrameTimer::Sample lastFrameTimerSample() const;
 
     protected:
-        void _renderCallback(const CameraPointer& camera, const SwapchainPointer& swapchain, const DevicePointer& device, const BatchPointer& batch);
+        void _renderCallback(RenderArgs& args);
 
-        void renderScene(const CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch);
+        void renderScene(RenderArgs& args);
 
         ScenePointer _scene;
         CameraPointer _camera;

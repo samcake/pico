@@ -268,7 +268,9 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
-    bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
+    auto rdl = pipeline->getRootDescriptorLayout();
+    if (rdl)
+        bindRootDescriptorLayout(dpso->getType(), rdl);
 
     auto dxRS = dpso->_rootSignature;
     if (dpso->getType() == PipelineType::GRAPHICS) {

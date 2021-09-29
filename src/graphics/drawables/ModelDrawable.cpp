@@ -622,27 +622,24 @@ namespace graphics
 
        // And now a render callback where we describe the rendering sequence
        graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline, albedoTex](
-           const NodeID node,
-           const graphics::CameraPointer& camera,
-           const graphics::SwapchainPointer& swapchain,
-           const graphics::DevicePointer& device,
-           const graphics::BatchPointer& batch) {
+           const NodeID node, RenderArgs& args) {
             
             static bool first{ true };
             if (first) {
                 first = false;
                 if (albedoTex) {
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                    batch->uploadTextureFromInitdata(device, albedoTex);
-                    batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                    args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
                 }
             }
 
-            batch->bindPipeline(pipeline);
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
        };
        model._drawcall = drawCallback;
        model._drawableID = scene->createDrawable(model).id();
@@ -658,20 +655,10 @@ namespace graphics
             auto partNumIndices = model._parts[d].numIndices;
            // And now a render callback where we describe the rendering sequence
            graphics::DrawObjectCallback drawCallback = [d, uniforms, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
-               const NodeID node,
-               const graphics::CameraPointer& camera,
-               const graphics::SwapchainPointer& swapchain,
-               const graphics::DevicePointer& device,
-               const graphics::BatchPointer& batch) {
-               /*    batch->bindPipeline(pipeline);
-                   batch->setViewport(camera->getViewportRect());
-                   batch->setScissor(camera->getViewportRect());
-
-                   batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-*/
+               const NodeID node, RenderArgs& args) {
                    ModelObjectData odata{ (uint32_t)node, (uint32_t)d, (uint32_t)numNodes, (uint32_t)numParts, (uint32_t)numMaterials, (uint32_t)uniforms->makeDrawMode() };
-                   batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
-                   batch->draw(partNumIndices, 0);
+                   args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                   args.batch->draw(partNumIndices, 0);
            };
 
            part->_drawcall = drawCallback;

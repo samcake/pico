@@ -200,9 +200,9 @@ namespace graphics
         auto pipeline = this->_HeightmapPipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, const graphics::CameraPointer& camera, const graphics::SwapchainPointer& swapchain, const graphics::DevicePointer& device, const graphics::BatchPointer& batch) {
-            batch->setViewport(camera->getViewportRect());
-            batch->setScissor(camera->getViewportRect());
+        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
     
             static uint32_t frameNum = 0;
             frameNum++;
@@ -210,22 +210,23 @@ namespace graphics
                                        heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
 
             if (doCompute) {
-                batch->bindPipeline(compute_pipeline);
-                batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
-                batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+                args.batch->bindPipeline(compute_pipeline);
+                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, compDescriptorSet);
+                args.batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
             
-            //   batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
-                batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
-                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+            //   args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
+                args.batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
             }
 
             odata.nodeID = node;
-            batch->bindPipeline(pipeline);
-            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
+            args.batch->bindPipeline(pipeline);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
 
             // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
-            batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
+            args.batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
         };
         drawable._drawcall = drawCallback;
     }

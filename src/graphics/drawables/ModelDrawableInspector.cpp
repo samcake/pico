@@ -578,59 +578,56 @@ namespace graphics
                 descriptorSet_compute, pipeline_compute_imageSpaceBlur, pipeline_compute_meshSpaceBlur,
                 descriptorSet_draw, pipeline_draw_uvspace, pipeline_draw_connectivity, pipeline_draw_kernelSamples,
                 numEdges, numNodes, numParts, numMaterials](
-                    const NodeID node,
-                    const graphics::CameraPointer& camera,
-                    const graphics::SwapchainPointer& swapchain,
-                    const graphics::DevicePointer& device,
-                    const graphics::BatchPointer& batch) {
+                    const NodeID node, RenderArgs& args) {
                         static bool first{ true };
                         auto params = pmodel->getUniforms().get();
 
                         if (params->makeUVMeshMap) {
 
-                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, uvmeshMap);
-                            batch->bindFramebuffer(uvmeshFramebuffer);
+                            args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::RENDER_TARGET, uvmeshMap);
+                            args.batch->bindFramebuffer(uvmeshFramebuffer);
 
-                            batch->clear(uvmeshFramebuffer, { 0, 0, 0, 0 });
+                            args.batch->clear(uvmeshFramebuffer, { 0, 0, 0, 0 });
 
                             core::vec4 viewport(0, 0, uvmeshFramebuffer->width(), uvmeshFramebuffer->height());
-                            batch->setViewport(viewport);
-                            batch->setScissor(viewport);
+                            args.batch->setViewport(viewport);
+                            args.batch->setScissor(viewport);
 
                             // Draw faces of the mesh in the edge map
-                            batch->bindPipeline(pipeline_uvmesh_face);
+                            args.batch->bindPipeline(pipeline_uvmesh_face);
 
                             // descriptor is bound for both passes since it s the same layout signature
-                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_uvmesh);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_uvmesh);
                             
                             ModelObjectData odata = makeModelObjectData(*params, node, ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT);
 
                             for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
  
                                 auto partNumIndices = pmodel->_parts[d].numIndices;
-                                batch->draw(partNumIndices, 0);
+                                args.batch->draw(partNumIndices, 0);
                             }
 
                             // Draw the edges over
                             if (params->uvmeshEdgeLinesPass) {
-                                batch->bindPipeline(pipeline_uvmesh_edge);
+                                args.batch->bindPipeline(pipeline_uvmesh_edge);
                          
                                 odata.drawMode =    ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT |
                                                     ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
 
                                 for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                     odata.partID = d;
-                                    batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                    args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                                     auto partNumEdges = pmodel->_parts[d].numEdges;
-                                    batch->draw(partNumEdges * 2, 0);
+                                    args.batch->draw(partNumEdges * 2, 0);
                                 }
                             }
 
-                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, uvmeshMap);
+                            args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::RENDER_TARGET, graphics::ResourceState::SHADER_RESOURCE, uvmeshMap);
 
-                            batch->beginPass(swapchain, swapchain->currentIndex());
+                            args.batch->beginPass(args.swapchain, args.swapchain->currentIndex());
 
 
                             params->makeUVMeshMap = false;
@@ -639,9 +636,9 @@ namespace graphics
 
                         if (first) {
                             if (albedoTex) {
-                                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                                batch->uploadTextureFromInitdata(device, albedoTex);
-                                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
+                                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                                args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
                             }
                         }
 
@@ -649,69 +646,72 @@ namespace graphics
                             const int NUM_COMPUTE_GROUP_THREADS = 4;
                             switch (params->filterKernelTechnique) {
                                 case ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE:
-                                    batch->bindPipeline(pipeline_compute_imageSpaceBlur);
+                                    args.batch->bindPipeline(pipeline_compute_imageSpaceBlur);
                                 break;
                                 case ModelDrawableInspectorUniforms::FKT_MESH_SPACE:
-                                    batch->bindPipeline(pipeline_compute_meshSpaceBlur);
+                                    args.batch->bindPipeline(pipeline_compute_meshSpaceBlur);
                                 break;
                             }
                             
-                            batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, descriptorSet_compute);
 
                             ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                            batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            args.batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
-                            batch->dispatch(computeMap->width() / NUM_COMPUTE_GROUP_THREADS, computeMap->height() / NUM_COMPUTE_GROUP_THREADS);
-                            batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
+                            args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, computeMap);
+                            args.batch->dispatch(computeMap->width() / NUM_COMPUTE_GROUP_THREADS, computeMap->height() / NUM_COMPUTE_GROUP_THREADS);
+                            args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, computeMap);
 
                             params->makeComputedMap = false;
                         }
 
                         // in uv space mode, draw uvspace inspect quad
                         if (params->renderUVSpace) {
-                            batch->bindPipeline(pipeline_draw_uvspace);
-                            batch->setViewport(camera->getViewportRect());
-                            batch->setScissor(camera->getViewportRect());
+                            args.batch->bindPipeline(pipeline_draw_uvspace);
+                            args.batch->setViewport(args.camera->getViewportRect());
+                            args.batch->setScissor(args.camera->getViewportRect());
 
-                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                             ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                            batch->draw(4, 0); // draw quad
+                            args.batch->draw(4, 0); // draw quad
                         }
 
 
                         if (params->renderConnectivity && (params->inspectedTriangle > -1)) {
-                            batch->bindPipeline(pipeline_draw_connectivity);
-                            batch->setViewport(camera->getViewportRect());
-                            batch->setScissor(camera->getViewportRect());
+                            args.batch->bindPipeline(pipeline_draw_connectivity);
+                            args.batch->setViewport(args.camera->getViewportRect());
+                            args.batch->setScissor(args.camera->getViewportRect());
 
-                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                             auto flags = params->buildFlags();
                             ModelObjectData odata = makeModelObjectData(*params, node, flags);
 
                             for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                                 auto partNumIndices = pmodel->_parts[d].numIndices;
-                                batch->draw((params->numInspectedTriangles) * 3, 0);
+                                args.batch->draw((params->numInspectedTriangles) * 3, 0);
                             }
                         }
 
                         if (params->renderKernelSamples && (params->inspectedTexelX > -1) && (params->inspectedTexelY > -1)) {
-                            batch->bindPipeline(pipeline_draw_kernelSamples);
-                            batch->setViewport(camera->getViewportRect());
-                            batch->setScissor(camera->getViewportRect());
+                            args.batch->bindPipeline(pipeline_draw_kernelSamples);
+                            args.batch->setViewport(args.camera->getViewportRect());
+                            args.batch->setScissor(args.camera->getViewportRect());
 
-                            batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                             ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                            batch->draw((params->numKernelSamples + 1) * 3, 0); // draw num samples per primitive
+                            args.batch->draw((params->numKernelSamples + 1) * 3, 0); // draw num samples per primitive
                         }
 
 
@@ -727,20 +727,17 @@ namespace graphics
         {
             {
                 graphics::DrawObjectCallback drawCallback = [descriptorSet_draw, pipeline_draw_mesh](
-                    const NodeID node,
-                    const graphics::CameraPointer& camera,
-                    const graphics::SwapchainPointer& swapchain,
-                    const graphics::DevicePointer& device,
-                    const graphics::BatchPointer& batch) {
+                    const NodeID node, RenderArgs& args) {
 
 
                     // this all works because the main texture is populated in the very first drawcall on the first call
 
-                    batch->bindPipeline(pipeline_draw_mesh);
-                    batch->setViewport(camera->getViewportRect());
-                    batch->setScissor(camera->getViewportRect());
+                    args.batch->bindPipeline(pipeline_draw_mesh);
+                    args.batch->setViewport(args.camera->getViewportRect());
+                    args.batch->setScissor(args.camera->getViewportRect());
 
-                    batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                    args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                    args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
                 };
                 model._drawcall = drawCallback;
                 model._drawableID = scene->createDrawable(model).id();
@@ -756,17 +753,14 @@ namespace graphics
                     // And now a render callback where we describe the rendering sequence
                     graphics::DrawObjectCallback drawCallback = [pmodel, d, partNumIndices](
                         const NodeID node,
-                        const graphics::CameraPointer& camera,
-                        const graphics::SwapchainPointer& swapchain,
-                        const graphics::DevicePointer& device,
-                        const graphics::BatchPointer& batch) {
+                        RenderArgs& args) {
                             auto params = pmodel->getUniforms().get();
                             if (params->render3DModel) {
                                 ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
                                 odata.partID = d;
-                                batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                                batch->draw(partNumIndices, 0);
+                                args.batch->draw(partNumIndices, 0);
                             }
                     };
 
@@ -788,19 +782,16 @@ namespace graphics
             graphics::DrawObjectCallback drawCallback = [pmodel, uvmeshMap,
                 descriptorSet_draw, pipeline_draw_edges, pipeline_draw_uvmesh_point, pipeline_draw_connectivity,
                 numEdges, numNodes, numParts, numMaterials](
-                const NodeID node,
-                const graphics::CameraPointer& camera,
-                const graphics::SwapchainPointer& swapchain,
-                const graphics::DevicePointer& device,
-                const graphics::BatchPointer& batch) {
+                const NodeID node, RenderArgs& args) {
                     auto params = pmodel->getUniforms().get();
 
                     if (params->renderWireframe || params->renderUVEdgeLines) {
-                        batch->bindPipeline(pipeline_draw_edges);
-                        batch->setViewport(camera->getViewportRect());
-                        batch->setScissor(camera->getViewportRect());
+                        args.batch->bindPipeline(pipeline_draw_edges);
+                        args.batch->setViewport(args.camera->getViewportRect());
+                        args.batch->setScissor(args.camera->getViewportRect());
 
-                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                         auto flags = params->buildFlags();
                         flags |= ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
@@ -812,25 +803,26 @@ namespace graphics
 
                         for (int d = 0; d < pmodel->_parts.size(); ++d) {
                             odata.partID = d;
-                            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                             auto partNumEdges = pmodel->_parts[d].numEdges;
-                            batch->draw(partNumEdges * 2, 0);
+                            args.batch->draw(partNumEdges * 2, 0);
                         }
                     }
 
 
                     // draw the cloud point of samples from the uv mesh
                     if (params->renderUVMeshPoints) {
-                        batch->bindPipeline(pipeline_draw_uvmesh_point);
-                        batch->setViewport(camera->getViewportRect());
-                        batch->setScissor(camera->getViewportRect());
+                        args.batch->bindPipeline(pipeline_draw_uvmesh_point);
+                        args.batch->setViewport(args.camera->getViewportRect());
+                        args.batch->setScissor(args.camera->getViewportRect());
 
-                        batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
+                        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+                        args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                         ModelObjectData odata = makeModelObjectData(*params, node, params->buildFlags());
-                        batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
+                        args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
 
-                        batch->draw(uvmeshMap->width() * uvmeshMap->height(), 0); // draw point cloud
+                        args.batch->draw(uvmeshMap->width() * uvmeshMap->height(), 0); // draw point cloud
                     }
 
             };
