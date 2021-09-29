@@ -63,6 +63,8 @@ struct AppState {
 
     graphics::ItemID _modelItemID;
 
+    core::vec3 _modelInsertOffset;
+
 };
 
 AppState state;
@@ -75,7 +77,7 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::Node& root) {
 
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
@@ -84,11 +86,29 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, state._scene, *modelDrawablePtr);
 
     graphics::ItemIDs modelItemIDs;
 
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), state._scene, *modelDrawablePtr);
+
+    // let's offset the root to not overlap on previous model
+    if (modelItemIDs.size()) {
+        auto modelRootNodeId = state._scene->getItem(modelItemIDs[0]).getNodeID();
+
+        auto modelBound = modelDrawablePtr->getBound();
+
+        auto modelOffset = modelBound.half_size * (1.0 + 0.1);
+        auto modelPos = state._modelInsertOffset + (modelOffset * core::vec3(1.0, -1.0, 1.0));
+
+        modelOffset.y = 0;
+        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+
+        state._scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+            core::translation(rts, modelPos);
+            return true;
+            });
+    }
 
     return modelItemIDs;
 }
@@ -196,7 +216,7 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     state._modelRootNode = scene->createNode(core::mat4x3(), -1);
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, scene, state._modelRootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state._modelRootNode);
     if (modelItemIDs.size()) {
          state._modelItemID = modelItemIDs[0];
     }
@@ -367,7 +387,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, scene, state._modelRootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, state._modelRootNode);
             }
         }
         return;
