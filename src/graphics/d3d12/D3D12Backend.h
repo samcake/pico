@@ -99,9 +99,6 @@ namespace graphics {
         uint64_t _frameFenceValues[D3D12Backend::CHAIN_NUM_FRAMES] = {};
         HANDLE _fenceEvent;
 
-        // Memory management
-        DescriptorHeapPointer _descriptorHeap;
-
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
 
@@ -126,12 +123,18 @@ namespace graphics {
 
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
         DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) override;
-        DescriptorHeapPointer getDescriptorHeap() override;
 
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
 
         void flush() override;
+
+        // Default empty pipeline layout
+        RootDescriptorLayoutPointer _emptyRootDescriptorLayout;
+
+        // Global Descriptor Heap
+        DescriptorHeapPointer getDescriptorHeap() override;
+        DescriptorHeapPointer _descriptorHeap;
 
         // Separate shader and pipeline state compilation as functions in order
         // to be able to live edit the shaders

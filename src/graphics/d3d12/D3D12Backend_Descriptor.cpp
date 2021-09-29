@@ -84,9 +84,20 @@ D3D12_SHADER_VISIBILITY EvalShaderVisibility(ShaderStage _shaderStage) {
  }
 
 RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootDescriptorLayoutInit& init) {
-    if (init._pushLayout.empty() && init._samplerLayout.empty() && init._setLayouts.empty()) {
+ /*   if (init._pushLayout.empty() && init._samplerLayout.empty() && init._setLayouts.empty()) {
+        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.NumParameters = 0;
+        rootSignatureDesc.pParameters = nullptr;
+        rootSignatureDesc.NumStaticSamplers = 0;
+        rootSignatureDesc.pStaticSamplers = nullptr;
+        rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+        ComPtr<ID3DBlob> signature;
+        ComPtr<ID3DBlob> error;
+        ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+        ThrowIfFailed(_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&rootSignature)));
         return nullptr;
-    }
+    }*/
 
     auto descriptorLayout = new D3D12RootDescriptorLayoutBackend();
 
