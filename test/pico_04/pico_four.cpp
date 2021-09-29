@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
     // a drawable from the pointcloud
     graphics::PointCloudDrawable* pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *pointCloudDrawable);
+    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *pointCloudDrawable);
     auto pcdrawable = scene->createDrawable(*pointCloudDrawable);
 
     // A triangel soup drawable factory
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 
     // a drawable from the trianglesoup
     graphics::TriangleSoupDrawable* triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
-    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *triangleSoupDrawable);
+    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *triangleSoupDrawable);
     auto tsdrawable = scene->createDrawable(*triangleSoupDrawable);
 
     // A gizmo drawable factory
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 
     // a Primitive
     auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
-    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, p_drawable.as<graphics::PrimitiveDrawable>());
+    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, p_drawable.as<graphics::PrimitiveDrawable>());
     p_drawable.as<graphics::PrimitiveDrawable>()._size = {1.0, 2.0, 0.7 };
 
     std::vector<graphics::NodeID> prim_nodes;
@@ -202,11 +202,11 @@ int main(int argc, char *argv[])
 
     // a gizmo drawable to draw the transforms
     auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable.as<graphics::NodeGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable.as<graphics::NodeGizmo>());
     gzdrawable.as<graphics::NodeGizmo>().nodes.resize(6);
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
     gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
 
 

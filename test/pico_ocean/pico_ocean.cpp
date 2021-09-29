@@ -113,14 +113,14 @@ int main(int argc, char *argv[])
 
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_node.as<graphics::NodeGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
     gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(ocean_resolution * ocean_resolution);
     auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
     gzitem_node.setVisible(false);
 
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
     gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);

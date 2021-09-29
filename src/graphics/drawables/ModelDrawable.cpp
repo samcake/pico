@@ -579,7 +579,6 @@ namespace graphics
    void ModelDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::ModelDrawable& model)
     {
        // It s time to create a descriptorSet that matches the expected pipeline descriptor set

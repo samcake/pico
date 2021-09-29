@@ -188,7 +188,6 @@ namespace graphics
     void TriangleSoupDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::TriangleSoupDrawable& triangleSoup)
     {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set

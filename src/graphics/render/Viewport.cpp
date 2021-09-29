@@ -149,10 +149,8 @@ void Viewport::_renderCallback(RenderArgs& args) {
 
 void Viewport::renderScene(RenderArgs& args) {
 
-    args.batch->bindRootDescriptorLayout(graphics::PipelineType::GRAPHICS, _viewPassRootLayout);
-    args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, _viewPassDescriptorSet);
-
     args.viewPassDescriptorSet = _viewPassDescriptorSet;
+
     for (int i = 1; i < _scene->getItems().size(); i++) {
         auto& item = _scene->getItems()[i];
         if (item.isValid() && item.isVisible()) {

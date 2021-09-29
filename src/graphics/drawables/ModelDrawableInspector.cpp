@@ -440,7 +440,6 @@ namespace graphics
     void ModelDrawableInspectorFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::ModelDrawableInspector& model)
     {
         {

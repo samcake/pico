@@ -113,7 +113,6 @@ namespace graphics
    void PrimitiveDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::PrimitiveDrawable& prim)
     {
         auto prim_ = &prim;

@@ -75,7 +75,7 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
 
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
@@ -84,7 +84,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, *modelDrawablePtr);
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
 
     graphics::ItemIDs modelItemIDs;
 
@@ -179,14 +179,14 @@ int main(int argc, char *argv[])
 
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_node.as<graphics::NodeGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
     gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes._nodes_buffer->getNumElements());
     auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
     gzitem_node.setVisible(false);
 
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, gzdrawable_item.as<graphics::ItemGizmo>());
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
     gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items._items_buffer->getNumElements());
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     state._modelRootNode = scene->createNode(core::mat4x3(), -1);
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, scene, camera, state._modelRootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, scene, state._modelRootNode);
     if (modelItemIDs.size()) {
          state._modelItemID = modelItemIDs[0];
     }
@@ -367,7 +367,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, scene, camera, state._modelRootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, scene, state._modelRootNode);
             }
         }
         return;

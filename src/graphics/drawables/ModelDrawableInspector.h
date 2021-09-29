@@ -175,7 +175,6 @@ namespace graphics {
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
-            const graphics::CameraPointer& camera,
             graphics::ModelDrawableInspector& model);
 
         

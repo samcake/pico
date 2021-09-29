@@ -164,7 +164,6 @@ namespace graphics
    void GizmoDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::NodeGizmo& gizmo)
     {
         auto pgizmo = &gizmo;
@@ -191,7 +190,6 @@ namespace graphics
    void GizmoDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::ItemGizmo& gizmo)
    {
        // Create DescriptorSet #1, #0 is ViewPassDS

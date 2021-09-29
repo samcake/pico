@@ -66,8 +66,7 @@ namespace graphics {
         graphics::TriangleSoupDrawable* createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
 
         // Create Drawcall object drawing the TriangleSoupDrawable in the rendering context
-        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, const graphics::CameraPointer& camera,
-            graphics::TriangleSoupDrawable& pointcloudDrawable);
+        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, graphics::TriangleSoupDrawable& pointcloudDrawable);
 
         // Read / write shared uniforms
         const TriangleSoupDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
