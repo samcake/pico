@@ -92,8 +92,18 @@ namespace graphics {
         friend class Device;
         Texture();
 
+        bool _needUpload = true;
+
     public:
         virtual ~Texture();
+
+        // true if the texture needs to be uploaded through a uploadTextureFromInitdata call
+        // don't forget the transitions calls!
+        // this needs to be checked and done explicitely before being able to fetch from that texture in shaders 
+        bool needUpload() const { return _needUpload; }
+
+        // Called internally 
+        void notifyUploaded() { _needUpload = false; }
 
         uint32_t width() const { return _init.width; }
         uint32_t height() const { return _init.height; }

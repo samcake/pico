@@ -7,3 +7,5 @@ target_compile_features(pico_terrain PRIVATE cxx_std_17)
 target_include_directories(pico_terrain PRIVATE ../../src)
 
 target_link_libraries(pico_terrain graphics uix)
+
+set_property(TARGET pico_terrain PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/test/pico_terrain")

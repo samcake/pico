@@ -57,11 +57,12 @@ struct AppState {
     graphics::ModelDrawableUniformsPointer _modelDrawableParams;
 
 
-    graphics::ScenePointer _scene;
+    graphics::ScenePointer scene;
+    struct {
+        graphics::Node rootNode;
+        graphics::ItemID modelItemID;
+    } models;
 
-    graphics::Node _modelRootNode;
-
-    graphics::ItemID _modelItemID;
 
     core::vec3 _modelInsertOffset;
 
@@ -77,7 +78,7 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
 
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
@@ -86,15 +87,15 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, state._scene, *modelDrawablePtr);
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
 
     graphics::ItemIDs modelItemIDs;
 
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), state._scene, *modelDrawablePtr);
+    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
 
     // let's offset the root to not overlap on previous model
     if (modelItemIDs.size()) {
-        auto modelRootNodeId = state._scene->getItem(modelItemIDs[0]).getNodeID();
+        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
 
         auto modelBound = modelDrawablePtr->getBound();
 
@@ -104,7 +105,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         modelOffset.y = 0;
         state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
 
-        state._scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
             core::translation(rts, modelPos);
             return true;
             });
@@ -176,11 +177,10 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 250000);
-    scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    scene->_drawables.resizeBuffers(gpuDevice, 250000);
-    state._scene = scene;
+    state.scene = std::make_shared<graphics::Scene>();
+    state.scene->_items.resizeBuffers(gpuDevice, 250000);
+    state.scene->_nodes.resizeBuffers(gpuDevice, 250000);
+    state.scene->_drawables.resizeBuffers(gpuDevice, 250000);
 
     // A Camera to look at the scene
     auto camera = std::make_shared<graphics::Camera>();
@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
     camera->setFocal(0.1f);
 
     // The view managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice,
+    auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
 
     // A gizmo drawable factory
@@ -198,34 +198,34 @@ int main(int argc, char *argv[])
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a gizmo drawable to draw the transforms
-    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes._nodes_buffer->getNumElements());
-    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
+    auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->getNumElements());
+    auto gzitem_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
     gzitem_node.setVisible(false);
 
 
-    auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items._items_buffer->getNumElements());
-    auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
+    auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->getNumElements());
+    auto gzitem_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
 
 
 
     // Some nodes to layout the scene and animate objects
-    state._modelRootNode = scene->createNode(core::mat4x3(), -1);
+    state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state._modelRootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
     if (modelItemIDs.size()) {
-         state._modelItemID = modelItemIDs[0];
+         state.models.modelItemID = modelItemIDs[0];
     }
 
-    scene->_nodes.updateTransforms();
+    state.scene->_nodes.updateTransforms();
 
 
-    scene->updateBounds();
-    core::vec4 sceneSphere = scene->getBounds().toSphere();
+    state.scene->updateBounds();
+    core::vec4 sceneSphere = state.scene->getBounds().toSphere();
     
     // Content creation
     float doAnimate = 0.0f;
@@ -302,7 +302,7 @@ int main(int argc, char *argv[])
             }
         }
         ImGui::End();
-        if (ImGui::Begin("Scene")) {
+    /*    if (ImGui::Begin("Scene")) {
             static char buffer[512] = "";
             int buffer_size = 512;
             if (ImGui::InputText("Open...", buffer, buffer_size)) {
@@ -311,10 +311,10 @@ int main(int argc, char *argv[])
 
         }
         ImGui::End();
+        */
 
-
-        scene->_items.syncBuffer();
-        scene->_nodes.updateTransforms();
+        state.scene->_items.syncBuffer();
+        state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!
@@ -349,10 +349,10 @@ int main(int argc, char *argv[])
 
         if (e.state && e.key == uix::KEY_DELETE) {
 
-            if (state._modelItemID) {
+            if (state.models.modelItemID) {
                 gpuDevice->flush();
-                state._scene->deleteItem(state._modelItemID);
-                state._modelItemID = graphics::INVALID_NODE_ID;
+                state.scene->deleteItem(state.models.modelItemID);
+                state.models.modelItemID = graphics::INVALID_NODE_ID;
             }
         }
 
@@ -387,7 +387,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, state._modelRootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNode);
             }
         }
         return;

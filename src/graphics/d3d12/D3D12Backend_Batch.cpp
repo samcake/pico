@@ -268,16 +268,11 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dxPso = dpso->_pipelineState;
     _commandList->SetPipelineState(dxPso.Get());
 
-    auto rdl = pipeline->getRootDescriptorLayout();
-    if (rdl)
-        bindRootDescriptorLayout(dpso->getType(), rdl);
-
-    auto dxRS = dpso->_rootSignature;
+    bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
+ 
     if (dpso->getType() == PipelineType::GRAPHICS) {
-     //   _commandList->SetGraphicsRootSignature(dxRS.Get());
         _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
     } else if (dpso->getType() == PipelineType::COMPUTE) {
-     //   _commandList->SetComputeRootSignature(dxRS.Get());
     }
 }
 
@@ -348,8 +343,6 @@ void D3D12BatchBackend::drawIndexed(uint32_t numPrimitives, uint32_t startIndex)
 void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayouts, const BufferPointer& src) {
     auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
     auto dstBackend = static_cast<D3D12TextureBackend*>(dest.get());
-
-
 
     D3D12_RESOURCE_DESC textureDesc{};
     textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;

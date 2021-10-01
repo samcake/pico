@@ -84,10 +84,6 @@ D3D12_SHADER_VISIBILITY EvalShaderVisibility(ShaderStage _shaderStage) {
  }
 
 RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootDescriptorLayoutInit& init) {
-    if (init._pushLayout.empty() && init._samplerLayout.empty() && init._setLayouts.empty()) {
-        return nullptr;
-    }
-
     auto descriptorLayout = new D3D12RootDescriptorLayoutBackend();
 
     D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData;

@@ -120,6 +120,8 @@ void Batch::uploadTextureFromInitdata(const DevicePointer& device, const Texture
     }
 
     uploadTexture(dest, updloadLayout, uploadBuffer);
+
+    dest->notifyUploaded(); // Indicate that the init data has been loaded
 }
 
 void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}

@@ -226,7 +226,6 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-
     if (init.usage & ResourceUsage::RENDER_TARGET) {
         desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
@@ -274,6 +273,11 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     auto d3d12TextureBackend = new D3D12TextureBackend();
     d3d12TextureBackend->_init = init;
     d3d12TextureBackend->_resource;
+
+    // No need to upload if used as render target or RW resource
+    if (init.usage & (ResourceUsage::RENDER_TARGET | ResourceUsage::RW_RESOURCE_TEXTURE) ) {
+        d3d12TextureBackend->notifyUploaded(); 
+    }
 
     HRESULT hres = backend->_device->CreateCommittedResource(
         &heap_props, heap_flags, &desc, res_states, p_clear_value,

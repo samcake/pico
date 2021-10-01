@@ -383,6 +383,9 @@ D3D12Backend::D3D12Backend() {
         1000
     };
     _descriptorHeap = this->createDescriptorHeap(descriptorHeapInit);
+
+    // Allocate a default empty pipeline layout
+    _emptyRootDescriptorLayout = this->createRootDescriptorLayout( {} );
 }
 
 D3D12Backend::~D3D12Backend() {
