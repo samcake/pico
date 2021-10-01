@@ -33,7 +33,7 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
+#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Shader FAILED !!!");
 
 
 const std::string D3D12ShaderBackend::ShaderTypes[] = {
@@ -80,9 +80,9 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
                                         "no source file" :
                                         shader->getShaderDesc().url) :
                                     shader->getShaderDesc().watcher_file);
-            picoLog() << target << " " << shader->getShaderDesc().entryPoint << std::endl
-                      << "    " << file << std::endl
-                      << (char*)errorBlob->GetBufferPointer();
+            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "/n"
+                      + "    " + file + "/n"
+                      + (char*)errorBlob->GetBufferPointer()));
             errorBlob->Release();
         }
 

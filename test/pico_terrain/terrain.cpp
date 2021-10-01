@@ -135,7 +135,7 @@ TerrainPointer Terrain::createFromDEM(const std::string& filename) {
     }
     auto dem_path = std::filesystem::absolute(std::filesystem::path(filename));
     if (!std::filesystem::exists(dem_path)) {
-        picoLog() << "meta file " << dem_path.string() << " doesn't exist\n";
+        picoLog("meta file " + dem_path.string() + " doesn't exist");
         return nullptr;
     }
 

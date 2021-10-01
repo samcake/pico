@@ -102,12 +102,12 @@ void PipelineWatcher::add(const ShaderPointer& shader) {
                         }
 
                         if (shader->recompile(source)) {
-                            picoLog() << "SUCCESS recompiling shader <" + k + ">\n";
+                            picoLog(("SUCCESS recompiling shader <" + k + ">"));
 
                             // shader successfully recompiled, let's trigger the programs about it
                             notifyShaderRecompiled(k);
                         } else {
-                            picoLog() << "FAIL recompiling shader <" + k + ">\n";
+                            picoLog(("FAIL recompiling shader <" + k + ">"));
                         }
                     }
                 }
@@ -159,14 +159,14 @@ void PipelineWatcher::notifyShaderRecompiled(const std::string& key) {
         if (program) {
             if (program->isProgram()) {
                 if (program->relink()) {
-                    picoLog() << "SUCCESS relinking program <" + x.second + ">\n";
+                    picoLog(("SUCCESS relinking program <" + x.second + ">"));
                     notifyProgramRelinked(x.second);
                 } else {
-                    picoLog() << "FAIL relinking program <" + x.second + ">\n";
+                    picoLog(("FAIL relinking program <" + x.second + ">"));
                 }
             }
             else if (program->isCompute()) {
-                picoLog() << "SUCCESS relinking compute program <" + x.second + ">\n";
+                picoLog(("SUCCESS relinking compute program <" + x.second + ">"));
                 notifyProgramRelinked(x.second);
             }
         }
@@ -181,9 +181,9 @@ void PipelineWatcher::notifyProgramRelinked(const std::string& key) {
         auto pipeline = x.second.lock();
         if (pipeline) {
             if (pipeline->realize()) {
-                picoLog() << "SUCCESS realizing pipeline <" + x.first + ">\n";
+                picoLog(("SUCCESS realizing pipeline <" + x.first + ">"));
             } else {
-                picoLog() << "FAIL realizing pipeline <" + x.first + ">\n";
+                picoLog(("FAIL realizing pipeline <" + x.first + ">"));
             }
         }
     });

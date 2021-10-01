@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
     auto result = core::api::create(pico_init);
 
     if (!result) {
-        std::clog << "Pico api failed to create ?" << std::endl;
+        picoLog("Pico api failed to create ?");
         return 1;
     }
 
@@ -424,7 +424,7 @@ int main(int argc, char *argv[])
     }
 
     core::api::destroy();
-    std::clog << "Pico api destroyed" << std::endl;
+    picoLog("Pico api destroyed");
 
      return 0;
 }

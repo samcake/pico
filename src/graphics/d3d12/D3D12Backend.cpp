@@ -48,7 +48,7 @@
 using namespace graphics;
 
 
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
+#define ThrowIfFailed(result) if (FAILED((result))) picoLog(("D3D12Backend FAILED !!!"));
 /**
 inline void ThrowIfFailed(HRESULT hr)
 {

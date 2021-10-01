@@ -31,7 +31,7 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
+#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Descriptor FAILED !!!");
 
 D3D12RootDescriptorLayoutBackend::D3D12RootDescriptorLayoutBackend() {
 
@@ -343,7 +343,7 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
     }
     picoAssert(SUCCEEDED(hres));
     if (error_msgs) {
-        picoLog() << (char*)error_msgs->GetBufferPointer();
+        picoLog((char*)error_msgs->GetBufferPointer());
     }
 
     hres = _device->CreateRootSignature(0, sig_blob->GetBufferPointer(), sig_blob->GetBufferSize(),
@@ -439,7 +439,7 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
     }
 
     if (write_count != dxDescriptorSet->_cbvsrvuav_count + dxDescriptorSet->_sampler_count) {
-        picoLog() << "Number of objects assigned on descriptor set does NOT match";
+        picoLog("Number of objects assigned on descriptor set does NOT match");
         return;
     }
 
