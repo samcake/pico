@@ -820,7 +820,7 @@ std::unique_ptr<Model> Model::createFromGLTF(const std::string& filename) {
     }
     auto model_path = std::filesystem::absolute(std::filesystem::path(filename));
     if (!std::filesystem::exists(model_path)) {
-        picoLog() << "model file " << model_path.string() << " doesn't exist\n";
+        picoLog( ("model file " + model_path.string() + " doesn't exist"));
         return nullptr;
     }
     auto model_path_root = model_path.parent_path();
@@ -838,12 +838,12 @@ std::unique_ptr<Model> Model::createFromGLTF(const std::string& filename) {
             return parseModel(gltf_data, model_path_root);
         }
         else {
-            picoLog() << "gltf_data file " << model_path.string() << " doesn't have root object\n";
+            picoLog(("gltf_data file " + model_path.string() + " doesn't have root object"));
             return nullptr;
         }
     }
     catch (...) {
-        picoLog() << "gltf_data file " << model_path.string() << " is not valid json\n";
+        picoLog(("gltf_data file " + model_path.string() + " is not valid json"));
         return nullptr;
     }
 }

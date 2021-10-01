@@ -25,18 +25,18 @@
 // SOFTWARE.
 //
 #pragma once
-
-#include <iostream>
+#include <string>
 #include "dllmain.h"
 
-#define picoLog() ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__)
-#define picoAssert(t) ::core::Log::_assert((t), __FILE__, __LINE__, __FUNCTION__)
+#define picoLog(message) ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__, message)
+#define picoAssert(t) ::core::Log::_assert((t), __FILE__, __LINE__, __FUNCTION__, #t)
 
 namespace core {
     class CORE_API Log {
         public:
-        static std::ostream& _log(const char* file, int line, const char* functionName);
-        static void _assert(bool test, const char* file, int line, const char* functionName);
+        static void _log(const char* file, int line, const char* functionName, const char* message, int level = 0);
+        static void _log(const char* file, int line, const char* functionName, const std::string& message, int level = 0) { _log(file, line, functionName, message.c_str(), level); }
+        static void _assert(bool test, const char* file, int line, const char* functionName, const char* message);
     };
 
 }

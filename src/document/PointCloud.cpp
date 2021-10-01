@@ -55,7 +55,7 @@ namespace document
         }
         auto meta_path = std::filesystem::absolute(std::filesystem::path(filename));
         if (!std::filesystem::exists(meta_path)) {
-            picoLog() << "meta file " << meta_path.string() << " doesn't exist\n";
+            picoLog(("meta file " + meta_path.string() + " doesn't exist"));
             return nullptr;
         }
 
@@ -80,15 +80,15 @@ namespace document
                 if (ply_path_kv != meta_data.end()) {
                     pointcloud_ply_path = ((*ply_path_kv).get<std::string>());
                 } else {
-                    picoLog() << "meta file " << meta_path.string() << " doesn't have a valid key <" << POINT_CLOUD_PATH_K << ">\n";
+                    picoLog(("meta file " + meta_path.string() + " doesn't have a valid key <" + POINT_CLOUD_PATH_K + ">"));
                     return nullptr;
                 }
             } else {
-                picoLog() << "meta file " << meta_path.string() << " doesn't have root object\n";
+                picoLog(("meta file " + meta_path.string() + " doesn't have root object"));
                 return nullptr;
             }
         } catch (...) {
-            picoLog() << "meta file " << meta_path.string() << " is not valid json\n";
+            picoLog(("meta file " + meta_path.string() + " is not valid json"));
             return nullptr;
         }
 
@@ -131,7 +131,7 @@ namespace document
                 return nullptr;
             }
         } else {
-            picoLog() << "pointcloud file " << pointcloud_ply_path.string() << " doesn't exist\n";
+            picoLog(("pointcloud file " + pointcloud_ply_path.string() + " doesn't exist"));
             return nullptr;
         }
     }

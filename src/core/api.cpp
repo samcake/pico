@@ -35,12 +35,12 @@ using namespace core;
 std::unique_ptr<api> api::_instance;
 
 api::~api() {
-    picoLog() << "pico api is destoyed, bye!\n";
+    picoLog("pico api is destoyed, bye!");
 }
 
 bool api::create(const ApiInit& init) {
     if (_instance) {
-        picoLog() << "pico::api::instance already exist, do not create a new instance and exit returning fail\n";
+        picoLog("pico::api::instance already exist, do not create a new instance and exit returning fail");
         return false;
     }
     if (!_instance) {

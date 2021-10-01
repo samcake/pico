@@ -29,7 +29,7 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
+#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Pipeline FAILED !!!");
 
 
 D3D12PipelineStateBackend::D3D12PipelineStateBackend() {

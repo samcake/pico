@@ -31,7 +31,7 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog() << "FAILED !!!/n";
+#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Swapchain FAILED !!!");
 
 // D3D12SwapchainBackend
 

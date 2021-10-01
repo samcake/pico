@@ -25,15 +25,15 @@
 // SOFTWARE.
 //
 #include "Log.h"
+#include <iostream>
 
 
-std::ostream& core::Log::_log(const char* file, int line, const char* functionName) {
-   // return std::clog << file << " - " << line << " - " << functionName << " : ";
-    return std::clog << /*file << " - " << line << " - " << */ functionName << " : ";
+void core::Log::_log(const char* file, int line, const char* functionName, const char* message, int level) {
+    std::clog << /*file << " - " << line << " - " << */ functionName << " : " << message << std::endl;
 }
 
-void core::Log::_assert(bool test, const char* file, int line, const char* functionName) {
+void core::Log::_assert(bool test, const char* file, int line, const char* functionName, const char* message) {
     if (!test) {
-        Log::_log(file, line, functionName);
+        Log::_log(file, line, functionName, message);
     }
 }

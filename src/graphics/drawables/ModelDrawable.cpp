@@ -331,7 +331,7 @@ namespace graphics
                         edge_buffer.emplace_back(core::ivec4{ edge.x, edge.y, (int32_t) ti, -1});
                         indexedEdgeMap.insert({ ek, {edge_index, ti} });
                     } else {
-                        picoAssert( (((int32_t) e_bucket->second.t1) == (-1)), "we have a problem, more than 2 triangles for that edge ???");
+                        picoAssert( (((int32_t) e_bucket->second.t1) == (-1))); // "we have a problem, more than 2 triangles for that edge ???"
                         
                         edge_index = e_bucket->second.index;
                         e_bucket->second.t1 = ti;
