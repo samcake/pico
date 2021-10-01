@@ -344,8 +344,6 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSu
     auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
     auto dstBackend = static_cast<D3D12TextureBackend*>(dest.get());
 
-
-
     D3D12_RESOURCE_DESC textureDesc{};
     textureDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     textureDesc.Alignment = 0;

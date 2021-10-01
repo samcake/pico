@@ -623,14 +623,10 @@ namespace graphics
        graphics::DrawObjectCallback drawCallback = [descriptorSet, pipeline, albedoTex](
            const NodeID node, RenderArgs& args) {
             
-            static bool first{ true };
-            if (first) {
-                first = false;
-                if (albedoTex) {
-                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                    args.batch->uploadTextureFromInitdata(args.device, albedoTex);
-                    args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
-                }
+            if (albedoTex && albedoTex->needUpload()) {
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
+                args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
             }
 
             args.batch->bindPipeline(pipeline);

@@ -64,6 +64,8 @@ struct AppState {
     } models;
 
 
+    core::vec3 _modelInsertOffset;
+
 };
 
 AppState state;
@@ -90,6 +92,24 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     graphics::ItemIDs modelItemIDs;
 
     modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+
+    // let's offset the root to not overlap on previous model
+    if (modelItemIDs.size()) {
+        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
+
+        auto modelBound = modelDrawablePtr->getBound();
+
+        auto modelOffset = modelBound.half_size * (1.0 + 0.1);
+        auto modelPos = state._modelInsertOffset + (modelOffset * core::vec3(1.0, -1.0, 1.0));
+
+        modelOffset.y = 0;
+        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+
+        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+            core::translation(rts, modelPos);
+            return true;
+            });
+    }
 
     return modelItemIDs;
 }

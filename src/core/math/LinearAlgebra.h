@@ -79,6 +79,7 @@ namespace core
         vec3 operator+(const vec3& a) const { return vec3(x + a.x, y + a.y, z + a.z); }
         vec3 operator-(const vec3& a) const { return vec3(x - a.x, y - a.y, z - a.z); }
         vec3 operator*(float s) const { return vec3(x * s, y * s, z * s); }
+        vec3 operator*(const vec3& a) const { return vec3(x * a.x, y * a.y, z * a.z); }
         vec3 operator-() const { return vec3(-x, -y, -z); }
 
         float operator[](int i) const { return data()[i]; }
