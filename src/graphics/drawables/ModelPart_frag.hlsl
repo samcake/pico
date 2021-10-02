@@ -1,4 +1,24 @@
 
+
+//
+// Paint API
+// 
+float3 paintStripe(float3 value, float period, float stripe) {
+    float3 normalizedWidth = fwidth(value);
+    normalizedWidth /= (period);
+    float half_stripe_width = 0.5 * stripe;
+    float3 offset = float3(half_stripe_width, half_stripe_width, half_stripe_width);
+    float stripe_over_period = stripe / period;
+    float3 edge = float3(stripe_over_period, stripe_over_period, stripe_over_period);
+    float3 x0 = (value - offset) / (period)-normalizedWidth * 0.5;
+    float3 x1 = x0 + normalizedWidth;
+    float3 balance = float3(1.0, 1.0, 1.0) - edge;
+    float3 i0 = edge * floor(x0) + max(float3(0.0, 0.0, 0.0), frac(x0) - balance);
+    float3 i1 = edge * floor(x1) + max(float3(0.0, 0.0, 0.0), frac(x1) - balance);
+    float3 strip = (i1 - i0) / normalizedWidth;
+    return clamp(strip, float3(0.0, 0.0, 0.0), float3(1.0, 1.0, 1.0));
+}
+
 //
 // Color API
 // 
@@ -50,22 +70,44 @@ struct Part {
 
 StructuredBuffer<Part>  part_array : register(t1);
 
-// Compute tangent space and final normal
-float3 computeNormal(float3 surfNormal, float3 normalMap, float3 eyePos, float2 uv) {
-    float3 q0 = ddx(eyePos);
-    float3 q1 = ddy(eyePos);
-    float2 st0 = ddx(uv);
-    float2 st1 = ddy(uv);
 
-    float3 S = normalize(q0 * st1.y - q1 * st0.y);
-    float3 T = normalize(-q0 * st1.x + q1 * st0.x);
-    float3 normal = surfNormal;
-    /*
-        normalMap.xy = 1.0 * normalMap.xy;
-        float3x3 tsn = float3x3(S, T, normal);
-        normal = mul(tsn, normalMap.xyz);
-        normal = normalize(normal);
-      */  return normal;
+
+// Drawgrid
+float3 drawGrid(float2 uv, float3 color) {
+    float tex_width, tex_height, tex_elements;
+    material_textures.GetDimensions(tex_width, tex_height, tex_elements);
+
+    float3 texcoord = float3(uv.x * tex_width, uv.y * tex_height, 1.0f);
+
+    float3 grid = paintStripe(texcoord, tex_width * 0.1f, 1.5f);
+    color = lerp(color, float3(1.0, 0.0, 0.0), grid.x);
+    color = lerp(color, float3(0.0, 1.0, 0.0), grid.y);
+
+  //  grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
+ //   color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
+
+    return color;
+}
+
+// Technique to compute tangent space in fragment shader by
+// Christian Schüler
+// http://www.thetenthplanet.de/archives/1180
+// Compute tangent space and final normal
+float3x3 computeTangentSpace(float3 surfNormal, float3 viewVec, float2 uv) {
+    float3 dp1 = ddx(viewVec);
+    float3 dp2 = ddy(viewVec);
+    float2 duv1 = ddx(uv);
+    float2 duv2 = ddy(uv);
+
+    float3 dp2perp = cross(dp2, surfNormal); // V ^ N ~= T
+    float3 dp1perp = cross(surfNormal, dp1); // N ^ U ~= B
+    float3 T = (dp2perp * duv1.x + dp1perp * duv2.x);
+    float3 B = (dp2perp * duv1.y + dp1perp * duv2.y);
+
+    float invmax = rsqrt(max(dot(T, T), dot(B, B)));
+    T *= invmax;
+    B *= invmax;
+    return float3x3(T,B, surfNormal);
 }
 
 //
@@ -98,15 +140,22 @@ float4 main(PixelShaderInput IN) : SV_Target{
 //    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
 
-    float4 mapNor = float4(0.0, 0.0, 0.0, 0.0);
-    if (m.textures.y != -1) {
-        mapNor = float4(material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz, 1.0);
-    }
-
-    float4 mapN = (mapNor * 2.0 - 1.0);
+    // Normal and Normal map
     float3 surfNormal = normalize(IN.Normal);
-    float3 normal = computeNormal(surfNormal, mapN, IN.EyePos.xyz, IN.Texcoord.xy);
-    //normal = worldFromEyeSpaceDir(_view, normal);
+    float3 mapNor = float4(0.0, 0.0, 0.0, 0.0);
+    float3 normal = surfNormal;
+    if (m.textures.y != -1) {
+        mapNor = float3(material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.y)).xyz);
+        float3 mapN = (mapNor * 2.0 - 1.0);
+        // assume surfNormal, the inter­po­lat­ed ver­tex nor­mal and 
+        // V, the view vec­tor (ver­tex to eye)
+        //   and then -V => eye to vertex
+        float3 mV = -IN.EyePos.xyz;
+        float3x3 tbn = computeTangentSpace(surfNormal, mV, IN.Texcoord.xy);
+        normal = (mul(mapN, tbn));
+        normal = normalize(normal);
+        normal = normal.xyz; // i m puzzled by the fact that we don't need to swizzle the result here ? whatever
+    }
 
     float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.z != -1) {
@@ -125,7 +174,11 @@ float4 main(PixelShaderInput IN) : SV_Target{
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
     case 3: baseColor = mapNor; break;
+ //   case 3: baseColor = rmaoMap; break;
     }
+   //  baseColor = float3(0.7, 0.7, 0.7);
+
+   // baseColor = drawGrid(IN.Texcoord.xy, baseColor);
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
     const float globalI = 0.3f;
@@ -146,5 +199,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
     }
  
     float3 color = shading * baseColor + emissiveColor;
+
     return float4(color, 1.0);
 }
