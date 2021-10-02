@@ -97,6 +97,10 @@ float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
     return transformTo(view, worldPos);
 }
 
+float3 worldFromEyeSpace(Transform view, float3 eyePos) {
+    return transformFrom(view, eyePos);
+}
+
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
     return transformFrom(model, objPos);
 }
@@ -314,9 +318,14 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     float g = INT8_TO_NF * (float)((color >> 8) & 0xFF);
     float b = INT8_TO_NF * (float)((color >> 16) & 0xFF);
 */
+
+  //  float3 camera_pos = worldFromEyeSpace(_view, float3(0, 0, 0));
+    float3 camera_pos = _view.col_w();
+
     VertexShaderOutput OUT;
     OUT.Position = clipPos;
-    OUT.EyePos = eyePosition;
+  //  OUT.EyePos = eyePosition;
+    OUT.EyePos = camera_pos - position;
     OUT.Normal = normal;
     OUT.Texcoord = texcoord;
     
