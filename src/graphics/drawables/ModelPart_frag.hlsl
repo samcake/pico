@@ -83,8 +83,8 @@ float3 drawGrid(float2 uv, float3 color) {
     color = lerp(color, float3(1.0, 0.0, 0.0), grid.x);
     color = lerp(color, float3(0.0, 1.0, 0.0), grid.y);
 
-  //  grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
- //   color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
+    grid = paintStripe(texcoord, tex_width * 0.01f, 0.5f);
+    color = lerp(color, float3(0.8, 0.8, 1.8), max(grid.x, grid.y));
 
     return color;
 }
@@ -137,7 +137,6 @@ struct PixelShaderInput{
 
 float4 main(PixelShaderInput IN) : SV_Target{
     int matIdx = part_array[_partID].material;// < 0.0 ? 0 : floor(IN.Material));
-//    int matIdx = asint(IN.Material);// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
 
     // Normal and Normal map
@@ -154,7 +153,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
         float3x3 tbn = computeTangentSpace(surfNormal, mV, IN.Texcoord.xy);
         normal = (mul(mapN, tbn));
         normal = normalize(normal);
-        normal = normal.xyz; // i m puzzled by the fact that we don't need to swizzle the result here ? whatever
+        normal = normal.xyz; // i m puzzled by the fact that we don't need to swizzle the result here ? whatever it works
     }
 
     float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
@@ -168,17 +167,17 @@ float4 main(PixelShaderInput IN) : SV_Target{
         albedo = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }
 
-    float3 baseColor = float3(1.0, 1.0, 1.0);
+    float3 baseColor = float3(0.7, 0.7, 0.7);
     switch (DISPLAYED_COLOR(_drawMode)) {
     case 0: baseColor = albedo; break;
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
     case 3: baseColor = mapNor; break;
- //   case 3: baseColor = rmaoMap; break;
+    case 4: baseColor = rmaoMap; break;
+    case 5: ; break;
     }
-   //  baseColor = float3(0.7, 0.7, 0.7);
 
-   // baseColor = drawGrid(IN.Texcoord.xy, baseColor);
+    baseColor = drawGrid(IN.Texcoord.xy, baseColor);
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
     const float globalI = 0.3f;

@@ -98,17 +98,23 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
 
         auto modelBound = modelDrawablePtr->getBound();
+        auto minCorner = modelBound.minPos();
+        auto maxCorner = modelBound.maxPos();
+        auto boundCenter = modelBound.center;
 
-        auto modelOffset = modelBound.half_size * (1.0 + 0.1);
-        auto modelPos = state._modelInsertOffset + (modelOffset * core::vec3(1.0, -1.0, 1.0));
+        auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
+        auto modelPos = state._modelInsertOffset + modelOffset;
+        modelPos.y += modelBound.half_size.y;
 
-        modelOffset.y = 0;
-        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+
+        modelPos = modelPos - boundCenter;
 
         scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
             core::translation(rts, modelPos);
             return true;
             });
+
+        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
     }
 
     return modelItemIDs;
@@ -282,7 +288,7 @@ int main(int argc, char *argv[])
                 auto& params = *state._modelDrawableParams.get();
 
                 static const char* displayedNames[] = {
-                    "albedo", "normal", "surface normal", "normal map"
+                    "albedo", "normal", "surface normal", "normal map", "rao map", "grey"
                 };
                 if (ImGui::BeginCombo("Displayed Color", displayedNames[params.displayedColor])) {
                     for (int n = 0; n < IM_ARRAYSIZE(displayedNames); n++) {
