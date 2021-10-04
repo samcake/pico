@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
                 auto& params = *state._modelDrawableParams.get();
 
                 static const char* displayedNames[] = {
-                    "albedo", "normal", "surface normal", "normal map"
+                    "albedo", "normal", "surface normal", "normal map", "rao map", "grey"
                 };
                 if (ImGui::BeginCombo("Displayed Color", displayedNames[params.displayedColor])) {
                     for (int n = 0; n < IM_ARRAYSIZE(displayedNames); n++) {
