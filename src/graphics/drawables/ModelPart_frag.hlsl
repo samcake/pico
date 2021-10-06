@@ -1,4 +1,4 @@
-
+static const float M_PI = acos(-1);
 
 //
 // Paint API
@@ -34,6 +34,66 @@ float3 colorRGBfromHSV(const float3 hsv) {
 float3 rainbowRGB(float n, float d = 1.0f) {
     return colorRGBfromHSV(float3((n / d) * (5.0 / 6.0), 3.0, 1.0));
 }
+
+//
+// Material Shading API
+//
+
+// The following equation models the Fresnel reflectance term of the spec equation (aka F())
+// Implementation of fresnel from [4], Equation 15
+float3 F_Schlick(float3 f0, float3 f90, float VdotH) {
+    return f0 + (f90 - f0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
+}
+
+// Smith Joint GGX
+// Note: Vis = G / (4 * NdotL * NdotV)
+// see Eric Heitz. 2014. Understanding the Masking-Shadowing Function in Microfacet-Based BRDFs. Journal of Computer Graphics Techniques, 3
+// see Real-Time Rendering. Page 331 to 336.
+// see https://google.github.io/filament/Filament.md.html#materialsystem/specularbrdf/geometricshadowing(specularg)
+float V_GGX(float NdotL, float NdotV, float alphaRoughness)
+{
+    float alphaRoughnessSq = alphaRoughness * alphaRoughness;
+
+    float GGXV = NdotL * sqrt(NdotV * NdotV * (1.0 - alphaRoughnessSq) + alphaRoughnessSq);
+    float GGXL = NdotV * sqrt(NdotL * NdotL * (1.0 - alphaRoughnessSq) + alphaRoughnessSq);
+
+    float GGX = GGXV + GGXL;
+    if (GGX > 0.0)
+    {
+        return 0.5 / GGX;
+    }
+    return 0.0;
+}
+
+// The following equation(s) model the distribution of microfacet normals across the area being drawn (aka D())
+// Implementation from "Average Irregularity Representation of a Roughened Surface for Ray Reflection" by T. S. Trowbridge, and K. P. Reitz
+// Follows the distribution function recommended in the SIGGRAPH 2013 course notes from EPIC Games [1], Equation 3.
+float D_GGX(float NdotH, float alphaRoughness)
+{
+    float alphaRoughnessSq = alphaRoughness * alphaRoughness;
+    float f = (NdotH * NdotH) * (alphaRoughnessSq - 1.0) + 1.0;
+    return alphaRoughnessSq / (M_PI * f * f);
+}
+
+//https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+float3 BRDF_lambertian(float3 f0, float3 f90, float3 diffuseColor, float specularWeight, float VdotH)
+{
+    // see https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+    return (1.0 - specularWeight * F_Schlick(f0, f90, VdotH)) * (diffuseColor / M_PI);
+
+}
+
+
+//  https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#acknowledgments AppendixB
+float3 BRDF_specularGGX(float3 f0, float3 f90, float alphaRoughness, float specularWeight, float VdotH, float NdotL, float NdotV, float NdotH)
+{
+    float3 F = F_Schlick(f0, f90, VdotH);
+    float Vis = V_GGX(NdotL, NdotV, alphaRoughness);
+    float D = D_GGX(NdotH, alphaRoughness);
+
+    return specularWeight * F * Vis * D;
+}
+
 
 //
 // Material API
@@ -156,11 +216,13 @@ float4 main(PixelShaderInput IN) : SV_Target{
         normal = normal.xyz; // i m puzzled by the fact that we don't need to swizzle the result here ? whatever it works
     }
 
-    float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
+    float4 rmaoMap = float4(1.0, 1.0, 0.0, 0.0);
     if (m.textures.z != -1) {
-        rmaoMap = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.z));
+        rmaoMap = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.z)).gbra;
     }
-
+    float roughness = m.roughness * rmaoMap.x;
+    float metallic = m.metallic * rmaoMap.y;
+    
     // with albedo from property or from texture
     float3 albedo = m.color;
     if (m.textures.x != -1) {
@@ -173,31 +235,60 @@ float4 main(PixelShaderInput IN) : SV_Target{
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
     case 3: baseColor = mapNor; break;
-    case 4: baseColor = rmaoMap; break;
-    case 5: ; break;
+    case 4: baseColor = roughness; break;
+    case 5: baseColor = metallic; break;
+ //   case 5: ; break;
     }
 
-    baseColor = drawGrid(IN.Texcoord.xy, baseColor);
+   // baseColor = drawGrid(IN.Texcoord.xy, baseColor);
+    float3 shading = baseColor;
+    if (LIGHT_SHADING(_drawMode))
+    {
+        const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
+        const float globalI = 0.3f;
+        const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
+        const float lightI = 2.8f;
 
-    const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
-    const float globalI = 0.3f;
-    const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
-    const float lightI = 0.8f;
+        float3 n = normal;
+        float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
+        float3 l = -lightD; //normalize(pointToLight); // Direction from surface point to light
+        float3 h = normalize(l + v); // Direction of the vector between l and v, called halfway vector
+        float NdotL = clamp(dot(n, l), 0.0, 1.0);
+        float NdotV = clamp(dot(n, v), 0.0, 1.0);
+        float NdotH = clamp(dot(n, h), 0.0, 1.0);
+        float LdotH = clamp(dot(l, h), 0.0, 1.0);
+        float VdotH = clamp(dot(v, h), 0.0, 1.0);
+        if (NdotL > 0.0 || NdotV > 0.0)
+        {
+            float3 intensity = lightI;
+            float specularWeight = 1.0;
+            float3 f0 = 0.04;
+            float3 one_f0 = 1.0 - 0.04;
+            float3 C_diff = lerp(baseColor * (one_f0), 0, metallic);
+            f0 = lerp(f0, baseColor, metallic);
+            float3 f90 = 1.0;
+            float alphaRoughness = roughness * roughness;
+//            shading = (NDotL * lightI + NDotG * globalI);
+            //mix(dielectric_brdf, metal_brdf, metallic)
 
-    float NDotL = clamp(dot(normal, -lightD), 0.0f, 1.0f);
-    float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
+            float3 f_diffuse = intensity * NdotL * BRDF_lambertian(f0, f90, C_diff, specularWeight, VdotH);
+            float3 f_specular = intensity * NdotL * BRDF_specularGGX(f0, f90, alphaRoughness, specularWeight, VdotH, NdotL, NdotV, NdotH);
+            shading = f_diffuse + f_specular;
+        //    shading = f_diffuse;
+         //   shading = roughness;
 
-    float3 shading = float3(1.0, 1.0, 1.0);
-    if (LIGHT_SHADING(_drawMode)) {
-        shading = (NDotL * lightI + NDotG * globalI);
+        }
+        
+        float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
+        
     }
-
+    
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
     if (m.textures.w != -1) {
         emissiveColor = material_textures.Sample(uSampler0, float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
  
-    float3 color = shading * baseColor + emissiveColor;
+    float3 color = shading + emissiveColor;
 
     return float4(color, 1.0);
 }

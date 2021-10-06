@@ -113,8 +113,8 @@ namespace graphics {
 
     struct ModelMaterial {
         core::vec4 color{0.5f, 0.5f, 0.5f, 1.0f};
-        float metallic{ 0.0f };
-        float roughness{0.0f };
+        float metallic{ 1.0f };
+        float roughness{1.0f };
         float spareA;
         float spareB;
         core::vec4 emissive{ 0.0f, 0.0f, 0.0f, 1.0f };
