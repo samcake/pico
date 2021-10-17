@@ -87,6 +87,7 @@ namespace graphics {
         // DirectX 12 Objects
         ComPtr<ID3D12Device2> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
+        double _commandQueueTimestampFrequency = 1.0;
 
         // Functions points for functions that need to be loaded
         PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER           fnD3D12CreateRootSignatureDeserializer = nullptr;
@@ -235,7 +236,13 @@ namespace graphics {
         ComPtr<ID3D12GraphicsCommandList> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 
+        ComPtr<ID3D12QueryHeap> _queryHeap;
+        ComPtr<ID3D12Resource> _queryResult;
+        ComPtr<ID3D12Resource> _queryResultMapped;
+        void* _queryResultCPUMappedAddress = nullptr;
+
         UINT _currentBackBufferIndex { 0 };
+        double _commandQueueTimestampFrequency = 1.0;
 
         DescriptorHeapPointer _descriptorHeap;
 
