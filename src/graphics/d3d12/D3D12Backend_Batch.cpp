@@ -69,60 +69,6 @@ BatchPointer D3D12Backend::createBatch(const BatchInit & init) {
 
     batch->_descriptorHeap = _descriptorHeap;
 
-
-    // Describe and create a heap for occlusion queries.
-    D3D12_QUERY_HEAP_DESC queryHeapDesc = {};
-    queryHeapDesc.Count = D3D12Backend::CHAIN_NUM_FRAMES * 2;
-    queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    ThrowIfFailed(_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&batch->_queryHeap)));
-
-    D3D12_HEAP_PROPERTIES heapProp;
-    heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
-    //heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-    heapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
-    heapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
-    heapProp.CreationNodeMask = 1;
-    heapProp.VisibleNodeMask = 1;
-    D3D12_HEAP_FLAGS heapFlags = D3D12_HEAP_FLAG_NONE;
-
-
-    D3D12_RESOURCE_DESC desc;
-    desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
-    desc.Alignment = 0;
-    desc.Width = 256; //3 * 2 * 8; Big enough hence 256bytes
-    desc.Height = 1;
-    desc.DepthOrArraySize = 1;
-    desc.MipLevels = 1;
-    desc.Format = DXGI_FORMAT_UNKNOWN;
-    desc.SampleDesc.Count = 1;
-    desc.SampleDesc.Quality = 0;
-    desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-    desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-
-
-    ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
-        D3D12_HEAP_FLAG_NONE,
-        &desc,
-        D3D12_RESOURCE_STATE_COPY_SOURCE,
-        nullptr,
-        IID_PPV_ARGS(&batch->_queryResult)
-    ));
-
-    // Same buffer but mapped
-    heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-    ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
-        D3D12_HEAP_FLAG_NONE,
-        &desc,
-       D3D12_RESOURCE_STATE_COPY_DEST,
-        nullptr,
-        IID_PPV_ARGS(&batch->_queryResultMapped)
-    ));
-
-    D3D12_RANGE read_range = { 0, 0 };
-    batch->_queryResultMapped->Map(0, &read_range, (void**)&(batch->_queryResultCPUMappedAddress));
-
-    batch->_commandQueueTimestampFrequency = _commandQueueTimestampFrequency;
-
     return BatchPointer(batch);
 }
 
@@ -134,48 +80,33 @@ D3D12BatchBackend::D3D12BatchBackend() :
 D3D12BatchBackend::~D3D12BatchBackend() {
 }
 
-void D3D12BatchBackend::begin(uint8_t currentIndex) {
+void D3D12BatchBackend::begin(uint8_t currentIndex, const BatchTimerPointer& timer) {
     _currentBackBufferIndex = currentIndex;
     auto commandAllocator = _commandAllocators[currentIndex];
 
     commandAllocator->Reset();
     _commandList->Reset(commandAllocator.Get(), nullptr);
+
+    if (timer) {
+        _timer = timer;
+        auto t = static_cast<D3D12BatchTimerBackend*>(timer.get());
+        t->begin(_commandList.Get(), _currentBackBufferIndex);
+    }
 }
 
 void D3D12BatchBackend::end() {
+    if (_timer) {
+        auto t = static_cast<D3D12BatchTimerBackend*>(_timer.get());
+        t->end(_commandList.Get(), _currentBackBufferIndex);
+        _timer.reset();
+    }
     ThrowIfFailed(_commandList->Close());
 }
 
 void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t index) {
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
     D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
-    
-    
-    auto prevFrameIndex = ((_currentBackBufferIndex + 2) % 3);
-
-    auto destBuffer = _queryResult.Get();
-   // auto destBuffer = _queryResultMapped.Get();
-      // resolve data for previous frame
-    D3D12_RESOURCE_BARRIER barrier;
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-    barrier.Transition.pResource = destBuffer;
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.Subresource = 0;
-    _commandList->ResourceBarrier(1, &barrier);
-
-    _commandList->ResolveQueryData(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, prevFrameIndex * 2, 2, destBuffer, prevFrameIndex * 2 * 8);
-
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-    _commandList->ResourceBarrier(1, &barrier);
-
-     auto mappedBuffer = _queryResultMapped.Get();
-     _commandList->CopyResource(mappedBuffer, destBuffer);
-
-    _commandList->EndQuery(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, _currentBackBufferIndex * 2);
-
+ 
     if (sw->_dsvDescriptorHeap) {
         D3D12_CPU_DESCRIPTOR_HANDLE dsv{ sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr};
         _commandList->OMSetRenderTargets(1, &rtv, TRUE, &dsv);
@@ -194,17 +125,6 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
 
 void D3D12BatchBackend::endPass() {
     _commandList->OMSetRenderTargets(0, nullptr, TRUE, nullptr); // needed ?
-
-    // timestamp end of batch
-    _commandList->EndQuery(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, _currentBackBufferIndex * 2 + 1);
-
-    // grab last timing recording
-    auto prevFrameIndex = ((_currentBackBufferIndex + 2) % 3);
-    uint64_t* timingResults = (uint64_t*) _queryResultCPUMappedAddress;
-    
-
-    auto gpuFrameTiming = (timingResults[prevFrameIndex * 2 + 1] - timingResults[prevFrameIndex * 2]) / _commandQueueTimestampFrequency;
-    picoLog(std::to_string(gpuFrameTiming));
 
     _currentGraphicsRootLayout_setRootIndex = 0;
     _currentGraphicsRootLayout_samplerRootIndex = 0;

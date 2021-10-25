@@ -213,6 +213,10 @@ namespace graphics {
     struct FramebufferInit;
 
 
+    class BatchTimer;
+    using BatchTimerPointer = std::shared_ptr<BatchTimer>;
+    struct BatchTimerInit;
+
     // Resource Types
     enum ResourceUsage : uint8_t {
         INDEX_BUFFER = 0x01,

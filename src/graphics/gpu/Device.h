@@ -47,6 +47,7 @@ namespace graphics {
         virtual FramebufferPointer createFramebuffer(const FramebufferInit& init) = 0;
 
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
+        virtual BatchTimerPointer createBatchTimer(const BatchTimerInit& init) = 0;
 
         virtual BufferPointer createBuffer(const BufferInit& init) = 0;
         virtual TexturePointer createTexture(const TextureInit& init) = 0;
@@ -96,6 +97,7 @@ namespace graphics {
         FramebufferPointer createFramebuffer(const FramebufferInit& init);
 
         BatchPointer createBatch(const BatchInit& init);
+        BatchTimerPointer createBatchTimer(const BatchTimerInit& init);
 
         BufferPointer createBuffer(const BufferInit& init);
         TexturePointer createTexture(const TextureInit& init);

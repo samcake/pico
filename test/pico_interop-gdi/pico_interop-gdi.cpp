@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 
         auto currentIndex = swapchain->currentIndex();
 
-        args.batch->begin(currentIndex);
+        args.batch->begin(currentIndex, nullptr);
 
         args.batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,

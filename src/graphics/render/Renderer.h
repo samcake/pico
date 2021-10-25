@@ -36,6 +36,7 @@ namespace graphics {
         BatchPointer batch;
         SwapchainPointer swapchain;
         CameraPointer camera;
+        BatchTimerPointer timer;
         DescriptorSetPointer viewPassDescriptorSet;
     };
 
@@ -52,6 +53,5 @@ namespace graphics {
         DevicePointer _device;
         BatchPointer _batch;
         RenderCallback _callback;
-
     };
 }

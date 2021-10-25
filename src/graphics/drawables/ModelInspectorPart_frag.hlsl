@@ -73,7 +73,7 @@ struct Projection {
 };
 
 // Camera buffer
-cbuffer UniformBlock0 : register(b0) {
+cbuffer UniformBlock0 : register(b10) {
     //float4x3 _view;
     Transform _view;
     Projection _projection;

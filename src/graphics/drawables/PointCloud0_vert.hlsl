@@ -59,7 +59,7 @@ float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
     }
 }
 
-cbuffer UniformBlock0 : register(b0) {
+cbuffer UniformBlock0 : register(b10) {
     //float4x3 _view;
     View _view;
     Projection _projection;
