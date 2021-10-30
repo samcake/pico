@@ -144,7 +144,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     uint instance = ivid / (3 * num_tris);
     uint tvid = vid % 3;
     uint tid = vid / 3;
-    uint sampleIdx = (instance + currentSampleIndex) % (int)numSamples;
+    uint sampleIdx = (instance - currentSampleIndex) % (int)numSamples;
 
     float3 position = float3(0.0, 0.0, 0.0);
     float3 color = float3(1.0, 1.0, 1.0);

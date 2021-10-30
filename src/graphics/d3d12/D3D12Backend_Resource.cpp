@@ -36,7 +36,7 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
    if (init.usage && ResourceUsage::UNIFORM_BUFFER) {
         auto numBlocks = ((uint32_t) init.bufferSize) / 256;
 
-        bufferSize = (numBlocks + 1) * 256;
+        bufferSize = ((uint32_t)init.bufferSize - (numBlocks * 256) == 0 ?  + 1) * 256;
 
         if (init.swapchainable) {
             

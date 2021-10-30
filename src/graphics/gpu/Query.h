@@ -49,7 +49,7 @@ namespace graphics {
 
 
     struct BatchTimerInit {
-        int32_t numSamples = 128;
+        int32_t numSamples = 64;
     };
 
     class BatchTimer {
