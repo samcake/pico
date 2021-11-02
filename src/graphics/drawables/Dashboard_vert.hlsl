@@ -144,6 +144,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     uint instance = ivid / (3 * num_tris);
     uint tvid = vid % 3;
     uint tid = vid / 3;
+    
     uint sampleIdx = (instance - currentSampleIndex) % (int)numSamples;
 
     float3 position = float3(0.0, 0.0, 0.0);
@@ -169,7 +170,14 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 
     position.z -= 2.0;
 
-
+    if (instance == 0)
+    {
+        position.xy = (coords.xy * 2 - float2(1.0, 1.0)) * float2(0.4, 0.4);
+        //coords.zw = position.xy;
+        coords.w = -1;
+        position.z -= 0.1;   
+    }
+    
     float3 eyePosition = position;
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

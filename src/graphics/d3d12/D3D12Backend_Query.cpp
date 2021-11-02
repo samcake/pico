@@ -124,8 +124,9 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
     ThrowIfFailed(_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&timer->_queryHeap)));
 
-    auto numBlocks = ((uint32_t)8 * 2 * init.numSamples) / 256;
-    int bufferSize = (numBlocks + 1) * 256;
+    int bufferSize = ((uint32_t)8 * 2 * init.numSamples);
+    auto numBlocks =  bufferSize / 256 + (bufferSize % 256 > 0);
+    bufferSize = numBlocks * 256;
 
     BufferInit bi;
     bi.bufferSize = 8 * 2 * init.numSamples;
