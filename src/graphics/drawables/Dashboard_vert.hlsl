@@ -172,7 +172,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 
     if (instance == 0)
     {
-        position.xy = (coords.xy * 2 - float2(1.0, 1.0)) * float2(0.4, 0.4);
+        position.xy = (coords.xy * 2 - float2(1.0, 1.0)) * float2(1.0, 0.1);
         //coords.zw = position.xy;
         coords.w = -1;
         position.z -= 0.1;   

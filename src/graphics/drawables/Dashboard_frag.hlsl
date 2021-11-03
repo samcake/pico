@@ -55,23 +55,11 @@ float4 main(PixelShaderInput IN) : SV_Target
     if (maxCoord > 1.0) discard;
 
     float3 color = float3(IN.coords.xy, 0);
-    
+
     if (IN.coords.w == -1)
     {
         float2 p = IN.coords.xy * 2 - float2(1, 1);
-        p *= 3.0;
-        float2 pc = p;
-        
-        color = float3(frac(pc), 0);
         color = 0.2;
-        
-        float isoscale = 0.5;
-        float hexscale = 1.0;
-        
-        float a = clamp(1.0 - abs(sdHexagonGrid(p, isoscale, hexscale)) * 50.0, 0, 1);
-
-        color = lerp(color, float3(0.9, 0.9, 0.9), a);
-
     }
     
     return float4(color, 1.0);
