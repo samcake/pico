@@ -42,6 +42,7 @@
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/DashboardDrawable.h>
+#include <graphics/drawables/HexagonDrawable.h>
 
 #include <graphics/drawables/ModelDrawable.h>
 
@@ -220,6 +221,7 @@ int main(int argc, char *argv[])
     gzitem_item.setVisible(false);
 
 
+    #ifdef DASHBOARD
     // A dashboard factory and drawable to represent some debug data
     auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
     dashboardDrawableFactory->allocateGPUShared(gpuDevice);
@@ -229,11 +231,23 @@ int main(int argc, char *argv[])
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
 
     auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    #endif
+
+    // A hexagon factory and drawable to represent some debug data
+    auto hexagonDrawableFactory = std::make_shared<graphics::HexagonDrawableFactory>();
+    hexagonDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a hexagon
+    auto hexagon_drawable = state.scene->createDrawable(*hexagonDrawableFactory->createDrawable(gpuDevice));
+    hexagonDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, hexagon_drawable.as<graphics::HexagonDrawable>());
+
+    auto hexagon_item = state.scene->createItem(graphics::Node::null, hexagon_drawable);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
+    graphics::NodeIDs modelItemIDs;
+    //modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
     if (modelItemIDs.size()) {
          state.models.modelItemID = modelItemIDs[0];
     }
