@@ -128,7 +128,7 @@ namespace graphics
 
             // A hex is drawn with 6 triangles 3 verts * n instances
             int numFaces = 20;
-            int numRings = 3;
+            int numRings = 0;
             int numHexs = 1 + 6 * (numRings * (numRings + 1)) / 2;
             args.batch->draw(6 * 3 * numHexs * numFaces, 0);
         };

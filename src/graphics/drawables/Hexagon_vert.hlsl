@@ -265,14 +265,14 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
         coords.zw = float2(pol);
         position.xy += mul(HEX_TO_2D, float3(h));
     }    
-    position.xy *= 0.08;
+    position.xy *= 2.0 / 3.0;
     position = position.xzy;
     
     
     //position.y = face_id * 2.0;
     
     
-    // BUild face base to transform hex
+    // Build face base to transform hex
     uint3 faceIdxs = icosahedron_indices[face_id];
     float3 faceOri = (icosahedron_verts[faceIdxs.x]
     + icosahedron_verts[faceIdxs.y]
@@ -284,7 +284,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
     float3 faceTan = normalize(icosahedron_verts[faceIdxs.z] - icosahedron_verts[faceIdxs.y]);
     
     position = faceOri * 1.0
-    +faceTan * position.x + faceUp * position.z;
+    +faceTan * position.z + faceUp * position.x;
     
     float3 color = float3(1.0, 1.0, 1.0);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
