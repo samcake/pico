@@ -146,6 +146,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     uint tid = vid / 3;
     
     uint sampleIdx = (instance - currentSampleIndex) % (int)numSamples;
+    sampleIdx = currentSampleIndex;
 
     float3 position = float3(0.0, 0.0, 0.0);
     float3 color = float3(1.0, 1.0, 1.0);
@@ -178,6 +179,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
         position.z -= 0.1;   
     }
     
+    position.y -= 0.95; // Move the dashboard at the bottom of the viewport
+
     float3 eyePosition = position;
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

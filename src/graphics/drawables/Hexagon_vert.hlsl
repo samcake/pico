@@ -241,22 +241,28 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
 
-    const int num_tris = 6;
+    const int num_pents = 12;
+    const int num_ivid_for_pents = num_pents * 3 * 5;
+
+    int is_summit = ivid < num_ivid_for_pents;
+
+
+    int num_tris = is_summit ? 3 : 6; // Only 3 summit triangles per face, 6 triangles per hexagons ottherwise
     uint vid = ivid % (3 * num_tris);
-    uint instance = ivid / (3 * num_tris);
     uint tvid = vid % 3;
     uint tid = vid / 3;
 
-    uint vertIdx = (tvid ? (tvid + tid - 1) % 6 : 6);
-    float3 position = float3(HEX_VERTS[vertIdx], 0.0);
+    uint instance = (ivid - (1 - is_summit) * num_ivid_for_pents) / (3 * num_tris);
 
-    float4 coords = float4(position.xy, instance, sy);
+        const int num_faces = 20;
+    int face_id = instance % num_faces;
+
+    uint hex_vertIdx = (tvid ? (tvid + tid - 1) % 6 : 6);
+    float3 position = float3(HEX_VERTS[hex_vertIdx], 0.0);
+    float4 coords = float4(position.xy, face_id, 20);
  
     int3 h = 0;
-    
-    
-    const int num_faces = 20;
-    int face_id = instance % num_faces; 
+
     int i = instance / num_faces;
     if ((i > 0)) //  && (i < 19))
     {
@@ -265,7 +271,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
         coords.zw = float2(pol);
         position.xy += mul(HEX_TO_2D, float3(h));
     }    
-    position.xy *= 2.0 / 3.0;
+    position.xy *= 2.0 / 3.0 / 2.0;
     position = position.xzy;
     
     
@@ -274,18 +280,22 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
     
     // Build face base to transform hex
     uint3 faceIdxs = icosahedron_indices[face_id];
-    float3 faceOri = (icosahedron_verts[faceIdxs.x]
-    + icosahedron_verts[faceIdxs.y]
-    + icosahedron_verts[faceIdxs.z]) /3.0;
+    float3 faceOri = (icosahedron_verts[faceIdxs.x] + icosahedron_verts[faceIdxs.y] + icosahedron_verts[faceIdxs.z]) /3.0;
   //  faceOri = icosahedron_verts[face_id];
     
     float3 faceNor = normalize(faceOri);
     float3 faceUp = normalize(icosahedron_verts[faceIdxs.x] - faceOri);
     float3 faceTan = normalize(icosahedron_verts[faceIdxs.z] - icosahedron_verts[faceIdxs.y]);
     
-    position = faceOri * 1.0
-    +faceTan * position.z + faceUp * position.x;
+    position = faceOri * 1.0 + faceTan * position.z + faceUp * position.x;
     
+    if (is_summit) {
+        position = icosahedron_verts[faceIdxs[tid]];
+        float3 delta = icosahedron_verts[faceIdxs[(tid + tvid) % 3]] - icosahedron_verts[faceIdxs[tid]];
+        position += delta * 1.0 / 6.0;
+    }
+
+    position = normalize(position);
     float3 color = float3(1.0, 1.0, 1.0);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);

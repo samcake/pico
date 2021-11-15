@@ -126,11 +126,13 @@ namespace graphics
             PrimitiveObjectData odata{ 0, 0, 1.0f, 1.0f };
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
-            // A hex is drawn with 6 triangles 3 verts * n instances
+            // A hex is drawnumPentsn with 6 triangles 3 verts
+            // A Pent is drawn with 5 triangles 3 verts
+            int numPents = 12;
             int numFaces = 20;
-            int numRings = 0;
+            int numRings = 1;
             int numHexs = 1 + 6 * (numRings * (numRings + 1)) / 2;
-            args.batch->draw(6 * 3 * numHexs * numFaces, 0);
+            args.batch->draw(5 * 3 * numPents + 6 * 3 * numHexs * numFaces, 0);
         };
         prim._drawcall = drawCallback;
     }

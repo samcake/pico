@@ -221,7 +221,6 @@ int main(int argc, char *argv[])
     gzitem_item.setVisible(false);
 
 
-    #ifdef DASHBOARD
     // A dashboard factory and drawable to represent some debug data
     auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
     dashboardDrawableFactory->allocateGPUShared(gpuDevice);
@@ -231,7 +230,7 @@ int main(int argc, char *argv[])
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
 
     auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
-    #endif
+
 
     // A hexagon factory and drawable to represent some debug data
     auto hexagonDrawableFactory = std::make_shared<graphics::HexagonDrawableFactory>();

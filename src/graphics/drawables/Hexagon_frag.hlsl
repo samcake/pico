@@ -68,7 +68,8 @@ float sdHexagonGrid(in float2 p, in float s)
 
 float4 main(PixelShaderInput IN) : SV_Target
 {
-    float3 color = rainbowRGB(IN.coords.w / (6.0 * IN.coords.z), 1.0 - IN.coords.z / 20.0);
+  //  float3 color = rainbowRGB(IN.coords.w / (6.0 * IN.coords.z), 1.0 - IN.coords.z / 20.0);
+    float3 color = rainbowRGB(IN.coords.z / (IN.coords.w));
     float2 p = IN.coords.xy;
     float isoscale = 1.0;
         
