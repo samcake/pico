@@ -85,7 +85,7 @@ float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
 }
 
 // Camera buffer
-cbuffer UniformBlock0 : register(b0) {
+cbuffer UniformBlock0 : register(b10) {
     //float4x3 _view;
     Transform _view;
     Projection _projection;
@@ -108,7 +108,7 @@ float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
 //
 // Transform Tree
 //
-StructuredBuffer<Transform>  tree_transforms : register(t0);
+StructuredBuffer<Transform>  tree_transforms : register(t20);
 
 Transform node_getTransform(int nodeID) {
     return tree_transforms[2 * nodeID];

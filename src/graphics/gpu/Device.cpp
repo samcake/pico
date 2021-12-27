@@ -103,6 +103,10 @@ void Device::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Descriptor
     return _backend->updateDescriptorSet(descriptorSet, objects);
 }
 
+BatchTimerPointer Device::createBatchTimer(const BatchTimerInit& init) {
+    return _backend->createBatchTimer(init);
+}
+
 BatchPointer Device::createBatch(const BatchInit& init) {
     return _backend->createBatch(init);
 }

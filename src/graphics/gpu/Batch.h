@@ -48,7 +48,7 @@ namespace graphics {
         ~Batch();
 
 
-        virtual void begin(uint8_t currentIndex);
+        virtual void begin(uint8_t currentIndex, const BatchTimerPointer& timer = nullptr);
         virtual void end();
 
         virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);

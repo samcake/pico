@@ -29,6 +29,7 @@
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
 #include "gpu/Swapchain.h"
+#include "gpu/Query.h"
 
 using namespace graphics;
 
@@ -36,9 +37,7 @@ Renderer::Renderer(const DevicePointer& device, RenderCallback callback) :
     _device(device),
     _callback(callback)
 {
-    graphics::BatchInit batchInit{};
-    _batch= _device->createBatch(batchInit);
-
+    _batch = _device->createBatch({});
 }
 
 Renderer::~Renderer() {

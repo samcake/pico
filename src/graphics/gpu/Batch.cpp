@@ -38,7 +38,7 @@ Batch::~Batch() {
 
 }
 
-void Batch::begin(uint8_t currentIndex) {}
+void Batch::begin(uint8_t currentIndex, const BatchTimerPointer& timer) {}
 void Batch::end() {}
 
 void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}

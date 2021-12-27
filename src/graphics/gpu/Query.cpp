@@ -1,6 +1,6 @@
-// Viewport.h 
+// Query.cpp
 //
-// Sam Gateau - January 2020
+// Sam Gateau - October 2021
 // 
 // MIT License
 //
@@ -24,46 +24,19 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#pragma once
+#include "Query.h"
 
-#include "render.h"
+using namespace graphics;
 
-#include <core/Realtime.h>
-#include "Renderer.h"
+Query::Query() {
+}
 
-#include <gpu/Descriptor.h>
+Query::~Query() {
 
-namespace graphics {
+}
+BatchTimer::BatchTimer() {
+}
 
-    class VISUALIZATION_API Viewport {
-    public:
-        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC = nullptr);
-        ~Viewport();
+BatchTimer::~BatchTimer() {
 
-        void present(const SwapchainPointer& swapchain);
-
-        core::FrameTimer::Sample lastFrameTimerSample() const;
-
-        static const DescriptorSetLayout viewPassLayout;
-
-    protected:
-        void _renderCallback(RenderArgs& args);
-
-        void renderScene(RenderArgs& args);
-
-        ScenePointer _scene;
-        CameraPointer _camera;
-        DevicePointer _device;
-        RendererPointer _renderer;
-
-        RenderCallback _postSceneRC;
-
-        // Measuring framerate
-        core::FrameTimer _frameTimer;
-        BatchTimerPointer _batchTimer;
-
-        DescriptorSetPointer _viewPassDescriptorSet;
-        RootDescriptorLayoutPointer _viewPassRootLayout;
-
-    };
 }

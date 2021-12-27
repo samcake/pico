@@ -41,6 +41,8 @@
 
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
+#include <graphics/drawables/DashboardDrawable.h>
+
 #include <graphics/drawables/ModelDrawable.h>
 
 #include <uix/Window.h>
@@ -218,6 +220,15 @@ int main(int argc, char *argv[])
     gzitem_item.setVisible(false);
 
 
+    // A dashboard factory and drawable to represent some debug data
+    auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
+    dashboardDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a dashboard
+    auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
+    dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
+
+    auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);

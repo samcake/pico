@@ -374,6 +374,10 @@ D3D12Backend::D3D12Backend() {
 
     _commandQueue = CreateCommandQueue(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
+    uint64_t frequency;
+    _commandQueue->GetTimestampFrequency(&frequency);
+    _commandQueueTimestampFrequency = (double)frequency;
+
     _fence = CreateFence(_device);
     _fenceEvent = CreateEventHandle();
 

@@ -1,6 +1,6 @@
-// Viewport.h 
+// Query.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - October 2021
 // 
 // MIT License
 //
@@ -26,44 +26,49 @@
 //
 #pragma once
 
-#include "render.h"
-
-#include <core/Realtime.h>
-#include "Renderer.h"
-
-#include <gpu/Descriptor.h>
+#include "gpu.h"
+#include <vector> 
 
 namespace graphics {
+    
+    struct QueryInit {
+    };
 
-    class VISUALIZATION_API Viewport {
-    public:
-        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC = nullptr);
-        ~Viewport();
-
-        void present(const SwapchainPointer& swapchain);
-
-        core::FrameTimer::Sample lastFrameTimerSample() const;
-
-        static const DescriptorSetLayout viewPassLayout;
-
+    class Query {
     protected:
-        void _renderCallback(RenderArgs& args);
+        friend class Device;
+        Query();
 
-        void renderScene(RenderArgs& args);
+        QueryInit _init;
 
-        ScenePointer _scene;
-        CameraPointer _camera;
-        DevicePointer _device;
-        RendererPointer _renderer;
+    public:
+        ~Query();
 
-        RenderCallback _postSceneRC;
+    };
 
-        // Measuring framerate
-        core::FrameTimer _frameTimer;
-        BatchTimerPointer _batchTimer;
 
-        DescriptorSetPointer _viewPassDescriptorSet;
-        RootDescriptorLayoutPointer _viewPassRootLayout;
 
+    struct BatchTimerInit {
+        int32_t numSamples = 64;
+    };
+
+    class BatchTimer {
+    protected:
+        friend class Device;
+        BatchTimer();
+
+        BatchTimerInit _init;
+
+        BufferPointer _buffer; // Buffer in gpu mem used by the queris to collect result, accessible as a read_resource
+
+        int32_t _currentSampleIndex = 0;
+
+    public:
+        ~BatchTimer();
+
+        BufferPointer getBuffer() const { return _buffer; }
+
+        int32_t getCurrentSampleIndex() const { return _currentSampleIndex; }
+        int32_t getNumSamples() const { return _init.numSamples; }
     };
 }

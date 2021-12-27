@@ -80,22 +80,33 @@ D3D12BatchBackend::D3D12BatchBackend() :
 D3D12BatchBackend::~D3D12BatchBackend() {
 }
 
-void D3D12BatchBackend::begin(uint8_t currentIndex) {
+void D3D12BatchBackend::begin(uint8_t currentIndex, const BatchTimerPointer& timer) {
     _currentBackBufferIndex = currentIndex;
     auto commandAllocator = _commandAllocators[currentIndex];
 
     commandAllocator->Reset();
     _commandList->Reset(commandAllocator.Get(), nullptr);
+
+    if (timer) {
+        _timer = timer;
+        auto t = static_cast<D3D12BatchTimerBackend*>(timer.get());
+        t->begin(_commandList.Get(), _currentBackBufferIndex);
+    }
 }
 
 void D3D12BatchBackend::end() {
+    if (_timer) {
+        auto t = static_cast<D3D12BatchTimerBackend*>(_timer.get());
+        t->end(_commandList.Get(), _currentBackBufferIndex);
+        _timer.reset();
+    }
     ThrowIfFailed(_commandList->Close());
 }
 
 void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t index) {
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
     D3D12_CPU_DESCRIPTOR_HANDLE rtv{ sw->_rtvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr + sw->_rtvDescriptorSize * index };
-    
+ 
     if (sw->_dsvDescriptorHeap) {
         D3D12_CPU_DESCRIPTOR_HANDLE dsv{ sw->_dsvDescriptorHeap->GetCPUDescriptorHandleForHeapStart().ptr};
         _commandList->OMSetRenderTargets(1, &rtv, TRUE, &dsv);

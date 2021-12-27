@@ -32,9 +32,17 @@
 #include "Drawable.h"
 #include "gpu/Swapchain.h"
 #include "gpu/Batch.h"
+#include "gpu/Query.h"
 
 
 using namespace graphics;
+
+// Allocate a rootLayout just for the scene descriptor set
+const DescriptorSetLayout Viewport::viewPassLayout = {
+    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 10, 1},
+    { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 20, 1}, // Node Transform
+    { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 21, 1}, // Timer
+};
 
 Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC) :
     _scene(scene),
@@ -52,22 +60,21 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
     _camera->allocateGPUData(_device);
     //auto render = std::bind(&Viewport::_renderCallback, this);
 
+
+    _batchTimer = _device->createBatchTimer({});
+
     _renderer = std::make_shared<Renderer>(device,
          [this] (RenderArgs& args) {
              this->_renderCallback(args);
           });
 
-    // Allocate a rootLayout just for the scene descriptor set
-    DescriptorSetLayout descriptorLayout = {
-        { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 0, 1},
-        { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 0, 1}, // Node Transform
-    };
+
 
     RootDescriptorLayoutPointer rootLayout = _device->createRootDescriptorLayout({
     {
     { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, 48},
     },
-    { descriptorLayout },
+    { viewPassLayout },
     {}
     });
     _viewPassRootLayout = rootLayout;
@@ -75,13 +82,14 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
     DescriptorSetInit dsInit = {
         nullptr,
         0, false,
-        descriptorLayout
+        viewPassLayout
     };
     _viewPassDescriptorSet = _device->createDescriptorSet(dsInit);
 
     DescriptorObjects descriptorObjects = {
         { graphics::DescriptorType::UNIFORM_BUFFER, _camera->getGPUBuffer() },
         { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_nodes._transforms_buffer },
+        { graphics::DescriptorType::RESOURCE_BUFFER, _batchTimer->getBuffer() },
     };
     _device->updateDescriptorSet(_viewPassDescriptorSet, descriptorObjects);
 
@@ -106,7 +114,7 @@ void Viewport::_renderCallback(RenderArgs& args) {
     auto currentIndex = args.swapchain->currentIndex();
     args.camera->updateGPUData();
 
-    args.batch->begin(currentIndex);
+    args.batch->begin(currentIndex, _batchTimer);
 
     args.batch->resourceBarrierTransition(
         graphics::ResourceBarrierFlag::NONE,
@@ -148,7 +156,7 @@ void Viewport::_renderCallback(RenderArgs& args) {
 }
 
 void Viewport::renderScene(RenderArgs& args) {
-
+    args.timer = _batchTimer;
     args.viewPassDescriptorSet = _viewPassDescriptorSet;
 
     for (int i = 1; i < _scene->getItems().size(); i++) {

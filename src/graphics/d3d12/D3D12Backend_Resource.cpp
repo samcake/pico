@@ -35,11 +35,10 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     // Align the buffer size to multiples of 256
    if (init.usage && ResourceUsage::UNIFORM_BUFFER) {
         auto numBlocks = ((uint32_t) init.bufferSize) / 256;
-
-        bufferSize = (numBlocks + 1) * 256;
+        auto blockModulo = ((uint32_t)init.bufferSize) % 256;
+        bufferSize = (numBlocks + (blockModulo > 0)) * 256;
 
         if (init.swapchainable) {
-            
             bufferSize *= D3D12Backend::CHAIN_NUM_FRAMES;
         }
     }

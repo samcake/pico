@@ -1,4 +1,3 @@
-//#include "Transform_inc.hlsl"
 static const float M_PI = acos(-1);
 
 //

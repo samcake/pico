@@ -154,7 +154,7 @@ namespace model {
         std::string _name;
         core::vec4 _baseColor{ 0.5f, 0.5f, 0.5f, 1.0f };
         float _metallicFactor{ 1.0f };
-        float _roughnessFactor{ 0.0f };
+        float _roughnessFactor{ 1.0f };
         Index _baseColorTexture{ INVALID_INDEX };
         Index _normalTexture{ INVALID_INDEX };
         Index _roughnessMetallicTexture{ INVALID_INDEX };

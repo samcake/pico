@@ -34,6 +34,7 @@
 #include "gpu/Pipeline.h"
 #include "gpu/Shader.h"
 #include "gpu/Descriptor.h"
+#include "gpu/Query.h"
 
 #include <core/stl/IndexTable.h>
 
@@ -87,6 +88,7 @@ namespace graphics {
         // DirectX 12 Objects
         ComPtr<ID3D12Device2> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
+        double _commandQueueTimestampFrequency = 1.0;
 
         // Functions points for functions that need to be loaded
         PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER           fnD3D12CreateRootSignatureDeserializer = nullptr;
@@ -105,7 +107,8 @@ namespace graphics {
         FramebufferPointer createFramebuffer(const FramebufferInit& init) override;
 
         BatchPointer createBatch(const BatchInit& init) override;
-
+        BatchTimerPointer createBatchTimer(const BatchTimerInit& init) override;
+ 
         BufferPointer createBuffer(const BufferInit& init) override;
 
         TexturePointer createTexture(const TextureInit& init) override;
@@ -190,7 +193,7 @@ namespace graphics {
         D3D12BatchBackend();
         virtual ~D3D12BatchBackend();
 
-        void begin(uint8_t currentIndex) override;
+        void begin(uint8_t currentIndex, const BatchTimerPointer& timer) override;
         void end() override;
 
         void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) override;
@@ -235,14 +238,16 @@ namespace graphics {
         ComPtr<ID3D12GraphicsCommandList> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 
-        UINT _currentBackBufferIndex { 0 };
-
         DescriptorHeapPointer _descriptorHeap;
+
+        UINT _currentBackBufferIndex{ 0 };
 
         UINT _currentGraphicsRootLayout_setRootIndex = 0;
         UINT _currentGraphicsRootLayout_samplerRootIndex = 0;
         UINT _currentComputeRootLayout_setRootIndex = 0;
         UINT _currentComputeRootLayout_samplerRootIndex = 0;
+
+        BatchTimerPointer _timer;
 
         static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
         static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
@@ -351,6 +356,23 @@ namespace graphics {
 
         D3D12_GPU_DESCRIPTOR_HANDLE _cbvsrvuav_GPUHandle;
         D3D12_GPU_DESCRIPTOR_HANDLE _sampler_GPUHandle;
+    };
+
+    class D3D12BatchTimerBackend : public BatchTimer {
+    public:
+        friend class D3D12Backend;
+        D3D12BatchTimerBackend();
+        virtual ~D3D12BatchTimerBackend();
+
+        void begin(ID3D12GraphicsCommandList* _commandList, INT index);
+        void end(ID3D12GraphicsCommandList* _commandList, INT index);
+
+        ComPtr<ID3D12QueryHeap> _queryHeap;
+        ComPtr<ID3D12Resource> _queryResult;
+        ComPtr<ID3D12Resource> _queryResultMapped;
+        void* _queryResultCPUMappedAddress = nullptr;
+
+        double _commandQueueTimestampFrequency = 1.0;
     };
 }
 

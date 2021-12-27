@@ -56,6 +56,8 @@
 
 #include <graphics/drawables/PrimitiveDrawable.h>
 
+#include <graphics/drawables/DashboardDrawable.h>
+
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -146,7 +148,6 @@ int main(int argc, char *argv[])
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
 
-
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
  
@@ -214,6 +215,15 @@ int main(int argc, char *argv[])
     auto gzitem = scene->createItem(graphics::Node::null, gzdrawable);
 
 
+    // A dashboard factory and drawable to represent some debug data
+    auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
+    dashboardDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a dashboard
+    auto dashboard_drawable = scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
+    dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, scene, dashboard_drawable.as<graphics::DashboardDrawable>());
+
+    auto dashboard_item = scene->createItem(graphics::Node::null, dashboard_drawable);
 
     scene->_nodes.updateTransforms();
 
