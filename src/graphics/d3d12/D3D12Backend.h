@@ -86,7 +86,7 @@ namespace graphics {
         void* nativeDevice() override { return _device.Get(); }
 
         // DirectX 12 Objects
-        ComPtr<ID3D12Device2> _device;
+        ComPtr<ID3D12Device5> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
         double _commandQueueTimestampFrequency = 1.0;
 
@@ -112,6 +112,8 @@ namespace graphics {
         BufferPointer createBuffer(const BufferInit& init) override;
 
         TexturePointer createTexture(const TextureInit& init) override;
+
+        GeometryPointer createGeometry(const GeometryInit& init) override;
 
         ShaderPointer createShader(const ShaderInit& init) override;
         ShaderPointer createProgram(const ProgramInit& init) override;
@@ -235,7 +237,7 @@ namespace graphics {
 
         void dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) override;
 
-        ComPtr<ID3D12GraphicsCommandList> _commandList;
+        ComPtr<ID3D12GraphicsCommandList4> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 
         DescriptorHeapPointer _descriptorHeap;
@@ -283,6 +285,14 @@ namespace graphics {
 
         D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
         D3D12_UNORDERED_ACCESS_VIEW_DESC   _unorderedAccessViewDesc;
+    };
+
+    class D3D12GeometryBackend : public Geometry {
+    public:
+        friend class D3D12Backend;
+        D3D12GeometryBackend();
+        virtual ~D3D12GeometryBackend();
+
     };
 
     class D3D12ShaderBackend : public Shader {

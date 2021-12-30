@@ -115,4 +115,30 @@ namespace graphics {
         uint64_t _bufferSize;
     };
 
+
+    struct VISUALIZATION_API BufferElementView {
+        BufferPointer buffer;
+        int64_t offset = 0;
+        int32_t stride = 0;
+    };
+
+    struct VISUALIZATION_API GeometryInit {
+        BufferElementView vertexBuffer;
+        int32_t vertexCount = 0;
+        PixelFormat vertexFormat = PixelFormat::R32G32B32_FLOAT;
+
+        BufferElementView indexBuffer;
+        int32_t indexCount = 0;
+    };
+
+    class VISUALIZATION_API Geometry {
+    protected:
+        // Geometry is created from the device
+        friend class Device;
+        Geometry();
+    public:
+        virtual ~Geometry();
+        GeometryInit _init;
+    };
+
 }

@@ -52,6 +52,8 @@ namespace graphics {
         virtual BufferPointer createBuffer(const BufferInit& init) = 0;
         virtual TexturePointer createTexture(const TextureInit& init) = 0;
 
+        virtual GeometryPointer createGeometry(const GeometryInit& init) = 0;
+
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
         virtual ShaderPointer createProgram(const ProgramInit& init) = 0;
 
@@ -101,6 +103,8 @@ namespace graphics {
 
         BufferPointer createBuffer(const BufferInit& init);
         TexturePointer createTexture(const TextureInit& init);
+
+        GeometryPointer createGeometry(const GeometryInit& init);
 
         ShaderPointer createShader(const ShaderInit& init);
         ShaderPointer createProgram(const ProgramInit& init);

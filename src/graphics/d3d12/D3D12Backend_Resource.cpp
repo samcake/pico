@@ -346,4 +346,23 @@ TexturePointer D3D12Backend::createTexture(const TextureInit& init) {
 }
 
 
+
+
+
+D3D12GeometryBackend::D3D12GeometryBackend() {
+
+}
+
+D3D12GeometryBackend::~D3D12GeometryBackend() {
+
+}
+
+GeometryPointer D3D12Backend::createGeometry(const GeometryInit& init) {
+    auto geometry = std::make_shared<D3D12GeometryBackend>();
+
+    geometry->_init = init;
+
+    return geometry;
+}
+
 #endif

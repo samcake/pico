@@ -207,7 +207,7 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
             // is favored.
             if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
                 SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(),
-                    D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) &&
+                    D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device), nullptr)) &&
                 dxgiAdapterDesc1.DedicatedVideoMemory > maxDedicatedVideoMemory)
             {
                 maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
@@ -231,18 +231,18 @@ void EnableDebugLayer()
 #endif
 }
 
-ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
+ComPtr<ID3D12Device5> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 {
 
     EnableDebugLayer();
 
-    ComPtr<ID3D12Device2> d3d12Device2;
-    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
+    ComPtr<ID3D12Device5> d3d12Device;
+    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12Device)));
 
     // Enable debug messages in debug mode.
 #if defined(_DEBUG)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
+    if (SUCCEEDED(d3d12Device.As(&pInfoQueue)))
     {
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
@@ -276,7 +276,7 @@ ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
     }
 #endif
 
-    return d3d12Device2;
+    return d3d12Device;
 }
 
 
@@ -348,6 +348,12 @@ D3D12Backend::D3D12Backend() {
 
     _device = CreateDevice(dxgiAdapter4);
 
+    // Check if the D3D12 device actually supports ray tracing.
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 caps = {};
+    auto hr = _device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &caps, sizeof(caps));
+    
+    if (FAILED(hr) || caps.RaytracingTier < D3D12_RAYTRACING_TIER_1_0)
+        return;
 
     // Load functions
     {

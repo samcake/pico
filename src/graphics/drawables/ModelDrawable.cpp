@@ -571,6 +571,20 @@ namespace graphics
         }
         modelDrawable->_bound = model_aabb;
 
+
+        // Ray tracing data structure
+        D3D12_RAYTRACING_GEOMETRY_DESC geometry;
+        geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+        geometry.Triangles.VertexBuffer.StartAddress = vb->GetGPUVirtualAddress();
+        geometry.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+        geometry.Triangles.VertexCount = static_cast<UINT>(vertices.size());
+        geometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+        geometry.Triangles.IndexBuffer = ib->GetGPUVirtualAddress();
+        geometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+        geometry.Triangles.IndexCount = static_cast<UINT>(indices.size());
+        geometry.Triangles.Transform3x4 = 0;
+        geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
         return modelDrawable;
     }
 

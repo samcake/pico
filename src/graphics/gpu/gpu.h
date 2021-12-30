@@ -180,6 +180,10 @@ namespace graphics {
     using TexturePointer = std::shared_ptr<Texture>;
     struct TextureInit;
 
+    class Geometry;
+    using GeometryPointer = std::shared_ptr<Geometry>;
+    struct GeometryInit;
+
     class Sampler;
     using SamplerPointer = std::shared_ptr<Sampler>;
     struct SamplerInit;
