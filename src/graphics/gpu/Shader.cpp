@@ -32,6 +32,17 @@
 
 using namespace graphics;
 
+std::string shaderTypeNames[(uint8_t)ShaderType::COUNT] =
+{
+    "PROGRAM",
+    "VERTEX",
+    "PIXEL",
+
+    "COMPUTE",
+
+    "RAYTRACING",
+};
+
 Shader::Shader():
     _shaderDesc{},
     _programDesc{}
@@ -45,13 +56,13 @@ Shader::~Shader() {
 
 bool Shader::hasWatcher() const {
     if (isProgram()) {
-        if (_programDesc.vertexShader && _programDesc.vertexShader->hasWatcher()) {
-             return true;
+        // check for any false case
+        for (auto& s : _programDesc.shaderLib) {
+            if (!(s.second && s.second->hasWatcher())) {
+                return false;
+            }
         }
-        if (_programDesc.pixelShader && _programDesc.pixelShader->hasWatcher()) {
-            return true;
-        }
-        return false;
+        return true;
     }
     else {
         return !_shaderDesc.watcher_file.empty();

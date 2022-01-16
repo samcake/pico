@@ -125,4 +125,6 @@ void Batch::uploadTextureFromInitdata(const DevicePointer& device, const Texture
 }
 
 void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}
+void Batch::dispatchRays(const DispatchRaysArgs& args) {}
+
 } // !using namespace graphics

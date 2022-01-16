@@ -33,6 +33,9 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
+
+
+
 #define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Shader FAILED !!!");
 
 
@@ -40,7 +43,8 @@ const std::string D3D12ShaderBackend::ShaderTypes[] = {
     "nope",
     "vs_5_1",
     "ps_5_1",
-    "cs_5_1"
+    "cs_5_1",
+    "lib_6_3",
 };
 
 D3D12ShaderBackend::D3D12ShaderBackend() {
@@ -80,8 +84,8 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
                                         "no source file" :
                                         shader->getShaderDesc().url) :
                                     shader->getShaderDesc().watcher_file);
-            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "/n"
-                      + "    " + file + "/n"
+            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "\n"
+                      + "    " + file + "\n"
                       + (char*)errorBlob->GetBufferPointer()));
             errorBlob->Release();
         }
@@ -93,6 +97,136 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
         return false;
     }
     dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderBlob = shaderBlob;
+    return true;
+}
+
+bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
+    if (!shader) {
+        return false;
+    }
+
+    ComPtr<IDxcUtils> pUtils;
+    DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf()));
+
+    ComPtr<IDxcIncludeHandler> includeHandler;
+    pUtils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf());
+
+    ComPtr<IDxcCompiler3> compiler;
+    HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+
+    ComPtr<IDxcBlobEncoding> pSource;
+  //  auto wsource = core::to_wstring(source);
+    auto& wsource = source;
+    pUtils->CreateBlob(wsource.c_str(), wsource.size(), CP_UTF8, pSource.GetAddressOf());
+
+    std::vector<LPWSTR> arguments;
+    //-E for the entry point (eg. PSMain)
+    arguments.push_back(L"-E");
+    auto wentry = core::to_wstring(shader->getShaderDesc().entryPoint);
+
+    arguments.push_back((LPWSTR) wentry.c_str());
+
+    //-T for the target profile (eg. ps_6_2)
+    arguments.push_back(L"-T");
+
+    std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
+
+    auto wtarget = core::to_wstring(target);
+    arguments.push_back((LPWSTR) wtarget.c_str());
+
+    //Strip reflection data and pdbs (see later)
+    arguments.push_back(L"-Qstrip_debug");
+    arguments.push_back(L"-Qstrip_reflect");
+
+    arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
+    arguments.push_back(DXC_ARG_DEBUG); //-Zi
+    arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
+/*
+    for (const std::wstring& define : defines)
+    {
+        arguments.push_back(L"-D");
+        arguments.push_back(define.c_str());
+    }*/
+
+    DxcBuffer sourceBuffer;
+    sourceBuffer.Ptr = pSource->GetBufferPointer();
+    sourceBuffer.Size = pSource->GetBufferSize();
+    sourceBuffer.Encoding = 0;
+
+    ComPtr<IDxcResult> pCompileResult;
+    //hr = compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf())));
+    hr = compiler->Compile(&sourceBuffer, (LPCWSTR*)arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf()));
+
+    //Error Handling
+    ComPtr<IDxcBlobUtf8> pErrors;
+    pCompileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(pErrors.GetAddressOf()), nullptr);
+    if (pErrors && pErrors->GetStringLength() > 0)
+    {
+  //      MyLogFunction(Error, (char*)pErrors->GetBufferPointer());
+
+        std::string file = (shader->getShaderDesc().watcher_file.empty() ?
+            (shader->getShaderDesc().url.empty() ?
+                "no source file" :
+                shader->getShaderDesc().url) :
+            shader->getShaderDesc().watcher_file);
+        picoLog((target + " " + shader->getShaderDesc().entryPoint + "\n"
+            + "    " + file + "\n"
+            + (char*)pErrors->GetBufferPointer()));
+
+        //errorBlob->Release();
+    }
+    ComPtr<IDxcBlob> shaderBlob;
+    pCompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr);
+
+
+    std::string file = (shader->getShaderDesc().watcher_file.empty() ?
+        (shader->getShaderDesc().url.empty() ?
+            "no source file" :
+            shader->getShaderDesc().url) :
+        shader->getShaderDesc().watcher_file);
+    picoLog((target + " " + shader->getShaderDesc().entryPoint + "\n"
+        + "    \n"
+        + (char*)shaderBlob->GetBufferPointer()));
+
+  /*  IDxcCompiler* compiler;
+    pUtils->
+
+
+    ID3DBlob* errorBlob;
+
+
+    HRESULT hr = D3DCompile(
+        source.c_str(),
+        source.size(),
+        shader->getShaderDesc().url.c_str(),
+        nullptr,
+        nullptr,
+        shader->getShaderDesc().entryPoint.c_str(),
+        target.c_str(),
+        0, 0,
+        &shaderBlob,
+        &errorBlob);*/
+   /*
+   if (FAILED(hr)) {
+        if (errorBlob) {
+            std::string file = (shader->getShaderDesc().watcher_file.empty() ?
+                (shader->getShaderDesc().url.empty() ?
+                    "no source file" :
+                    shader->getShaderDesc().url) :
+                shader->getShaderDesc().watcher_file);
+            picoLog((target + " " + shader->getShaderDesc().entryPoint + "/n"
+                + "    " + file + "/n"
+                + (char*)errorBlob->GetBufferPointer()));
+            errorBlob->Release();
+        }
+
+        if (shaderBlob)
+            shaderBlob->Release();
+
+
+        return false;
+    }*/
+    dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderLibBlob = shaderBlob;
     return true;
 }
 
@@ -111,15 +245,29 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
     shader->_shaderDesc = init;
 
     // and now compile
-    if ( D3D12Backend::compileShader(shader.get(), source) ) {
-        if (shader->hasWatcher()) {
-            auto shaderCompiler = std::function( [&] (Shader* sha, const std::string& src) -> bool {
-                return compileShader(sha, src);
-            });
+    if (init.type == ShaderType::RAYTRACING) {
+        shader->_programDesc.type = PipelineType::RAYTRACING;
+        if (D3D12Backend::compileShaderLib(shader.get(), source)) {
+            if (shader->hasWatcher()) {
+                auto shaderCompiler = std::function([&](Shader* sha, const std::string& src) -> bool {
+                    return compileShaderLib(sha, src);
+                    });
 
-            Shader::registerToWatcher(shader, shaderCompiler);
+                Shader::registerToWatcher(shader, shaderCompiler);
+            }
+            return shader;
         }
-        return shader;
+    } else {
+        if (D3D12Backend::compileShader(shader.get(), source)) {
+            if (shader->hasWatcher()) {
+                auto shaderCompiler = std::function([&](Shader* sha, const std::string& src) -> bool {
+                    return compileShader(sha, src);
+                    });
+
+                Shader::registerToWatcher(shader, shaderCompiler);
+            }
+            return shader;
+        }
     }
 
     return ShaderPointer();
@@ -129,7 +277,16 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
 ShaderPointer D3D12Backend::createProgram(const ProgramInit& init) {
     D3D12ShaderBackend* program = nullptr;
     // check the shaders are valid
-    if (init.pixelShader && init.vertexShader) {
+    if (init.type == PipelineType::GRAPHICS) {
+        if (init.shaderLib.at("VERTEX") && init.shaderLib.at("PIXEL")) {
+
+            program = new D3D12ShaderBackend();
+            program->_programDesc = init;
+
+            program->_shaderDesc.type = ShaderType::PROGRAM;
+        }
+    }
+    else if (init.type == PipelineType::RAYTRACING) {
         program = new D3D12ShaderBackend();
         program->_programDesc = init;
 

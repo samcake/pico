@@ -94,5 +94,28 @@ namespace graphics {
         virtual void uploadTextureFromInitdata(const DevicePointer& device, const TexturePointer& dest, const std::vector<uint32_t>& subresources = std::vector<uint32_t>());
 
         virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);
+
+        struct DispatchRaysArgs {
+            ShaderTablePointer  shaderTable;
+            uint64_t generationShaderRecordStart = 0;
+            uint64_t generationShaderRecordSize = 0;
+
+            uint64_t missShaderRecordStart = 0;
+            uint64_t missShaderRecordSize = 0;
+            uint64_t missShaderRecordStride = 0;
+
+            uint64_t hitGroupShaderRecordStart = 0;
+            uint64_t hitGroupShaderRecordSize = 0;
+            uint64_t hitGroupShaderRecordStride = 0;
+
+            uint64_t callableShaderRecordStart = 0;
+            uint64_t callableShaderRecordSize = 0;
+            uint64_t callableShaderRecordStride = 0;
+
+            uint16_t width = 1;
+            uint16_t height = 1;
+            uint16_t depth = 1;
+        };
+        virtual void dispatchRays(const DispatchRaysArgs& args);
     };
 }

@@ -276,14 +276,20 @@ void D3D12BatchBackend::bindRootDescriptorLayout(PipelineType type, const RootDe
 void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
 
-    auto dxPso = dpso->_pipelineState;
-    _commandList->SetPipelineState(dxPso.Get());
+    if (dpso->getType() == PipelineType::RAYTRACING) {
+        _commandList->SetPipelineState1(dpso->_stateObject.Get());
+    } else {
 
-    bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
- 
-    if (dpso->getType() == PipelineType::GRAPHICS) {
-        _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
-    } else if (dpso->getType() == PipelineType::COMPUTE) {
+        auto dxPso = dpso->_pipelineState;
+        _commandList->SetPipelineState(dxPso.Get());
+
+        bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
+
+        if (dpso->getType() == PipelineType::GRAPHICS) {
+            _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
+        }
+        else if (dpso->getType() == PipelineType::COMPUTE) {
+        }
     }
 }
 
@@ -470,6 +476,32 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSu
 
 void D3D12BatchBackend::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {
     _commandList->Dispatch(numThreadsX, numThreadsY, numThreadsZ);
+}
+
+void D3D12BatchBackend::dispatchRays(const DispatchRaysArgs& args) {
+    auto stb = static_cast<D3D12ShaderTableBackend*>(args.shaderTable.get());
+
+    D3D12_DISPATCH_RAYS_DESC desc = {};
+    desc.RayGenerationShaderRecord.StartAddress = args.generationShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.RayGenerationShaderRecord.SizeInBytes = args.generationShaderRecordSize;
+
+    desc.MissShaderTable.StartAddress = args.missShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.MissShaderTable.SizeInBytes = args.missShaderRecordSize;
+    desc.MissShaderTable.StrideInBytes = args.missShaderRecordStride;
+
+    desc.HitGroupTable.StartAddress = args.hitGroupShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.HitGroupTable.SizeInBytes = args.hitGroupShaderRecordSize;
+    desc.HitGroupTable.StrideInBytes = args.hitGroupShaderRecordStride;
+
+    desc.CallableShaderTable.StartAddress = args.callableShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.CallableShaderTable.SizeInBytes = args.callableShaderRecordSize;
+    desc.CallableShaderTable.StrideInBytes = args.callableShaderRecordStride;
+
+    desc.Width = args.width;
+    desc.Height = args.height;
+    desc.Depth = args.depth;
+
+    _commandList->DispatchRays(&desc);
 }
 
 #endif

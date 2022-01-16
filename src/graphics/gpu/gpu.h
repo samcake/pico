@@ -138,6 +138,8 @@ namespace graphics {
     
         COMPUTE,
 
+        RAYTRACING,
+
         COUNT,
     };
 
@@ -148,12 +150,15 @@ namespace graphics {
 
         COMPUTE = 0x1000,
 
-        COUNT = 4,
+        RAYTRACING = 0x2000,
+
+        COUNT = 5,
     };
 
     enum class PipelineType : uint8_t {
         GRAPHICS = 0,
         COMPUTE,
+        RAYTRACING,
 
         COUNT,
     };
@@ -211,6 +216,12 @@ namespace graphics {
     using PipelineStateWeakPtr = std::weak_ptr<PipelineState>;
     struct GraphicsPipelineStateInit;
     struct ComputePipelineStateInit;
+    struct RaytracingPipelineStateInit;
+
+    struct ShaderEntry;
+    struct ShaderTableInit;
+    class ShaderTable;
+    using ShaderTablePointer = std::shared_ptr<ShaderTable>;
 
     class Framebuffer;
     using FramebufferPointer = std::shared_ptr<Framebuffer>;
@@ -222,15 +233,17 @@ namespace graphics {
     struct BatchTimerInit;
 
     // Resource Types
-    enum ResourceUsage : uint8_t {
-        INDEX_BUFFER = 0x01,
-        VERTEX_BUFFER = 0x02,
-        UNIFORM_BUFFER = 0x04,
-        RESOURCE_BUFFER = 0x08,
-        RW_RESOURCE_BUFFER = 0x10,
-        RESOURCE_TEXTURE = 0x20,
-        RW_RESOURCE_TEXTURE = 0x40,
-        RENDER_TARGET = 0x80,
+    enum ResourceUsage : uint32_t {
+        INDEX_BUFFER = 0x00000001,
+        VERTEX_BUFFER = 0x00000002,
+        UNIFORM_BUFFER = 0x00000004,
+        RESOURCE_BUFFER = 0x00000008,
+        RW_RESOURCE_BUFFER = 0x00000010,
+        RESOURCE_TEXTURE = 0x00000020,
+        RW_RESOURCE_TEXTURE = 0x00000040,
+        RENDER_TARGET = 0x00000080,
+
+        ACCELERATION_STRUCTURE = 0x00000100,
 
 
         COUNT = 8,

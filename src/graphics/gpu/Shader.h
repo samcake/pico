@@ -28,6 +28,7 @@
 
 #include <string>
 #include <functional>
+#include <map>
 
 #include "gpu.h"
 
@@ -46,11 +47,22 @@ namespace graphics {
         std::string watcher_file;
     };
 
-    struct VISUALIZATION_API ProgramInit {
-        ShaderPointer vertexShader;
-        ShaderPointer pixelShader;
-    };
+    using ShaderLib = std::map < std::string, ShaderPointer >;
 
+    extern std::string shaderTypeNames[(uint8_t) ShaderType::COUNT];
+
+    struct VISUALIZATION_API ProgramInit {
+        PipelineType    type = PipelineType::GRAPHICS;
+        ShaderLib       shaderLib;
+
+        ProgramInit() {}
+        ProgramInit(const ShaderPointer& vs, const ShaderPointer& ps) {
+            shaderLib["VERTEX"] = vs;
+            shaderLib["PIXEL"] = ps;
+        }
+
+    };
+    
     class VISUALIZATION_API Shader {
     protected:
         // Shader is created from the device
@@ -61,12 +73,14 @@ namespace graphics {
         virtual ~Shader();
 
 
-        ShaderPointer getVertexShader() const { return _programDesc.vertexShader; }
-        ShaderPointer getPixelShader() const { return _programDesc.pixelShader; }
+        ShaderPointer getVertexShader() const { return _programDesc.shaderLib.at("VERTEX"); }
+        ShaderPointer getPixelShader() const { return _programDesc.shaderLib.at("PIXEL"); }
 
+        ShaderType getShaderType() const { return _shaderDesc.type; }
         bool isProgram() const { return _shaderDesc.type == ShaderType::PROGRAM; }
-
         bool isCompute() const { return _shaderDesc.type == ShaderType::COMPUTE; }
+
+        PipelineType getPipelineType() const { return _programDesc.type; }
         
         bool hasWatcher() const;
 
@@ -80,6 +94,7 @@ namespace graphics {
         virtual bool relink();
 
     protected:
+       
         ShaderInit _shaderDesc;
         ProgramInit _programDesc;
 

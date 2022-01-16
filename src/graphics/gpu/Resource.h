@@ -42,7 +42,7 @@ namespace graphics {
 
 
     struct VISUALIZATION_API BufferInit {
-        uint8_t usage;
+        uint32_t usage;
         uint64_t bufferSize { 0 };
         bool hostVisible {false};
         bool swapchainable {false};
@@ -76,7 +76,7 @@ namespace graphics {
 
 
     struct VISUALIZATION_API TextureInit {
-        uint8_t usage { 0 }; // indicate the different usage expected for this resource. Default is SHADER_RESOURCE
+        uint32_t usage { 0 }; // indicate the different usage expected for this resource. Default is SHADER_RESOURCE
         uint32_t width { 0 };
         uint32_t height { 0 };
         uint32_t numSlices { 0 }; // if numSlices is > 0 => array texture
@@ -136,9 +136,14 @@ namespace graphics {
         // Geometry is created from the device
         friend class Device;
         Geometry();
+
+        BufferPointer _tlas;
+
     public:
         virtual ~Geometry();
         GeometryInit _init;
+
+        BufferPointer getTLAS() const { return _tlas; }
     };
 
 }

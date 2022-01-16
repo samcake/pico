@@ -44,6 +44,7 @@
 #include <graphics/drawables/DashboardDrawable.h>
 
 #include <graphics/drawables/ModelDrawable.h>
+#include <graphics/drawables/PostSceneDrawable.h>
 
 #include <uix/Window.h>
 #include <uix/Imgui.h>
@@ -58,6 +59,8 @@ struct AppState {
     graphics::ModelDrawableFactoryPointer _modelDrawableFactory;
     graphics::ModelDrawableUniformsPointer _modelDrawableParams;
 
+    graphics::PostSceneDrawableFactoryPointer _postSceneDrawableFactory;
+    graphics::PostSceneDrawableUniformsPointer _postSceneDrawableParams;
 
     graphics::ScenePointer scene;
     struct {
@@ -82,6 +85,12 @@ AppState state;
 
 graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
 
+    if (!state._postSceneDrawableFactory) {
+        state._postSceneDrawableFactory = std::make_shared<graphics::PostSceneDrawableFactory>();
+        state._postSceneDrawableFactory->allocateGPUShared(gpuDevice);
+        state._postSceneDrawableParams = state._postSceneDrawableFactory->getUniformsPtr();
+    }
+
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
         state._modelDrawableFactory->allocateGPUShared(gpuDevice);
@@ -90,6 +99,11 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
     state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
+
+    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
+    state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
+
+    
 
     graphics::ItemIDs modelItemIDs;
 
@@ -118,6 +132,11 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
         state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
     }
+
+    state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
+    auto ppDrawable = scene->createDrawable(*postProcessDrawablePtr);
+    auto pcitem = scene->createItem(root, ppDrawable);
+
 
     return modelItemIDs;
 }

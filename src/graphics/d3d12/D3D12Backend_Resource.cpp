@@ -346,9 +346,6 @@ TexturePointer D3D12Backend::createTexture(const TextureInit& init) {
 }
 
 
-
-
-
 D3D12GeometryBackend::D3D12GeometryBackend() {
 
 }
@@ -361,6 +358,172 @@ GeometryPointer D3D12Backend::createGeometry(const GeometryInit& init) {
     auto geometry = std::make_shared<D3D12GeometryBackend>();
 
     geometry->_init = init;
+
+    auto vb = static_cast<D3D12BufferBackend*>(init.vertexBuffer.buffer.get());
+    auto ib = static_cast<D3D12BufferBackend*>(init.indexBuffer.buffer.get());
+
+    D3D12_RAYTRACING_GEOMETRY_DESC d3d12GeomDesc;
+    d3d12GeomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+    d3d12GeomDesc.Triangles.VertexBuffer.StartAddress = vb->_resource->GetGPUVirtualAddress() + init.vertexBuffer.offset;
+    d3d12GeomDesc.Triangles.VertexBuffer.StrideInBytes = init.vertexBuffer.stride;
+    d3d12GeomDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+    d3d12GeomDesc.Triangles.VertexCount = init.vertexCount;
+
+    d3d12GeomDesc.Triangles.IndexBuffer = ib->_resource->GetGPUVirtualAddress() + init.indexBuffer.offset;
+    d3d12GeomDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+    d3d12GeomDesc.Triangles.IndexCount = init.indexCount;
+
+    d3d12GeomDesc.Triangles.Transform3x4 = 0;
+    d3d12GeomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+    // Get required sizes for an acceleration structure.
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+
+    // Describe the bottom - level acceleration structure .
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC bottomLevelBuildDesc = {};
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& bottomLevelInputs = bottomLevelBuildDesc.Inputs;
+    {
+        bottomLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        bottomLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        bottomLevelInputs.Flags = buildFlags;
+
+        // From previous code snippet
+        bottomLevelInputs.pGeometryDescs = &d3d12GeomDesc;
+        bottomLevelInputs.NumDescs = 1;
+    }
+
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& topLevelInputs = topLevelBuildDesc.Inputs;
+    {
+        topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        topLevelInputs.Flags = buildFlags;
+
+        topLevelInputs.NumDescs = 1;
+        topLevelInputs.pGeometryDescs = nullptr;
+    }
+
+    // Get the memory requirements to build the acceleration structure
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
+    _device->GetRaytracingAccelerationStructurePrebuildInfo(&topLevelInputs, &topLevelPrebuildInfo);
+
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO bottomLevelPrebuildInfo = {};
+    _device->GetRaytracingAccelerationStructurePrebuildInfo(&bottomLevelInputs, &bottomLevelPrebuildInfo);
+
+    // Allocate the 3 buffers scratch + blas + tlas
+    ID3D12Resource* scratchBuffer;
+    ID3D12Resource* blasBuffer;
+    ID3D12Resource* tlasBuffer;
+    ID3D12Resource* instancesBuffer;
+    {
+        D3D12_HEAP_PROPERTIES heapProp;
+        heapProp.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapProp.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
+        heapProp.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
+        heapProp.CreationNodeMask = 1;
+        heapProp.VisibleNodeMask = 1;
+
+
+        D3D12_RESOURCE_DESC desc;
+        desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        desc.Alignment = 0;
+        desc.Height = 1;
+        desc.DepthOrArraySize = 1;
+        desc.MipLevels = 1;
+        desc.Format = DXGI_FORMAT_UNKNOWN;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+        desc.Width = std::max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
+        HRESULT hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, NULL, __uuidof(scratchBuffer), (void**)&(scratchBuffer));
+
+        desc.Width = bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(blasBuffer), (void**)&(blasBuffer));
+
+        desc.Width = topLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(tlasBuffer), (void**)&(tlasBuffer));
+
+
+        // Create an instance desc for the bottom-level acceleration structure.
+        D3D12_RAYTRACING_INSTANCE_DESC instanceDesc = {};
+        instanceDesc.Transform[0][0] = instanceDesc.Transform[1][1] = instanceDesc.Transform[2][2] = 1;
+        instanceDesc.InstanceMask = 1;
+        instanceDesc.AccelerationStructure = blasBuffer->GetGPUVirtualAddress();
+
+        heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+        desc.Width = sizeof(instanceDesc);
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, __uuidof(instancesBuffer), (void**)&(instancesBuffer));
+        void* pMappedData;
+        instancesBuffer->Map(0, nullptr, &pMappedData);
+        memcpy(pMappedData, &instanceDesc, desc.Width);
+        instancesBuffer->Unmap(0, nullptr);
+
+
+        // Bottom Level Acceleration Structure desc
+        {
+            bottomLevelBuildDesc.ScratchAccelerationStructureData = scratchBuffer->GetGPUVirtualAddress();
+            bottomLevelBuildDesc.DestAccelerationStructureData = blasBuffer->GetGPUVirtualAddress();
+        }
+
+        // Top Level Acceleration Structure desc
+        {
+            topLevelBuildDesc.DestAccelerationStructureData = tlasBuffer->GetGPUVirtualAddress();
+            topLevelBuildDesc.ScratchAccelerationStructureData = scratchBuffer->GetGPUVirtualAddress();
+            topLevelBuildDesc.Inputs.InstanceDescs = instancesBuffer->GetGPUVirtualAddress();
+        }
+    }
+
+    {
+
+        // Create a command list that supports ray tracing .
+        ID3D12CommandAllocator* cmdAlloc; // Create as in raster - based code
+        _device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&cmdAlloc));
+
+        ID3D12GraphicsCommandList4* cmdList; // Command list for ray tracing
+        _device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, cmdAlloc, nullptr, IID_PPV_ARGS(&cmdList));
+
+        // Build the bottom - level acceleration structure .
+        cmdList->BuildRaytracingAccelerationStructure(&bottomLevelBuildDesc, 0, nullptr);
+
+        D3D12_RESOURCE_BARRIER b = {};
+        b.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        b.UAV.pResource = blasBuffer;
+        b.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        cmdList->ResourceBarrier(1, &b);
+
+        cmdList->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+
+        D3D12_RESOURCE_BARRIER uavBarrier;
+        uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+        uavBarrier.UAV.pResource = tlasBuffer;
+        uavBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        cmdList->ResourceBarrier(1, &uavBarrier);
+
+        cmdList->Close();
+
+        ID3D12CommandList* commandLists[] = { cmdList };
+        _commandQueue->ExecuteCommandLists(1, commandLists);
+    }
+
+    geometry->_bottomLevelAccelerationStructure = (blasBuffer);
+    geometry->_topLevelAccelerationStructure = (tlasBuffer);
+
+    auto geotlas = std::make_shared<D3D12BufferBackend>();
+    geotlas->_init.bufferSize = topLevelPrebuildInfo.ResultDataMaxSizeInBytes;
+    geotlas->_init.usage = graphics::ACCELERATION_STRUCTURE;
+    geotlas->_resource = tlasBuffer;
+
+    if (geotlas->_init.usage & ResourceUsage::ACCELERATION_STRUCTURE) {
+        geotlas->_resourceBufferView.Format = DXGI_FORMAT_UNKNOWN;
+        geotlas->_resourceBufferView.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+        geotlas->_resourceBufferView.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        geotlas->_resourceBufferView.RaytracingAccelerationStructure.Location = tlasBuffer->GetGPUVirtualAddress();
+    }
+
+    geometry->_tlas = geotlas;
 
     return geometry;
 }

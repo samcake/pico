@@ -61,6 +61,7 @@ namespace graphics {
 
         virtual PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) = 0;
         virtual PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) = 0;
+        virtual PipelineStatePointer createRaytracingPipelineState(const RaytracingPipelineStateInit& init) = 0;
 
         virtual RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init) = 0;
         
@@ -68,6 +69,9 @@ namespace graphics {
         virtual DescriptorHeapPointer getDescriptorHeap() = 0;
 
         virtual DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) = 0;
+
+        virtual ShaderEntry getShaderEntry(const PipelineStatePointer& pipeline, const std::string& entry) = 0;
+        virtual ShaderTablePointer createShaderTable(const ShaderTableInit& init) = 0;
 
         virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
 
@@ -113,6 +117,7 @@ namespace graphics {
 
         PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init);
         PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init);
+        PipelineStatePointer createRaytracingPipelineState(const RaytracingPipelineStateInit& init);
 
         RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init);
 
@@ -120,6 +125,9 @@ namespace graphics {
         DescriptorHeapPointer getDescriptorHeap();
 
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init);
+
+        ShaderEntry getShaderEntry(const PipelineStatePointer& pipeline, const std::string& entry);
+        ShaderTablePointer  createShaderTable(const ShaderTableInit& init);
 
         // Operations
 

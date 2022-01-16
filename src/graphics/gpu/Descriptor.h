@@ -56,6 +56,8 @@ namespace graphics {
         DescriptorSetLayout  _pushLayout;
         DescriptorSetLayouts _setLayouts;
         DescriptorSetLayout  _samplerLayout;
+        PipelineType         _pipelineType = PipelineType::GRAPHICS;
+        bool                 _localSignature = false;
     };
 
     class VISUALIZATION_API RootDescriptorLayout {
@@ -148,4 +150,42 @@ namespace graphics {
 
         DescriptorObjects _objects;
     };
+
+    class VISUALIZATION_API ShaderEntry {
+    protected:
+        friend class Device;
+    public:
+        ShaderEntry();
+        ShaderEntry(const ShaderEntry& src);
+        virtual ~ShaderEntry();
+
+        static const uint32_t BLOB_SIZE = 32;
+        std::array<uint8_t, BLOB_SIZE> _blob;
+    };
+
+    // Shader Record
+    struct VISUALIZATION_API ShaderTableInit {
+        struct Record {
+            ShaderEntry shaderEntry;
+            DescriptorSetPointer descriptorSet;
+        };
+
+        using RecordArray = std::vector<Record>;
+
+
+        RecordArray records;
+    };
+
+
+    class VISUALIZATION_API ShaderTable {
+    protected:
+        friend class Device;
+        ShaderTable();
+
+        ShaderTableInit _init;
+    public:
+        virtual ~ShaderTable();
+
+    };
+
 }

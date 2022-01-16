@@ -59,3 +59,13 @@ Texture::Texture() :
 Texture::~Texture() {
 
 }
+
+Geometry::Geometry() :
+	_init{}
+{
+
+}
+
+Geometry::~Geometry() {
+
+}
