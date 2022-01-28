@@ -9,6 +9,8 @@
 
 
 file(GLOB GRAPHICS_SHADERS
+    "gpu/*.hlsl"
+    "render/*.hlsl"
     "drawables/*.hlsl"
 )
 
@@ -18,6 +20,8 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
  foreach( item IN LISTS GRAPHICS_SHADERS )
     get_filename_component(item_name ${item} NAME_WE)
+    get_filename_component(item_ext ${item} LAST_EXT)
+
     set(item_target_root ${SHADER_OUTPUT_DIR}/${item_name})
 
     list(APPEND INCLUDE_SHADERS_HPP ${item_target_root}.h)
@@ -28,7 +32,7 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
         DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
-        COMMAND scribe ${item} -c++ -o ${item_target_root}
+        COMMAND scribe ${item} -c++ -parseFilenameType -o ${item_target_root} 
     )
  
 endforeach()

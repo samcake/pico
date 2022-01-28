@@ -177,17 +177,11 @@ namespace graphics
 
         // And a Pipeline
 
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = ModelInspectorPart_vert::getSource();
-        auto shader_pixel_src = ModelInspectorPart_frag::getSource();
-        auto shader_comp_src = ModelUVSpaceProcessing_comp::getSource();
-        auto shader_comp_src_file = ModelUVSpaceProcessing_comp::getSourceFilename();
-
         // Draw pass shaders and pipeline
-        graphics::ShaderInit draw_vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderInit draw_vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelInspectorPart_vert::getSource, ModelInspectorPart_vert::getSourceFilename() };
         graphics::ShaderPointer draw_vertexShader = device->createShader(draw_vertexShaderInit);
 
-        graphics::ShaderInit draw_pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit draw_pixelShaderInit{ graphics::ShaderType::PIXEL, "main", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer draw_pixelShader = device->createShader(draw_pixelShaderInit);
 
         graphics::ProgramInit draw_programInit{ draw_vertexShader, draw_pixelShader };
@@ -218,10 +212,10 @@ namespace graphics
         _pipeline_draw_edges = device->createGraphicsPipelineState(draw_edges_pipelineInit);
 
         // Draw mesh connectivity
-        graphics::ShaderInit draw_connectivity_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_connectivity", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderInit draw_connectivity_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_connectivity", ModelInspectorPart_vert::getSource, ModelInspectorPart_vert::getSourceFilename() };
         graphics::ShaderPointer draw_connectivity_vertexShader = device->createShader(draw_connectivity_vertexShaderInit);
 
-        graphics::ShaderInit draw_connectivity_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_connectivity", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit draw_connectivity_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_connectivity", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer draw_connectivity_pixelShader = device->createShader(draw_connectivity_pixelShaderInit);
 
         graphics::ProgramInit draw_connectivity_programInit{ draw_connectivity_vertexShader, draw_connectivity_pixelShader };
@@ -239,10 +233,10 @@ namespace graphics
         _pipeline_draw_connectivity = device->createGraphicsPipelineState(draw_connectivity_pipelineInit);
 
         // Draw mesh connectivity
-        graphics::ShaderInit draw_kernelSamples_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_kernelSamples", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderInit draw_kernelSamples_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_kernelSamples", ModelInspectorPart_vert::getSource, ModelInspectorPart_vert::getSourceFilename() };
         graphics::ShaderPointer draw_kernelSamples_vertexShader = device->createShader(draw_kernelSamples_vertexShaderInit);
 
-        graphics::ShaderInit draw_kernelSamples_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_kernelSamples", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit draw_kernelSamples_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_kernelSamples", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer draw_kernelSamples_pixelShader = device->createShader(draw_kernelSamples_pixelShaderInit);
 
         graphics::ProgramInit draw_kernelSamples_programInit{ draw_kernelSamples_vertexShader, draw_kernelSamples_pixelShader };
@@ -261,9 +255,9 @@ namespace graphics
 
 
         // Draw some widgets to debug and uderstand the UV space
-        graphics::ShaderInit uvspace_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderInit uvspace_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvspace", ModelInspectorPart_vert::getSource, ModelInspectorPart_vert::getSourceFilename() };
         graphics::ShaderPointer uvspace_vertexShader = device->createShader(uvspace_vertexShaderInit);
-        graphics::ShaderInit uvspace_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvspace", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit uvspace_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvspace", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer uvspace_pixelShader = device->createShader(uvspace_pixelShaderInit);
 
         graphics::ProgramInit uvspace_programInit{ uvspace_vertexShader, uvspace_pixelShader };
@@ -281,10 +275,10 @@ namespace graphics
         _pipeline_draw_uvspace_inspect = device->createGraphicsPipelineState(uvspace_pipelineInit);
 
         // Draw uvmesh map points
-        graphics::ShaderInit draw_uvmesh_point_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvmesh_point", "", shader_vertex_src, ModelInspectorPart_vert::getSourceFilename() };
+        graphics::ShaderInit draw_uvmesh_point_vertexShaderInit{ graphics::ShaderType::VERTEX, "main_uvmesh_point", ModelInspectorPart_vert::getSource, ModelInspectorPart_vert::getSourceFilename() };
         graphics::ShaderPointer draw_uvmesh_point_vertexShader = device->createShader(draw_uvmesh_point_vertexShaderInit);
 
-        graphics::ShaderInit draw_uvmesh_point_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh_point", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit draw_uvmesh_point_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh_point", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer draw_uvmesh_point_pixelShader = device->createShader(draw_uvmesh_point_pixelShaderInit);
 
         graphics::ProgramInit draw_uvmesh_point_programInit{ draw_uvmesh_point_vertexShader, draw_uvmesh_point_pixelShader };
@@ -304,7 +298,7 @@ namespace graphics
 
         // 
         // Make uvmesh pipeline draw edges and face and encode mesh data
-        graphics::ShaderInit make_uvmesh_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh", "", shader_pixel_src, ModelInspectorPart_frag::getSourceFilename() };
+        graphics::ShaderInit make_uvmesh_pixelShaderInit{ graphics::ShaderType::PIXEL, "main_uvmesh", ModelInspectorPart_frag::getSource, ModelInspectorPart_frag::getSourceFilename() };
         graphics::ShaderPointer make_uvmesh_pixelShader = device->createShader(make_uvmesh_pixelShaderInit);
 
         graphics::ProgramInit make_uvmesh_programInit{ draw_vertexShader, make_uvmesh_pixelShader };
@@ -327,8 +321,8 @@ namespace graphics
 
         // First compute blur shader and pipeline
         {
-         //   graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlur", "", shader_comp_src, shader_comp_src_file };
-            graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlurBrutForce", "", shader_comp_src, shader_comp_src_file };
+         //   graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlur", ModelUVSpaceProcessing_comp::getSource, ModelUVSpaceProcessing_comp::getSourceFilename() };
+            graphics::ShaderInit imageSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_imageSpaceBlurBrutForce", ModelUVSpaceProcessing_comp::getSource, ModelUVSpaceProcessing_comp::getSourceFilename() };
             graphics::ShaderPointer imageSpaceBlur_compShader = device->createShader(imageSpaceBlur_compShaderInit);
 
             // Let's describe the Compute pipeline Descriptors layout
@@ -340,7 +334,7 @@ namespace graphics
             _pipeline_compute_imageSpaceBlur = device->createComputePipelineState(imageSpaceBlur_compPipelineInit);
         }
         {
-            graphics::ShaderInit meshSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_meshSpaceBlur", "", shader_comp_src, shader_comp_src_file };
+            graphics::ShaderInit meshSpaceBlur_compShaderInit{ graphics::ShaderType::COMPUTE, "main_meshSpaceBlur", ModelUVSpaceProcessing_comp::getSource, ModelUVSpaceProcessing_comp::getSourceFilename() };
             graphics::ShaderPointer meshSpaceBlur_compShader = device->createShader(meshSpaceBlur_compShaderInit);
 
             _pipeline_compute_meshSpaceBlur = device->createComputePipelineState({

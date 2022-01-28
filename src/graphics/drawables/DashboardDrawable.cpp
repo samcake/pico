@@ -81,10 +81,10 @@ namespace graphics
         // And a Pipeline
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", Dashboard_vert::getSource(), Dashboard_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", Dashboard_frag::getSource(), Dashboard_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

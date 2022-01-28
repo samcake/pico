@@ -98,16 +98,15 @@ namespace graphics
 
         // And a Pipeline
 
-        auto shader_pixel_src = Gizmo_frag::getSource();
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit_node{ graphics::ShaderType::VERTEX, "main", "", GizmoNode_vert::getSource(), GizmoNode_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit_node{ graphics::ShaderType::VERTEX, "main", GizmoNode_vert::getSource, GizmoNode_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader_node = device->createShader(vertexShaderInit_node);
 
-        graphics::ShaderInit vertexShaderInit_item{ graphics::ShaderType::VERTEX, "main", "", GizmoItem_vert::getSource(), GizmoItem_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit_item{ graphics::ShaderType::VERTEX, "main", GizmoItem_vert::getSource, GizmoItem_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader_item = device->createShader(vertexShaderInit_item);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, Gizmo_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Gizmo_frag::getSource, Gizmo_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit_node{ vertexShader_node, pixelShader };

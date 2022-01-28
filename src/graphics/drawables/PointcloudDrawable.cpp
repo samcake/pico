@@ -84,15 +84,11 @@ namespace graphics
 
         // And a Pipeline
 
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = PointCloud_vert::getSource();
-        auto shader_pixel_src = PointCloud_frag::getSource();
-
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, PointCloud_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", PointCloud_vert::getSource, PointCloud_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, PointCloud_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", PointCloud_frag::getSource, PointCloud_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

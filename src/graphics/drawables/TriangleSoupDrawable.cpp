@@ -87,15 +87,11 @@ namespace graphics
 
         // And a Pipeline
 
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = TriangleSoup_vert::getSource();
-        auto shader_pixel_src = TriangleSoup_frag::getSource();
-
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, TriangleSoup_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", TriangleSoup_vert::getSource, TriangleSoup_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, TriangleSoup_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", TriangleSoup_frag::getSource, TriangleSoup_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

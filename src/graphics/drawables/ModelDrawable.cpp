@@ -97,16 +97,12 @@ namespace graphics
         auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
       
         // And a Pipeline
-
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = ModelPart_vert::getSource();
-        auto shader_pixel_src = ModelPart_frag::getSource();
-
+        
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelPart_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename() };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, ModelPart_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", ModelPart_frag::getSource, ModelPart_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
