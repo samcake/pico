@@ -63,8 +63,6 @@ class PicoID3DInclude : public ID3DInclude {
                     LPCVOID* ppData,
                     UINT* pBytes) override {
 
-        picoLog("Opening");
-
         auto includedFilename = std::string(pFileName);
         auto shaderFilename = _src->getShaderDesc().url;
         auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
@@ -87,7 +85,6 @@ class PicoID3DInclude : public ID3DInclude {
 
     HRESULT Close(LPCVOID pData) override {
 
-        picoLog("Closing");
         return S_OK;
     }
 
