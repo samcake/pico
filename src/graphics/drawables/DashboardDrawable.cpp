@@ -41,6 +41,12 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+#include "Viewport_inc.h"
+
 #include "Dashboard_vert.h"
 #include "Dashboard_frag.h"
 
@@ -81,10 +87,17 @@ namespace graphics
         // And a Pipeline
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+           Transform_inc::getMapEntry(),
+           Projection_inc::getMapEntry(),
+           Camera_inc::getMapEntry(),
+           SceneTransform_inc::getMapEntry(),
+           Viewport_inc::getMapEntry(),
+        };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

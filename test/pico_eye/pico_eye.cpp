@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
     auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
     auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
-    dashboard_item.setVisible(false);
+  //  dashboard_item.setVisible(false);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);

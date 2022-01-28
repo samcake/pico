@@ -45,6 +45,11 @@
 #include "GizmoItem_vert.h"
 #include "Gizmo_frag.h"
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+
 //using namespace view3d;
 namespace graphics
 {
@@ -100,13 +105,21 @@ namespace graphics
 
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit_node{ graphics::ShaderType::VERTEX, "main", GizmoNode_vert::getSource, GizmoNode_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry()
+        };
+
+
+        graphics::ShaderInit vertexShaderInit_node{ graphics::ShaderType::VERTEX, "main", GizmoNode_vert::getSource, GizmoNode_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader_node = device->createShader(vertexShaderInit_node);
 
-        graphics::ShaderInit vertexShaderInit_item{ graphics::ShaderType::VERTEX, "main", GizmoItem_vert::getSource, GizmoItem_vert::getSourceFilename() };
+        graphics::ShaderInit vertexShaderInit_item{ graphics::ShaderType::VERTEX, "main", GizmoItem_vert::getSource, GizmoItem_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader_item = device->createShader(vertexShaderInit_item);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Gizmo_frag::getSource, Gizmo_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Gizmo_frag::getSource, Gizmo_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit_node{ vertexShader_node, pixelShader };
