@@ -41,6 +41,11 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+
 #include "Heightmap_vert.h"
 #include "Heightmap_frag.h"
 #include "Ocean_comp.h"
@@ -90,10 +95,16 @@ namespace graphics
         // And a Pipeline
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Heightmap_vert::getSource, Heightmap_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
+        };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Heightmap_vert::getSource, Heightmap_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Heightmap_frag::getSource, Heightmap_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Heightmap_frag::getSource, Heightmap_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

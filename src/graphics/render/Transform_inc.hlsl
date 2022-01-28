@@ -1,8 +1,7 @@
 //
 // Transform API
 // 
-// Define Transform
-// point and direction operations
+// Define Transform struct and functions
 //
 
 #define mat43 float4x3
@@ -42,14 +41,141 @@ float3 transformFrom(const Transform mat, const float3 p) {
 // Model / World / Eye Space transforms from Model and View
 //
 
+// Eye <= World
 float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
     return transformTo(view, worldPos);
 }
 
+// World <= Eye
+float3 worldFromEyeSpace(Transform view, float3 eyePos) {
+    return transformFrom(view, eyePos);
+}
+
+// World <= Eye dir
+float3 worldFromEyeSpaceDir(Transform view, float3 eyeDir) {
+    return rotateFrom(view, eyeDir);
+}
+
+// World <= Object
 float3 worldFromObjectSpace(Transform model, float3 objPos) {
     return transformFrom(model, objPos);
 }
 
+// World <= Object  dir
+float3 worldFromObjectSpaceDir(Transform model, float3 objDir) {
+    return rotateFrom(model, objDir);
+}
+
+// Object <= World dir
 float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
     return rotateTo(model, worldDir);
+}
+
+
+
+
+
+
+
+
+
+
+//
+// Box API
+//
+
+struct Box {
+    float3 _center;
+    float3 _size;
+
+    float3 getCorner(int i) {
+        return _center + _size * float3(-1.0 + 2.0 * float((i) & 0x01), -1.0 + 2.0 * float((i >> 1) & 0x01), -1.0 + 2.0 * float((i >> 2) & 0x01));
+        // 0:  - - - 
+        // 1:  + - -
+        // 2:  - + -
+        // 3:  + + -
+        // 4:  - - +
+        // 5:  + - +
+        // 6:  - + +
+        // 7:  + + +
+    }
+
+    int2 getEdge(int i) {
+        // 0: 0 1
+        // 1: 2 3
+        // 2: 4 5
+        // 3: 6 7
+
+        // 4: 0 2
+        // 5: 1 3
+        // 6: 4 6
+        // 7: 5 7
+
+        // 8: 0 4
+        // 9: 1 5
+        //10: 2 6
+        //11: 3 7
+
+        const int2 EDGES[12] = {
+            int2(0, 1),
+            int2(2, 3),
+            int2(4, 5),
+            int2(6, 7),
+
+            int2(0, 2),
+            int2(1, 3),
+            int2(4, 6),
+            int2(5, 7),
+
+            int2(0, 4),
+            int2(1, 5),
+            int2(2, 6),
+            int2(3, 7)
+        };
+        return EDGES[i];
+    }
+
+    int3 getTriangle(int i) {
+        // 0: 2 0 6
+        // 1: 6 0 4
+        // 2: 1 3 5
+        // 3: 5 3 7
+
+        // 4: 0 1 4
+        // 5: 4 1 5
+        // 6: 2 6 3 
+        // 7: 3 6 7
+
+        // 8: 0 2 1
+        // 9: 1 2 3
+        //10: 4 5 6
+        //11: 6 5 7
+
+        const int3 TRIS[12] = {
+            int3(2, 0, 6),
+            int3(6, 0, 4),
+            int3(1, 3, 5),
+            int3(5, 3, 7),
+
+            int3(0, 1, 4),
+            int3(4, 1, 5),
+            int3(2, 6, 3),
+            int3(3, 6, 7),
+
+            int3(0, 2, 1),
+            int3(1, 2, 3),
+            int3(4, 5, 6),
+            int3(6, 5, 7)
+        };
+        return TRIS[i];
+    }
+};
+
+Box worldFromObjectSpace(Transform model, Box objBox) {
+    Box wb;
+    wb._center = transformFrom(model, objBox._center);
+    wb._size.x = dot(abs(model.row_x()), objBox._size);
+    wb._size.y = dot(abs(model.row_y()), objBox._size);
+    wb._size.z = dot(abs(model.row_z()), objBox._size);
+    return wb;
 }
