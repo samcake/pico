@@ -152,13 +152,17 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 }
 )HLSL");
 
+
+const std::string& getVertexShaderSource() { return vertexShaderSource; }
+const std::string& getPixelShaderSource() { return pixelShaderSource; }
+
 graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout vertexLayout, const graphics::RootDescriptorLayoutPointer& rootDescriptorLayout) {
 
-    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", getVertexShaderSource };
     graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
 
-    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", getPixelShaderSource };
     graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
     graphics::ProgramInit programInit{ vertexShader, pixelShader };

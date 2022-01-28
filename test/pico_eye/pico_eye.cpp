@@ -39,6 +39,7 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
+#include <graphics/drawables/SkyDrawable.h>
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/DashboardDrawable.h>
@@ -201,6 +202,17 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
 
+    // A sky drawable factory
+    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    skyDrawableFactory->allocateGPUShared(gpuDevice);
+
+    // a sky drawable to draw the sky
+    auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
+    skyDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, skyDrawable.as<graphics::SkyDrawable>());
+    auto skyitem = state.scene->createItem(graphics::Node::null, skyDrawable);
+    skyitem.setVisible(true);
+
+
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
     gizmoDrawableFactory->allocateGPUShared(gpuDevice);
@@ -227,8 +239,8 @@ int main(int argc, char *argv[])
     // a dashboard
     auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
-
     auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    dashboard_item.setVisible(false);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
