@@ -47,6 +47,7 @@
 #include "SceneTransform_inc.h"
 
 #include "Mesh_inc.h"
+#include "Part_inc.h"
 #include "Material_inc.h"
 #include "SceneModel_inc.h"
 
@@ -120,6 +121,7 @@ namespace graphics
             SceneTransform_inc::getMapEntry(),
 
             Mesh_inc::getMapEntry(),
+            Part_inc::getMapEntry(),
             Material_inc::getMapEntry(),
             SceneModel_inc::getMapEntry(),
             

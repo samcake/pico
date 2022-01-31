@@ -64,7 +64,7 @@ class PicoID3DInclude : public ID3DInclude {
                     UINT* pBytes) override {
 
         auto includedFilename = std::string(pFileName);
-        auto shaderFilename = _src->getShaderDesc().url;
+        auto shaderFilename = _src->getShaderDesc().watcher_file;
         auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
 
         if (_src && _src->getShaderDesc().includes.size()) {
@@ -125,8 +125,8 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
                                         "no source file" :
                                         shader->getShaderDesc().url) :
                                     shader->getShaderDesc().watcher_file);
-            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "/n"
-                      + "    " + file + "/n"
+            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "\n"
+                      + "    " + file + "\n"
                       + (char*)errorBlob->GetBufferPointer()));
             errorBlob->Release();
         }

@@ -4,6 +4,7 @@
 #include "Color_inc.hlsl"
 #include "Paint_inc.hlsl"
 #include "Shading_inc.hlsl"
+#include "Surface_inc.hlsl"
 
 
 int SHOW_UVMESH_OUTSIDE_BIT() { return 0x00000001; }
