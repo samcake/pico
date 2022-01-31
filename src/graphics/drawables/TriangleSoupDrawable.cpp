@@ -43,6 +43,11 @@
 
 #include <document/TriangleSoup.h>
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+
 #include "TriangleSoup_vert.h"
 #include "TriangleSoup_frag.h"
 
@@ -87,15 +92,17 @@ namespace graphics
 
         // And a Pipeline
 
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = TriangleSoup_vert::getSource();
-        auto shader_pixel_src = TriangleSoup_frag::getSource();
-
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, TriangleSoup_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
+        };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", TriangleSoup_vert::getSource, TriangleSoup_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, TriangleSoup_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", TriangleSoup_frag::getSource, TriangleSoup_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

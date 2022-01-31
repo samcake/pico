@@ -25,6 +25,7 @@ int main (int argc, char** argv) {
     std::string srcFilename;
     std::string destFilename;
     std::string targetName;
+    std::string targetExt;
     std::list<std::string> headerFiles;
     TextTemplate::Vars vars;
     
@@ -33,6 +34,7 @@ int main (int argc, char** argv) {
     bool makefileDeps = false;
     bool showParseTree = false;
     bool makeCPlusPlus = false;
+    bool parseShaderTypeFromFilename = false;
 
     auto config = std::make_shared<TextTemplate::Config>();
 
@@ -52,14 +54,33 @@ int main (int argc, char** argv) {
         VERTEX = 0,
         FRAGMENT,
         COMPUTE,
+        INCLUDE,
     } type = VERTEX;
     static const char* shaderTypeString[] = {
-        "VERTEX", "PIXEL", "COMPUTE"
+        "VERTEX", "PIXEL", "COMPUTE", "INCLUDE"
     };
     static const char* shaderCreateString[] = {
-        "Vertex", "Pixel", "Compute"
+        "Vertex", "Pixel", "Compute", "Include"
     };
     std::string shaderStage{ "vert" };
+
+    auto shaderStageParser = [&](const std::string& token) {
+        if (token == "frag") {
+            shaderStage = token;
+            type = FRAGMENT;
+        } else if (token == "comp") {
+            shaderStage = token;
+            type = COMPUTE;
+        } else if (token == "vert") {
+            shaderStage = token;
+            type = VERTEX;
+        } else if (token == "inc") {
+            shaderStage = token;
+            type = INCLUDE;
+        } else {
+            cerr << "Unrecognized shader type. Supported is vert, frag, comp or inc" << endl;
+        }
+    };
 
     for (int ii = 1; (mode != EXIT) && (ii < argc); ii++) {
         inputs.push_back(argv[ii]);
@@ -90,6 +111,9 @@ int main (int argc, char** argv) {
                     mode = READY;
                 } else if (inputs.back() == "-T") {
                     mode = GRAB_SHADER_TYPE;
+                } else if (inputs.back() == "-parseFilenameType") {
+                    parseShaderTypeFromFilename = true;
+                    mode = READY;
                 } else {
                     // just grabbed the source filename, stop parameter parsing
                     srcFilename = inputs.back();
@@ -138,18 +162,7 @@ int main (int argc, char** argv) {
                 
             case GRAB_SHADER_TYPE:
             {
-                if (inputs.back() == "frag") {
-                    shaderStage = inputs.back();
-                    type = FRAGMENT;
-                } else if (inputs.back() == "comp") {
-                    shaderStage = inputs.back();
-                    type = COMPUTE;
-                } else if (inputs.back() == "vert") {
-                    shaderStage = inputs.back();
-                    type = VERTEX;
-                } else {
-                    cerr << "Unrecognized shader type. Supported is vert, frag or geom" << endl;
-                }
+                shaderStageParser(inputs.back());
                 mode = READY;
             }
             break;
@@ -175,8 +188,15 @@ int main (int argc, char** argv) {
         cerr << "  -listVars : Will list the vars name and value in the standard output." << endl;
         cerr << "  -showParseTree : Draw the tree obtained while parsing the source" << endl;
         cerr << "  -c++ : Generate a c++ source file containing the output file stream stored as a char[] variable" << endl;
-        cerr << "  -T vert/frag/geom : define the type of the shader. Defaults to VERTEX if not specified." << endl;
+        cerr << "  -T vert/frag/comp : define the type of the shader. Defaults to VERTEX if not specified." << endl;
         cerr << "       This is necessary if the -c++ option is used." << endl;
+        cerr << "  -parseFilenameType : the shader type is deduced from the filename." << endl;
+        cerr << "       nameOfShaderFile.vert.[language extension] => Vertex" << endl;
+        cerr << "       nameOfShaderFile.frag.[language extension] => Fragment" << endl;
+        cerr << "       nameOfShaderFile.comp.[language extension] => Compute" << endl;
+        cerr << "       nameOfShaderFile.inc.[language extension] => Include" << endl;
+        cerr << "       This is necessary if the -c++ option is used." << endl;
+
         return 0;
     }
 
@@ -188,13 +208,30 @@ int main (int argc, char** argv) {
             targetName = destFilename;
         }
     }
+
+    if (parseShaderTypeFromFilename) {
+        // trim anything before '/' or '\'
+        auto shaderTypeToken = srcFilename.substr(srcFilename.find_last_of('/') + 1);
+        shaderTypeToken = shaderTypeToken.substr(shaderTypeToken.find_last_of('\\') + 1);
+
+        // Get the last extesntion from the input has the target
+        targetExt = shaderTypeToken.substr(shaderTypeToken.find_last_of('.'));
+
+        // trim anything after '.'
+        shaderTypeToken = shaderTypeToken.substr(0, shaderTypeToken.find_first_of('.'));
+
+        // now extract the expected type name at the end of the reminaining token after '_'
+        shaderTypeToken = shaderTypeToken.substr(shaderTypeToken.find_last_of('_') + 1);
+        shaderStageParser(shaderTypeToken);
+    }
+
     // no clean it to have just a descent c var name
     if (!targetName.empty()) {
         // trim anything before '/' or '\'
         targetName = targetName.substr(targetName.find_last_of('/') + 1);
         targetName = targetName.substr(targetName.find_last_of('\\') + 1);
 
-        // trim anything after '.'
+        // trim anything after last '.'
         targetName = targetName.substr(0, targetName.find_first_of('.'));
     }
 
@@ -309,17 +346,22 @@ int main (int argc, char** argv) {
         headerStringStream << "#ifndef " << targetName << "_h" << std::endl;
         headerStringStream << "#define " << targetName << "_h\n" << std::endl;
         headerStringStream << "#include <string>\n" << std::endl;
-        //      headerStringStream << "#include <gpu/Shader.h>\n" << std::endl;
+
         headerStringStream << "class " << targetName << " {" << std::endl;
         headerStringStream << "public:" << std::endl;
-    //    headerStringStream << "\tstatic gpu::Shader::Type getType() { return gpu::Shader::" << shaderTypeString[type] << "; }" << std::endl;
         headerStringStream << "\tstatic const std::string& getType() { return \"" << shaderTypeString[type] << "\"; }" << std::endl;
         headerStringStream << "\tstatic const std::string& getSource() { return _source; }" << std::endl;
         headerStringStream << "\tstatic std::string getSourceFilename() { return \"" << srcFilename << "\"; }" << std::endl;
-   //     headerStringStream << "\tstatic gpu::ShaderPointer getShader();" << std::endl;
+
+        headerStringStream << "\tstatic std::string getName() { return \"" << targetName << "\"; }" << std::endl;
+        headerStringStream << "\tstatic std::string getFilename() { return \"" << targetName << targetExt << "\"; }" << std::endl;
+
+        headerStringStream << "\ttypedef const std::string& (*SourceGetter)();" << std::endl;
+        headerStringStream << "\tstatic std::pair<std::string, SourceGetter> getMapEntry() { return { getFilename(), getSource }; }" << std::endl;
+
         headerStringStream << "private:" << std::endl;
         headerStringStream << "\tstatic const std::string _source;" << std::endl;
-    //    headerStringStream << "\tstatic gpu::ShaderPointer _shader;" << std::endl;
+
         headerStringStream << "};\n" << std::endl;
         headerStringStream << "#endif // " << targetName << "_h" << std::endl;
 
@@ -365,7 +407,7 @@ int main (int argc, char** argv) {
 
         // Write source file
         sourceStringStream << "#include \"" << targetName << ".h\"\n" << std::endl;
-  //      sourceStringStream << "gpu::ShaderPointer " << targetName << "::_shader;" << std::endl;
+
         sourceStringStream << "const std::string " << targetName << "::_source = std::string()";
         // Write the pages content
         for (auto page : pages) {
@@ -373,13 +415,6 @@ int main (int argc, char** argv) {
         }
         sourceStringStream << ";\n" << std::endl << std::endl;
 
-  /*      sourceStringStream << "gpu::ShaderPointer " << targetName << "::getShader() {" << std::endl;
-        sourceStringStream << "\tif (_shader==nullptr) {" << std::endl;
-        sourceStringStream << "\t\t_shader = gpu::Shader::create" << shaderCreateString[type] << "(std::string(_source));" << std::endl;
-        sourceStringStream << "\t}" << std::endl;
-        sourceStringStream << "\treturn _shader;" << std::endl;
-        sourceStringStream << "}\n" << std::endl;
-*/
         // Destination stream
         if (!destFilename.empty()) {
             std::fstream sourceFile;

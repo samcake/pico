@@ -1,4 +1,4 @@
-// DashboardDrawable.cpp
+// SkyDrawable.cpp
 //
 // Sam Gateau - October 2021
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "DashboardDrawable.h"
+#include "SkyDrawable.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -45,20 +45,21 @@
 #include "Projection_inc.h"
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
-#include "Viewport_inc.h"
+#include "Sky_inc.h"
+#include "Color_inc.h"
 
-#include "Dashboard_vert.h"
-#include "Dashboard_frag.h"
+#include "SkyDrawable_vert.h"
+#include "SkyDrawable_frag.h"
 
 //using namespace view3d;
 namespace graphics
 {
 
-    DashboardDrawableFactory::DashboardDrawableFactory() :
-        _sharedUniforms(std::make_shared<DashboardDrawableUniforms>()) {
+    SkyDrawableFactory::SkyDrawableFactory() :
+        _sharedUniforms(std::make_shared<SkyDrawableUniforms>()) {
 
     }
-    DashboardDrawableFactory::~DashboardDrawableFactory() {
+    SkyDrawableFactory::~SkyDrawableFactory() {
 
     }
 
@@ -70,7 +71,7 @@ namespace graphics
         float stride{ 0 };
     };
 
-    void DashboardDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void SkyDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{
@@ -84,20 +85,19 @@ namespace graphics
          };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootLayoutInit);
 
-        // And a Pipeline
-
-        // test: create shader
-        graphics::ShaderIncludeLib include = {
-           Transform_inc::getMapEntry(),
-           Projection_inc::getMapEntry(),
-           Camera_inc::getMapEntry(),
-           SceneTransform_inc::getMapEntry(),
-           Viewport_inc::getMapEntry(),
+        // Shaders & Pipeline
+        graphics::ShaderIncludeLib include = { 
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
+            Sky_inc::getMapEntry(),
+            Color_inc::getMapEntry(),
         };
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename(), include };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", SkyDrawable_vert::getSource, SkyDrawable_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename(), include };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", SkyDrawable_frag::getSource, SkyDrawable_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
@@ -112,22 +112,22 @@ namespace graphics
                     true, // enable depth
                     BlendState()
         };
-        _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
+        _skyPipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::DashboardDrawable* DashboardDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
-        auto primitiveDrawable = new DashboardDrawable();
+    graphics::SkyDrawable* SkyDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
+        auto primitiveDrawable = new SkyDrawable();
         primitiveDrawable->_uniforms = _sharedUniforms;
         return primitiveDrawable;
     }
 
-   void DashboardDrawableFactory::allocateDrawcallObject(
+   void SkyDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::DashboardDrawable& prim)
+        graphics::SkyDrawable& prim)
     {
         auto prim_ = &prim;
-        auto pipeline = this->_primitivePipeline;
+        auto pipeline = this->_skyPipeline;
 
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
@@ -137,6 +137,7 @@ namespace graphics
                 args.batch->setScissor(args.camera->getViewportRect());
 
                 args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+
                 PrimitiveObjectData odata{ args.timer->getCurrentSampleIndex(), args.timer->getNumSamples(), 1.0f, 1.0f };
                 args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 

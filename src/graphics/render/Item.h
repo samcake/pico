@@ -50,6 +50,8 @@ namespace graphics {
     public:
         static Item null;
 
+        Item() {} // null item
+
         Item(const Item& src) = default;
         Item& Item::operator= (const Item&) = default;
 
@@ -58,6 +60,7 @@ namespace graphics {
 
         void setVisible(bool visible) { _self->setVisible(visible); }
         bool isVisible() const { return _self->isVisible(); }
+        bool toggleVisible() { return _self->toggleVisible(); }
 
         NodeID getNodeID() const { return _self->getNodeID(); }
 
@@ -72,10 +75,6 @@ namespace graphics {
             const Scene* _scene{ nullptr };
             const ItemStore* _store{ nullptr };
             const ItemID _id{ INVALID_ITEM_ID };
-
-            NodeID _nodeID{ INVALID_NODE_ID };
-            DrawableID _drawableID{ INVALID_DRAWABLE_ID };
-            bool _isVisible{ true };
     
             Concept(const Scene* scene, const ItemStore* store, ItemID index) :
                 _scene(scene),
@@ -86,6 +85,7 @@ namespace graphics {
 
             void setVisible(bool visible);
             bool isVisible() const;
+            bool toggleVisible();
             void setNode(Node node);
             NodeID getNodeID() const;
             void setDrawable(Drawable drawable);
@@ -97,7 +97,6 @@ namespace graphics {
 
         std::shared_ptr<Concept> _self;
 
-        Item() { } // invalid
         friend class ItemStore;
         Item(Concept* self) : _self(self) { }
     };
@@ -115,6 +114,8 @@ namespace graphics {
             DrawableID _drawableID{ INVALID_DRAWABLE_ID };
             ItemID _groupID{ INVALID_ITEM_ID };
             uint32_t _isVisible{ true };
+
+            inline bool toggleVisible() { _isVisible = !_isVisible; return _isVisible; }
         };
 
         Item createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner = INVALID_ITEM_ID);
@@ -146,9 +147,12 @@ namespace graphics {
         void syncBuffer();
     };
 
-
+    inline void Item::Concept::setVisible(bool visible) { _store->editInfo(_id)._isVisible = visible; }
     inline bool Item::Concept::isVisible() const { return _store->getInfo(_id)._isVisible; }
+    inline bool Item::Concept::toggleVisible() { return _store->editInfo(_id).toggleVisible(); }
+    inline void Item::Concept::setNode(Node node) { _store->editInfo(_id)._nodeID = node.id(); }
     inline NodeID Item::Concept::getNodeID() const { return _store->getInfo(_id)._nodeID; }
+    inline void Item::Concept::setDrawable(Drawable drawable) { _store->editInfo(_id)._drawableID = drawable.id(); }
     inline DrawableID Item::Concept::getDrawableID() const { return _store->getInfo(_id)._drawableID; }
     inline ItemID Item::Concept::getGroupID() const { return _store->getInfo(_id)._groupID; }
 

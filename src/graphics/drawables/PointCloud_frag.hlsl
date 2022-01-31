@@ -16,3 +16,14 @@ float4 main(PixelShaderInput IN) : SV_Target
   //  return float4(IN.Color.xyz, step(r2, 1.0));
     return float4(IN.Color.xyz, 1.0);
 }
+
+
+// Initial version 
+struct PixelShaderInput0 {
+    float4 Color    : COLOR;
+};
+
+float4 main0(PixelShaderInput0 IN) : SV_Target
+{
+    return IN.Color;
+}
