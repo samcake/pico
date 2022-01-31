@@ -35,18 +35,6 @@ namespace graphics {
 
     Item Item::null;
 
-    void Item::Concept::setVisible(bool visible) {
-         _store->editInfo(_id)._isVisible = visible;
-    }
-
-    void Item::Concept::setNode(Node node) {
-        auto& info = _store->editInfo(_id);
-        info._nodeID = node.id();
-    }
-    void Item::Concept::setDrawable(Drawable drawable) {
-         _store->editInfo(_id)._drawableID = drawable.id();
-    }
-
     core::aabox3 Item::Concept::fetchWorldBound() const {
         const auto& info = _store->getInfo(_id);
         if ((info._nodeID != INVALID_NODE_ID) && (info._drawableID != INVALID_DRAWABLE_ID)) {

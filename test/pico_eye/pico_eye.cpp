@@ -29,6 +29,7 @@
 #include <chrono>
 
 #include <core/api.h>
+#include <core/Log.h>
 
 #include <document/Model.h>
 
@@ -69,6 +70,12 @@ struct AppState {
 
     core::vec3 _modelInsertOffset;
 
+    struct {
+        graphics::Item tree_node;
+        graphics::Item tree_item;
+        graphics::Item dashboard;
+    } tools;
+
 };
 
 AppState state;
@@ -89,35 +96,39 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelDrawableParams = state._modelDrawableFactory->getUniformsPtr();
     }
 
-    auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
-
     graphics::ItemIDs modelItemIDs;
-
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
-
-    // let's offset the root to not overlap on previous model
-    if (modelItemIDs.size()) {
-        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
-
-        auto modelBound = modelDrawablePtr->getBound();
-        auto minCorner = modelBound.minPos();
-        auto maxCorner = modelBound.maxPos();
-        auto boundCenter = modelBound.center;
-
-        auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
-        auto modelPos = state._modelInsertOffset + modelOffset;
-        modelPos.y += modelBound.half_size.y;
+    if (lmodel) {
+        auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
+        state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
 
 
-        modelPos = modelPos - boundCenter;
+        modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
 
-        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
-            core::translation(rts, modelPos);
-            return true;
-            });
+        // let's offset the root to not overlap on previous model
+        if (modelItemIDs.size()) {
+            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
 
-        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+            auto modelBound = modelDrawablePtr->getBound();
+            auto minCorner = modelBound.minPos();
+            auto maxCorner = modelBound.maxPos();
+            auto boundCenter = modelBound.center;
+
+            auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
+            auto modelPos = state._modelInsertOffset + modelOffset;
+            modelPos.y += modelBound.half_size.y;
+
+
+            modelPos = modelPos - boundCenter;
+
+            scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+                core::translation(rts, modelPos);
+                return true;
+                });
+
+            state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+        }
+    } else {
+        picoLog("Model document is empty");
     }
 
     return modelItemIDs;
@@ -142,7 +153,7 @@ document::ModelPointer loadModel() {
     // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
    // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-    //std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
 
     // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
     // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
@@ -162,7 +173,9 @@ document::ModelPointer loadModel() {
 
 
     lmodel = document::model::Model::createFromGLTF(modelFile);
-
+    if (!lmodel) {
+        picoLog("Model <" + modelFile + "> document failed to load");
+    }
     return lmodel;
 }
 
@@ -221,15 +234,15 @@ int main(int argc, char *argv[])
     auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
     gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->getNumElements());
-    auto gzitem_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
+    state.tools.tree_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
+    state.tools.tree_node.setVisible(false);
 
 
     auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
     gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->getNumElements());
-    auto gzitem_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
+    state.tools.tree_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
+    state.tools.tree_item.setVisible(false);
 
 
     // A dashboard factory and drawable to represent some debug data
@@ -239,8 +252,8 @@ int main(int argc, char *argv[])
     // a dashboard
     auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
-    auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
-  //  dashboard_item.setVisible(false);
+    state.tools.dashboard = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    state.tools.dashboard.setVisible(false);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
@@ -331,16 +344,6 @@ int main(int argc, char *argv[])
             }
         }
         ImGui::End();
-    /*    if (ImGui::Begin("Scene")) {
-            static char buffer[512] = "";
-            int buffer_size = 512;
-            if (ImGui::InputText("Open...", buffer, buffer_size)) {
-                std::clog << "? " << buffer << std::endl;
-            }
-
-        }
-        ImGui::End();
-        */
 
         state.scene->_items.syncBuffer();
         state.scene->_nodes.updateTransforms();
@@ -370,10 +373,13 @@ int main(int argc, char *argv[])
         }
 
         if (e.state && e.key == uix::KEY_N) {
-            gzitem_node.setVisible(!gzitem_node.isVisible());
+            state.tools.tree_node.toggleVisible();
         }
         if (e.state && e.key == uix::KEY_B) {
-            gzitem_item.setVisible(!gzitem_item.isVisible());
+            state.tools.tree_item.toggleVisible();
+        }
+        if (e.state && e.key == uix::KEY_M) {
+            state.tools.dashboard.toggleVisible();
         }
 
         if (e.state && e.key == uix::KEY_DELETE) {
