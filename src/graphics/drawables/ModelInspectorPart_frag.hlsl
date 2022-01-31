@@ -142,7 +142,7 @@ float3 drawUVMeshTool(float2 uv, float3 color, int numIndices) {
     }
 
     if (_drawMode & SHOW_UVMESH_FACES_ID_BIT()) {
-        color = lerp(color, rainbowRGB(float(uvmesh_triangle(uvmesh)), float(numIndices/ 3)), 0.5f * (1- uvmesh_isOutside(uvmesh)));
+        color = lerp(color, color_rainbow(float(uvmesh_triangle(uvmesh)), float(numIndices/ 3)), 0.5f * (1- uvmesh_isOutside(uvmesh)));
     }
 
     // uvmesh edge texels
@@ -221,9 +221,9 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
    // baseColor = 0.5 * (normal + float3(1.0, 1.0, 1.0));
    // baseColor = mapNor.xyz;
-  //  baseColor = rainbowRGB(IN.Material, float(_numMaterials));
-  //  baseColor = rainbowRGB(_partID, float(_numParts));
-  //  baseColor = rainbowRGB(_nodeID, float(_numNodes));
+  //  baseColor = color_rainbow(IN.Material, float(_numMaterials));
+  //  baseColor = color_rainbow(_partID, float(_numParts));
+  //  baseColor = color_rainbow(_nodeID, float(_numNodes));
   //  baseColor = float3(IN.Texcoord.x, IN.Texcoord.y, 0.0f);
     
    //  baseColor = mapN;
@@ -251,7 +251,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
 }
 
 float4 main_connectivity(PixelShaderInput IN) : SV_Target{
-    return float4(rainbowRGB(IN.TriPos.w, IN.TriPos.x), 1.0);
+    return float4(color_rainbow(IN.TriPos.w, IN.TriPos.x), 1.0);
 }
 
 
@@ -260,7 +260,7 @@ float4 main_kernelSamples(PixelShaderInput IN) : SV_Target{
     if ((r2 >= 1.0)) discard;
 
     if (IN.TriPos.x > 0) {
-        return float4(rainbowRGB(IN.TriPos.w, IN.TriPos.x), 1.0);
+        return float4(color_rainbow(IN.TriPos.w, IN.TriPos.x), 1.0);
     }
 
     float innerTest = float(r2 < 0.01);

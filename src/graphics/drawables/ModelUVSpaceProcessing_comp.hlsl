@@ -340,13 +340,13 @@ void main_meshSpaceBlur(uint3 DTid : SV_DispatchThreadID)
 
 
     float3 color = float3(1, 1, 1);
-   // color = rainbowRGB(float(triangleId), float(part_array[0].numIndices / 3));
+   // color = color_rainbow(float(triangleId), float(part_array[0].numIndices / 3));
    // color = normal.xyz;
    // color = position;
    // color = tangent;
    // color = cotangent;
    // color = float3(texcoord.xy, 0 );
-    //color = rainbowRGB(numIntersects, float(numKernelSamples));
+    //color = color_rainbow(numIntersects, float(numKernelSamples));
     color = accumulation / float(numIntersects);
 
     out_buffer[pixelCoord] = float4(color, 1);

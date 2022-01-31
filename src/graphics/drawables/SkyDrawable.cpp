@@ -46,6 +46,7 @@
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
 #include "Sky_inc.h"
+#include "Color_inc.h"
 
 #include "SkyDrawable_vert.h"
 #include "SkyDrawable_frag.h"
@@ -91,6 +92,7 @@ namespace graphics
             Camera_inc::getMapEntry(),
             SceneTransform_inc::getMapEntry(),
             Sky_inc::getMapEntry(),
+            Color_inc::getMapEntry(),
         };
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", SkyDrawable_vert::getSource, SkyDrawable_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
