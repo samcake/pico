@@ -46,6 +46,16 @@
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
 
+#include "Mesh_inc.h"
+#include "Part_inc.h"
+#include "Material_inc.h"
+#include "SceneModel_inc.h"
+
+#include "Color_inc.h"
+#include "Paint_inc.h"
+#include "Shading_inc.h"
+#include "Surface_inc.h"
+
 #include "ModelPart_vert.h"
 #include "ModelPart_frag.h"
 
@@ -96,7 +106,7 @@ namespace graphics
                 }
             },
             {
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
             }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
@@ -109,6 +119,18 @@ namespace graphics
             Projection_inc::getMapEntry(),
             Camera_inc::getMapEntry(),
             SceneTransform_inc::getMapEntry(),
+
+            Mesh_inc::getMapEntry(),
+            Part_inc::getMapEntry(),
+            Material_inc::getMapEntry(),
+            SceneModel_inc::getMapEntry(),
+            
+            Color_inc::getMapEntry(),
+            Paint_inc::getMapEntry(),
+            Shading_inc::getMapEntry(),
+            Surface_inc::getMapEntry(),
+
+
         };
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
@@ -600,6 +622,9 @@ namespace graphics
        graphics::SamplerInit samplerInit{};
        auto sampler = device->createSampler(samplerInit);
 
+       samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
+       auto samplerL = device->createSampler(samplerInit);
+
        graphics::DescriptorObjects descriptorObjects = {
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer()},
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
@@ -607,7 +632,8 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getMaterialBuffer() },
             { graphics::DescriptorType::RESOURCE_TEXTURE, model.getAlbedoTexture() },
-            { sampler }
+            { sampler },
+            { samplerL }
        };
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 

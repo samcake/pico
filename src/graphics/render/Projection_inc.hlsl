@@ -56,3 +56,10 @@ float4 clipFromEyeSpace(Projection proj, float3 eyePos) {
     }
 }
 
+float3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, float2 clipPos) {
+    return float3(clipPos.x * aspectRatio * sensorHeight * 0.5, clipPos.y * sensorHeight * 0.5, -focal);
+}
+
+float3 eyeFromClipSpace(Projection proj, float2 clipPos) {
+    return eyeFromClipSpace(proj.focal(), proj.sensorHeight(), proj.aspectRatio(), clipPos);
+}

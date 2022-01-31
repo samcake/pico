@@ -50,8 +50,6 @@ namespace graphics {
 
         ShaderIncludeLib includes;
 
-        std::string _source;
-
         ShaderInit() {}
 
         ShaderInit(ShaderType t, const std::string& e, const std::string& u, const ShaderIncludeLib& i = ShaderIncludeLib()) :

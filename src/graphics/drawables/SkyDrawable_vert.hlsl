@@ -11,6 +11,7 @@ cbuffer UniformBlock1 : register(b1) {
 struct VertexShaderOutput
 {
     float4 Coords : TEXCOORD;
+    float3 wdir : WPOS;
     float4 Position : SV_Position;
 };
 
@@ -31,6 +32,10 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float4 coords = float4(ndc, uv);
     float4 clipPos = _projection.clipPosPersAt(ndc.x, ndc.y, 1.0);
 
+    float3 eyeDir = eyeFromClipSpace(_projection, ndc.xy);
+    float3 worldDir = worldFromEyeSpaceDir(_view, eyeDir);
+
+    OUT.wdir = worldDir;
     OUT.Position = clipPos;
     OUT.Coords = coords;
  
