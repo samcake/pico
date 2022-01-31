@@ -47,6 +47,18 @@
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
 
+#include "Mesh_inc.h"
+#include "Material_inc.h"
+#include "SceneModel_inc.h"
+
+#include "Color_inc.h"
+#include "Paint_inc.h"
+#include "Shading_inc.h"
+#include "Surface_inc.h"
+
+#include "MeshEdge_inc.h"
+#include "Triangle_inc.h"
+
 #include "ModelInspectorPart_vert.h"
 #include "ModelInspectorPart_frag.h"
 #include "ModelUVSpaceProcessing_comp.h"
@@ -185,6 +197,18 @@ namespace graphics
             Projection_inc::getMapEntry(),
             Camera_inc::getMapEntry(),
             SceneTransform_inc::getMapEntry(),
+
+            Mesh_inc::getMapEntry(),
+            Material_inc::getMapEntry(),
+            SceneModel_inc::getMapEntry(),
+
+            Color_inc::getMapEntry(),
+            Paint_inc::getMapEntry(),
+            Shading_inc::getMapEntry(),
+
+            Surface_inc::getMapEntry(),
+            MeshEdge_inc::getMapEntry(),
+            Triangle_inc::getMapEntry(),
         };
 
         // And a Pipeline

@@ -46,6 +46,11 @@ float3 eyeFromWorldSpace(Transform view, float3 worldPos) {
     return transformTo(view, worldPos);
 }
 
+// Eye <= World Dir
+float3 eyeFromWorldSpaceDir(Transform view, float3 worldDir) {
+    return rotateTo(view, worldDir);
+}
+
 // World <= Eye
 float3 worldFromEyeSpace(Transform view, float3 eyePos) {
     return transformFrom(view, eyePos);
