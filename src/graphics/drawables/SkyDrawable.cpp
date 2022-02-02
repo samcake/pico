@@ -51,9 +51,15 @@
 #include "SkyDrawable_vert.h"
 #include "SkyDrawable_frag.h"
 
+using float2 = core::vec2;
+using float3 = core::vec3;
+using float4 = core::vec4;
+
 //using namespace view3d;
 namespace graphics
 {
+
+
 
     SkyDrawableFactory::SkyDrawableFactory() :
         _sharedUniforms(std::make_shared<SkyDrawableUniforms>()) {
@@ -64,19 +70,21 @@ namespace graphics
     }
 
     // Custom data uniforms
-    struct PrimitiveObjectData {
-        uint32_t nodeID{0};
-        float numVertices{ 0 };
-        float numIndices{ 0 };
-        float stride{ 0 };
+    struct SkyDrawableData {
+        float3 sunDir;
+        float spare;
     };
+
+    SkyDrawableData evalPushDataFromUnifors(const SkyDrawableUniforms& uniforms) {
+        return { uniforms.atmos.sunDirection, 0 };
+    }
 
     void SkyDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{
             {
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(PrimitiveObjectData) >> 2}
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(SkyDrawableData) >> 2}
             },
             {
                 // ViewPass descriptorSet Layout
@@ -138,8 +146,8 @@ namespace graphics
 
                 args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
 
-                PrimitiveObjectData odata{ args.timer->getCurrentSampleIndex(), args.timer->getNumSamples(), 1.0f, 1.0f };
-                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
+                auto pushdata = evalPushDataFromUnifors((* (prim_->getUniforms()) ));
+                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(SkyDrawableData), (const uint8_t*)&pushdata);
 
                 // A quad is drawn with one triangle 3 verts
                 args.batch->draw(3 * args.timer->getNumSamples(), 0);

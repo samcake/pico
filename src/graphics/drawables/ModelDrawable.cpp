@@ -55,6 +55,7 @@
 #include "Paint_inc.h"
 #include "Shading_inc.h"
 #include "Surface_inc.h"
+#include "Sky_inc.h"
 
 #include "ModelPart_vert.h"
 #include "ModelPart_frag.h"
@@ -130,7 +131,7 @@ namespace graphics
             Shading_inc::getMapEntry(),
             Surface_inc::getMapEntry(),
 
-
+            Sky_inc::getMapEntry(),
         };
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
