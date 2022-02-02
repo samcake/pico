@@ -41,6 +41,13 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+
+#include "Color_inc.h"
+
 #include "Hexagon_vert.h"
 #include "Hexagon_frag.h"
 
@@ -81,10 +88,19 @@ namespace graphics
         // And a Pipeline
 
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_hex", "", Hexagon_vert::getSource(), Hexagon_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
+
+            Color_inc::getMapEntry(),
+        };
+
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_hex", Hexagon_vert::getSource, Hexagon_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", Hexagon_frag::getSource(), Hexagon_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Hexagon_frag::getSource, Hexagon_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
