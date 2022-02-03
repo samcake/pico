@@ -26,9 +26,14 @@
 //
 #pragma once
 
+#include <core/math/LinearAlgebra.h>
 #include "../gpu/gpu.h"
 
 namespace graphics {
+
+    using float2 = core::vec2;
+    using float3 = core::vec3;
+    using float4 = core::vec4;
 
     // Render types
     class Scene;
@@ -46,5 +51,9 @@ namespace graphics {
 
     class Mesh;
     using MeshPointer = std::shared_ptr<Mesh>;
+
+    class Sky;
+    using SkyPointer = std::shared_ptr<Sky>;
+
 }
 

@@ -211,13 +211,15 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
+    // A sky drawable factory
+    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    skyDrawableFactory->allocateGPUShared(gpuDevice);
+    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+
     // The view managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
 
-    // A sky drawable factory
-    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
-    skyDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a sky drawable to draw the sky
     auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
@@ -342,12 +344,28 @@ int main(int argc, char *argv[])
 
                 ImGui::Checkbox("Light shading", &params.lightShading);
             }
+
+            auto sunDir = state.scene->_sky->getSunDir();
+            auto sunAE = core::dir_to_azimuth_elevation(sunDir);
+            const float c_pi = acos(-1);
+            bool sunChanged = false;
+            sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -c_pi, c_pi);
+            sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -c_pi * 0.5, c_pi * 0.5);
+            if (sunChanged) {
+                sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                state.scene->_sky->setSunDir(sunDir);
+            }
         }
         ImGui::End();
+
+
 
         state.scene->_items.syncBuffer();
         state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+
+        state.scene->_sky->updateGPUData();
+
 
         // Render!
         viewport->present(swapchain);

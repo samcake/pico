@@ -32,6 +32,7 @@
 
 #include <render/Scene.h>
 #include <render/Drawable.h>
+#include <render/Sky.h>
 #include <gpu/Query.h>
 
 namespace graphics {
@@ -46,19 +47,10 @@ namespace graphics {
 
     class SkyDrawable;
 
-    struct Atmosphere {
-        core::vec3 sunDirection = core::vec3(0, 1, 0);      // The sun direction (normalized) 
-        float earthRadius = 6360e3;                         // In the paper this is usually Rg or Re (radius ground, eart) 
-        float atmosphereRadius = 6420e3;                    // In the paper this is usually R or Ra (radius atmosphere) 
-        float Hr = 7994;                                    // Thickness of the atmosphere if density was uniform (Hr) 
-        float Hm = 1200;                                    // Same as above but for Mie scattering (Hm) 
 
-        core::vec3 betaR { 3.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
-        core::vec3 betaM { 21e-6f };                        // Mie Scattering
-    };
 
     struct VISUALIZATION_API SkyDrawableUniforms {
-        Atmosphere atmos;
+        SkyPointer _sky;
     };
 
     using SkyDrawableUniformsPointer = std::shared_ptr<SkyDrawableUniforms>;

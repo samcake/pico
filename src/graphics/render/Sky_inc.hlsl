@@ -2,28 +2,34 @@
 // Sky API
 //
 
+struct Atmosphere {
+    float4 er_ar_hr_hm;
+    float4 betaR; // { 3.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
+    float4 betaM; // { 21e-6f };                        // Mie Scattering
 
-float3 getLightDir() {
-    // the direction TO the light
-    return normalize(float3(1.f, 0.8f, 0.f));
-}
+    float earthRadius() { return er_ar_hr_hm.x; } // = 6360e3;                         // In the paper this is usually Rg or Re (radius ground, eart) 
+    float atmosphereRadius() { return er_ar_hr_hm.y; } // = 6420e3;                    // In the paper this is usually R or Ra (radius atmosphere) 
+    float Hr() { return er_ar_hr_hm.z; } // = 7994;                                    // Thickness of the atmosphere if density was uniform (Hr) 
+    float Hm() { return er_ar_hr_hm.w; } // = 1200;                                    // Same as above but for Mie scattering (Hm) 
+};
 
-float3 _SkyColor(const float3 dir) {
-    float3 HORIZON_COLOR = float3(1.71, 1.31, 0.83);
-    float3 SKY_COLOR = float3(0.4, 0.75, 1);
-    float3 SUN_COLOR = float3(1.5, 1, 0.6);
-    float3 SUN_DIRECTION = getLightDir();
 
-    float mixWeight = sqrt(abs(dir.z));
-    float3 sky = (1 - mixWeight) * HORIZON_COLOR + mixWeight * SKY_COLOR;
-    float3 sun = 4 * SUN_COLOR * pow(max(dot(SUN_DIRECTION, dir), 0), 1500);
-    return sky + sun;
-}
+//float3 _SkyColor(const float3 dir) {
+//    float3 HORIZON_COLOR = float3(1.71, 1.31, 0.83);
+//    float3 SKY_COLOR = float3(0.4, 0.75, 1);
+//    float3 SUN_COLOR = float3(1.5, 1, 0.6);
+//    float3 SUN_DIRECTION = getLightDir();
+//
+//    float mixWeight = sqrt(abs(dir.z));
+//    float3 sky = (1 - mixWeight) * HORIZON_COLOR + mixWeight * SKY_COLOR;
+//    float3 sun = 4 * SUN_COLOR * pow(max(dot(SUN_DIRECTION, dir), 0), 1500);
+//    return sky + sun;
+//}
 
-int raySphereIntersect(float3 orig, float3 dir, float atmosphereRadius, in out float t0, in out float t1) {
+int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float t0, in out float t1) {
 
     float p = dot(dir, orig);
-    float q = dot(orig, orig) - atmosphereRadius * atmosphereRadius;
+    float q = dot(orig, orig) - sphereRadius * sphereRadius;
 
     float discriminant = (p * p) - q;
     if (discriminant < 0.0f) {
@@ -37,15 +43,14 @@ int raySphereIntersect(float3 orig, float3 dir, float atmosphereRadius, in out f
     return (discriminant > 1e-7) ? 2 : 1;
 }
 
-float3 sky_computeIncidentLight(float3 orig, float3 dir, float tmin, float tmax) {
+float3 sky_computeIncidentLight(Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
     const float M_PI = acos(-1);
-    float3 sunDirection = getLightDir();  // The sun direction (normalized) 
-    float earthRadius = 6360e3;           // In the paper this is usually Rg or Re (radius ground, eart) 
-    float atmosphereRadius = 6420e3;           // In the paper this is usually R or Ra (radius atmosphere) 
-    float Hr = 7994;             // Thickness of the atmosphere if density was uniform (Hr) 
-    float Hm = 1200;             // Same as above but for Mie scattering (Hm) 
-    float3 betaR = float3(3.8e-6f, 13.5e-6f, 33.1e-6f);
-    float3 betaM = (21e-6f);
+    float earthRadius = atmos.earthRadius();
+    float atmosphereRadius = atmos.atmosphereRadius();           // In the paper this is usually R or Ra (radius atmosphere) 
+    float Hr = atmos.Hr();             // Thickness of the atmosphere if density was uniform (Hr) 
+    float Hm = atmos.Hm();             // Same as above but for Mie scattering (Hm) 
+    float3 betaR = atmos.betaR.xyz;
+    float3 betaM = atmos.betaM.xyz;
 
     float t0, t1;
     if (!raySphereIntersect(orig, dir, atmosphereRadius, t0, t1) || t1 < 0) return 0;
@@ -100,8 +105,32 @@ float3 sky_computeIncidentLight(float3 orig, float3 dir, float tmin, float tmax)
 
 
 
-float3 SkyColor(const float3 dir) {
-    float earthRadius = 6360e3;           // In the paper this is usually Rg or Re (radius ground, eart) 
+#include "Transform_inc.hlsl"
 
-    return sky_computeIncidentLight(float3(0, earthRadius + 94, 0), dir, 0, 100000.0);
+// Sky buffer
+cbuffer SkyConstant : register(b11) {
+    Atmosphere _atmosphere;
+    float3 _sunDirection;       // the direction TO the light
+    float _sunIntensity;
+    Transform _stage;
+};
+
+
+float3 getSunDir() { 
+    return _sunDirection;
+}
+float getSunIntensity() {
+    return _sunIntensity;
+}
+
+float3 SkyColor(const float3 dir) {
+    float3 stage_dir =rotateFrom(_stage, dir);
+
+    float3 origin = float3(0, _atmosphere.earthRadius() + 10, 0);
+    float t0, t1, tMax = 100000.0;
+
+    if (raySphereIntersect(origin, stage_dir, _atmosphere.earthRadius(), t0, t1) && t1 > 0)
+        tMax = max(0.f, t0);
+
+    return sky_computeIncidentLight(_atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
 }

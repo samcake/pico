@@ -102,7 +102,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
        // const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
        // const float lightI = 2.8f;
 
-        float3 lightD = getLightDir();
+        float3 lightD = getSunDir();
         float lightI = SkyColor(lightD);
 
         float3 n = normal;

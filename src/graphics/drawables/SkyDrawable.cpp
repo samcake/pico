@@ -63,6 +63,7 @@ namespace graphics
 
     SkyDrawableFactory::SkyDrawableFactory() :
         _sharedUniforms(std::make_shared<SkyDrawableUniforms>()) {
+        _sharedUniforms->_sky = std::make_shared<Sky>();
 
     }
     SkyDrawableFactory::~SkyDrawableFactory() {
@@ -76,7 +77,7 @@ namespace graphics
     };
 
     SkyDrawableData evalPushDataFromUnifors(const SkyDrawableUniforms& uniforms) {
-        return { uniforms.atmos.sunDirection, 0 };
+        return { uniforms._sky->getSunDir(), 0 };
     }
 
     void SkyDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
@@ -121,6 +122,8 @@ namespace graphics
                     BlendState()
         };
         _skyPipeline = device->createGraphicsPipelineState(pipelineInit);
+
+        _sharedUniforms->_sky->allocateGPUData(device);
     }
 
     graphics::SkyDrawable* SkyDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
