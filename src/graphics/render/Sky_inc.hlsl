@@ -126,7 +126,7 @@ float getSunIntensity() {
 float3 SkyColor(const float3 dir) {
     float3 stage_dir =rotateFrom(_stage, dir);
 
-    float3 origin = float3(0, _atmosphere.earthRadius() + 10, 0);
+    float3 origin = float3(0, _atmosphere.earthRadius() + _stage.col_w().y, 0);
     float t0, t1, tMax = 100000.0;
 
     if (raySphereIntersect(origin, stage_dir, _atmosphere.earthRadius(), t0, t1) && t1 > 0)

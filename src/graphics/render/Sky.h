@@ -77,6 +77,9 @@ namespace graphics {
         void setStage(const core::mat4x3& mat);
         core::mat4x3 getStage() const;
 
+        void setStageAltitude(float alt);
+        float getStageAltitude() const;
+
         // Gpu version of the Sky Data
         void allocateGPUData(const DevicePointer& device);
         bool updateGPUData();

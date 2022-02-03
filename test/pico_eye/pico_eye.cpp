@@ -345,16 +345,23 @@ int main(int argc, char *argv[])
                 ImGui::Checkbox("Light shading", &params.lightShading);
             }
 
+            const float c_rad_to_deg = 180.0 / acos(-1);
             auto sunDir = state.scene->_sky->getSunDir();
-            auto sunAE = core::dir_to_azimuth_elevation(sunDir);
-            const float c_pi = acos(-1);
+            auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
             bool sunChanged = false;
-            sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -c_pi, c_pi);
-            sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -c_pi * 0.5, c_pi * 0.5);
+            sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
+            sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
             if (sunChanged) {
+                sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
                 sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
                 state.scene->_sky->setSunDir(sunDir);
             }
+
+            float altitude = state.scene->_sky->getStageAltitude();
+            if (ImGui::SliderFloat("Stage Altitude", &altitude, 1, 1000080, "%.0f")) {
+                state.scene->_sky->setStageAltitude(altitude);
+            }
+
         }
         ImGui::End();
 

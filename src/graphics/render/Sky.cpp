@@ -63,6 +63,16 @@ float3 Sky::getSunDir() const {
     return _camData._data._sunDirection;
 }
 
+void Sky::setStageAltitude(float alt) {
+    WriteLock();
+    _camData._data._stageRT._columns[3].y = alt;
+}
+float Sky::getStageAltitude() const {
+    ReadLock();
+    return _camData._data._stageRT._columns[3].y;
+}
+
+
 void Sky::allocateGPUData(const DevicePointer& device) {
     // CReate a gpu buffer to hold the Sky
     graphics::BufferInit uboInit;
