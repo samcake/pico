@@ -357,10 +357,9 @@ int main(int argc, char *argv[])
                 state.scene->_sky->setSunDir(sunDir);
             }
 
-            float altitude = state.scene->_sky->getStageAltitude();
-            altitude = log10(altitude + 1.0);
-            if (ImGui::SliderFloat("Stage Altitude log", &altitude, 0, 10, "%.1f")) {
-                state.scene->_sky->setStageAltitude(pow(10.0, altitude) - 1.0);
+            float altitude = state.scene->_sky->getStageAltitude() * 0.001;
+            if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 10000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+                state.scene->_sky->setStageAltitude(altitude * 1000.0);
             }
 
             auto simDim = state.scene->_sky->getSimDim();

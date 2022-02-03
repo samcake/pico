@@ -54,12 +54,16 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
 
     float t0, t1;
     int numAtmosphereIntersections = raySphereIntersect(orig, dir, atmosphereRadius, t0, t1);
-    // if above the atmosphere looking out in space
+
+    // Ray above the atmosphere looking out in space
     if (!numAtmosphereIntersections || t1 < 0)
         return float3(0, 0, 0);
-
-    if (t0 > tmin && t0 > 0) tmin = t0;
-    if (t1 < tmax) tmax = t1;
+    // Ray start above atmosphere looking down
+    if (t0 > tmin && t0 > 0)
+        tmin = t0;
+    // Ray start under atmosphere looking up
+    if (t1 < tmax || tmax < 0)
+        tmax = t1;
     
     uint numSamples = simDim.x;
     uint numSamplesLight = simDim.y;
@@ -133,7 +137,7 @@ float3 SkyColor(const float3 dir) {
     float3 stage_dir =rotateFrom(_stage, dir);
 
     float3 origin = float3(0, _atmosphere.earthRadius() + 0.001 + _stage.col_w().y, 0);
-    float t0, t1, tMax = 100000.0;
+    float t0, t1, tMax = -1.0;
 
     if (raySphereIntersect(origin, stage_dir, _atmosphere.earthRadius(), t0, t1) && t1 > 0)
         tMax = max(0.f, t0);
