@@ -358,7 +358,7 @@ int main(int argc, char *argv[])
             }
 
             float altitude = state.scene->_sky->getStageAltitude() * 0.001;
-            if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 10000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+            if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
                 state.scene->_sky->setStageAltitude(altitude * 1000.0);
             }
 
