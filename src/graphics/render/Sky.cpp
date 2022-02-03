@@ -72,6 +72,16 @@ float Sky::getStageAltitude() const {
     return _camData._data._stageRT._columns[3].y;
 }
 
+void Sky::setSimDim(const int4& dims) {
+    WriteLock();
+    _camData._data._simDim = dims;
+}
+
+int4 Sky::getSimDim() const {
+    ReadLock();
+    return _camData._data._simDim;
+}
+
 
 void Sky::allocateGPUData(const DevicePointer& device) {
     // CReate a gpu buffer to hold the Sky

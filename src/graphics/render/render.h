@@ -34,6 +34,7 @@ namespace graphics {
     using float2 = core::vec2;
     using float3 = core::vec3;
     using float4 = core::vec4;
+    using int4 = core::ivec4;
 
     // Render types
     class Scene;

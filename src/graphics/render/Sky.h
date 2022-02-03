@@ -48,6 +48,7 @@ namespace graphics {
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
         float _sunIntensity = 10.0;
         core::mat4x3 _stageRT;
+        core::ivec4 _simDim = { 16, 8 , 0 , 0};
     };
 
     class VISUALIZATION_API Sky {
@@ -79,6 +80,9 @@ namespace graphics {
 
         void setStageAltitude(float alt);
         float getStageAltitude() const;
+
+        void setSimDim(const int4& dims);
+        int4 getSimDim() const;
 
         // Gpu version of the Sky Data
         void allocateGPUData(const DevicePointer& device);

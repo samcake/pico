@@ -43,7 +43,7 @@ int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float
     return (discriminant > 1e-7) ? 2 : 1;
 }
 
-float3 sky_computeIncidentLight(Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
+float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
     const float M_PI = acos(-1);
     float earthRadius = atmos.earthRadius();
     float atmosphereRadius = atmos.atmosphereRadius();           // In the paper this is usually R or Ra (radius atmosphere) 
@@ -53,11 +53,16 @@ float3 sky_computeIncidentLight(Atmosphere atmos, float3 sunDirection, float3 or
     float3 betaM = atmos.betaM.xyz;
 
     float t0, t1;
-    if (!raySphereIntersect(orig, dir, atmosphereRadius, t0, t1) || t1 < 0) return 0;
+    int numAtmosphereIntersections = raySphereIntersect(orig, dir, atmosphereRadius, t0, t1);
+    // if above the atmosphere looking out in space
+    if (!numAtmosphereIntersections || t1 < 0)
+        return float3(0, 0, 0);
+
     if (t0 > tmin && t0 > 0) tmin = t0;
     if (t1 < tmax) tmax = t1;
-    uint numSamples = 16;
-    uint numSamplesLight = 8;
+    
+    uint numSamples = simDim.x;
+    uint numSamplesLight = simDim.y;
     float segmentLength = (tmax - tmin) / numSamples;
     float tCurrent = tmin;
     float3 sumR = (0);
@@ -113,6 +118,7 @@ cbuffer SkyConstant : register(b11) {
     float3 _sunDirection;       // the direction TO the light
     float _sunIntensity;
     Transform _stage;
+    int4 _simDims;
 };
 
 
@@ -126,11 +132,11 @@ float getSunIntensity() {
 float3 SkyColor(const float3 dir) {
     float3 stage_dir =rotateFrom(_stage, dir);
 
-    float3 origin = float3(0, _atmosphere.earthRadius() + _stage.col_w().y, 0);
+    float3 origin = float3(0, _atmosphere.earthRadius() + 0.001 + _stage.col_w().y, 0);
     float t0, t1, tMax = 100000.0;
 
     if (raySphereIntersect(origin, stage_dir, _atmosphere.earthRadius(), t0, t1) && t1 > 0)
         tMax = max(0.f, t0);
 
-    return sky_computeIncidentLight(_atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
+    return sky_computeIncidentLight(_simDims, _atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
 }

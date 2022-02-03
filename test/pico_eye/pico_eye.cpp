@@ -306,11 +306,11 @@ int main(int argc, char *argv[])
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
             frameSample = currentSample;
-            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t) frameSample.beginRate())
-                              + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
-                              + (camera->isOrtho()
-                                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
-                                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
+            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t)frameSample.beginRate())
+                + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
+                + (camera->isOrtho()
+                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
+                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")));
             window->setTitle(title);
         }
         auto t = (currentSample._frameNum / 90.0f);
@@ -358,8 +358,17 @@ int main(int argc, char *argv[])
             }
 
             float altitude = state.scene->_sky->getStageAltitude();
-            if (ImGui::SliderFloat("Stage Altitude", &altitude, 1, 1000080, "%.0f")) {
-                state.scene->_sky->setStageAltitude(altitude);
+            altitude = log10(altitude + 1.0);
+            if (ImGui::SliderFloat("Stage Altitude log", &altitude, 0, 10, "%.1f")) {
+                state.scene->_sky->setStageAltitude(pow(10.0, altitude) - 1.0);
+            }
+
+            auto simDim = state.scene->_sky->getSimDim();
+            bool simDimChanged = false;
+            simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
+            simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
+            if (simDimChanged) {
+                state.scene->_sky->setSimDim(simDim);
             }
 
         }
