@@ -1,11 +1,14 @@
 //
 // Sky API
+// 
+// Implementation taken from
+// https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 //
 
 struct Atmosphere {
     float4 er_ar_hr_hm;
-    float4 betaR; // { 3.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
-    float4 betaM; // { 21e-6f };                        // Mie Scattering
+    float4 betaR; // { 5.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
+    float4 betaM; // { 4e-6f };                        // Mie Scattering
 
     float earthRadius() { return er_ar_hr_hm.x; } // = 6360e3;                         // In the paper this is usually Rg or Re (radius ground, eart) 
     float atmosphereRadius() { return er_ar_hr_hm.y; } // = 6420e3;                    // In the paper this is usually R or Ra (radius atmosphere) 
@@ -46,9 +49,9 @@ int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float
 float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
     const float M_PI = acos(-1);
     float earthRadius = atmos.earthRadius();
-    float atmosphereRadius = atmos.atmosphereRadius();           // In the paper this is usually R or Ra (radius atmosphere) 
-    float Hr = atmos.Hr();             // Thickness of the atmosphere if density was uniform (Hr) 
-    float Hm = atmos.Hm();             // Same as above but for Mie scattering (Hm) 
+    float atmosphereRadius = atmos.atmosphereRadius();          
+    float Hr = atmos.Hr();   
+    float Hm = atmos.Hm();
     float3 betaR = atmos.betaR.xyz;
     float3 betaM = atmos.betaM.xyz;
 
@@ -69,26 +72,35 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
     uint numSamplesLight = simDim.y;
     float segmentLength = (tmax - tmin) / numSamples;
     float tCurrent = tmin;
+
     float3 sumR = (0);
     float3 sumM = (0); // mie and rayleigh contribution 
-    float opticalDepthR = 0, opticalDepthM = 0;
+    float opticalDepthR = 0;
+    float opticalDepthM = 0;
+
     float mu = dot(dir, sunDirection); // mu in the paper which is the cosine of the angle between the sun direction and the ray direction 
     float phaseR = 3.f / (16.f * M_PI) * (1 + mu * mu);
     float g = 0.76f;
     float phaseM = 3.f / (8.f * M_PI) * ((1.f - g * g) * (1.f + mu * mu)) / ((2.f + g * g) * pow(1.f + g * g - 2.f * g * mu, 1.5f));
+
     for (int i = 0; i < numSamples; ++i) {
         float3 samplePosition = orig + (tCurrent + segmentLength * 0.5f) * dir;
         float height = length(samplePosition) - earthRadius;
+
         // compute optical depth for light
         float hr = exp(-height / Hr) * segmentLength;
         float hm = exp(-height / Hm) * segmentLength;
         opticalDepthR += hr;
         opticalDepthM += hm;
+
         // light optical depth
         float t0Light, t1Light;
         raySphereIntersect(samplePosition, sunDirection, atmosphereRadius, t0Light, t1Light);
-        float segmentLengthLight = t1Light / numSamplesLight, tCurrentLight = 0;
-        float opticalDepthLightR = 0, opticalDepthLightM = 0;
+        float segmentLengthLight = t1Light / numSamplesLight;
+        float tCurrentLight = 0;
+        float opticalDepthLightR = 0;
+        float opticalDepthLightM = 0;
+
         uint j;
         for (j = 0; j < numSamplesLight; ++j) {
             float3 samplePositionLight = samplePosition + (tCurrentLight + segmentLengthLight * 0.5f) * sunDirection;
@@ -104,6 +116,7 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
             sumR += attenuation * hr;
             sumM += attenuation * hm;
         }
+
         tCurrent += segmentLength;
     }
 

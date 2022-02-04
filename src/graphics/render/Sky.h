@@ -39,8 +39,9 @@ namespace graphics {
         float Hr{ 7994 };                                    // Thickness of the atmosphere if density was uniform (Hr) 
         float Hm{ 1200 };                                    // Same as above but for Mie scattering (Hm) 
 
-        float4 betaR{ 3.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
-        float4 betaM{ 21e-6f };                             // Mie Scattering
+        float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
+        float4 betaM{ 4e-6f };                             // Mie Scattering 
+        // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (21e-6f)
     };
 
     struct VISUALIZATION_API SkyData {
