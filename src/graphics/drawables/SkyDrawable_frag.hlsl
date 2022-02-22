@@ -108,7 +108,7 @@ float4 main(PixelShaderInput IN) : SV_Target
 
  //   float3 color = color_rgbFromDir(dir);
 
-    float3 color = SkyColor(dir);
+    float3 color;// = SkyColor(dir);
 
     float2 texcoord = sky_texcoordFromDir(dir);
 
@@ -116,15 +116,16 @@ float4 main(PixelShaderInput IN) : SV_Target
     sky_map.GetDimensions(mapSize.x, mapSize.y);
     float2 texelSize = rcp(mapSize);
 
-    if (IN.coords.z > 0.5)
+  //  if (IN.coords.z > 0.5)
     {
-        float2 v_uv = (IN.coords.zw - float2(0.55, 0.05)) / 0.4;
+      //  float2 v_uv = (IN.coords.zw - float2(0.55, 0.05)) / 0.4;
+        float2 v_uv = (IN.coords.zw - float2(0.5, 0.0)) / 0.5;
         
         if (v_uv.x < 0 || v_uv.y < 0 || v_uv.x >= 1 || v_uv.y >= 1)
         {
             float2 base = octahedron_uvFromDir(dir);
  
-            if (base.x < (texelSize.x - 1.0) || base.x > 1.0 - texelSize.x || base.y < (texelSize.y - 1.0) || base.y > 1.0 - texelSize.y)
+        /*    if (base.x < (texelSize.x - 1.0) || base.x > 1.0 - texelSize.x || base.y < (texelSize.y - 1.0) || base.y > 1.0 - texelSize.y)
             {
                 texcoord = offsetOctCoord(base, 0);
                 color = sky_map.SampleLevel(uSampler0[0], offsetOctCoord(base, 0), texelSize).xyz;
@@ -136,7 +137,7 @@ float4 main(PixelShaderInput IN) : SV_Target
                 color *= 0.25;
 
             }
-            else
+            else */
             {
                 texcoord = offsetOctCoord(base, 0);
                 color = sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
@@ -144,12 +145,13 @@ float4 main(PixelShaderInput IN) : SV_Target
         }
         else
         {
-            color = sky_map.SampleLevel(uSampler0[1], v_uv, 0).xyz;
+            color = sky_map.SampleLevel(uSampler0[0], v_uv, 0).xyz;
         }
     }
 
     
-    return float4(HDR(color), 1.0);
+  //  return float4(HDR(color), 1.0);
+    return float4((color), 1.0);
 
 }
 
