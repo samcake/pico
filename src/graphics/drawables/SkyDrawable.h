@@ -79,6 +79,8 @@ namespace graphics {
     protected:
         SkyDrawableUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _skyPipeline;
+
+        graphics::PipelineStatePointer _skymapPipeline;
     };
     using SkyDrawableFactoryPointer = std::shared_ptr< SkyDrawableFactory>;
 

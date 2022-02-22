@@ -41,7 +41,7 @@ namespace graphics {
 
         float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
         float4 betaM{ 4e-6f };                             // Mie Scattering 
-        // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (21e-6f)
+        // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (2e-6f)
     };
 
     struct VISUALIZATION_API SkyData {
@@ -68,6 +68,8 @@ namespace graphics {
         SkyCPU _camData;
         SkyGPU _gpuData;
 
+        TexturePointer _skymap;
+
     public:
         Sky();
         ~Sky();
@@ -89,5 +91,8 @@ namespace graphics {
         void allocateGPUData(const DevicePointer& device);
         bool updateGPUData();
         BufferPointer getGPUBuffer() const;
+
+
+        TexturePointer getSkymap() const;
     };
 }

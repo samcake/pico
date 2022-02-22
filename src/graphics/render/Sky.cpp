@@ -97,6 +97,15 @@ void Sky::allocateGPUData(const DevicePointer& device) {
 
     // sync the data version
     _gpuData._version = _camData._version;
+
+    graphics::TextureInit mapInit;
+    mapInit.format = graphics::PixelFormat::R11G11B10_FLOAT;
+    mapInit.width = 2048;
+    mapInit.height = 2048;
+    mapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
+    _skymap = device->createTexture(mapInit);
+
+
 }
 
 bool Sky::updateGPUData() {
@@ -117,5 +126,9 @@ bool Sky::updateGPUData() {
 BufferPointer Sky::getGPUBuffer() const {
     ReadGPULock();
     return _gpuData._buffer;
+}
+
+TexturePointer Sky::getSkymap() const {
+    return _skymap;
 }
 

@@ -160,5 +160,3 @@ float3 SkyColor(const float3 dir) {
     return sky_computeIncidentLight(_simDims, _atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
 }
 
-
-

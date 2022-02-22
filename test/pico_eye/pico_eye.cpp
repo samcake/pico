@@ -366,6 +366,7 @@ int main(int argc, char *argv[])
             bool simDimChanged = false;
             simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
             simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
+            simDimChanged |= ImGui::SliderInt("Skymap fetch offset", &simDim.z, -15, 15);
             if (simDimChanged) {
                 state.scene->_sky->setSimDim(simDim);
             }
