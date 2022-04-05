@@ -221,22 +221,21 @@ namespace graphics
         device->updateDescriptorSet(draw_descriptorSet, draw_descriptorObjects);
 
 
-
-
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, pipeline, skymapPipeline, draw_descriptorSet, comp_descriptorSet](const NodeID node, RenderArgs& args) {
-
-            if (prim_->_needSkymapUpdate) {
+            auto uniforms = prim_->getUniforms();
+            if (uniforms->_sky->needSkymapUpdate()) {
                 const int NUM_COMPUTE_GROUP_THREADS = 4;
 
-                auto skymap = prim_->getUniforms()->_sky->getSkymap();
+                auto skymap = uniforms->_sky->getSkymap();
                 args.batch->bindPipeline(skymapPipeline);
                 args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, args.viewPassDescriptorSet);
                 args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, comp_descriptorSet);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, skymap);
                 args.batch->dispatch(skymap->width() / NUM_COMPUTE_GROUP_THREADS, skymap->height() / NUM_COMPUTE_GROUP_THREADS);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, skymap);
-                prim_->_needSkymapUpdate = false;
+
+                uniforms->_sky->resetNeedSkymapUpdate();
             }
 
             args.batch->bindPipeline(pipeline);
@@ -246,7 +245,7 @@ namespace graphics
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, draw_descriptorSet);
 
-            auto pushdata = evalPushDataFromUnifors((* (prim_->getUniforms()) ));
+            auto pushdata = evalPushDataFromUnifors((* (uniforms) ));
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(SkyDrawableData), (const uint8_t*)&pushdata);
 
             // A quad is drawn with one triangle 3 verts
