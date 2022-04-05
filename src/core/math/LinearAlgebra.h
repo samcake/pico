@@ -395,6 +395,7 @@ namespace core
         const vec3& w() const { return _columns[3]; }
     };
 
+
     // Matrix: 3 raws . 4 columns
     struct mat4 {
         vec4 _columns[4]{ {1.0f, 0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 0.0f, 1.0f} };
@@ -723,6 +724,18 @@ namespace core
                                         { dot(a_row_0, b.w()) + a.w().x,
                                           dot(a_row_1, b.w()) + a.w().y,
                                           dot(a_row_2, b.w()) + a.w().z } };
+    }
+
+
+    inline vec2 dir_to_azimuth_elevation(core::vec3 dir) {
+        float elevation = asin(dir.y);
+        float azimuth = atan2(dir.z, dir.x);
+        return vec2(azimuth, elevation);
+    }
+
+    inline vec3 dir_from_azimuth_elevation(float azimuth, float altitude) {
+        float calt = cos(altitude);
+        return { cos(azimuth) * calt, sin(altitude), sin(azimuth) * calt };
     }
 }
 

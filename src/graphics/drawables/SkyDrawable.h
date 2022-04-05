@@ -32,6 +32,7 @@
 
 #include <render/Scene.h>
 #include <render/Drawable.h>
+#include <render/Sky.h>
 #include <gpu/Query.h>
 
 namespace graphics {
@@ -46,12 +47,12 @@ namespace graphics {
 
     class SkyDrawable;
 
+
+
     struct VISUALIZATION_API SkyDrawableUniforms {
-        float a = 0;
-        float b = 0;
-        float c = 0;
-        float d = 0;
+        SkyPointer _sky;
     };
+
     using SkyDrawableUniformsPointer = std::shared_ptr<SkyDrawableUniforms>;
 
     class VISUALIZATION_API SkyDrawableFactory {
@@ -78,6 +79,8 @@ namespace graphics {
     protected:
         SkyDrawableUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _skyPipeline;
+
+        graphics::PipelineStatePointer _skymapPipeline;
     };
     using SkyDrawableFactoryPointer = std::shared_ptr< SkyDrawableFactory>;
 

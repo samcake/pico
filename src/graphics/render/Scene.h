@@ -29,7 +29,6 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
-#include <core/math/LinearAlgebra.h>
 
 #include "Renderer.h"
 #include "render/Transform.h"
@@ -87,6 +86,8 @@ namespace graphics {
         void updateBounds();
         const core::Bounds& getBounds() const { return _bounds; }
 
+        SkyPointer _sky;
+        
     protected:
 
         IDToIndices _idToIndices;

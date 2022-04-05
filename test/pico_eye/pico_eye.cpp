@@ -211,13 +211,15 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
+    // A sky drawable factory
+    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    skyDrawableFactory->allocateGPUShared(gpuDevice);
+    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+
     // The view managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
 
-    // A sky drawable factory
-    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
-    skyDrawableFactory->allocateGPUShared(gpuDevice);
 
     // a sky drawable to draw the sky
     auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
@@ -304,11 +306,11 @@ int main(int argc, char *argv[])
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
             frameSample = currentSample;
-            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t) frameSample.beginRate())
-                              + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
-                              + (camera->isOrtho()
-                                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
-                                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
+            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t)frameSample.beginRate())
+                + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
+                + (camera->isOrtho()
+                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
+                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")));
             window->setTitle(title);
         }
         auto t = (currentSample._frameNum / 90.0f);
@@ -342,12 +344,44 @@ int main(int argc, char *argv[])
 
                 ImGui::Checkbox("Light shading", &params.lightShading);
             }
+
+            const float c_rad_to_deg = 180.0 / acos(-1);
+            auto sunDir = state.scene->_sky->getSunDir();
+            auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
+            bool sunChanged = false;
+            sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
+            sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
+            if (sunChanged) {
+                sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
+                sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                state.scene->_sky->setSunDir(sunDir);
+            }
+
+            float altitude = state.scene->_sky->getStageAltitude() * 0.001;
+            if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+                state.scene->_sky->setStageAltitude(altitude * 1000.0);
+            }
+
+            auto simDim = state.scene->_sky->getSimDim();
+            bool simDimChanged = false;
+            simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
+            simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
+            simDimChanged |= ImGui::SliderInt("Skymap fetch offset", &simDim.z, -15, 15);
+            if (simDimChanged) {
+                state.scene->_sky->setSimDim(simDim);
+            }
+
         }
         ImGui::End();
+
+
 
         state.scene->_items.syncBuffer();
         state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+
+        state.scene->_sky->updateGPUData();
+
 
         // Render!
         viewport->present(swapchain);

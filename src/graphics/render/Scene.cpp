@@ -26,9 +26,13 @@
 //
 #include "Scene.h"
 
+#include "Sky.h"
+
+
 namespace graphics {
 
 Scene::Scene() {
+    _sky = std::make_shared<Sky>();
 }
 
 Scene::~Scene() {
