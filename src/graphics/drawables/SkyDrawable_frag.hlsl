@@ -57,7 +57,8 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
             else 
             {
                color = sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
-              // color = diffuse_sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
+              //
+              color = diffuse_sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
             }
         }
         else
@@ -109,9 +110,10 @@ float3 sampleHemisphere(float u1, float u2) {
 
 float3 sampleHemisphereSequence(int i, const int count) {
     float z = i * rcp(float(count));
-    float a = frac(float(i) * rcp( 1 + (float(count))) );
+    float a = frac(float(i) * rcp( 1 + z * z *(float(count))) );
     return sampleHemisphere(z, a);
 }
+
 
 [numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
 void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
@@ -123,21 +125,36 @@ void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
     float2 invMapSize = rcp(mapSize);
 
     float3 dir = sky_dirFromTexcoord((pixelCoord + 0.5) * invMapSize);
-
+  /*  float3 b1, b2;
+    if (dir.z < -0.9999999f) // Handle the singularity
+    {
+        b1 = float3(0.0f, -1.0f, 0.0f);
+        b2 = float3(-1.0f, 0.0f, 0.0f);
+    //    return;
+    }
+    else
+    {
+        const float a = 1.0f / (1.0f + dir.z);
+        const float b = -dir.x * dir.y * a;
+        b1 = float3(1.0f - dir.x * dir.x * a, b, -dir.x);
+        b2 = float3(b, 1.0f - dir.y * dir.y * a, -dir.y);
+    }
+    */
    // float3 dirX = normalize(cross(float3(0, 1, 0), dir));
     float3 dirX = float3(+dir.z, dir.y, -dir.x);
     float3 dirY = cross(dir, dirX);
     float3 difffuse = 0;
 
-    const int num = 1000;
+    const int num = 3000;
     for (int i = 0; i < num; i++) {
         float3 sampleDirHemi = sampleHemisphereSequence(i, num);
 
+     //  float3 sampleDir = transform_rotateFrom(b2, -b1, dir, sampleDirHemi);
         float3 sampleDir = transform_rotateFrom(dirX, dirY, dir, sampleDirHemi);
 
         float2 texcoord = sky_texcoordFromDir(sampleDir);
         difffuse += sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
     }
-    difffuse /= float(num);
+    difffuse /= float(num) * 0.5;
     out_buffer[pixelCoord] = float4(difffuse, 1);
 }
