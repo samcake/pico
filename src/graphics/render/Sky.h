@@ -49,7 +49,7 @@ namespace graphics {
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
         float _sunIntensity = 10.0;
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
-        core::ivec4 _simDim = { 16, 8 , 0 , 0};
+        core::ivec4 _simDim = { 16, 8 , 0 , 1024};
     };
 
     class VISUALIZATION_API Sky {
@@ -69,6 +69,8 @@ namespace graphics {
         SkyGPU _gpuData;
 
         TexturePointer _skymap;
+        uint32_t _skymapVersion{ 0xFFFFFFFF };
+
 
     public:
         Sky();
@@ -94,5 +96,7 @@ namespace graphics {
 
 
         TexturePointer getSkymap() const;
+        bool needSkymapUpdate() const;
+        void syncSkymap();
     };
 }

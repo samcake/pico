@@ -226,7 +226,7 @@ namespace graphics
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, pipeline, skymapPipeline, draw_descriptorSet, comp_descriptorSet](const NodeID node, RenderArgs& args) {
 
-            if (prim_->_needSkymapUpdate) {
+            if (prim_->getUniforms()->_sky->needSkymapUpdate()) {
                 const int NUM_COMPUTE_GROUP_THREADS = 4;
 
                 auto skymap = prim_->getUniforms()->_sky->getSkymap();
@@ -236,7 +236,7 @@ namespace graphics
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, skymap);
                 args.batch->dispatch(skymap->width() / NUM_COMPUTE_GROUP_THREADS, skymap->height() / NUM_COMPUTE_GROUP_THREADS);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, skymap);
-                prim_->_needSkymapUpdate = false;
+                prim_->getUniforms()->_sky->syncSkymap();
             }
 
             args.batch->bindPipeline(pipeline);

@@ -160,3 +160,84 @@ float3 SkyColor(const float3 dir) {
     return sky_computeIncidentLight(_simDims, _atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
 }
 
+
+
+
+// octahedron mapping
+// 
+
+
+// Octahedron wrap the uv in range [-1,1] from up hemisphere to bottom hemisphere (and back?)
+float2 octahedron_uvWrap(float2 uv)
+{
+    return (1.0 - abs(uv.yx)) * (uv.xy >= 0.0 ? 1.0 : -1.0);
+}
+
+// Octahedron convert from dir normalized to uv in range [-1,1]
+float2 octahedron_uvFromDir(float3 dir)
+{
+    // REF https://knarkowicz.wordpress.com/2014/04/16/octahedron-normal-vector-encoding/
+    dir /= (abs(dir.x) + abs(dir.y) + abs(dir.z));
+    float2 uv = dir.y >= 0.0 ? dir.zx : octahedron_uvWrap(dir.zx);
+    return uv;
+}
+
+// Octahedron convert from  uv in range [-1,1] to dir normalized
+float3 octahedron_dirFromUv(float2 uv)
+{
+    // REF https://twitter.com/Stubbesaurus/status/937994790553227264
+    float3 dir = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
+    float t = max(-dir.y, 0.0);
+    dir.xz += (dir.xz >= 0.0 ? -t : t);
+    return normalize(dir);
+}
+
+float3 sky_dirFromTexcoord(float2 tc)
+{
+    return octahedron_dirFromUv(2 * tc - 1.0);
+}
+
+float2 sky_texcoordFromDir(float3 dir)
+{
+    return (octahedron_uvFromDir(dir) * 0.5 + 0.5);
+}
+
+
+// Check for offset over texture edge,
+bool octahedron_flipped(float2 c, in out bool2 r)
+{
+    r.x = abs(c.x) >= 1.0;
+    r.y = abs(c.y) >= 1.0;
+    return r.x || r.y;
+}
+
+// Example of computing mirrored repeat sampling 
+// of an octahedron map with a small texel offset.
+// Note this is not designed to solve the double wrap case.
+// The "base" is as computed by Oct3To2() above.
+
+float2 octahedron_offsetCoord(float2 base, float2 offset)
+{
+    float2 coord = base + offset; // 2 VALU
+
+   // coord = OctFlipped(coord) ? -coord : coord; // 4 VALU
+    bool2 r;
+    if (octahedron_flipped(coord, r))
+    {
+        if (r.x && r.y)
+        {
+            coord = -coord;
+        }
+        else if (r.x)
+        {
+            coord = float2((coord.x >= 0 ? 1 : -1) * (2 - abs(coord.x)), -coord.y);
+        }
+        else if (r.y)
+        {
+            coord = float2(-coord.x, (coord.y >= 0 ? 1 : -1) * (2 - abs(coord.y)));
+        }
+    }
+
+    coord = coord * 0.5 + 0.5; // 2 VALU
+    return coord;
+}
