@@ -147,6 +147,7 @@ namespace graphics {
         // When we modify d3d12 objects already in use, we need to garbage collect
         // them to be destroyed at a later time
         void garbageCollect(const ComPtr<ID3D12DeviceChild>& child);
+        void flushGarbage();
         std::list< ComPtr<ID3D12DeviceChild> > _garbageObjects;
 
         // Enum translation tables

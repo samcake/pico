@@ -105,7 +105,9 @@ void Sky::allocateGPUData(const DevicePointer& device) {
     mapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
     _skymap = device->createTexture(mapInit);
 
-
+    mapInit.width = 256;
+    mapInit.height = 256;
+    _diffuse_skymap = device->createTexture(mapInit);
 }
 
 bool Sky::updateGPUData() {
@@ -141,4 +143,9 @@ void Sky::resetNeedSkymapUpdate() {
 TexturePointer Sky::getSkymap() const {
     return _skymap;
 }
+
+TexturePointer Sky::getDiffuseSkymap() const {
+    return _diffuse_skymap;
+}
+
 

@@ -3,9 +3,17 @@
 // 
 // Define Transform struct and functions
 //
+#ifndef Transform_inc
+#define Transform_inc
 
 #define mat43 float4x3
 
+float3 transform_rotateFrom(const float3 axisX, const float3 axisY, const float3 axisZ, const float3 d) {
+    return float3(
+        dot(float3(axisX.x, axisY.x, axisZ.x), d),
+        dot(float3(axisX.y, axisY.y, axisZ.y), d),
+        dot(float3(axisX.z, axisY.z, axisZ.z), d));
+}
 
 struct Transform {
     float4 _right_upX;
@@ -184,3 +192,5 @@ Box worldFromObjectSpace(Transform model, Box objBox) {
     wb._size.z = dot(abs(model.row_z()), objBox._size);
     return wb;
 }
+
+#endif
