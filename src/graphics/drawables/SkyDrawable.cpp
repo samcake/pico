@@ -104,6 +104,7 @@ namespace graphics
                 Viewport::viewPassLayout,
                 {
                 { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 1, 1},
                 }
             },
             {
@@ -118,7 +119,7 @@ namespace graphics
             graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", SkyDrawable_vert::getSource, SkyDrawable_vert::getSourceFilename(), include };
             graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-            graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", SkyDrawable_frag::getSource, SkyDrawable_frag::getSourceFilename(), include };
+            graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main_draw", SkyDrawable_frag::getSource, SkyDrawable_frag::getSourceFilename(), include };
             graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
             graphics::ProgramInit programInit{ vertexShader, pixelShader };
@@ -165,6 +166,38 @@ namespace graphics
                _skymapPipeline = device->createComputePipelineState(skymap_pipelineInit);
         }
 
+        // Let's describe the pipeline Descriptors layout for diffuse compute pass
+        graphics::RootDescriptorLayoutInit diffuse_compute_descriptorLayoutInit{
+            {
+            },
+            {
+                // ViewPass descriptorSet Layout
+                Viewport::viewPassLayout,
+                {
+                { graphics::DescriptorType::RW_RESOURCE_TEXTURE, graphics::ShaderStage::COMPUTE, 0, 1}, // render target!
+                { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::ALL_GRAPHICS, 0, 1},
+                }
+            },
+            {
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
+            }
+        };
+        auto diffuse_skymap_descriptorLayout = device->createRootDescriptorLayout(diffuse_compute_descriptorLayoutInit);
+
+
+        {
+            graphics::ShaderInit diffuse_skymap_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeDiffuseSkymap", SkyDrawable_frag::getSource, SkyDrawable_frag::getSourceFilename(), include };
+            graphics::ShaderPointer diffuse_skymap_compShader = device->createShader(diffuse_skymap_compShaderInit);
+
+            // Let's describe the Compute pipeline Descriptors layout
+            graphics::ComputePipelineStateInit diffuse_skymap_pipelineInit{
+                diffuse_skymap_compShader,
+                diffuse_skymap_descriptorLayout
+            };
+
+            _diffuseSkymapPipeline = device->createComputePipelineState(diffuse_skymap_pipelineInit);
+        }
+
     }
 
     graphics::SkyDrawable* SkyDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
@@ -179,29 +212,15 @@ namespace graphics
         graphics::SkyDrawable& prim)
     {
         auto prim_ = &prim;
-        auto pipeline = this->_skyPipeline;
-
+        auto drawPipeline = this->_skyPipeline;
         auto skymapPipeline = this->_skymapPipeline;
+        auto diffusePipeline = this->_diffuseSkymapPipeline;
 
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
-        graphics::DescriptorSetInit descriptorSetInit{
-            skymapPipeline->getRootDescriptorLayout(),
-            1, true
-        };
-        auto comp_descriptorSet = device->createDescriptorSet(descriptorSetInit);
-
-        graphics::DescriptorObjects comp_descriptorObjects = {
-            { graphics::DescriptorType::RW_RESOURCE_TEXTURE, prim.getUniforms()->_sky->getSkymap() }
-        };
-        device->updateDescriptorSet(comp_descriptorSet, comp_descriptorObjects);
-
-
-
-
 
         graphics::DescriptorSetInit draw_descriptorSetInit{
-            pipeline->getRootDescriptorLayout(),
+            drawPipeline->getRootDescriptorLayout(),
             1, true
         };
         auto draw_descriptorSet = device->createDescriptorSet(draw_descriptorSetInit);
@@ -215,38 +234,71 @@ namespace graphics
 
         graphics::DescriptorObjects draw_descriptorObjects = {
             { graphics::DescriptorType::RESOURCE_TEXTURE, prim.getUniforms()->_sky->getSkymap() },
+            { graphics::DescriptorType::RESOURCE_TEXTURE, prim.getUniforms()->_sky->getDiffuseSkymap() },
             { samplerP },
             { samplerL }
         };
         device->updateDescriptorSet(draw_descriptorSet, draw_descriptorObjects);
 
+        graphics::DescriptorSetInit skymap_descriptorSetInit{
+            skymapPipeline->getRootDescriptorLayout(),
+            1, true
+        };
+        auto skymap_descriptorSet = device->createDescriptorSet(skymap_descriptorSetInit);
+
+        graphics::DescriptorObjects skymap_descriptorObjects = {
+            { graphics::DescriptorType::RW_RESOURCE_TEXTURE, prim.getUniforms()->_sky->getSkymap() }
+        };
+        device->updateDescriptorSet(skymap_descriptorSet, skymap_descriptorObjects);
 
 
+        graphics::DescriptorSetInit diffuse_descriptorSetInit{
+            diffusePipeline->getRootDescriptorLayout(),
+            1, true
+        };
+        auto diffuse_descriptorSet = device->createDescriptorSet(diffuse_descriptorSetInit);
+
+        graphics::DescriptorObjects diffuse_descriptorObjects = {
+            { graphics::DescriptorType::RW_RESOURCE_TEXTURE, prim.getUniforms()->_sky->getDiffuseSkymap() },
+            { graphics::DescriptorType::RESOURCE_TEXTURE, prim.getUniforms()->_sky->getSkymap() },
+            { samplerP },
+            { samplerL }
+        };
+        device->updateDescriptorSet(diffuse_descriptorSet, diffuse_descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline, skymapPipeline, draw_descriptorSet, comp_descriptorSet](const NodeID node, RenderArgs& args) {
-
-            if (prim_->getUniforms()->_sky->needSkymapUpdate()) {
+        graphics::DrawObjectCallback drawCallback = [prim_, drawPipeline, skymapPipeline, diffusePipeline, draw_descriptorSet, skymap_descriptorSet, diffuse_descriptorSet](const NodeID node, RenderArgs& args) {
+            auto uniforms = prim_->getUniforms();
+            if (uniforms->_sky->needSkymapUpdate()) {
                 const int NUM_COMPUTE_GROUP_THREADS = 4;
 
-                auto skymap = prim_->getUniforms()->_sky->getSkymap();
+                auto skymap = uniforms->_sky->getSkymap();
                 args.batch->bindPipeline(skymapPipeline);
                 args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, args.viewPassDescriptorSet);
-                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, comp_descriptorSet);
+                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, skymap_descriptorSet);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, skymap);
                 args.batch->dispatch(skymap->width() / NUM_COMPUTE_GROUP_THREADS, skymap->height() / NUM_COMPUTE_GROUP_THREADS);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, skymap);
-                prim_->getUniforms()->_sky->syncSkymap();
+
+                auto diffuse_skymap = uniforms->_sky->getDiffuseSkymap();
+                args.batch->bindPipeline(diffusePipeline);
+                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, args.viewPassDescriptorSet);
+                args.batch->bindDescriptorSet(graphics::PipelineType::COMPUTE, diffuse_descriptorSet);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, diffuse_skymap);
+                args.batch->dispatch(diffuse_skymap->width() / NUM_COMPUTE_GROUP_THREADS, diffuse_skymap->height() / NUM_COMPUTE_GROUP_THREADS);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, diffuse_skymap);
+                    
+                uniforms->_sky->resetNeedSkymapUpdate();
             }
 
-            args.batch->bindPipeline(pipeline);
+            args.batch->bindPipeline(drawPipeline);
             args.batch->setViewport(args.camera->getViewportRect());
             args.batch->setScissor(args.camera->getViewportRect());
 
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, draw_descriptorSet);
 
-            auto pushdata = evalPushDataFromUnifors((* (prim_->getUniforms()) ));
+            auto pushdata = evalPushDataFromUnifors((* (uniforms) ));
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(SkyDrawableData), (const uint8_t*)&pushdata);
 
             // A quad is drawn with one triangle 3 verts

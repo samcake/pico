@@ -41,8 +41,8 @@ Sky::~Sky() {
 
 #define useLocks 1
 #ifdef useLocks 
-#define WriteLock() const std::lock_guard<std::mutex> cpulock(_camData._access); _camData._version++;
-#define ReadLock() const std::lock_guard<std::mutex> cpulock(_camData._access);
+#define WriteLock() const std::lock_guard<std::mutex> cpulock(_cpuData._access); _cpuData._version++;
+#define ReadLock() const std::lock_guard<std::mutex> cpulock(_cpuData._access);
 
 #define WriteGPULock() const std::lock_guard<std::mutex> gpulock(_gpuData._access); _gpuData._version++;
 #define ReadGPULock() const std::lock_guard<std::mutex> gpulock(_gpuData._access);
@@ -56,30 +56,30 @@ Sky::~Sky() {
 
 void Sky::setSunDir(const float3& dir) {
     WriteLock();
-    _camData._data._sunDirection = core::normalize(dir);
+    _cpuData._data._sunDirection = core::normalize(dir);
 }
 float3 Sky::getSunDir() const {
     ReadLock();
-    return _camData._data._sunDirection;
+    return _cpuData._data._sunDirection;
 }
 
 void Sky::setStageAltitude(float alt) {
     WriteLock();
-    _camData._data._stageRT._columns[3].y = alt;
+    _cpuData._data._stageRT._columns[3].y = alt;
 }
 float Sky::getStageAltitude() const {
     ReadLock();
-    return _camData._data._stageRT._columns[3].y;
+    return _cpuData._data._stageRT._columns[3].y;
 }
 
 void Sky::setSimDim(const int4& dims) {
     WriteLock();
-    _camData._data._simDim = dims;
+    _cpuData._data._simDim = dims;
 }
 
 int4 Sky::getSimDim() const {
     ReadLock();
-    return _camData._data._simDim;
+    return _cpuData._data._simDim;
 }
 
 
@@ -94,32 +94,34 @@ void Sky::allocateGPUData(const DevicePointer& device) {
     // and then copy data there
     ReadLock();
     WriteGPULock();
-    memcpy(_gpuData._buffer->_cpuMappedAddress, &_camData._data, sizeof(SkyData));
-    
+    memcpy(_gpuData._buffer->_cpuMappedAddress, &_cpuData._data, sizeof(SkyData));
+
     // sync the data version
-    _gpuData._version = _camData._version;
+    _gpuData._version = _cpuData._version;
 
     graphics::TextureInit mapInit;
     mapInit.format = graphics::PixelFormat::R11G11B10_FLOAT;
-    mapInit.width = _camData._data._simDim.w;
+    mapInit.width = _cpuData._data._simDim.w;
     mapInit.height = mapInit.width;
     mapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
     _skymap = device->createTexture(mapInit);
 
-
+    mapInit.width = 256;
+    mapInit.height = 256;
+    _diffuse_skymap = device->createTexture(mapInit);
 }
 
 bool Sky::updateGPUData() {
     // TODO make the version an atomic to be thread safe...
-    bool needCopy = (_gpuData._version != _camData._version);
+    bool needCopy = (_gpuData._version != _cpuData._version);
     // copy data from tcpu to gpu here if versions are different
     if (needCopy) {
         ReadLock();
         WriteGPULock();
-        memcpy(_gpuData._buffer->_cpuMappedAddress, &_camData._data, sizeof(SkyData));
+        memcpy(_gpuData._buffer->_cpuMappedAddress, &_cpuData._data, sizeof(SkyData));
 
         // sync the data version
-        _gpuData._version = _camData._version;
+        _gpuData._version = _cpuData._version;
     }
     return needCopy;
 }
@@ -129,16 +131,20 @@ BufferPointer Sky::getGPUBuffer() const {
     return _gpuData._buffer;
 }
 
+bool Sky::needSkymapUpdate() const {
+    ReadLock();
+    return _skymapVersion != _cpuData._version;
+}
+
+void Sky::resetNeedSkymapUpdate() {
+    ReadLock();
+    _skymapVersion = _cpuData._version;
+}
+
 TexturePointer Sky::getSkymap() const {
     return _skymap;
 }
 
-bool Sky::needSkymapUpdate() const {
-    return (_skymapVersion != _gpuData._version);
+TexturePointer Sky::getDiffuseSkymap() const {
+    return _diffuse_skymap;
 }
-
-void Sky::syncSkymap() {
-    // Force the skymapVersion to the current gpu version
-    _skymapVersion = _gpuData._version;
-}
-
