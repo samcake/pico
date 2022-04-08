@@ -2,6 +2,8 @@
 //
 // Triangle API
 // 
+#ifndef TRIANGLE_INC
+#define TRIANGLE_INC
 
 // Triangle ray intersection by IQ https://iquilezles.org/
 // triangle defined by vertices v0, v1 and  v2
@@ -18,3 +20,5 @@ float3 triangle_intersect(in float3 ro, in float3 rd, in float3 v0, in float3 v1
     if (u < 0.0 || u>1.0 || v < 0.0 || (u + v)>1.0) t = -1.0;
     return float3(t, u, v);
 }
+
+#endif

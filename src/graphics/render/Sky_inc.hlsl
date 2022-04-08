@@ -4,6 +4,8 @@
 // Implementation taken from
 // https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 //
+#ifndef SKY_INC
+#define SKY_INC
 
 struct Atmosphere {
     float4 er_ar_hr_hm;
@@ -241,3 +243,30 @@ float2 octahedron_offsetCoord(float2 base, float2 offset)
     coord = coord * 0.5 + 0.5; // 2 VALU
     return coord;
 }
+
+float3 sky_fetchEnvironmentMap(float3 dir, Texture2D map, SamplerState sampP, SamplerState sampL)
+{
+    float2 mapSize;
+    map.GetDimensions(mapSize.x, mapSize.y);
+    float2 texelSize = rcp(mapSize);
+    
+    float3 color;
+    float2 base = octahedron_uvFromDir(dir);
+    float2 texcoord = octahedron_offsetCoord(base, 0);
+ 
+    if ((1.0 - abs(base.x) < texelSize.x) || (1.0 - abs(base.y) < texelSize.y))
+    {
+        color = map.SampleLevel(sampP, octahedron_offsetCoord(base, texelSize), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(texelSize.x, -texelSize.y)), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(-texelSize.x, texelSize.y)), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(-texelSize.x, -texelSize.y)), 0).xyz;
+        color *= 0.25;
+    }
+    else
+    {
+        color = map.SampleLevel(sampL, texcoord, 0).xyz;
+    }
+    return color;
+}
+
+#endif

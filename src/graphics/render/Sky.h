@@ -49,7 +49,7 @@ namespace graphics {
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
         float _sunIntensity = 10.0;
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
-        core::ivec4 _simDim = { 16, 8 , 0 , 1024};
+        core::ivec4 _simDim = { 16, 8 , 10000, 1024};
     };
 
     class VISUALIZATION_API Sky {

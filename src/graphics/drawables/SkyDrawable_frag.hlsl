@@ -8,8 +8,6 @@ Texture2D diffuse_sky_map : register(t1);
 SamplerState uSampler0[2] : register(s0);
 
 
-
-
 struct PixelShaderInput
 {
     float4 coords : TEXCOORD;
@@ -25,53 +23,47 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
 {
     float3 dir = normalize(IN.wdir);
 
-    float3 color;
-
-
-    float2 mapSize;
-    sky_map.GetDimensions(mapSize.x, mapSize.y);
-    float2 texelSize = rcp(mapSize);
-
-
-    float aspectratio = _viewport.z / _viewport.w;
-
-  //  if (IN.coords.z > 0.5)
-    {
-      //  float2 v_uv = (IN.coords.zw - float2(0.55, 0.05)) / 0.4;
-        float2 v_uv = (IN.coords.zw - float2(0.7, 0.0)) / (0.3 * float2(1.0, aspectratio));
-        
-        if (v_uv.x < 0 || v_uv.y < 0 || v_uv.x >= 1 || v_uv.y >= 1)
-        {
-            float2 base = octahedron_uvFromDir(dir);
-            float2 texcoord = octahedron_offsetCoord(base, 0);
-            //float2 texcoord = sky_texcoordFromDir(dir);
- 
-            if ( (1.0 - abs(base.x) < texelSize.x) || (1.0 - abs(base.y) < texelSize.y) )
-            {
-                color = sky_map.SampleLevel(uSampler0[0], octahedron_offsetCoord(base, texelSize), 0).xyz;
-                color += sky_map.SampleLevel(uSampler0[0], octahedron_offsetCoord(base, float2(texelSize.x, -texelSize.y)), 0).xyz;
-                color += sky_map.SampleLevel(uSampler0[0], octahedron_offsetCoord(base, float2(-texelSize.x, texelSize.y)), 0).xyz;
-                color += sky_map.SampleLevel(uSampler0[0], octahedron_offsetCoord(base, float2(-texelSize.x, -texelSize.y)), 0).xyz;
-                color *= 0.25;
-            }
-            else 
-            {
-               color = sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
-              //
-              color = diffuse_sky_map.SampleLevel(uSampler0[1], texcoord, 0).xyz;
-            }
-        }
-        else
-        {
-            if (v_uv.x > 0.5)
-                color = sky_map.SampleLevel(uSampler0[0], v_uv, 0).xyz;
-            else
-                color = diffuse_sky_map.SampleLevel(uSampler0[0], v_uv, 0).xyz;
-        }
-    }
+    float3 color = sky_fetchEnvironmentMap(dir, sky_map, uSampler0[0], uSampler0[1]);
 
     
-  //  return float4(HDR(color), 1.0);
+    
+    { // Scopes
+        float aspectratio = _viewport.z / _viewport.w;
+        float2 v_uv1 = (IN.coords.zw - float2(0.7, 0.0)) / (0.3 * float2(1.0, aspectratio));
+        float2 v_uv2 = (IN.coords.zw - float2(0.0, 0.0)) / (0.3 * float2(1.0, aspectratio));
+        float2 v_uv3 = (IN.coords.zw - float2(0.0, 0.3 * aspectratio)) / (0.3 * float2(1.0, aspectratio));
+        if (all(abs(v_uv1 - 0.5) < 0.5))
+        {
+            if (v_uv1.x > 0.5)
+                color = sky_map.SampleLevel(uSampler0[0], v_uv1, 0).xyz;
+            else
+                color = diffuse_sky_map.SampleLevel(uSampler0[0], v_uv1, 0).xyz;       
+        }
+        else if (all(abs(v_uv2 - 0.5) < 0.5))
+        {
+            v_uv2 = 2.2 * (v_uv2 - 0.5);
+            float r = dot(v_uv2, v_uv2);
+            if (r <= 1.0f)
+            {
+                float3 dome_dir = float3(v_uv2.x, v_uv2.y, sqrt(1 - r));
+                dome_dir = worldFromEyeSpaceDir(_view, dome_dir);
+                color = sky_fetchEnvironmentMap(dome_dir, sky_map, uSampler0[0], uSampler0[1]);
+            }
+        }
+        else if (all(abs(v_uv3 - 0.5) < 0.5))
+        {
+            v_uv3 = 2.2 * (v_uv3 - 0.5);
+            float r = dot(v_uv3, v_uv3);
+            if (r <= 1.0f)
+            {
+                float3 dome_dir = float3(v_uv3.x, v_uv3.y, sqrt(1 - r));
+                dome_dir = worldFromEyeSpaceDir(_view, dome_dir);
+                color = sky_fetchEnvironmentMap(dome_dir, diffuse_sky_map, uSampler0[0], uSampler0[1]);
+            }
+        }
+    }
+    
+    // return float4(HDR(color), 1.0);
     return float4((color), 1.0);
 
 }
@@ -110,7 +102,7 @@ float3 sampleHemisphere(float u1, float u2) {
 
 float3 sampleHemisphereSequence(int i, const int count) {
     float z = i * rcp(float(count));
-    float a = frac(float(i) * rcp( 1 + z * z *(float(count))) );
+    float a = i + 1 - z;
     return sampleHemisphere(z, a);
 }
 
@@ -124,37 +116,24 @@ void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
     out_buffer.GetDimensions(mapSize.x, mapSize.y);
     float2 invMapSize = rcp(mapSize);
 
-    float3 dir = sky_dirFromTexcoord((pixelCoord + 0.5) * invMapSize);
-  /*  float3 b1, b2;
-    if (dir.z < -0.9999999f) // Handle the singularity
-    {
-        b1 = float3(0.0f, -1.0f, 0.0f);
-        b2 = float3(-1.0f, 0.0f, 0.0f);
-    //    return;
-    }
-    else
-    {
-        const float a = 1.0f / (1.0f + dir.z);
-        const float b = -dir.x * dir.y * a;
-        b1 = float3(1.0f - dir.x * dir.x * a, b, -dir.x);
-        b2 = float3(b, 1.0f - dir.y * dir.y * a, -dir.y);
-    }
-    */
-   // float3 dirX = normalize(cross(float3(0, 1, 0), dir));
-    float3 dirX = float3(+dir.z, dir.y, -dir.x);
-    float3 dirY = cross(dir, dirX);
-    float3 difffuse = 0;
+    float3 dir = normalize(sky_dirFromTexcoord((pixelCoord + 0.5) * invMapSize));
 
-    const int num = 3000;
+    // Make an orthonormal base from direction
+    float3 dirX;
+    float3 dirY;
+    transform_evalOrthonormalBase(dir, dirX, dirY);
+
+    float3 diffuse = 0;
+
+    int num = _simDims.z;
     for (int i = 0; i < num; i++) {
         float3 sampleDirHemi = sampleHemisphereSequence(i, num);
-
-     //  float3 sampleDir = transform_rotateFrom(b2, -b1, dir, sampleDirHemi);
+        
         float3 sampleDir = transform_rotateFrom(dirX, dirY, dir, sampleDirHemi);
 
         float2 texcoord = sky_texcoordFromDir(sampleDir);
-        difffuse += sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
+        diffuse += sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
     }
-    difffuse /= float(num) * 0.5;
-    out_buffer[pixelCoord] = float4(difffuse, 1);
+    diffuse /= float(num);
+    out_buffer[pixelCoord] = float4(diffuse, 1);
 }

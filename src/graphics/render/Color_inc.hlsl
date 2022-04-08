@@ -1,6 +1,8 @@
 //
 // Color API
 // 
+#ifndef COLOR_INC
+#define COLOR_INC
 
 float3 color_rgbFromHSV(const float3 hsv) {
     const float4 k = float4(1.0f, 2.0f / 3.0f, 1.0f / 3.0f, 3.0f);
@@ -20,3 +22,5 @@ float3 color_rgbFromDir(float3 dir) {
     float v = (dir.y > 0 ? 1.0 : 1.0 + dir.y);
     return color_rgbFromHSV(float3(h, sqrt(s), sqrt(v)));
 }
+
+#endif

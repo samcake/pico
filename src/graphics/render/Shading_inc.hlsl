@@ -2,6 +2,8 @@
 //
 // Material Shading API
 //
+#ifndef SHADING_INC
+#define SHADING_INC
 
 static const float M_PI = acos(-1);
 
@@ -56,3 +58,4 @@ float3 BRDF_specularGGX(float3 f0, float3 f90, float alphaRoughness, float specu
 }
 
 
+#endif
