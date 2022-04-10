@@ -135,5 +135,7 @@ void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
         diffuse += sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
     }
     diffuse /= float(num);
+   // diffuse *= 4.0;
+    diffuse *= 3.14;
     out_buffer[pixelCoord] = float4(diffuse, 1);
 }
