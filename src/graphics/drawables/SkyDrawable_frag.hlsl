@@ -9,16 +9,11 @@ SamplerState uSampler0[2] : register(s0);
 
 float3 evalSH(float3 dir)
 {
-    float3 d = dir.xyz;
+    float3 d = dir.zxy;
 
   //------------------------------------------------------------------       
   // We now define the constants and assign values to x,y, and z 
-	
-    const float c1 = 0.429043;
-    const float c2 = 0.511664;
-    const float c3 = 0.743125;
-    const float c4 = 0.886227;
-    const float c5 = 0.247708;
+
     
     float3 L00 = diffuse_sky_map.Load(int3(0, 0, 0)).xyz;
     float3 L1_1 = diffuse_sky_map.Load(int3(1, 0, 0)).xyz;
@@ -32,19 +27,24 @@ float3 evalSH(float3 dir)
     
   //------------------------------------------------------------------ 
   // We now compute the squares and products needed 
-
-    float3 d2 = d * d;
-   /* x2 = x * x;
+    /* x2 = x * x;
     y2 = y * y;
     z2 = z * z;
     xy = x * y;
     yz = y * z;
     xz = x * z;*/
-  //------------------------------------------------------------------ 
+	
+    const float c1 = 0.429043;
+    const float c2 = 0.511664;
+    const float c3 = 0.743125;
+    const float c4 = 0.886227;
+    const float c5 = 0.247708;
+    
+    //------------------------------------------------------------------ 
   // Finally, we compute equation 13
     
-    float3 col = c1 * L22 * (d2.x - d2.y)
-            + c3 * L20 * d2.z
+    float3 col = c1 * L22 * (d.x * d.x - d.y * d.y)
+            + c3 * L20 * d.z * d.z
             + c4 * L00
             - c5 * L20
             + 2 * c1 * (  L2_2 * d.x * d.y
@@ -59,9 +59,9 @@ float3 evalSH(float3 dir)
 
 
 
-void updatecoeffs(float3 hdr, float domega, float3 d, inout float3 coeffs[9])
+void updatecoeffs(float3 hdr, float domega, float3 d, out float3 coeffs[9])
 {
-    float3 dir = d.xyz;
+    float3 dir = d.zxy;
   /****************************************************************** 
    Update the coefficients (i.e. compute the next term in the
    integral) based on the lighting value hdr, the differential
@@ -83,29 +83,29 @@ void updatecoeffs(float3 hdr, float domega, float3 d, inout float3 coeffs[9])
 
     /* L_{00}.  Note that Y_{00} = 0.282095 */
     const float c0 = 0.282095;
-    coeffs[0] += hdr * c0 * domega;
+    coeffs[0] = hdr * c0 * domega;
 
     /* L_{1m}. -1 <= m <= 1.  The linear terms */
     const float c1 = 0.488603;
-    coeffs[1] += hdr * (c1 * dir.y) * domega; /* Y_{1-1} = 0.488603 y  */
-    coeffs[2] += hdr * (c1 * dir.z) * domega; /* Y_{10}  = 0.488603 z  */
-    coeffs[3] += hdr * (c1 * dir.x) * domega; /* Y_{11}  = 0.488603 x  */
+    coeffs[1] = hdr * (c1 * dir.y) * domega; /* Y_{1-1} = 0.488603 y  */
+    coeffs[2] = hdr * (c1 * dir.z) * domega; /* Y_{10}  = 0.488603 z  */
+    coeffs[3] = hdr * (c1 * dir.x) * domega; /* Y_{11}  = 0.488603 x  */
 
     /* The Quadratic terms, L_{2m} -2 <= m <= 2 */
 
     /* First, L_{2-2}, L_{2-1}, L_{21} corresponding to xy,yz,xz */
     const float c2 = 1.092548;
-    coeffs[4] += hdr * (c2 * dir.x * dir.y) * domega; /* Y_{2-2} = 1.092548 xy */
-    coeffs[5] += hdr * (c2 * dir.y * dir.z) * domega; /* Y_{2-1} = 1.092548 yz */
-    coeffs[7] += hdr * (c2 * dir.x * dir.z) * domega; /* Y_{21}  = 1.092548 xz */
+    coeffs[4] = hdr * (c2 * dir.x * dir.y) * domega; /* Y_{2-2} = 1.092548 xy */
+    coeffs[5] = hdr * (c2 * dir.y * dir.z) * domega; /* Y_{2-1} = 1.092548 yz */
+    coeffs[7] = hdr * (c2 * dir.x * dir.z) * domega; /* Y_{21}  = 1.092548 xz */
 
     /* L_{20}.  Note that Y_{20} = 0.315392 (3z^2 - 1) */
     const float c3 = 0.315392;
-    coeffs[6] += hdr * (c3 * (3 * dir.z * dir.z - 1)) * domega;
+    coeffs[6] = hdr * (c3 * (3 * dir.z * dir.z - 1)) * domega;
 
     /* L_{22}.  Note that Y_{22} = 0.546274 (x^2 - y^2) */
     const float c4 = 0.546274;
-    coeffs[8] += hdr * (c4 * (dir.x * dir.x - dir.y * dir.y)) * domega;
+    coeffs[8] = hdr * (c4 * (dir.x * dir.x - dir.y * dir.y)) * domega;
 }
 
 struct PixelShaderInput
@@ -250,7 +250,8 @@ void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
     int2 pixelCoord = DTid.xy;
 
     out_buffer[pixelCoord] = float4(0, 0, 0, 1);
-    AllMemoryBarrier();
+    //AllMemoryBarrier();
+    AllMemoryBarrierWithGroupSync();
     
     float2 mapSize;
     out_buffer.GetDimensions(mapSize.x, mapSize.y);
@@ -272,5 +273,6 @@ void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
     
     
     if (pixelCoord.y > 0)
-        out_buffer[pixelCoord] = float4(coeffs[3], 1);
+        out_buffer[pixelCoord] = float4(coeffs[0], 1);
+        
 }
