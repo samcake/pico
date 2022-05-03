@@ -131,6 +131,18 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
 
 #include "Transform_inc.hlsl"
 
+struct SphericalHarmonics {
+    float4 L00 ;
+    float4 L1_1;
+    float4 L10 ;
+    float4 L11 ;
+    float4 L2_2;
+    float4 L2_1;
+    float4 L20 ;
+    float4 L21 ;
+    float4 L22 ;
+};
+
 // Sky buffer
 cbuffer SkyConstant : register(b11) {
     Atmosphere _atmosphere;
@@ -138,6 +150,7 @@ cbuffer SkyConstant : register(b11) {
     float _sunIntensity;
     Transform _stage;
     int4 _simDims;
+    SphericalHarmonics _irradianceSH;
 };
 
 
@@ -267,6 +280,30 @@ float3 sky_fetchEnvironmentMap(float3 dir, Texture2D map, SamplerState sampP, Sa
         color = map.SampleLevel(sampL, texcoord, 0).xyz;
     }
     return color;
+}
+
+
+float3 sky_evalIrradianceSH(float3 dir) {
+    float3 d = dir.zxy;
+	
+    const float c1 = 0.429043;
+    const float c2 = 0.511664;
+    const float c3 = 0.743125;
+    const float c4 = 0.886227;
+    const float c5 = 0.247708;
+    
+    float3 col = c1 * _irradianceSH.L22.xyz * (d.x * d.x - d.y * d.y)
+            + c3 * _irradianceSH.L20.xyz * d.z * d.z
+            + c4 * _irradianceSH.L00.xyz
+            - c5 * _irradianceSH.L20.xyz
+            + 2 * c1 * (_irradianceSH.L2_2.xyz * d.x * d.y
+                        + _irradianceSH.L21.xyz * d.x * d.z
+                        + _irradianceSH.L2_1.xyz * d.y * d.z)
+            + 2 * c2 * (_irradianceSH.L11.xyz * d.x
+                        + _irradianceSH.L1_1.xyz * d.y
+                        + _irradianceSH.L10.xyz * d.z);
+
+    return col;
 }
 
 #endif

@@ -39,4 +39,6 @@ namespace core {
         static void _assert(bool test, const char* file, int line, const char* functionName, const char* message);
     };
 
+    extern std::string to_string(std::wstring wstr);
+    extern std::wstring to_wstring(std::string str);
 }

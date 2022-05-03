@@ -49,13 +49,47 @@ Buffer::~Buffer() {
 }
 
 Texture::Texture() :
-	_init{},
-	_bufferSize(0),
-	_cpuMappedAddress(nullptr)
+	_init{}
 {
 
 }
 
 Texture::~Texture() {
 
+}
+
+std::pair<UploadSubresourceLayoutArray, uint64_t> Texture::evalUploadSubresourceLayout(const TexturePointer& dest, const std::vector<uint32_t>& subresources) {
+    // find amount of data required to fit all the init data
+    uint64_t bufferSize = 0;
+    UploadSubresourceLayoutArray updloadLayout;
+    // if no subresoruces, assume all
+    if (subresources.empty()) {
+        uint32_t s = 0;
+        for (const auto& id : dest->_init.initData) {
+            if (id.size()) {
+                UploadSubresourceLayout ul;
+                ul.subresource = s;
+                ul.byteOffset = bufferSize;
+                ul.byteLength = dest->_init.initData[s].size();
+                bufferSize += ul.byteLength;
+                updloadLayout.emplace_back(ul);
+            }
+            s++;
+        }
+    } else {
+        for (const auto& s : subresources) {
+            if (dest->_init.initData.size() > s) {
+                if (dest->_init.initData[s].size()) {
+                    UploadSubresourceLayout ul;
+                    ul.subresource = s;
+                    ul.byteOffset = bufferSize;
+                    ul.byteLength = dest->_init.initData[s].size();
+                    bufferSize += ul.byteLength;
+                    updloadLayout.emplace_back(ul);
+                }
+            }
+        }
+    }
+
+    return { updloadLayout, bufferSize };
 }

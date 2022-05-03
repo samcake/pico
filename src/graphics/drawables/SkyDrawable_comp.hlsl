@@ -1,61 +1,10 @@
 #include "Sky_inc.hlsl"
 
 Texture2D sky_map : register(t0);
+SamplerState uSampler0[2] : register(s0);
 
 
-float3 evalSH(float3 dir)
-{
-    float3 d = dir.zxy;
-
-  //------------------------------------------------------------------       
-  // We now define the constants and assign values to x,y, and z 
-
-    
-    float3 L00 = diffuse_sky_map.Load(int3(0, 0, 0)).xyz;
-    float3 L1_1 = diffuse_sky_map.Load(int3(1, 0, 0)).xyz;
-    float3 L10 = diffuse_sky_map.Load(int3(2, 0, 0)).xyz;
-    float3 L11 = diffuse_sky_map.Load(int3(3, 0, 0)).xyz;
-    float3 L2_2 = diffuse_sky_map.Load(int3(4, 0, 0)).xyz;
-    float3 L2_1 = diffuse_sky_map.Load(int3(5, 0, 0)).xyz;
-    float3 L20 = diffuse_sky_map.Load(int3(6, 0, 0)).xyz;
-    float3 L21 = diffuse_sky_map.Load(int3(7, 0, 0)).xyz;
-    float3 L22 = diffuse_sky_map.Load(int3(8, 0, 0)).xyz;
-    
-  //------------------------------------------------------------------ 
-  // We now compute the squares and products needed 
-    /* x2 = x * x;
-    y2 = y * y;
-    z2 = z * z;
-    xy = x * y;
-    yz = y * z;
-    xz = x * z;*/
-	
-    const float c1 = 0.429043;
-    const float c2 = 0.511664;
-    const float c3 = 0.743125;
-    const float c4 = 0.886227;
-    const float c5 = 0.247708;
-    
-    //------------------------------------------------------------------ 
-  // Finally, we compute equation 13
-    
-    float3 col = c1 * L22 * (d.x * d.x - d.y * d.y)
-            + c3 * L20 * d.z * d.z
-            + c4 * L00
-            - c5 * L20
-            + 2 * c1 * (  L2_2 * d.x * d.y
-                        + L21  * d.x * d.z
-                        + L2_1 * d.y * d.z)
-            + 2 * c2 * (  L11  * d.x
-                        + L1_1 * d.y
-                        + L10  * d.z);
-
-    return col;
-}
-
-
-
-void updatecoeffs(float3 hdr, float domega, float3 d, out float3 coeffs[9])
+void updatecoeffs(float3 hdr, float domega, float3 d, inout float3 coeffs[9])
 {
     float3 dir = d.zxy;
     /******************************************************************
@@ -104,11 +53,13 @@ void updatecoeffs(float3 hdr, float domega, float3 d, out float3 coeffs[9])
     coeffs[8] = hdr * (c4 * (dir.x * dir.x - dir.y * dir.y)) * domega;
 }
 
-
 // Read previous state from 
-RWTexture2D<float4> out_buffer : register(u0);
+RWTexture2D<float4> out_texture : register(u0);
+RWBuffer<float4> out_buffer : register(u1);
 
-#define THREAD_GROUP_SIDE 4
+#define THREAD_GROUP_SIDE 8
+#define THREAD_GROUP_DIM THREAD_GROUP_SIDE * THREAD_GROUP_SIDE
+#define SH_DIM 9
 
 [numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
 void main_makeSkymap(uint3 DTid : SV_DispatchThreadID)
@@ -116,7 +67,7 @@ void main_makeSkymap(uint3 DTid : SV_DispatchThreadID)
     int2 pixelCoord = DTid.xy;
 
     float2 mapSize;
-    out_buffer.GetDimensions(mapSize.x, mapSize.y);
+    out_texture.GetDimensions(mapSize.x, mapSize.y);
     float2 invMapSize = rcp(mapSize);
    
 
@@ -125,104 +76,95 @@ void main_makeSkymap(uint3 DTid : SV_DispatchThreadID)
     float3 color = SkyColor(dir);
 
         
-    out_buffer[pixelCoord] = float4(color, 1);
+    out_texture[pixelCoord] = float4(color, 1);
 }
 
-float3 sampleHemisphere(float u1, float u2) {
-    float cosTheta = 1 - u1;
-    float sinTheta = sqrt(max(0.0f, 1.0f - cosTheta * cosTheta));
-    float phi = 2 * 3.14 * u2;
-    return float3(sinTheta * cos(phi), sinTheta * sin(phi), cosTheta);
-}
-
-float3 sampleHemisphereSequence(int i, const int count) {
-    float z = i * rcp(float(count));
-    float a = i + 1 - z;
-    return sampleHemisphere(z, a);
-}
-
-
-[numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
-void main_makeDiffuseSkymap_old
-(uint3 DTid : SV_DispatchThreadID)
-{
-    int2 pixelCoord = DTid.xy;
-
-    float2 mapSize;
-    out_buffer.GetDimensions(mapSize.x, mapSize.y);
-    float2 invMapSize = rcp(mapSize);
-
-    float3 dir = (sky_dirFromTexcoord((pixelCoord + 0.5) * invMapSize));
-
-    // Make an orthonormal base from direction
-    float3 dirX;
-    float3 dirY;
-    transform_evalOrthonormalBase(dir, dirX, dirY);
-
-    float3 diffuse = 0;
-
-    int num = _simDims.z;
-    for (int i = 0; i < num; i++) {
-        float3 sampleDirHemi = sampleHemisphereSequence(i, num);
-        
-        float3 sampleDir = transform_rotateFrom(dirX, dirY, dir, sampleDirHemi);
-
-        float2 texcoord = sky_texcoordFromDir(sampleDir);
-        diffuse += sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
-    }
-    diffuse /= float(num);
-   // diffuse *= 4.0;
-    diffuse *= 3.14;
-    out_buffer[pixelCoord] = float4(diffuse, 1);
-}
-
-
+//////////////////////////////////// 
 //If I use a groupshared
-//groupshared float3 group_coeffs[9];
+groupshared float3 group_coeffs[THREAD_GROUP_DIM * SH_DIM];
 
-[numthreads(THREAD_GROUP_SIDE, THREAD_GROUP_SIDE, 1)]
-void main_makeDiffuseSkymap(uint3 DTid : SV_DispatchThreadID)
+void sumUpSHInGroupSharedMem(in uint groupThreadIndex)
 {
-    int2 pixelCoord = DTid.xy;
-
-    out_buffer[pixelCoord] = float4(0, 0, 0, 1);
-    AllMemoryBarrier();
-    //AllMemoryBarrierWithGroupSync();
-    
-    float2 mapSize;
-    out_buffer.GetDimensions(mapSize.x, mapSize.y);
-    float2 invMapSize = rcp(mapSize);
-    float2 texcoord = (pixelCoord + 0.5) * invMapSize;
-    float3 dir = sky_dirFromTexcoord(texcoord);
-    float3 light = sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
-    
-    float solidangle = 2 * 3.14 * invMapSize * 3.14 * 2.0 ;
-    
-    float3 coeffs[9] = { { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 },
-                         { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 },
-                         { 0, 0, 0 }, { 0, 0, 0 }, { 0, 0, 0 } };
-    
-    updatecoeffs(light, solidangle, dir, coeffs);
-   /*
-    for (int i = 0; i < 9; ++i)
-        InterlockedAdd
-        group_coeffs[i] += coeffs[i];
-    GroupMemoryBarrierWithGroupSync();
-/*
-    for (uint k = 32; k > 0; k >>= 1)
+    // Sum SH contributions for the group in shared mem
+    for (uint k = THREAD_GROUP_DIM / 2; k > 0; k >>= 1)
     {
-        if (groupIndex < k)
+        if (groupThreadIndex < k)
         {
-            group_coeffs[groupIndex] += group_coeffs[groupIndex + k];
+            int destGroupIndex = groupThreadIndex * SH_DIM;
+            int foldGroupIndex = (groupThreadIndex + k) * SH_DIM;
+            
+            for (int i = 0; i < SH_DIM; ++i)
+                group_coeffs[destGroupIndex + i] += group_coeffs[foldGroupIndex + i];
         }
         GroupMemoryBarrierWithGroupSync();
     }
-    */
+}
+
+[numthreads(THREAD_GROUP_DIM, 1, 1)]
+void main_makeDiffuseSkymap_first(uint3 DTid : SV_DispatchThreadID, uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
+{
+    uint groupIndex = Gid.x;
+    uint groupThreadIndex = GTid.x;
+    uint2 groupThreadCoord = uint2(groupThreadIndex % THREAD_GROUP_SIDE, groupThreadIndex / THREAD_GROUP_SIDE);
+
+    // Compute this pixel's contribution to SH 
+    
+    float2 mapSize = float2(_simDims.z, _simDims.z);
+    uint2 pixelCoord = uint2(DTid.x / uint(mapSize.x), DTid.x % uint(mapSize.x));
+    float2 invMapSize = rcp(mapSize);
+    float2 texcoord = (pixelCoord + 0.5) * invMapSize;
+    float3 dir = sky_dirFromTexcoord(texcoord);
+    
+    float3 light = sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
+    
+    float solidangle = 2 * 3.14 * invMapSize.x * invMapSize.y;
+    // float solidangle = 1.0;
+    
+    float3 coeffs[SH_DIM] = {
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 },
+        { 0, 0, 0 }
+    };
+    updatecoeffs(light, solidangle, dir, coeffs);
+    
+
+    // Store SH in shared mem for the group
     for (int i = 0; i < 9; ++i)
-        (out_buffer[int2(i, 0)] += float4(coeffs[i], 0);
+        group_coeffs[SH_DIM * groupThreadIndex + i] = coeffs[i];
+    GroupMemoryBarrierWithGroupSync();
     
+    sumUpSHInGroupSharedMem(groupThreadIndex);
     
-    if (pixelCoord.y > 0)
-        out_buffer[pixelCoord] = float4(coeffs[0], 1);
-        
+    // Write group SH in out_buffer at corresponding groupIndex
+    if (groupThreadIndex < SH_DIM) // <=> for (int i = 0; i < SH_DIM; ++i)
+        out_buffer[SH_DIM * groupIndex + groupThreadIndex] = float4(group_coeffs[groupThreadIndex], 0);
+}
+
+
+[numthreads(THREAD_GROUP_DIM, 1, 1)]
+void main_makeDiffuseSkymap_next(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_GroupID)
+{
+    uint groupIndex = Gid.x;
+    uint groupThreadIndex = GTid.x; 
+
+    DeviceMemoryBarrier();
+  
+    // Store SH in shared mem for the group
+    for (int i = 0; i < SH_DIM; ++i)
+        group_coeffs[SH_DIM * groupThreadIndex + i] = out_buffer[SH_DIM * (groupIndex * THREAD_GROUP_DIM + groupThreadIndex) + i];
+    GroupMemoryBarrierWithGroupSync();
+    
+    sumUpSHInGroupSharedMem(groupThreadIndex);
+    
+    // Write group SH in out_buffer at corresponding groupIndex
+    if (groupThreadIndex < SH_DIM) // <=> for (int i = 0; i < SH_DIM; ++i)
+        out_buffer[SH_DIM * groupIndex + groupThreadIndex] = float4(group_coeffs[groupThreadIndex], 0);
+  
+    GroupMemoryBarrierWithGroupSync();
 }

@@ -109,7 +109,7 @@ namespace graphics {
         BatchPointer createBatch(const BatchInit& init) override;
         BatchTimerPointer createBatchTimer(const BatchTimerInit& init) override;
  
-        BufferPointer createBuffer(const BufferInit& init) override;
+        BufferPointer _createBuffer(const BufferInit& init, const std::string& name) override;
 
         TexturePointer createTexture(const TextureInit& init) override;
 
@@ -211,7 +211,12 @@ namespace graphics {
             const BufferPointer& buffer) override;
         void resourceBarrierTransition(
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
-            const TexturePointer& buffer, uint32_t subresource) override;
+            const TexturePointer& texture, uint32_t subresource) override;
+
+        void resourceBarrierRW(
+            ResourceBarrierFlag flag, const BufferPointer& buffer) override;
+        void resourceBarrierRW(
+            ResourceBarrierFlag flag, const TexturePointer& texture, uint32_t subresource) override;
 
         void setViewport(const core::vec4& viewport) override;
         void setScissor(const core::vec4& scissor) override;
@@ -233,6 +238,9 @@ namespace graphics {
         void drawIndexed(uint32_t numPrimitives, uint32_t startIndex) override;
 
         void uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayout, const BufferPointer& src) override;
+
+        void copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, const BufferPointer& src, uint32_t srcOffset, uint32_t size) override;
+        void uploadBuffer(const BufferPointer& dest) override;
 
         void dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) override;
 
@@ -265,6 +273,7 @@ namespace graphics {
         virtual ~D3D12BufferBackend();
 
         ComPtr<ID3D12Resource> _resource;
+        ComPtr<ID3D12Resource> _cpuDataResource;
 
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;

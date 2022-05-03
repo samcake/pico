@@ -140,7 +140,7 @@ document::ModelPointer loadModel() {
     //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
     //   std::string modelFile("../asset/gltf/Sponza.gltf");
     //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
-     std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+   //  std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
     //  std::string modelFile("../asset/gltf/buggy.gltf");
     //   std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
@@ -153,7 +153,7 @@ document::ModelPointer loadModel() {
     // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
    // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-    // std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+     std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
 
     // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
     // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
@@ -235,14 +235,14 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->getNumElements());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->numElements());
     state.tools.tree_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
     state.tools.tree_node.setVisible(false);
 
 
     auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->getNumElements());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->numElements());
     state.tools.tree_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
     state.tools.tree_item.setVisible(false);
 
@@ -366,7 +366,7 @@ int main(int argc, char *argv[])
             bool simDimChanged = false;
             simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
             simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
-            simDimChanged |= ImGui::SliderInt("Diffuse Env sample count", &simDim.z, 1, simDim.w * simDim.w >> 1);
+            simDimChanged |= ImGui::SliderInt("Diffuse Env sample count", &simDim.z, 8, simDim.w);
             if (simDimChanged) {
                 state.scene->_sky->setSimDim(simDim);
             }

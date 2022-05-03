@@ -81,7 +81,7 @@ namespace graphics {
         graphics::PipelineStatePointer _skyPipeline;
 
         graphics::PipelineStatePointer _skymapPipeline;
-        graphics::PipelineStatePointer _diffuseSkymapPipeline;
+        graphics::PipelineStatePointer _diffuseSkymapPipeline[2];
     };
     using SkyDrawableFactoryPointer = std::shared_ptr< SkyDrawableFactory>;
 

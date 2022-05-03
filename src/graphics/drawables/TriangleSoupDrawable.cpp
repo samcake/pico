@@ -211,8 +211,8 @@ namespace graphics
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
-        auto numVertices = triangleSoup.getVertexBuffer()->getNumElements();
-        auto numIndices = triangleSoup.getIndexBuffer()->getNumElements();
+        auto numVertices = triangleSoup.getVertexBuffer()->numElements();
+        auto numIndices = triangleSoup.getIndexBuffer()->numElements();
         auto vertexStride = triangleSoup.getVertexBuffer()->_init.structStride;
 
         auto ptriangleSoup = &triangleSoup;

@@ -44,12 +44,19 @@ namespace graphics {
         // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (2e-6f)
     };
 
+    struct SphericalHarmonics {
+        static const int32_t DIM = 9;
+        float4 coefs[DIM];
+    };
+
     struct VISUALIZATION_API SkyData {
         Atmosphere _atmosphere;
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
         float _sunIntensity = 10.0;
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
-        core::ivec4 _simDim = { 16, 8 , 10000, 1024};
+        core::ivec4 _simDim = { 16, 8 , 1024, 1024};
+
+        SphericalHarmonics _sh;
     };
 
     class VISUALIZATION_API Sky {
@@ -69,7 +76,6 @@ namespace graphics {
         SkyGPU _gpuData;
 
         TexturePointer _skymap;
-        TexturePointer _diffuse_skymap;
         uint32_t _skymapVersion{ 0xFFFFFFFF };
 
     public:
@@ -99,6 +105,7 @@ namespace graphics {
         void resetNeedSkymapUpdate();
 
         TexturePointer getSkymap() const;
-        TexturePointer getDiffuseSkymap() const;
+
+        uint32_t getIrradianceSHOffsetInGPUBuffer() const;
     };
 }
