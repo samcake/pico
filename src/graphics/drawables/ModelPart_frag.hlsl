@@ -107,7 +107,8 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
         float3 n = normal;
         
-        lightI = sky_evalIrradianceSH(n) * 3.14;
+        lightI = sky_evalIrradianceSH(n) * 3.0;
+        lightD = n;
         
         float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
         float3 l = lightD; //normalize(pointToLight); // Direction from surface point to light
