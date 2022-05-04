@@ -89,10 +89,12 @@ void Sky::allocateGPUData(const DevicePointer& device) {
     uboInit.usage = ResourceUsage::UNIFORM_BUFFER;
     uboInit.bufferSize = sizeof(SkyData);
     uboInit.hostVisible = true;
+    uboInit.cpuDouble = true;
     _gpuData._buffer = device->createBuffer(uboInit);
 
     // and then copy data there
     ReadLock();
+    WriteGPULock();
     memcpy(_gpuData._buffer->_cpuMappedAddress, &_cpuData._data, sizeof(SkyData));
 
     // sync the data version
@@ -100,12 +102,10 @@ void Sky::allocateGPUData(const DevicePointer& device) {
 
     graphics::TextureInit mapInit;
     mapInit.format = graphics::PixelFormat::R11G11B10_FLOAT;
-    mapInit.width = 2048;
-    mapInit.height = 2048;
+    mapInit.width = _cpuData._data._simDim.w;
+    mapInit.height = mapInit.width;
     mapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
     _skymap = device->createTexture(mapInit);
-
-
 }
 
 bool Sky::updateGPUData() {
@@ -142,3 +142,7 @@ TexturePointer Sky::getSkymap() const {
     return _skymap;
 }
 
+uint32_t Sky::getIrradianceSHOffsetInGPUBuffer() const {
+    SkyData s;
+    return (reinterpret_cast<uint8_t*>(&s._sh) - reinterpret_cast<uint8_t*>(&s));
+}

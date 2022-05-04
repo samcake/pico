@@ -3,6 +3,8 @@
 // 
 // Eye / Clip Space
 // 
+#ifndef PROJECTION_INC
+#define PROJECTION_INC
 
 struct Projection {
     float4 _aspectRatio_sensorHeight_focal_far;
@@ -63,3 +65,5 @@ float3 eyeFromClipSpace(float focal, float sensorHeight, float aspectRatio, floa
 float3 eyeFromClipSpace(Projection proj, float2 clipPos) {
     return eyeFromClipSpace(proj.focal(), proj.sensorHeight(), proj.aspectRatio(), clipPos);
 }
+
+#endif

@@ -1,6 +1,8 @@
 //
 // Paint API
 // 
+#ifndef PAINT_INC
+#define PAINT_INC
 
 // Paint a stripe 
 // FRAGMENT Shader only, using ddxy()
@@ -19,3 +21,5 @@ float3 paintStripe(float3 value, float period, float stripe) {
     float3 strip = (i1 - i0) / normalizedWidth;
     return clamp(strip, float3(0.0, 0.0, 0.0), float3(1.0, 1.0, 1.0));
 }
+
+#endif

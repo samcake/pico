@@ -103,9 +103,13 @@ float4 main(PixelShaderInput IN) : SV_Target{
        // const float lightI = 2.8f;
 
         float3 lightD = getSunDir();
-        float lightI = SkyColor(lightD);
+        float3 lightI = SkyColor(lightD);
 
         float3 n = normal;
+        
+        lightI = sky_evalIrradianceSH(n) * 3.0;
+        lightD = n;
+        
         float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
         float3 l = lightD; //normalize(pointToLight); // Direction from surface point to light
         float3 h = normalize(l + v); // Direction of the vector between l and v, called halfway vector

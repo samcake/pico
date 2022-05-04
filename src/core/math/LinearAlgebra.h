@@ -737,5 +737,23 @@ namespace core
         float calt = cos(altitude);
         return { cos(azimuth) * calt, sin(altitude), sin(azimuth) * calt };
     }
+
+    inline void transform_evalOrthonormalBase(const vec3& D, vec3& X, vec3& Y) {
+        // evaluate an orthonormal base from a direction D
+        // D is injected as the Z axis and teh function produce the X and Y axis
+        // Algorithm by Jeppe Revall Frisvad
+        // https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+        // Handle the singularity
+        if (D.z < -0.9999999f) {
+            X = vec3(0.0f, -1.0f, 0.0f);
+            Y = vec3(-1.0f, 0.0f, 0.0f);
+            return;
+        }
+
+        float a = 1.0f / (1.0f + D.z);
+        float b = -D.x * D.y * a;
+        X = vec3(1.0f - D.x * D.x * a, b, -D.x);
+        Y = vec3(b, 1.0f - D.y * D.y * a, -D.y);
+    }
 }
 

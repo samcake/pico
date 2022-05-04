@@ -4,6 +4,8 @@
 // Implementation taken from
 // https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 //
+#ifndef SKY_INC
+#define SKY_INC
 
 struct Atmosphere {
     float4 er_ar_hr_hm;
@@ -129,6 +131,18 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
 
 #include "Transform_inc.hlsl"
 
+struct SphericalHarmonics {
+    float4 L00 ;
+    float4 L1_1;
+    float4 L10 ;
+    float4 L11 ;
+    float4 L2_2;
+    float4 L2_1;
+    float4 L20 ;
+    float4 L21 ;
+    float4 L22 ;
+};
+
 // Sky buffer
 cbuffer SkyConstant : register(b11) {
     Atmosphere _atmosphere;
@@ -136,6 +150,7 @@ cbuffer SkyConstant : register(b11) {
     float _sunIntensity;
     Transform _stage;
     int4 _simDims;
+    SphericalHarmonics _irradianceSH;
 };
 
 
@@ -160,3 +175,135 @@ float3 SkyColor(const float3 dir) {
     return sky_computeIncidentLight(_simDims, _atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
 }
 
+
+
+
+// octahedron mapping
+// 
+
+
+// Octahedron wrap the uv in range [-1,1] from up hemisphere to bottom hemisphere (and back?)
+float2 octahedron_uvWrap(float2 uv)
+{
+    return (1.0 - abs(uv.yx)) * (uv.xy >= 0.0 ? 1.0 : -1.0);
+}
+
+// Octahedron convert from dir normalized to uv in range [-1,1]
+float2 octahedron_uvFromDir(float3 dir)
+{
+    // REF https://knarkowicz.wordpress.com/2014/04/16/octahedron-normal-vector-encoding/
+    dir /= (abs(dir.x) + abs(dir.y) + abs(dir.z));
+    float2 uv = dir.y >= 0.0 ? dir.zx : octahedron_uvWrap(dir.zx);
+    return uv;
+}
+
+// Octahedron convert from  uv in range [-1,1] to dir normalized
+float3 octahedron_dirFromUv(float2 uv)
+{
+    // REF https://twitter.com/Stubbesaurus/status/937994790553227264
+    float3 dir = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
+    float t = max(-dir.y, 0.0);
+    dir.xz += (dir.xz >= 0.0 ? -t : t);
+    return normalize(dir);
+}
+
+float3 sky_dirFromTexcoord(float2 tc)
+{
+    return octahedron_dirFromUv(2 * tc - 1.0);
+}
+
+float2 sky_texcoordFromDir(float3 dir)
+{
+    return (octahedron_uvFromDir(dir) * 0.5 + 0.5);
+}
+
+
+// Check for offset over texture edge,
+bool octahedron_flipped(float2 c, in out bool2 r)
+{
+    r.x = abs(c.x) >= 1.0;
+    r.y = abs(c.y) >= 1.0;
+    return r.x || r.y;
+}
+
+// Example of computing mirrored repeat sampling 
+// of an octahedron map with a small texel offset.
+// Note this is not designed to solve the double wrap case.
+// The "base" is as computed by Oct3To2() above.
+
+float2 octahedron_offsetCoord(float2 base, float2 offset)
+{
+    float2 coord = base + offset; // 2 VALU
+
+   // coord = OctFlipped(coord) ? -coord : coord; // 4 VALU
+    bool2 r;
+    if (octahedron_flipped(coord, r))
+    {
+        if (r.x && r.y)
+        {
+            coord = -coord;
+        }
+        else if (r.x)
+        {
+            coord = float2((coord.x >= 0 ? 1 : -1) * (2 - abs(coord.x)), -coord.y);
+        }
+        else if (r.y)
+        {
+            coord = float2(-coord.x, (coord.y >= 0 ? 1 : -1) * (2 - abs(coord.y)));
+        }
+    }
+
+    coord = coord * 0.5 + 0.5; // 2 VALU
+    return coord;
+}
+
+float3 sky_fetchEnvironmentMap(float3 dir, Texture2D map, SamplerState sampP, SamplerState sampL)
+{
+    float2 mapSize;
+    map.GetDimensions(mapSize.x, mapSize.y);
+    float2 texelSize = rcp(mapSize);
+    
+    float3 color;
+    float2 base = octahedron_uvFromDir(dir);
+    float2 texcoord = octahedron_offsetCoord(base, 0);
+ 
+    if ((1.0 - abs(base.x) < texelSize.x) || (1.0 - abs(base.y) < texelSize.y))
+    {
+        color = map.SampleLevel(sampP, octahedron_offsetCoord(base, texelSize), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(texelSize.x, -texelSize.y)), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(-texelSize.x, texelSize.y)), 0).xyz;
+        color += map.SampleLevel(sampP, octahedron_offsetCoord(base, float2(-texelSize.x, -texelSize.y)), 0).xyz;
+        color *= 0.25;
+    }
+    else
+    {
+        color = map.SampleLevel(sampL, texcoord, 0).xyz;
+    }
+    return color;
+}
+
+
+float3 sky_evalIrradianceSH(float3 dir) {
+    float3 d = dir.zxy;
+	
+    const float c1 = 0.429043;
+    const float c2 = 0.511664;
+    const float c3 = 0.743125;
+    const float c4 = 0.886227;
+    const float c5 = 0.247708;
+    
+    float3 col = c1 * _irradianceSH.L22.xyz * (d.x * d.x - d.y * d.y)
+            + c3 * _irradianceSH.L20.xyz * d.z * d.z
+            + c4 * _irradianceSH.L00.xyz
+            - c5 * _irradianceSH.L20.xyz
+            + 2 * c1 * (_irradianceSH.L2_2.xyz * d.x * d.y
+                        + _irradianceSH.L21.xyz * d.x * d.z
+                        + _irradianceSH.L2_1.xyz * d.y * d.z)
+            + 2 * c2 * (_irradianceSH.L11.xyz * d.x
+                        + _irradianceSH.L1_1.xyz * d.y
+                        + _irradianceSH.L10.xyz * d.z);
+
+    return col;
+}
+
+#endif

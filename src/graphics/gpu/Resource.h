@@ -40,10 +40,17 @@ namespace graphics {
 
     };
 
+    struct UploadSubresourceLayout {
+        uint32_t subresource{ 0 };
+        uint64_t byteOffset{ 0 };
+        uint64_t byteLength{ 0 };
+    };
+    using UploadSubresourceLayoutArray = std::vector< UploadSubresourceLayout>;
 
     struct VISUALIZATION_API BufferInit {
-        uint8_t usage;
+        uint16_t usage{ 0 };
         uint64_t bufferSize { 0 };
+        bool cpuDouble{ false };
         bool hostVisible {false};
         bool swapchainable {false};
         bool raw {false};
@@ -61,16 +68,33 @@ namespace graphics {
     protected:
         // Buffer is created from the device
         friend class Device;
+        friend class Backend;
         Buffer();
+
+        std::string _name;
+
+        uint64_t _bufferSize;
+
+        bool _needUpload = true;
 
     public:
         virtual ~Buffer();
 
-        uint32_t getNumElements() const { return _init.numElements; }
-
         BufferInit _init;
+
+        uint64_t bufferSize() const { return _bufferSize; }
+        uint32_t numElements() const { return _init.numElements; }
+
         void* _cpuMappedAddress = nullptr;
-        uint64_t _bufferSize;
+
+        // true if the texture needs to be uploaded through a Batch::uploadBuffer call
+        // don't forget the transitions calls!
+        // this needs to be checked and done explicitely before being able to fetch from that buffer in shaders 
+        bool needUpload() const { return _needUpload; }
+        void touch() { _needUpload = true; }
+
+        // Called internally 
+        void notifyUploaded() { _needUpload = false; }
     };
 
 
@@ -97,7 +121,17 @@ namespace graphics {
     public:
         virtual ~Texture();
 
-        // true if the texture needs to be uploaded through a uploadTextureFromInitdata call
+        TextureInit _init;
+
+        uint32_t width() const { return _init.width; }
+        uint32_t height() const { return _init.height; }
+        uint32_t numSlices() const { return _init.numSlices; }
+        PixelFormat format() const { return _init.format; }
+
+        // cpuDataBuffer is allocated if required
+        BufferPointer _cpuDataBuffer;
+
+        // true if the buffer needs to be uploaded through a Batch::uploadTexture call
         // don't forget the transitions calls!
         // this needs to be checked and done explicitely before being able to fetch from that texture in shaders 
         bool needUpload() const { return _needUpload; }
@@ -105,14 +139,7 @@ namespace graphics {
         // Called internally 
         void notifyUploaded() { _needUpload = false; }
 
-        uint32_t width() const { return _init.width; }
-        uint32_t height() const { return _init.height; }
-        uint32_t numSlices() const { return _init.numSlices; }
-        PixelFormat format() const { return _init.format; }
-
-        TextureInit _init;
-        void* _cpuMappedAddress = nullptr;
-        uint64_t _bufferSize;
+        static std::pair<UploadSubresourceLayoutArray, uint64_t> evalUploadSubresourceLayout(const TexturePointer& dest, const std::vector<uint32_t>& subresources = std::vector<uint32_t>());
     };
 
 }

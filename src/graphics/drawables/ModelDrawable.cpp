@@ -639,11 +639,11 @@ namespace graphics
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
-       auto numVertices = model.getVertexBuffer()->getNumElements();
-       auto numIndices = model.getIndexBuffer()->getNumElements();
+       auto numVertices = model.getVertexBuffer()->numElements();
+       auto numIndices = model.getIndexBuffer()->numElements();
        auto vertexStride = model.getVertexBuffer()->_init.structStride;
-       auto numParts = model.getPartBuffer()->getNumElements();
-       auto numMaterials = model.getMaterialBuffer()->getNumElements();
+       auto numParts = model.getPartBuffer()->numElements();
+       auto numMaterials = model.getMaterialBuffer()->numElements();
 
        // NUmber of nodes in the model
        auto numNodes = model._localNodeTransforms.size();
@@ -657,7 +657,7 @@ namespace graphics
             
             if (albedoTex && albedoTex->needUpload()) {
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                args.batch->uploadTexture(albedoTex);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
             }
 

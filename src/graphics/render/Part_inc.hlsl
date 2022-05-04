@@ -1,6 +1,8 @@
 //
 // Model Part API
 //
+#ifndef PART_INC
+#define PART_INC
 
 struct Part {
     uint numIndices;
@@ -13,3 +15,4 @@ struct Part {
     uint spareC;
 };
 
+#endif

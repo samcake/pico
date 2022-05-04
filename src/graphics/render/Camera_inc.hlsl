@@ -1,3 +1,6 @@
+#ifndef CAMERA_INC
+#define CAMERA_INC
+
 #include "Transform_inc.hlsl"
 #include "Projection_inc.hlsl"
 
@@ -10,3 +13,4 @@ cbuffer UniformBlock0 : register(b10) {
     float4 _viewport;
 };
 
+#endif

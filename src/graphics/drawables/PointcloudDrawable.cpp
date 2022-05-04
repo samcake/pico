@@ -196,7 +196,7 @@ namespace graphics
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
-        auto numVertices = pointcloud.getVertexBuffer()->getNumElements();
+        auto numVertices = pointcloud.getVertexBuffer()->numElements();
 
         auto ppointcloud = &pointcloud;
         auto pipeline = this->_pipeline;

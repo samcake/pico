@@ -3,9 +3,40 @@
 // 
 // Define Transform struct and functions
 //
+#ifndef TRANSFORM_INC
+#define TRANSFORM_INC
 
 #define mat43 float4x3
 
+// evaluate an orthonormal base from a direction D
+// D is injected as the Z axis and teh function produce the X and Y axis
+// Algorithm by Jeppe Revall Frisvad
+// https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
+void transform_evalOrthonormalBase(in float3 D, out float3 X, out float3 Y) {
+    // Handle the singularity
+    if (D.z < -0.9999999f) {
+        X = float3(0.0f, -1.0f, 0.0f);
+        Y = float3(-1.0f, 0.0f, 0.0f);
+        return;
+    }
+    
+    float a = 1.0f * rcp(1.0f + D.z);
+    float b = -D.x * D.y * a;
+    X = float3(1.0f - D.x * D.x * a, b, -D.x);
+    Y = float3(b, 1.0f - D.y * D.y * a, -D.y);
+     
+    // Naive implementation
+    // Y = (abs(dir.y) < 0.95f ? float3(0, 1, 0) : float3(1, 0, 0));
+    // X = normalize(cross(Y, D));
+    // Y = cross(D, X); 
+}
+
+float3 transform_rotateFrom(const float3 axisX, const float3 axisY, const float3 axisZ, const float3 d) {
+    return float3(
+        dot(float3(axisX.x, axisY.x, axisZ.x), d),
+        dot(float3(axisX.y, axisY.y, axisZ.y), d),
+        dot(float3(axisX.z, axisY.z, axisZ.z), d));
+}
 
 struct Transform {
     float4 _right_upX;
@@ -184,3 +215,5 @@ Box worldFromObjectSpace(Transform model, Box objBox) {
     wb._size.z = dot(abs(model.row_z()), objBox._size);
     return wb;
 }
+
+#endif

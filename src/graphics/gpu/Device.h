@@ -49,7 +49,7 @@ namespace graphics {
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
         virtual BatchTimerPointer createBatchTimer(const BatchTimerInit& init) = 0;
 
-        virtual BufferPointer createBuffer(const BufferInit& init) = 0;
+        virtual BufferPointer _createBuffer(const BufferInit& init, const std::string& name) = 0;
         virtual TexturePointer createTexture(const TextureInit& init) = 0;
 
         virtual ShaderPointer createShader(const ShaderInit& init) = 0;
@@ -99,7 +99,8 @@ namespace graphics {
         BatchPointer createBatch(const BatchInit& init);
         BatchTimerPointer createBatchTimer(const BatchTimerInit& init);
 
-        BufferPointer createBuffer(const BufferInit& init);
+        BufferPointer _createBuffer(const BufferInit& init, const std::string& name);
+
         TexturePointer createTexture(const TextureInit& init);
 
         ShaderPointer createShader(const ShaderInit& init);
@@ -141,3 +142,5 @@ namespace graphics {
 
     };
 }
+
+#define createBuffer(init) _createBuffer(init, __FILE__)

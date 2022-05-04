@@ -30,11 +30,20 @@ using namespace graphics;
 
 #ifdef _WINDOWS
 
-D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) {
+D3D12BufferBackend::D3D12BufferBackend() {
+
+}
+
+D3D12BufferBackend::~D3D12BufferBackend() {
+
+}
+
+BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::string& name) {
+
     uint64_t bufferSize = init.bufferSize;
     // Align the buffer size to multiples of 256
-   if (init.usage && ResourceUsage::UNIFORM_BUFFER) {
-        auto numBlocks = ((uint32_t) init.bufferSize) / 256;
+    if (init.usage && ResourceUsage::UNIFORM_BUFFER) {
+        auto numBlocks = ((uint32_t)init.bufferSize) / 256;
         auto blockModulo = ((uint32_t)init.bufferSize) % 256;
         bufferSize = (numBlocks + (blockModulo > 0)) * 256;
 
@@ -65,13 +74,14 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
     desc.SampleDesc.Quality = 0;
     desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
     if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
         desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
     // Adjust for padding
     UINT64 padded_size = 0;
-    backend->_device->GetCopyableFootprints(&desc, 0, 1, 0, NULL, NULL, NULL, &padded_size);
+    _device->GetCopyableFootprints(&desc, 0, 1, 0, NULL, NULL, NULL, &padded_size);
     bufferSize = (uint64_t)padded_size;
     desc.Width = padded_size;
 
@@ -88,56 +98,78 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
     }
 
+    if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
+        res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    }
+
     if (init.usage & ResourceUsage::RESOURCE_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         res_states |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
     }
 
-    if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
-        res_states = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+    if (init.usage & ResourceUsage::GENERIC_READ_BUFFER) {
+        res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
 
+    // cpu double or not ? this affect the host visible flag
     // Host visible is ok if not a RW_resouce
-    if (init.hostVisible) {
+    if (!init.cpuDouble && init.hostVisible) {
         // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
         heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
         res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
     }
 
 
-
-    ID3D12Resource* dxResource = nullptr;
-    HRESULT hres = backend->_device->CreateCommittedResource(
-        &heapProp, heapFlags, &desc, res_states, NULL,
-        __uuidof(dxResource), (void**)&(dxResource));
-
-
+    // Ready to allocate, let's create the Backend buffer
     D3D12BufferBackend* bufferBackend = new D3D12BufferBackend();
-
     bufferBackend->_init = init;
-    bufferBackend->_resource = dxResource;
+    bufferBackend->_resource;
+    bufferBackend->_cpuDataResource;
     bufferBackend->_bufferSize = bufferSize;
 
+    HRESULT hres = _device->CreateCommittedResource(
+        &heapProp, heapFlags, &desc, res_states, NULL,
+        __uuidof(bufferBackend->_resource), (void**)&(bufferBackend->_resource));
 
-    if (init.hostVisible) {
+    bufferBackend->_resource->SetName(core::to_wstring(name).c_str());
+
+    // Allocate the mapped resource double host visible version if double buffered
+    if (init.cpuDouble && init.hostVisible) {
+        // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
+        heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
+        res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
+        desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        hres = _device->CreateCommittedResource(
+            &heapProp, heapFlags, &desc, res_states, NULL,
+            __uuidof(bufferBackend->_cpuDataResource), (void**)&(bufferBackend->_cpuDataResource));
+
         D3D12_RANGE read_range = { 0, 0 };
-        hres = dxResource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
+        hres = bufferBackend->_cpuDataResource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
+    } else if (init.hostVisible) {
+        D3D12_RANGE read_range = { 0, 0 };
+        hres = bufferBackend->_resource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
+
+        // No need to upload
+        bufferBackend->notifyUploaded();
     }
 
+
+    // Populate the expected views
     if (init.usage & ResourceUsage::VERTEX_BUFFER) {
-        bufferBackend->_vertexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
+        bufferBackend->_vertexBufferView.BufferLocation = bufferBackend->_resource->GetGPUVirtualAddress();
         bufferBackend->_vertexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_vertexBufferView.StrideInBytes = init.vertexStride;
         // Format is filled out by tr_create_vertex_buffer
     }
 
     if (init.usage & ResourceUsage::UNIFORM_BUFFER) {
-        bufferBackend->_uniformBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
+        bufferBackend->_uniformBufferView.BufferLocation = bufferBackend->_resource->GetGPUVirtualAddress();
         bufferBackend->_uniformBufferView.SizeInBytes = (UINT)bufferSize;
     }
 
     if (init.usage & ResourceUsage::INDEX_BUFFER) {
-        bufferBackend->_indexBufferView.BufferLocation = dxResource->GetGPUVirtualAddress();
+        bufferBackend->_indexBufferView.BufferLocation = bufferBackend->_resource->GetGPUVirtualAddress();
         bufferBackend->_indexBufferView.SizeInBytes = (UINT)bufferSize;
         bufferBackend->_indexBufferView.Format = DXGI_FORMAT_R32_UINT;
     }
@@ -172,27 +204,8 @@ D3D12BufferBackend* CreateBuffer(D3D12Backend* backend, const BufferInit& init) 
         }
     }
 
-    return bufferBackend;
-
+    return BufferPointer(bufferBackend);
 }
-
-D3D12BufferBackend::D3D12BufferBackend() {
-
-}
-
-D3D12BufferBackend::~D3D12BufferBackend() {
-
-}
-
-BufferPointer D3D12Backend::createBuffer(const BufferInit& init) {
-    auto buffer = CreateBuffer(this, init);
-
-    return BufferPointer(buffer);
-}
-
-
-
-
 
 
 D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& init) {
@@ -340,9 +353,26 @@ D3D12TextureBackend::~D3D12TextureBackend() {
 
 }
 TexturePointer D3D12Backend::createTexture(const TextureInit& init) {
-    auto texture = CreateTexture(this, init);
+    auto texture = TexturePointer(CreateTexture(this, init));
 
-    return TexturePointer(texture);
+    // If init data, allocate a cpu buffer to upload the data
+    if (!init.initData.empty()) {
+        // find amount of data required to fit all the init data
+        auto layoutAndSize = Texture::evalUploadSubresourceLayout(texture);
+
+        // create a buffer, fill it with the data and then call uploadTexture
+        BufferInit bufferInit;
+        bufferInit.bufferSize = layoutAndSize.second;
+        bufferInit.hostVisible = true;
+        texture->_cpuDataBuffer = _createBuffer(bufferInit, "cpu buffer for texture");
+
+        for (const auto& l : layoutAndSize.first) {
+            std::byte* destmem = (std::byte*)(texture->_cpuDataBuffer->_cpuMappedAddress) + l.byteOffset;
+            memcpy(destmem, texture->_init.initData[l.subresource].data(), l.byteLength);
+        }
+    }
+
+    return texture;
 }
 
 
