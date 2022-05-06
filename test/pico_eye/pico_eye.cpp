@@ -74,6 +74,8 @@ struct AppState {
         graphics::Item tree_node;
         graphics::Item tree_item;
         graphics::Item dashboard;
+
+        bool sky_ui{ true };
     } tools;
 
 };
@@ -140,7 +142,7 @@ document::ModelPointer loadModel() {
     //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
     //   std::string modelFile("../asset/gltf/Sponza.gltf");
     //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
-   //  std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+     std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
     //  std::string modelFile("../asset/gltf/buggy.gltf");
     //   std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/duck.gltf");
@@ -153,7 +155,8 @@ document::ModelPointer loadModel() {
     // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
    // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-     std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Sponza-intel/Main/NewSponza_Main_Blender_glTF.gltf");
 
     // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
     // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
@@ -345,32 +348,37 @@ int main(int argc, char *argv[])
                 ImGui::Checkbox("Light shading", &params.lightShading);
             }
 
-            const float c_rad_to_deg = 180.0 / acos(-1);
-            auto sunDir = state.scene->_sky->getSunDir();
-            auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
-            bool sunChanged = false;
-            sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
-            sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
-            if (sunChanged) {
-                sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
-                sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
-                state.scene->_sky->setSunDir(sunDir);
-            }
+            if (ImGui::CollapsingHeader("Sky")) {
+                bool skyDebug = state.scene->_sky->isDebugEnabled();
+                if (ImGui::Checkbox("Show debug scopes", &skyDebug))
+                    state.scene->_sky->setDebugEnabled(skyDebug);
 
-            float altitude = state.scene->_sky->getStageAltitude() * 0.001;
-            if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
-                state.scene->_sky->setStageAltitude(altitude * 1000.0);
-            }
+                const float c_rad_to_deg = 180.0 / acos(-1);
+                auto sunDir = state.scene->_sky->getSunDir();
+                auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
+                bool sunChanged = false;
+                sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
+                sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
+                if (sunChanged) {
+                    sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
+                    sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                    state.scene->_sky->setSunDir(sunDir);
+                }
 
-            auto simDim = state.scene->_sky->getSimDim();
-            bool simDimChanged = false;
-            simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
-            simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
-            simDimChanged |= ImGui::SliderInt("Diffuse Env sample count", &simDim.z, 8, simDim.w);
-            if (simDimChanged) {
-                state.scene->_sky->setSimDim(simDim);
-            }
+                float altitude = state.scene->_sky->getStageAltitude() * 0.001;
+                if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+                    state.scene->_sky->setStageAltitude(altitude * 1000.0);
+                }
 
+                auto simDim = state.scene->_sky->getSimDim();
+                bool simDimChanged = false;
+                simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
+                simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
+                simDimChanged |= ImGui::SliderInt("Diffuse Env sample count", &simDim.z, 8, simDim.w);
+                if (simDimChanged) {
+                    state.scene->_sky->setSimDim(simDim);
+                }
+            }
         }
         ImGui::End();
 
