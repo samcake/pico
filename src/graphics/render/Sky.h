@@ -55,6 +55,7 @@ namespace graphics {
         float _sunIntensity = 10.0;
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
         core::ivec4 _simDim = { 16, 8 , 1024, 1024};
+        core::ivec4 _drawControl = { 0, 0, 0, 0 };
 
         SphericalHarmonics _sh;
     };
@@ -107,5 +108,9 @@ namespace graphics {
         TexturePointer getSkymap() const;
 
         uint32_t getIrradianceSHOffsetInGPUBuffer() const;
+
+        bool isDebugEnabled() const;
+        void setDebugEnabled(bool enabled);
+
     };
 }

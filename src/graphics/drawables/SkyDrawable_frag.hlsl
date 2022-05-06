@@ -24,10 +24,10 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
     float3 color = sky_fetchEnvironmentMap(dir, sky_map, uSampler0[0], uSampler0[1]);
 
     
-    
+    if (_drawControl.x == 1)
     { // Scopes
         float aspectratio = _viewport.z / _viewport.w;
-        float2 v_uv1 = (IN.coords.zw - float2(0.5, 0.0)) / (0.5 * float2(1.0, aspectratio));
+        float2 v_uv1 = (IN.coords.zw - float2(0.8, 0.0)) / (0.2 * float2(1.0, aspectratio));
         float2 v_uv2 = (IN.coords.zw - float2(0.0, 0.0)) / (0.3 * float2(1.0, aspectratio));
         float2 v_uv3 = (IN.coords.zw - float2(0.0, 0.3 * aspectratio)) / (0.3 * float2(1.0, aspectratio));
         if (all(abs(v_uv1 - 0.5) < 0.5))

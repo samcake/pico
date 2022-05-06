@@ -82,6 +82,15 @@ int4 Sky::getSimDim() const {
     return _cpuData._data._simDim;
 }
 
+void Sky::setDebugEnabled(bool enabled) {
+    WriteLock();
+    _cpuData._data._drawControl.x = enabled;
+}
+
+bool Sky::isDebugEnabled() const {
+    ReadLock();
+    return  _cpuData._data._drawControl.x == 1;
+}
 
 void Sky::allocateGPUData(const DevicePointer& device) {
     // CReate a gpu buffer to hold the Sky

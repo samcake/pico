@@ -150,6 +150,7 @@ cbuffer SkyConstant : register(b11) {
     float _sunIntensity;
     Transform _stage;
     int4 _simDims;
+    int4 _drawControl;
     SphericalHarmonics _irradianceSH;
 };
 
