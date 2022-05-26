@@ -1,6 +1,6 @@
-// pico_eye.cpp 
+// pico_ray.cpp 
 //
-// Sam Gateau - August 2021
+// Sam Gateau - December 2021
 // 
 // MIT License
 //
@@ -76,9 +76,8 @@ struct AppState {
 AppState state;
 
 //--------------------------------------------------------------------------------------
-// pico eye:
-//  Explore the definition of a document::model created from loading a gltf file
-//  and its drawable counterpart, MOdelDrawable
+// pico ray:
+//  Explore the ray tracing capcbilities of gpu!
 //--------------------------------------------------------------------------------------
 
 
