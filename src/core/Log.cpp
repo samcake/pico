@@ -51,4 +51,3 @@ std::wstring core::to_wstring(std::string str) {
     static std::wstring_convert<convert_t, wchar_t> strconverter;
     return strconverter.from_bytes(str);
 }
-

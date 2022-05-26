@@ -51,3 +51,23 @@ DescriptorHeap::DescriptorHeap() {
 DescriptorHeap::~DescriptorHeap() {
 
 }
+
+ShaderEntry::ShaderEntry() {
+
+}
+
+ShaderEntry::ShaderEntry(const ShaderEntry& src) {
+
+}
+
+ShaderEntry::~ShaderEntry() {
+
+}
+
+ShaderTable::ShaderTable() {
+
+}
+
+ShaderTable::~ShaderTable() {
+
+}

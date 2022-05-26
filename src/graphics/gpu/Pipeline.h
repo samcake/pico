@@ -59,6 +59,14 @@ namespace graphics {
         std::string watch_name;
     };
 
+    struct VISUALIZATION_API RaytracingPipelineStateInit {
+        ShaderPointer program;
+        RootDescriptorLayoutPointer globalRootDescriptorLayout;
+        RootDescriptorLayoutPointer localRootDescriptorLayout;
+
+        std::string watch_name;
+    };
+
     using PipelineRealizer = std::function<bool (PipelineState*)>;
 
     class VISUALIZATION_API PipelineState {
@@ -74,12 +82,14 @@ namespace graphics {
 
         ShaderPointer _program;
         RootDescriptorLayoutPointer _rootDescriptorLayout;
+        RootDescriptorLayoutPointer _localRootDescriptorLayout; // Raytracing shader lib local root descriptor
 
         PipelineRealizer _pipelineRealizer;
 
 //        union {
             GraphicsPipelineStateInit _graphics;
             ComputePipelineStateInit _compute;
+            RaytracingPipelineStateInit _raytracing;
   //      };       
 
     public:
@@ -87,6 +97,7 @@ namespace graphics {
 
         PipelineType getType() const;
         RootDescriptorLayoutPointer getRootDescriptorLayout() const;
+        RootDescriptorLayoutPointer getLocalRootDescriptorLayout() const { return _localRootDescriptorLayout; }
 
         bool realize();
 

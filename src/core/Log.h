@@ -26,6 +26,7 @@
 //
 #pragma once
 #include <string>
+
 #include "dllmain.h"
 
 #define picoLog(message) ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__, message)
@@ -37,6 +38,8 @@ namespace core {
         static void _log(const char* file, int line, const char* functionName, const char* message, int level = 0);
         static void _log(const char* file, int line, const char* functionName, const std::string& message, int level = 0) { _log(file, line, functionName, message.c_str(), level); }
         static void _assert(bool test, const char* file, int line, const char* functionName, const char* message);
+
+
     };
 
     extern std::string to_string(std::wstring wstr);

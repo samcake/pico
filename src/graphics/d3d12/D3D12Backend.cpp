@@ -33,6 +33,7 @@
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "D3DCompiler.lib")
+#pragma comment(lib, "dxCompiler.lib")
 #pragma comment(lib, "Shlwapi.lib")
 
 // The min/max macros conflict with like-named member functions.
@@ -207,7 +208,7 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
             // is favored.
             if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
                 SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(),
-                    D3D_FEATURE_LEVEL_11_0, __uuidof(ID3D12Device), nullptr)) &&
+                    D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device5), nullptr)) &&
                 dxgiAdapterDesc1.DedicatedVideoMemory > maxDedicatedVideoMemory)
             {
                 maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
@@ -228,32 +229,35 @@ void EnableDebugLayer()
     ComPtr<ID3D12Debug> debugInterface;
     ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
     debugInterface->EnableDebugLayer();
+
 #endif
 }
 
-ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
+ComPtr<ID3D12Device5> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
 {
 
     EnableDebugLayer();
 
-    ComPtr<ID3D12Device2> d3d12Device2;
-    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&d3d12Device2)));
-
+    ComPtr<ID3D12Device5> d3d12Device;
+    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12Device)));
+    
     // Enable debug messages in debug mode.
 #if defined(_DEBUG)
     ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device2.As(&pInfoQueue)))
+    if (SUCCEEDED(d3d12Device.As(&pInfoQueue)))
     {
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
         pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
+        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_INFO, FALSE);
+        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_MESSAGE, FALSE);
+        
 
         // Suppress whole categories of messages
         //D3D12_MESSAGE_CATEGORY Categories[] = {};
 
         // Suppress messages based on their severity level
-        D3D12_MESSAGE_SEVERITY Severities[] =
-        {
+        D3D12_MESSAGE_SEVERITY Severities[] = {
             D3D12_MESSAGE_SEVERITY_INFO
         };
 
@@ -276,7 +280,7 @@ ComPtr<ID3D12Device2> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
     }
 #endif
 
-    return d3d12Device2;
+    return d3d12Device;
 }
 
 
@@ -348,6 +352,12 @@ D3D12Backend::D3D12Backend() {
 
     _device = CreateDevice(dxgiAdapter4);
 
+    // Check if the D3D12 device actually supports ray tracing.
+    D3D12_FEATURE_DATA_D3D12_OPTIONS5 caps = {};
+    auto hr = _device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &caps, sizeof(caps));
+    
+    if (FAILED(hr) || caps.RaytracingTier < D3D12_RAYTRACING_TIER_1_1)
+        return;
 
     // Load functions
     {

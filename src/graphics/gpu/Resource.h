@@ -100,7 +100,7 @@ namespace graphics {
 
 
     struct VISUALIZATION_API TextureInit {
-        uint8_t usage { 0 }; // indicate the different usage expected for this resource. Default is SHADER_RESOURCE
+        uint16_t usage { 0 }; // indicate the different usage expected for this resource. Default is SHADER_RESOURCE
         uint32_t width { 0 };
         uint32_t height { 0 };
         uint32_t numSlices { 0 }; // if numSlices is > 0 => array texture
@@ -140,6 +140,37 @@ namespace graphics {
         void notifyUploaded() { _needUpload = false; }
 
         static std::pair<UploadSubresourceLayoutArray, uint64_t> evalUploadSubresourceLayout(const TexturePointer& dest, const std::vector<uint32_t>& subresources = std::vector<uint32_t>());
+    };
+
+
+    struct VISUALIZATION_API BufferElementView {
+        BufferPointer buffer;
+        int64_t offset = 0;
+        int32_t stride = 0;
+    };
+
+    struct VISUALIZATION_API GeometryInit {
+        BufferElementView vertexBuffer;
+        int32_t vertexCount = 0;
+        PixelFormat vertexFormat = PixelFormat::R32G32B32_FLOAT;
+
+        BufferElementView indexBuffer;
+        int32_t indexCount = 0;
+    };
+
+    class VISUALIZATION_API Geometry {
+    protected:
+        // Geometry is created from the device
+        friend class Device;
+        Geometry();
+
+        BufferPointer _tlas;
+
+    public:
+        virtual ~Geometry();
+        GeometryInit _init;
+
+        BufferPointer getTLAS() const { return _tlas; }
     };
 
 }

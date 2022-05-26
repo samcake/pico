@@ -139,6 +139,8 @@ namespace graphics {
     
         COMPUTE,
 
+        RAYTRACING,
+
         COUNT,
     };
 
@@ -149,12 +151,15 @@ namespace graphics {
 
         COMPUTE = 0x1000,
 
-        COUNT = 4,
+        RAYTRACING = 0x2000,
+
+        COUNT = 5,
     };
 
     enum class PipelineType : uint8_t {
         GRAPHICS = 0,
         COMPUTE,
+        RAYTRACING,
 
         COUNT,
     };
@@ -183,6 +188,10 @@ namespace graphics {
     struct UploadSubresourceLayout;
     using UploadSubresourceLayoutArray = std::vector<UploadSubresourceLayout>;
 
+    class Geometry;
+    using GeometryPointer = std::shared_ptr<Geometry>;
+    struct GeometryInit;
+
     class Sampler;
     using SamplerPointer = std::shared_ptr<Sampler>;
     struct SamplerInit;
@@ -210,6 +219,12 @@ namespace graphics {
     using PipelineStateWeakPtr = std::weak_ptr<PipelineState>;
     struct GraphicsPipelineStateInit;
     struct ComputePipelineStateInit;
+    struct RaytracingPipelineStateInit;
+
+    struct ShaderEntry;
+    struct ShaderTableInit;
+    class ShaderTable;
+    using ShaderTablePointer = std::shared_ptr<ShaderTable>;
 
     class Framebuffer;
     using FramebufferPointer = std::shared_ptr<Framebuffer>;
@@ -231,8 +246,9 @@ namespace graphics {
         RW_RESOURCE_TEXTURE = 0x0040,
         RENDER_TARGET = 0x0080,
         GENERIC_READ_BUFFER = 0x0100,
+        ACCELERATION_STRUCTURE = 0x0200,
 
-        COUNT = 9,
+        COUNT = 10,
     };
 
     enum class ResourceState {

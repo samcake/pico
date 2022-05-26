@@ -48,6 +48,7 @@ using namespace Microsoft::WRL;
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
+#include <dxcapi.h>
 
 namespace graphics {
     class D3D12DescriptorHeapBackend;
@@ -86,7 +87,7 @@ namespace graphics {
         void* nativeDevice() override { return _device.Get(); }
 
         // DirectX 12 Objects
-        ComPtr<ID3D12Device2> _device;
+        ComPtr<ID3D12Device5> _device;
         ComPtr<ID3D12CommandQueue> _commandQueue;
         double _commandQueueTimestampFrequency = 1.0;
 
@@ -113,6 +114,8 @@ namespace graphics {
 
         TexturePointer createTexture(const TextureInit& init) override;
 
+        GeometryPointer createGeometry(const GeometryInit& init) override;
+
         ShaderPointer createShader(const ShaderInit& init) override;
         ShaderPointer createProgram(const ProgramInit& init) override;
 
@@ -120,9 +123,13 @@ namespace graphics {
 
         PipelineStatePointer createGraphicsPipelineState(const GraphicsPipelineStateInit& init) override;
         PipelineStatePointer createComputePipelineState(const ComputePipelineStateInit& init) override;
+        PipelineStatePointer createRaytracingPipelineState(const RaytracingPipelineStateInit& init) override;
    
         RootDescriptorLayoutPointer createRootDescriptorLayout(const RootDescriptorLayoutInit& init) override;
         DescriptorSetPointer createDescriptorSet(const DescriptorSetInit& init) override;
+
+        ShaderEntry          getShaderEntry(const PipelineStatePointer& pipeline, const std::string& entry) override;
+        ShaderTablePointer   createShaderTable(const ShaderTableInit& init) override;
 
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
         DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) override;
@@ -142,6 +149,7 @@ namespace graphics {
         // Separate shader and pipeline state compilation as functions in order
         // to be able to live edit the shaders
         bool compileShader(Shader* shader, const std::string& src);
+        bool compileShaderLib(Shader* shader, const std::string& src);
         bool realizePipelineState(PipelineState* pipeline);
 
         // When we modify d3d12 objects already in use, we need to garbage collect
@@ -244,7 +252,9 @@ namespace graphics {
 
         void dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) override;
 
-        ComPtr<ID3D12GraphicsCommandList> _commandList;
+        void dispatchRays(const DispatchRaysArgs& args) override;
+
+        ComPtr<ID3D12GraphicsCommandList4> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 
         DescriptorHeapPointer _descriptorHeap;
@@ -295,6 +305,17 @@ namespace graphics {
         D3D12_UNORDERED_ACCESS_VIEW_DESC   _unorderedAccessViewDesc;
     };
 
+    class D3D12GeometryBackend : public Geometry {
+    public:
+        friend class D3D12Backend;
+        D3D12GeometryBackend();
+        virtual ~D3D12GeometryBackend();
+
+        // Acceleration structure
+        ComPtr<ID3D12Resource> _bottomLevelAccelerationStructure;
+        ComPtr<ID3D12Resource> _topLevelAccelerationStructure;
+    };
+
     class D3D12ShaderBackend : public Shader {
     public:
         friend class D3D12Backend;
@@ -302,6 +323,7 @@ namespace graphics {
         virtual ~D3D12ShaderBackend();
 
         ComPtr<ID3DBlob> _shaderBlob;
+        ComPtr<IDxcBlob> _shaderLibBlob;
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
     };
@@ -323,6 +345,10 @@ namespace graphics {
 
         ComPtr<ID3D12RootSignature> _rootSignature;
         ComPtr<ID3D12PipelineState> _pipelineState;
+
+        ComPtr<ID3D12StateObject> _stateObject; // raytracing
+        ComPtr<ID3D12RootSignature> _localRootSignature; // raytracing
+
         D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
 
         static void fill_rasterizer_desc(const RasterizerState& src, D3D12_RASTERIZER_DESC& dst);
@@ -366,6 +392,15 @@ namespace graphics {
 
         D3D12_GPU_DESCRIPTOR_HANDLE _cbvsrvuav_GPUHandle;
         D3D12_GPU_DESCRIPTOR_HANDLE _sampler_GPUHandle;
+    };
+
+    class D3D12ShaderTableBackend : public ShaderTable {
+    public:
+        friend class D3D12Backend;
+        D3D12ShaderTableBackend();
+        virtual ~D3D12ShaderTableBackend();
+
+        ComPtr<ID3D12Resource> _shaderTable;
     };
 
     class D3D12BatchTimerBackend : public BatchTimer {

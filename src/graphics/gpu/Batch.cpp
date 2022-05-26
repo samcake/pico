@@ -112,4 +112,6 @@ void Batch::copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, con
 void Batch::uploadBuffer(const BufferPointer& dest) {}
 
 void Batch::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {}
+void Batch::dispatchRays(const DispatchRaysArgs& args) {}
+
 } // !using namespace graphics

@@ -58,6 +58,16 @@ Texture::~Texture() {
 
 }
 
+Geometry::Geometry() :
+	_init{}
+{
+
+}
+
+Geometry::~Geometry() {
+
+}
+
 std::pair<UploadSubresourceLayoutArray, uint64_t> Texture::evalUploadSubresourceLayout(const TexturePointer& dest, const std::vector<uint32_t>& subresources) {
     // find amount of data required to fit all the init data
     uint64_t bufferSize = 0;
@@ -93,3 +103,4 @@ std::pair<UploadSubresourceLayoutArray, uint64_t> Texture::evalUploadSubresource
 
     return { updloadLayout, bufferSize };
 }
+

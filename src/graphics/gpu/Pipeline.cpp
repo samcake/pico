@@ -121,18 +121,13 @@ void PipelineWatcher::add(const ShaderPointer& shader) {
         _tokenToShaders[program_token] = programWeakPtr;
 
         // this is a program, we just add the program as dependent on the subshader
-        auto sub_shader = shader->getProgramDesc().vertexShader;
-        if (sub_shader) {
-            auto sub_shader_filename = sub_shader->getShaderDesc().watcher_file;
-            if (!sub_shader_filename.empty()) {
-                _shaderToPrograms.emplace(sub_shader_filename, program_token);
-            }
-        }
-        sub_shader = shader->getProgramDesc().pixelShader;
-        if (sub_shader) {
-            auto sub_shader_filename = sub_shader->getShaderDesc().watcher_file;
-            if (!sub_shader_filename.empty()) {
-                _shaderToPrograms.emplace(sub_shader_filename, program_token);
+        for (auto& s : shader->getProgramDesc().shaderLib) {
+            auto sub_shader = s.second;
+            if (sub_shader) {
+                auto sub_shader_filename = sub_shader->getShaderDesc().watcher_file;
+                if (!sub_shader_filename.empty()) {
+                    _shaderToPrograms.emplace(sub_shader_filename, program_token);
+                }
             }
         }
     }
