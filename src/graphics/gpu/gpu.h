@@ -30,6 +30,7 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <vector>
 #include "../dllmain.h" // pick dllmain relative to this file
 
 namespace graphics {
@@ -184,6 +185,8 @@ namespace graphics {
     class Texture;
     using TexturePointer = std::shared_ptr<Texture>;
     struct TextureInit;
+    struct UploadSubresourceLayout;
+    using UploadSubresourceLayoutArray = std::vector<UploadSubresourceLayout>;
 
     class Geometry;
     using GeometryPointer = std::shared_ptr<Geometry>;
@@ -233,20 +236,19 @@ namespace graphics {
     struct BatchTimerInit;
 
     // Resource Types
-    enum ResourceUsage : uint32_t {
-        INDEX_BUFFER = 0x00000001,
-        VERTEX_BUFFER = 0x00000002,
-        UNIFORM_BUFFER = 0x00000004,
-        RESOURCE_BUFFER = 0x00000008,
-        RW_RESOURCE_BUFFER = 0x00000010,
-        RESOURCE_TEXTURE = 0x00000020,
-        RW_RESOURCE_TEXTURE = 0x00000040,
-        RENDER_TARGET = 0x00000080,
+    enum ResourceUsage : uint16_t {
+        INDEX_BUFFER = 0x0001,
+        VERTEX_BUFFER = 0x0002,
+        UNIFORM_BUFFER = 0x0004,
+        RESOURCE_BUFFER = 0x0008,
+        RW_RESOURCE_BUFFER = 0x0010,
+        RESOURCE_TEXTURE = 0x0020,
+        RW_RESOURCE_TEXTURE = 0x0040,
+        RENDER_TARGET = 0x0080,
+        GENERIC_READ_BUFFER = 0x0100,
+        ACCELERATION_STRUCTURE = 0x0200,
 
-        ACCELERATION_STRUCTURE = 0x00000100,
-
-
-        COUNT = 8,
+        COUNT = 10,
     };
 
     enum class ResourceState {
@@ -264,11 +266,10 @@ namespace graphics {
         COPY_SOURCE,
         RESOLVE_DEST,
         RESOLVE_SOURCE,
-        _GENERIC_READ,
+        GENERIC_READ_BUFFER,
 
         PRESENT,
         PREDICATION,
-
 
         COUNT,
     };

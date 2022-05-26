@@ -207,6 +207,28 @@ void D3D12BatchBackend::resourceBarrierTransition(
     _commandList->ResourceBarrier(1, &barrier);
 }
 
+void D3D12BatchBackend::resourceBarrierRW(
+    ResourceBarrierFlag flag, const TexturePointer& buffer, uint32_t subresource) {
+    auto d3d12tex = static_cast<D3D12TextureBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.UAV.pResource = d3d12tex->_resource.Get();
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
+void D3D12BatchBackend::resourceBarrierRW(
+    ResourceBarrierFlag flag, const BufferPointer& buffer) {
+    auto d3d12buf = static_cast<D3D12BufferBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.UAV.pResource = d3d12buf->_resource.Get();
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
 
 void D3D12BatchBackend::setViewport(const core::vec4 & viewport) {
     D3D12_VIEWPORT dxViewport;
@@ -471,6 +493,21 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSu
         _commandList->CopyTextureRegion(&dst, 0, 0, 0, &src, nullptr);
     }
     // ANd one after*/
+}
+
+void D3D12BatchBackend::copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, const BufferPointer& src, uint32_t srcOffset, uint32_t size) {
+    auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
+    auto dstBackend = static_cast<D3D12BufferBackend*>(dest.get());
+
+    _commandList->CopyBufferRegion(dstBackend->_resource.Get(), destOffset, srcBackend->_resource.Get(), srcOffset, size);
+}
+
+void D3D12BatchBackend::uploadBuffer(const BufferPointer& dest) {
+    auto dstBackend = static_cast<D3D12BufferBackend*>(dest.get());
+   
+    // upload the cpuDataBuffer into dest
+    _commandList->CopyBufferRegion(dstBackend->_resource.Get(), 0, dstBackend->_cpuDataResource.Get(), 0, dstBackend->bufferSize());
+    dstBackend->notifyUploaded();
 }
 
 

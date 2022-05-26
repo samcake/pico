@@ -111,7 +111,7 @@ namespace graphics
         // And a Pipeline
 
         // test: create shader
-        graphics::ShaderInit raytracingShaderInit{ graphics::ShaderType::RAYTRACING, "main", "", PostScene_ray::getSource(), PostScene_ray::getSourceFilename() };
+        graphics::ShaderInit raytracingShaderInit{ graphics::ShaderType::RAYTRACING, "main", PostScene_ray::getSource, PostScene_ray::getSourceFilename() };
         graphics::ShaderPointer raytracingShader = device->createShader(raytracingShaderInit);
 
 

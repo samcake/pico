@@ -42,9 +42,6 @@ namespace core {
 
     };
 
-
     extern std::string to_string(std::wstring wstr);
     extern std::wstring to_wstring(std::string str);
-
-
 }

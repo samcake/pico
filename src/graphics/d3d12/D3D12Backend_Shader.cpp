@@ -55,6 +55,49 @@ D3D12ShaderBackend::~D3D12ShaderBackend() {
 
 }
 
+class PicoID3DInclude : public ID3DInclude {
+
+    const Shader* _src = nullptr;
+    
+
+
+    HRESULT Open(   D3D_INCLUDE_TYPE IncludeType,
+                    LPCSTR           pFileName,
+                    LPCVOID          pParentData,
+                    LPCVOID* ppData,
+                    UINT* pBytes) override {
+
+        auto includedFilename = std::string(pFileName);
+        auto shaderFilename = _src->getShaderDesc().watcher_file;
+        auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
+
+        if (_src && _src->getShaderDesc().includes.size()) {
+            auto& includes = _src->getShaderDesc().includes;
+            auto i = includes.find(includedFilename);
+            if (i != includes.end()) {
+                (*ppData) = i->second().data();
+                (*pBytes) = i->second().size();
+            } else {
+
+                picoLog("Missing include candidate for <" + includedFilename + "> from shader " + shaderFilename  + " ... " + parentData);
+            }
+        } else {
+            picoLog("Failed to include <" + includedFilename + "> no includes provided from shader " + shaderFilename + " ... " + parentData);
+        }
+        return S_OK;
+    }
+
+    HRESULT Close(LPCVOID pData) override {
+
+        return S_OK;
+    }
+
+public:
+    PicoID3DInclude(const Shader* src) : _src( src ) {
+
+    }
+};
+
 bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
     if (!shader) {
         return false;
@@ -65,12 +108,14 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
     ID3DBlob* shaderBlob;
     ID3DBlob* errorBlob;
 
+    PicoID3DInclude* includer = new PicoID3DInclude(shader);
+
     HRESULT hr = D3DCompile(
         source.c_str(),
         source.size(),
         shader->getShaderDesc().url.c_str(),
         nullptr,
-        nullptr,
+        includer,
         shader->getShaderDesc().entryPoint.c_str(),
         target.c_str(),
         0, 0,
@@ -233,11 +278,13 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
 ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
 
     std::string target(D3D12ShaderBackend::ShaderTypes[(int) init.type]);
-    std::string source = init.source;
 
+    std::string source;
     if (!init.url.empty()) {
         std::ifstream file(init.url, std::ifstream::in);
         source = (std::stringstream() << file.rdbuf()).str();
+    } else if (init.sourceGetter) {
+        source = init.sourceGetter();
     }
 
     // Allocate the shader

@@ -29,6 +29,7 @@
 #include <chrono>
 
 #include <core/api.h>
+#include <core/Log.h>
 
 #include <document/Model.h>
 
@@ -39,6 +40,7 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
+#include <graphics/drawables/SkyDrawable.h>
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/DashboardDrawable.h>
@@ -68,6 +70,14 @@ struct AppState {
 
     core::vec3 _modelInsertOffset;
 
+    struct {
+        graphics::Item tree_node;
+        graphics::Item tree_item;
+        graphics::Item dashboard;
+
+        bool sky_ui{ true };
+    } tools;
+
 };
 
 AppState state;
@@ -87,35 +97,39 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelDrawableParams = state._modelDrawableFactory->getUniformsPtr();
     }
 
-    auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
-
     graphics::ItemIDs modelItemIDs;
-
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
-
-    // let's offset the root to not overlap on previous model
-    if (modelItemIDs.size()) {
-        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
-
-        auto modelBound = modelDrawablePtr->getBound();
-        auto minCorner = modelBound.minPos();
-        auto maxCorner = modelBound.maxPos();
-        auto boundCenter = modelBound.center;
-
-        auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
-        auto modelPos = state._modelInsertOffset + modelOffset;
-        modelPos.y += modelBound.half_size.y;
+    if (lmodel) {
+        auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
+        state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
 
 
-        modelPos = modelPos - boundCenter;
+        modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
 
-        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
-            core::translation(rts, modelPos);
-            return true;
-            });
+        // let's offset the root to not overlap on previous model
+        if (modelItemIDs.size()) {
+            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
 
-        state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+            auto modelBound = modelDrawablePtr->getBound();
+            auto minCorner = modelBound.minPos();
+            auto maxCorner = modelBound.maxPos();
+            auto boundCenter = modelBound.center;
+
+            auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
+            auto modelPos = state._modelInsertOffset + modelOffset;
+            modelPos.y += modelBound.half_size.y;
+
+
+            modelPos = modelPos - boundCenter;
+
+            scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+                core::translation(rts, modelPos);
+                return true;
+                });
+
+            state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+        }
+    } else {
+        picoLog("Model document is empty");
     }
 
     return modelItemIDs;
@@ -140,7 +154,8 @@ document::ModelPointer loadModel() {
     // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
 
    // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
-    //std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Sponza-intel/Main/NewSponza_Main_Blender_glTF.gltf");
 
     // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
     // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
@@ -160,7 +175,9 @@ document::ModelPointer loadModel() {
 
 
     lmodel = document::model::Model::createFromGLTF(modelFile);
-
+    if (!lmodel) {
+        picoLog("Model <" + modelFile + "> document failed to load");
+    }
     return lmodel;
 }
 
@@ -196,9 +213,22 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
+    // A sky drawable factory
+    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    skyDrawableFactory->allocateGPUShared(gpuDevice);
+    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+
     // The view managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
+
+
+    // a sky drawable to draw the sky
+    auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
+    skyDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, skyDrawable.as<graphics::SkyDrawable>());
+    auto skyitem = state.scene->createItem(graphics::Node::null, skyDrawable);
+    skyitem.setVisible(true);
+
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -207,16 +237,16 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->getNumElements());
-    auto gzitem_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->numElements());
+    state.tools.tree_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
+    state.tools.tree_node.setVisible(false);
 
 
     auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->getNumElements());
-    auto gzitem_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->numElements());
+    state.tools.tree_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
+    state.tools.tree_item.setVisible(false);
 
 
     // A dashboard factory and drawable to represent some debug data
@@ -226,8 +256,8 @@ int main(int argc, char *argv[])
     // a dashboard
     auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
-
-    auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    state.tools.dashboard = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    state.tools.dashboard.setVisible(false);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
@@ -278,11 +308,11 @@ int main(int argc, char *argv[])
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
             frameSample = currentSample;
-            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t) frameSample.beginRate())
-                              + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
-                              + (camera->isOrtho()
-                                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
-                                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
+            std::string title = std::string("Pico Eye: ") + std::to_string((uint32_t)frameSample.beginRate())
+                + std::string("Hz ") + std::to_string(0.001f * frameSample._frameDuration.count()) + std::string("ms")
+                + (camera->isOrtho()
+                    ? (std::string(" ortho:") + std::to_string((int)(1000.0f * camera->getOrthoHeight())) + std::string("mm"))
+                    : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")));
             window->setTitle(title);
         }
         auto t = (currentSample._frameNum / 90.0f);
@@ -316,22 +346,49 @@ int main(int argc, char *argv[])
 
                 ImGui::Checkbox("Light shading", &params.lightShading);
             }
-        }
-        ImGui::End();
-    /*    if (ImGui::Begin("Scene")) {
-            static char buffer[512] = "";
-            int buffer_size = 512;
-            if (ImGui::InputText("Open...", buffer, buffer_size)) {
-                std::clog << "? " << buffer << std::endl;
-            }
 
+            if (ImGui::CollapsingHeader("Sky")) {
+                bool skyDebug = state.scene->_sky->isDebugEnabled();
+                if (ImGui::Checkbox("Show debug scopes", &skyDebug))
+                    state.scene->_sky->setDebugEnabled(skyDebug);
+
+                const float c_rad_to_deg = 180.0 / acos(-1);
+                auto sunDir = state.scene->_sky->getSunDir();
+                auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
+                bool sunChanged = false;
+                sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
+                sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
+                if (sunChanged) {
+                    sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
+                    sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                    state.scene->_sky->setSunDir(sunDir);
+                }
+
+                float altitude = state.scene->_sky->getStageAltitude() * 0.001;
+                if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+                    state.scene->_sky->setStageAltitude(altitude * 1000.0);
+                }
+
+                auto simDim = state.scene->_sky->getSimDim();
+                bool simDimChanged = false;
+                simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);
+                simDimChanged |= ImGui::SliderInt("Sim num light samples", &simDim.y, 1, 64);
+                simDimChanged |= ImGui::SliderInt("Diffuse Env sample count", &simDim.z, 8, simDim.w);
+                if (simDimChanged) {
+                    state.scene->_sky->setSimDim(simDim);
+                }
+            }
         }
         ImGui::End();
-        */
+
+
 
         state.scene->_items.syncBuffer();
         state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+
+        state.scene->_sky->updateGPUData();
+
 
         // Render!
         viewport->present(swapchain);
@@ -357,10 +414,13 @@ int main(int argc, char *argv[])
         }
 
         if (e.state && e.key == uix::KEY_N) {
-            gzitem_node.setVisible(!gzitem_node.isVisible());
+            state.tools.tree_node.toggleVisible();
         }
         if (e.state && e.key == uix::KEY_B) {
-            gzitem_item.setVisible(!gzitem_item.isVisible());
+            state.tools.tree_item.toggleVisible();
+        }
+        if (e.state && e.key == uix::KEY_M) {
+            state.tools.dashboard.toggleVisible();
         }
 
         if (e.state && e.key == uix::KEY_DELETE) {

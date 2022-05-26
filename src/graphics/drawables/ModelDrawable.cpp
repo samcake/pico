@@ -41,6 +41,22 @@
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
+#include "Transform_inc.h"
+#include "Projection_inc.h"
+#include "Camera_inc.h"
+#include "SceneTransform_inc.h"
+
+#include "Mesh_inc.h"
+#include "Part_inc.h"
+#include "Material_inc.h"
+#include "SceneModel_inc.h"
+
+#include "Color_inc.h"
+#include "Paint_inc.h"
+#include "Shading_inc.h"
+#include "Surface_inc.h"
+#include "Sky_inc.h"
+
 #include "ModelPart_vert.h"
 #include "ModelPart_frag.h"
 
@@ -91,22 +107,36 @@ namespace graphics
                 }
             },
             {
-            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::PIXEL, 0, 1},
+            { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::ALL_GRAPHICS, 0, 2},
             }
         };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(descriptorLayoutInit);
       
         // And a Pipeline
-
-        // Load shaders (as stored in the resources)
-        auto shader_vertex_src = ModelPart_vert::getSource();
-        auto shader_pixel_src = ModelPart_frag::getSource();
-
+        
         // test: create shader
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", "", shader_vertex_src, ModelPart_vert::getSourceFilename() };
+        graphics::ShaderIncludeLib include = {
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
+
+            Mesh_inc::getMapEntry(),
+            Part_inc::getMapEntry(),
+            Material_inc::getMapEntry(),
+            SceneModel_inc::getMapEntry(),
+            
+            Color_inc::getMapEntry(),
+            Paint_inc::getMapEntry(),
+            Shading_inc::getMapEntry(),
+            Surface_inc::getMapEntry(),
+
+            Sky_inc::getMapEntry(),
+        };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", "", shader_pixel_src, ModelPart_frag::getSourceFilename() };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", ModelPart_frag::getSource, ModelPart_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
@@ -623,6 +653,9 @@ namespace graphics
        graphics::SamplerInit samplerInit{};
        auto sampler = device->createSampler(samplerInit);
 
+       samplerInit._filter = graphics::Filter::MIN_MAG_LINEAR_MIP_POINT;
+       auto samplerL = device->createSampler(samplerInit);
+
        graphics::DescriptorObjects descriptorObjects = {
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getPartBuffer()},
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
@@ -630,16 +663,17 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getMaterialBuffer() },
             { graphics::DescriptorType::RESOURCE_TEXTURE, model.getAlbedoTexture() },
-            { sampler }
+            { sampler },
+            { samplerL }
        };
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
-       auto numVertices = model.getVertexBuffer()->getNumElements();
-       auto numIndices = model.getIndexBuffer()->getNumElements();
+       auto numVertices = model.getVertexBuffer()->numElements();
+       auto numIndices = model.getIndexBuffer()->numElements();
        auto vertexStride = model.getVertexBuffer()->_init.structStride;
-       auto numParts = model.getPartBuffer()->getNumElements();
-       auto numMaterials = model.getMaterialBuffer()->getNumElements();
+       auto numParts = model.getPartBuffer()->numElements();
+       auto numMaterials = model.getMaterialBuffer()->numElements();
 
        // NUmber of nodes in the model
        auto numNodes = model._localNodeTransforms.size();
@@ -653,7 +687,7 @@ namespace graphics
             
             if (albedoTex && albedoTex->needUpload()) {
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                args.batch->uploadTexture(albedoTex);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
             }
 

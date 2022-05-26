@@ -471,12 +471,13 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         } break;
 
         case DescriptorType::UNIFORM_BUFFER: {
-            auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffer.get());
+            if (descriptorObject._buffer) {
+                auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffer.get());
 
-            ID3D12Resource* resource = dxUbo->_resource.Get();
-            D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
-            _device->CreateConstantBufferView(view_desc, cpuHandle);
-
+                ID3D12Resource* resource = dxUbo->_resource.Get();
+                D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
+                _device->CreateConstantBufferView(view_desc, cpuHandle);
+            }
             cpuHandle.ptr += dxDescriptorHeap->_descriptor_increment_size;
         } break;
 

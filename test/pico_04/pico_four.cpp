@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
     dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, scene, dashboard_drawable.as<graphics::DashboardDrawable>());
 
     auto dashboard_item = scene->createItem(graphics::Node::null, dashboard_drawable);
+    dashboard_item.setVisible(false);
 
     scene->_nodes.updateTransforms();
 

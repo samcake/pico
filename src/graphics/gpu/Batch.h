@@ -67,6 +67,11 @@ namespace graphics {
             ResourceBarrierFlag flag, ResourceState stateBefore, ResourceState stateAfter,
             const TexturePointer& buffer, uint32_t subresource = -1);
 
+        virtual void resourceBarrierRW(
+            ResourceBarrierFlag flag, const BufferPointer& buffer);
+        virtual void resourceBarrierRW(
+            ResourceBarrierFlag flag, const TexturePointer& texture, uint32_t subresource);
+
         virtual void setViewport(const core::vec4& viewport);
         virtual void setScissor(const core::vec4& scissor);
 
@@ -84,14 +89,12 @@ namespace graphics {
         virtual void draw(uint32_t numPrimitives, uint32_t startIndex);
         virtual void drawIndexed(uint32_t numPrimitives, uint32_t startIndex);
 
-        struct UploadSubresourceLayout {
-            uint32_t subresource { 0 };
-            uint64_t byteOffset{ 0 };
-            uint64_t byteLength{ 0 };
-        };
-        using UploadSubresourceLayoutArray = std::vector< UploadSubresourceLayout>;
         virtual void uploadTexture(const TexturePointer& dest, const UploadSubresourceLayoutArray& subresourceLayout, const BufferPointer& src);
+        virtual void uploadTexture(const TexturePointer& dest);
         virtual void uploadTextureFromInitdata(const DevicePointer& device, const TexturePointer& dest, const std::vector<uint32_t>& subresources = std::vector<uint32_t>());
+
+        virtual void uploadBuffer(const BufferPointer& dest);
+        virtual void copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, const BufferPointer& src, uint32_t srcOffset, uint32_t size);
 
         virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);
 

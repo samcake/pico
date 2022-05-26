@@ -35,16 +35,40 @@
 
 namespace graphics {
 
+    typedef const std::string& (*ShaderSourceGetter)();
+    using ShaderIncludeLib = std::unordered_map<std::string, ShaderSourceGetter>;
     using ShaderCompiler = std::function<bool(Shader*, const std::string&)>;
     using ProgramLinker = std::function<bool (Shader*)>;
 
     struct VISUALIZATION_API ShaderInit {
         ShaderType type { ShaderType::PROGRAM };
         std::string entryPoint;
+
         std::string url;
-        std::string source;
-        
+        ShaderSourceGetter sourceGetter = nullptr;
+       
         std::string watcher_file;
+
+        ShaderIncludeLib includes;
+
+        ShaderInit() {}
+
+        ShaderInit(ShaderType t, const std::string& e, const std::string& u, const ShaderIncludeLib& i = ShaderIncludeLib()) :
+            type(t), entryPoint(e),
+            url(u),
+            //sourceGetter(g),
+            watcher_file(u),
+            includes(i)
+        {}
+
+        ShaderInit(ShaderType t, const std::string& e, ShaderSourceGetter g, const std::string& w = std::string(), const ShaderIncludeLib& i = ShaderIncludeLib()) :
+            type(t), entryPoint(e),
+            //url(u),
+            sourceGetter(g),
+            watcher_file(w),
+            includes(i) {
+        }
+
     };
 
     using ShaderLib = std::map < std::string, ShaderPointer >;

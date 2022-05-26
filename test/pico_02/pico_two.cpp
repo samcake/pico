@@ -81,7 +81,7 @@ VertexShaderOutput mainVertex(VertexPosColor IN)
 {
     VertexShaderOutput OUT;
 
-   // OUT.Position = mul(ModelViewProjectionCB.MVP, float4(IN.Position, 1.0f));
+    // OUT.Position = mul(ModelViewProjectionCB.MVP, float4(IN.Position, 1.0f));
     OUT.Position = float4(IN.Position, 1.0f);
     OUT.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
 
@@ -101,13 +101,17 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 }
 )HLSL");
 
+
+const std::string& getVertexShaderSource() { return vertexShaderSource; }
+const std::string& getPixelShaderSource() { return pixelShaderSource; }
+
 graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout streamLayout ) {
 
-    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", "", vertexShaderSource };
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", getVertexShaderSource };
     graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
 
-    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", "", pixelShaderSource };
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", getPixelShaderSource };
     graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
     graphics::ProgramInit programInit { vertexShader, pixelShader };

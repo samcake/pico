@@ -61,8 +61,8 @@ FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
     return _backend->createFramebuffer(init);
 }
 
-BufferPointer Device::createBuffer(const BufferInit& init) {
-    return _backend->createBuffer(init);
+BufferPointer Device::_createBuffer(const BufferInit& init, const std::string& name) {
+    return _backend->_createBuffer(init, name);
 }
 TexturePointer Device::createTexture(const TextureInit& init) {
     return _backend->createTexture(init);
