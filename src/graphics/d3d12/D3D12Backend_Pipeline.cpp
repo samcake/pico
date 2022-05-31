@@ -48,8 +48,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         auto vertexShader = static_cast<D3D12ShaderBackend*> (init.program->getVertexShader().get());
         auto pixelShader = static_cast<D3D12ShaderBackend*> (init.program->getPixelShader().get());
-        ComPtr<ID3DBlob> vertexShaderBlob = vertexShader->_shaderBlob;
-        ComPtr<ID3DBlob> pixelShaderBlob = pixelShader->_shaderBlob;
+        auto vertexShaderBlob = vertexShader->_shaderBlob;
+        auto pixelShaderBlob = pixelShader->_shaderBlob;
 
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
@@ -134,7 +134,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
 
         auto computeShader = static_cast<D3D12ShaderBackend*> (init.program.get());
-        ComPtr<ID3DBlob> computeShaderBlob = computeShader->_shaderBlob;
+        auto computeShaderBlob = computeShader->_shaderBlob;
 
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
