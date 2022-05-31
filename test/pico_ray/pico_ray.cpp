@@ -98,12 +98,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
-
-    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
-    state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
-
-    
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr); 
 
     graphics::ItemIDs modelItemIDs;
 
@@ -133,6 +128,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
     }
 
+    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
     state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
     auto ppDrawable = scene->createDrawable(*postProcessDrawablePtr);
     auto pcitem = scene->createItem(root, ppDrawable);

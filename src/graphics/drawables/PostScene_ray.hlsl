@@ -58,7 +58,7 @@ void MyRaygenShader()
         lerp(viewport_top, viewport_bottom, lerpValues.y),
         0.0f);
 
-    if (IsInsideViewport(origin.xy))
+ /*   if (IsInsideViewport(origin.xy))
     {
         // Trace the ray.
         // Set the ray's extents.
@@ -75,7 +75,7 @@ void MyRaygenShader()
         // Write the raytraced color to the output texture.
         RenderTarget[DispatchRaysIndex().xy] = payload.color;
     }
-    else
+    else*/
     {
         // Render interpolated DispatchRaysIndex outside the stencil window
         RenderTarget[DispatchRaysIndex().xy] = float4(lerpValues, 0, 1);
