@@ -35,18 +35,22 @@ using namespace graphics;
 #ifdef _WINDOWS
 
 
+#define USE_DXC
 
 #define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Shader FAILED !!!");
 
 
 const std::string D3D12ShaderBackend::ShaderTypes[] = {
     "nope",
+#ifdef USE_DXC
     "vs_6_1",
     "ps_6_1",
     "cs_6_1",
-    //"vs_5_1",
-    //"ps_5_1",
-    //"cs_5_1",
+#else
+    "vs_5_1",
+    "ps_5_1",
+    "cs_5_1",
+#endif
     "lib_6_3",
 };
 
@@ -58,65 +62,8 @@ D3D12ShaderBackend::~D3D12ShaderBackend() {
 
 }
 
-class PicoID3DInclude : public ID3DInclude {
-
-    const Shader* _src = nullptr;
-    
-
-
-    HRESULT Open(   D3D_INCLUDE_TYPE IncludeType,
-                    LPCSTR           pFileName,
-                    LPCVOID          pParentData,
-                    LPCVOID* ppData,
-                    UINT* pBytes) override {
-
-        auto includedFilename = std::string(pFileName);
-        auto shaderFilename = _src->getShaderDesc().watcher_file;
-        auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
-
-        if (_src && _src->getShaderDesc().includes.size()) {
-            auto& includes = _src->getShaderDesc().includes;
-            auto i = includes.find(includedFilename);
-            if (i != includes.end()) {
-                (*ppData) = i->second().data();
-                (*pBytes) = i->second().size();
-            } else {
-
-                picoLog("Missing include candidate for <" + includedFilename + "> from shader " + shaderFilename  + " ... " + parentData);
-            }
-        } else {
-            picoLog("Failed to include <" + includedFilename + "> no includes provided from shader " + shaderFilename + " ... " + parentData);
-        }
-        return S_OK;
-    }
-
-    HRESULT Close(LPCVOID pData) override {
-
-        return S_OK;
-    }
-
-public:
-    PicoID3DInclude(const Shader* src) : _src( src ) {
-
-    }
-};
-
-#define DXC_MICROCOM_REF_FIELD(m_dwRef)                                        \
-  volatile std::atomic<llvm::sys::cas_flag> m_dwRef = {0};
-#define DXC_MICROCOM_ADDREF_IMPL(m_dwRef)                                      \
-  ULONG STDMETHODCALLTYPE AddRef() override {                                  \
-    return (ULONG)++m_dwRef;                                                   \
-  }
-#define DXC_MICROCOM_ADDREF_RELEASE_IMPL(m_dwRef)                              \
-  DXC_MICROCOM_ADDREF_IMPL(m_dwRef)                                            \
-  ULONG STDMETHODCALLTYPE Release() override {                                 \
-    ULONG result = (ULONG)--m_dwRef;                                           \
-    if (result == 0)                                                           \
-      delete this;                                                             \
-    return result;                                                             \
-  }
-
-class MyIncludeHandler : public IDxcIncludeHandler {
+#ifdef USE_DXC
+class PicoDXCIncludeHandler : public IDxcIncludeHandler {
 public:
     std::atomic<ULONG> m_cRef = { 0 };
 
@@ -135,7 +82,7 @@ public:
         return ulRefCount;
     }
 
-        virtual ~MyIncludeHandler() {}
+    virtual ~PicoDXCIncludeHandler() {}
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void** ppvObj) {
         // Always set out parameter to NULL, validating it first.
@@ -155,32 +102,25 @@ public:
     ComPtr<IDxcUtils> _utils;
     const Shader* _src = nullptr;
 
-    MyIncludeHandler(ComPtr<IDxcUtils> pUtils, const Shader* src) : _utils(pUtils), _src(src) {}
+    PicoDXCIncludeHandler(ComPtr<IDxcUtils> pUtils, const Shader* src) : _utils(pUtils), _src(src) {}
 
-     HRESULT STDMETHODCALLTYPE LoadSource(
-         _In_ LPCWSTR pFilename,                                 // Candidate filename.
-         _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
+    HRESULT STDMETHODCALLTYPE LoadSource(
+        _In_ LPCWSTR pFilename,                                 // Candidate filename.
+        _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource  // Resultant source object for included file, nullptr if not found.
     ) {
         auto includedFilename = core::to_string(std::wstring(pFilename));
 
         includedFilename = includedFilename.substr(2);
         auto shaderFilename = _src->getShaderDesc().watcher_file;
-      //  auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
-
+     
         if (_src && _src->getShaderDesc().includes.size()) {
             auto& includes = _src->getShaderDesc().includes;
             auto i = includes.find(includedFilename);
             if (i != includes.end()) {
                 ComPtr<IDxcBlobEncoding> pSource;
-                //  auto wsource = core::to_wstring(source);
-              //  auto& wsource = source;
                 _utils->CreateBlob(i->second().data(), i->second().size(), CP_UTF8, pSource.GetAddressOf());
                 *ppIncludeSource = pSource.Detach();
-
-       //         (*ppData) = i->second().data();
-         //       (*pBytes) = i->second().size();
             } else {
-
                 picoLog("Missing include candidate for <" + includedFilename + "> from shader " + shaderFilename + " ... ");// +parentData);
             }
         } else {
@@ -190,58 +130,13 @@ public:
     }
 };
 
-
-
-bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
-    if (!shader) {
-        return false;
-    }
-
-/*    std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
-
-    ID3DBlob* shaderBlob;
-    ID3DBlob* errorBlob;
-
-    PicoID3DInclude* includer = new PicoID3DInclude(shader);
-
-    HRESULT hr = D3DCompile(
-        source.c_str(),
-        source.size(),
-        shader->getShaderDesc().url.c_str(),
-        nullptr,
-        includer,
-        shader->getShaderDesc().entryPoint.c_str(),
-        target.c_str(),
-        0, 0,
-        &shaderBlob,
-        &errorBlob);
-
-    if (FAILED(hr)) {
-        if (errorBlob) {
-            std::string file = (shader->getShaderDesc().watcher_file.empty() ?
-                                    (shader->getShaderDesc().url.empty() ?
-                                        "no source file" :
-                                        shader->getShaderDesc().url) :
-                                    shader->getShaderDesc().watcher_file);
-            picoLog(  (target + " " + shader->getShaderDesc().entryPoint + "\n"
-                      + "    " + file + "\n"
-                      + (char*)errorBlob->GetBufferPointer()));
-            errorBlob->Release();
-        }
-
-        if (shaderBlob)
-            shaderBlob->Release();
-
-
-        return false;
-    }
-*/
+bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
     ComPtr<IDxcUtils> pUtils;
     DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf()));
-    MyIncludeHandler* includer = new MyIncludeHandler(pUtils, shader);
+    auto* includer = new PicoDXCIncludeHandler(pUtils, shader);
 
-   // ComPtr<IDxcIncludeHandler> includeHandler(includer);
-   // pUtils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf());
+    // ComPtr<IDxcIncludeHandler> includeHandler(includer);
+    // pUtils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf());
 
     ComPtr<IDxcCompiler3> compiler;
     HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
@@ -273,12 +168,12 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
     arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
     arguments.push_back(DXC_ARG_DEBUG); //-Zi
     arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
-/*
-    for (const std::wstring& define : defines)
-    {
-        arguments.push_back(L"-D");
-        arguments.push_back(define.c_str());
-    }*/
+    /*
+        for (const std::wstring& define : defines)
+        {
+            arguments.push_back(L"-D");
+            arguments.push_back(define.c_str());
+        }*/
 
     DxcBuffer sourceBuffer;
     sourceBuffer.Ptr = pSource->GetBufferPointer();
@@ -317,13 +212,114 @@ bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
             shader->getShaderDesc().url) :
         shader->getShaderDesc().watcher_file);
 
-   /* picoLog((target + " " + shader->getShaderDesc().entryPoint + "\n"
-        + "    \n"
-        + (char*)shaderBlob->GetBufferPointer()));
-        */
+    dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderBlob = shaderBlob;
+    return true;
+}
+
+#else
+
+class PicoID3DInclude : public ID3DInclude {
+
+    const Shader* _src = nullptr;
+
+
+
+    HRESULT Open(D3D_INCLUDE_TYPE IncludeType,
+        LPCSTR           pFileName,
+        LPCVOID          pParentData,
+        LPCVOID* ppData,
+        UINT* pBytes) override {
+
+        auto includedFilename = std::string(pFileName);
+        auto shaderFilename = _src->getShaderDesc().watcher_file;
+        auto parentData = (pParentData != 0 ? std::string((char*)pParentData) : std::string("UNKNOWN"));
+
+        if (_src && _src->getShaderDesc().includes.size()) {
+            auto& includes = _src->getShaderDesc().includes;
+            auto i = includes.find(includedFilename);
+            if (i != includes.end()) {
+                (*ppData) = i->second().data();
+                (*pBytes) = i->second().size();
+            } else {
+
+                picoLog("Missing include candidate for <" + includedFilename + "> from shader " + shaderFilename + " ... " + parentData);
+            }
+        } else {
+            picoLog("Failed to include <" + includedFilename + "> no includes provided from shader " + shaderFilename + " ... " + parentData);
+        }
+        return S_OK;
+    }
+
+    HRESULT Close(LPCVOID pData) override {
+
+        return S_OK;
+    }
+
+public:
+    PicoID3DInclude(const Shader* src) : _src(src) {
+
+    }
+};
+
+
+bool PicoFXCCompileShader(Shader* shader, const std::string& source) {
+    std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
+
+    ID3DBlob* shaderBlob;
+    ID3DBlob* errorBlob;
+
+    PicoID3DInclude* includer = new PicoID3DInclude(shader);
+
+    HRESULT hr = D3DCompile(
+        source.c_str(),
+        source.size(),
+        shader->getShaderDesc().url.c_str(),
+        nullptr,
+        includer,
+        shader->getShaderDesc().entryPoint.c_str(),
+        target.c_str(),
+        0, 0,
+        &shaderBlob,
+        &errorBlob);
+
+    if (FAILED(hr)) {
+        if (errorBlob) {
+            std::string file = (shader->getShaderDesc().watcher_file.empty() ?
+                (shader->getShaderDesc().url.empty() ?
+                    "no source file" :
+                    shader->getShaderDesc().url) :
+                shader->getShaderDesc().watcher_file);
+            picoLog((target + " " + shader->getShaderDesc().entryPoint + "\n"
+                + "    " + file + "\n"
+                + (char*)errorBlob->GetBufferPointer()));
+            errorBlob->Release();
+        }
+
+        if (shaderBlob)
+            shaderBlob->Release();
+
+
+        return false;
+    }
 
     dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderBlob = shaderBlob;
     return true;
+}
+
+
+
+#endif
+
+bool D3D12Backend::compileShader(Shader* shader, const std::string& source) {
+    if (!shader) {
+        return false;
+    }
+
+#ifdef USE_DXC
+    return PicoDXCCompileShader(shader, source);
+#else
+    return PicoFXCCompileShader(shader, source);
+#endif   
 }
 
 
@@ -454,7 +450,7 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
 
         return false;
     }*/
-    dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderLibBlob = shaderBlob;
+ //   dynamic_cast<D3D12ShaderBackend*>(shader)->_shaderLibBlob = shaderBlob;
     return true;
 }
 
@@ -477,10 +473,10 @@ ShaderPointer D3D12Backend::createShader(const ShaderInit& init) {
     // and now compile
     if (init.type == ShaderType::RAYTRACING) {
         shader->_programDesc.type = PipelineType::RAYTRACING;
-        if (D3D12Backend::compileShaderLib(shader.get(), source)) {
+        if (D3D12Backend::compileShader(shader.get(), source)) {
             if (shader->hasWatcher()) {
                 auto shaderCompiler = std::function([&](Shader* sha, const std::string& src) -> bool {
-                    return compileShaderLib(sha, src);
+                    return compileShader(sha, src);
                     });
 
                 Shader::registerToWatcher(shader, shaderCompiler);

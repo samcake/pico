@@ -229,8 +229,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         // Describe the DXIL library.
         D3D12_DXIL_LIBRARY_DESC rgs_libDesc = {};
-        rgs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderLibBlob->GetBufferSize();
-        rgs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderLibBlob->GetBufferPointer();
+        rgs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        rgs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
         rgs_libDesc.NumExports = 1;
         rgs_libDesc.pExports = &rgs_exportDesc;
 
@@ -254,8 +254,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         // Describe the DXIL library.
         D3D12_DXIL_LIBRARY_DESC chs_libDesc = {};
-        chs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderLibBlob->GetBufferSize();
-        chs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderLibBlob->GetBufferPointer();
+        chs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        chs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
         chs_libDesc.NumExports = 1;
         chs_libDesc.pExports = &chs_exportDesc;
 
@@ -279,8 +279,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         // Describe the DXIL library.
         D3D12_DXIL_LIBRARY_DESC ms_libDesc = {};
-        ms_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderLibBlob->GetBufferSize();
-        ms_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderLibBlob->GetBufferPointer();
+        ms_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        ms_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
         ms_libDesc.NumExports = 1;
         ms_libDesc.pExports = &ms_exportDesc;
 
