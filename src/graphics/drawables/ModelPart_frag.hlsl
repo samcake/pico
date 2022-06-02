@@ -56,7 +56,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     // Normal and Normal map
     float3 surfNormal = normalize(IN.Normal);
-    float3 mapNor = float4(0.0, 0.0, 0.0, 0.0);
+    float3 mapNor = (0.0);
     float3 normal = surfNormal;
     if (m.textures.y != -1) {
         mapNor = float3(material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.y)).xyz);
@@ -79,7 +79,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float metallic = m.metallic * rmaoMap.y;
     
     // with albedo from property or from texture
-    float3 albedo = m.color;
+    float3 albedo = m.color.xyz;
     if (m.textures.x != -1) {
         albedo = material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }

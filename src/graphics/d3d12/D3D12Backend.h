@@ -322,8 +322,9 @@ namespace graphics {
         D3D12ShaderBackend();
         virtual ~D3D12ShaderBackend();
 
-        ComPtr<ID3DBlob> _shaderBlob;
-        ComPtr<IDxcBlob> _shaderLibBlob;
+       // ComPtr<ID3DBlob> _shaderBlob;
+        ComPtr<IDxcBlob> _shaderBlob;
+    //    ComPtr<IDxcBlob> _shaderLibBlob;
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
     };

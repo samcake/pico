@@ -39,6 +39,7 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
+#include <graphics/drawables/SkyDrawable.h>
 #include <graphics/drawables/GizmoDrawable.h>
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/DashboardDrawable.h>
@@ -97,12 +98,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
-
-    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
-    state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
-
-    
+    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr); 
 
     graphics::ItemIDs modelItemIDs;
 
@@ -132,6 +128,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
     }
 
+    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
     state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
     auto ppDrawable = scene->createDrawable(*postProcessDrawablePtr);
     auto pcitem = scene->createItem(root, ppDrawable);
@@ -215,9 +212,20 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
+    // A sky drawable factory
+    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    skyDrawableFactory->allocateGPUShared(gpuDevice);
+    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+
     // The view managing the rendering of the scene from the camera
     auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
         uix::Imgui::standardPostSceneRenderCallback);
+
+    // a sky drawable to draw the sky
+    auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
+    skyDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, skyDrawable.as<graphics::SkyDrawable>());
+    auto skyitem = state.scene->createItem(graphics::Node::null, skyDrawable);
+    skyitem.setVisible(true);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -276,7 +284,7 @@ int main(int argc, char *argv[])
     // We need a window where to present, let s use the graphics::Window for convenience
     // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
-    uix::WindowInit windowInit { windowHandler, "Pico Eye" };
+    uix::WindowInit windowInit { windowHandler, "Pico Ray" };
     auto window = uix::Window::createWindow(windowInit);
 
     // Setup Dear ImGui context with the gpuDevice and the brand new window
@@ -351,6 +359,8 @@ int main(int argc, char *argv[])
         state.scene->_items.syncBuffer();
         state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
+
+        state.scene->_sky->updateGPUData();
 
         // Render!
         viewport->present(swapchain);

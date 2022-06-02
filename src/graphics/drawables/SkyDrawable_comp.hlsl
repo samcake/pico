@@ -157,7 +157,7 @@ void main_makeDiffuseSkymap_next(uint3 GTid : SV_GroupThreadID, uint3 Gid : SV_G
   
     // Store SH in shared mem for the group
     for (int i = 0; i < SH_DIM; ++i)
-        group_coeffs[SH_DIM * groupThreadIndex + i] = out_buffer[SH_DIM * (groupIndex * THREAD_GROUP_DIM + groupThreadIndex) + i];
+        group_coeffs[SH_DIM * groupThreadIndex + i] = out_buffer[SH_DIM * (groupIndex * THREAD_GROUP_DIM + groupThreadIndex) + i].xyz;
     GroupMemoryBarrierWithGroupSync();
     
     sumUpSHInGroupSharedMem(groupThreadIndex);
