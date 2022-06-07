@@ -61,11 +61,15 @@ FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
     return _backend->createFramebuffer(init);
 }
 
-BufferPointer Device::createBuffer(const BufferInit& init) {
-    return _backend->createBuffer(init);
+BufferPointer Device::_createBuffer(const BufferInit& init, const std::string& name) {
+    return _backend->_createBuffer(init, name);
 }
 TexturePointer Device::createTexture(const TextureInit& init) {
     return _backend->createTexture(init);
+}
+
+GeometryPointer Device::createGeometry(const GeometryInit& init) {
+    return _backend->createGeometry(init);
 }
 
 ShaderPointer Device::createShader(const ShaderInit& init) {
@@ -85,6 +89,9 @@ PipelineStatePointer Device::createGraphicsPipelineState(const GraphicsPipelineS
 PipelineStatePointer Device::createComputePipelineState(const ComputePipelineStateInit& init) {
     return _backend->createComputePipelineState(init);
 }
+PipelineStatePointer Device::createRaytracingPipelineState(const RaytracingPipelineStateInit& init) {
+    return _backend->createRaytracingPipelineState(init);
+}
 
 RootDescriptorLayoutPointer Device::createRootDescriptorLayout(const RootDescriptorLayoutInit& init) {
     return _backend->createRootDescriptorLayout(init);
@@ -101,6 +108,13 @@ DescriptorSetPointer Device::createDescriptorSet(const DescriptorSetInit& init) 
 }
 void Device::updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) {
     return _backend->updateDescriptorSet(descriptorSet, objects);
+}
+
+ShaderEntry Device::getShaderEntry(const PipelineStatePointer& pipeline, const std::string& entry) {
+    return _backend->getShaderEntry(pipeline, entry);
+}
+ShaderTablePointer Device::createShaderTable(const ShaderTableInit& init) {
+    return _backend->createShaderTable(init);
 }
 
 BatchTimerPointer Device::createBatchTimer(const BatchTimerInit& init) {

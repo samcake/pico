@@ -1,62 +1,6 @@
 #include "SceneTransform_inc.hlsl"
 
-static const float SQRT_3 = sqrt(3.0);
-static const float HALF_SQRT_3 = SQRT_3 * 0.5;
-
-static const float2 HEX_VERTS[7] = {
-    float2(0, 1),
-    float2(-HALF_SQRT_3, 0.5),
-    float2(-HALF_SQRT_3, -0.5),
-    float2(0,-1),
-    float2(HALF_SQRT_3, -0.5),
-    float2(HALF_SQRT_3, 0.5),
-    float2(0, 0),
-};
-
-static const float2x3 HEX_TO_2D = float2x3(
-     HALF_SQRT_3, 0,    -HALF_SQRT_3,
-     -0.5,        1,    -0.5
-);
-
-static const int3 hex_direction_vectors[6] = {
-    int3(+1, 0, -1), int3( 0, +1, -1), int3(-1, +1, 0),
-    int3(-1, 0, +1), int3( 0, -1, +1), int3(+1, -1, 0)
-};
-
-int3 hex_dir(uint dir, int ring = 1) {
-    return hex_direction_vectors[uint(dir) % 6] * ring;
-}
-
-int3 hex_add(int3 a, int3 b) {
-    return a + b;
-}
-
-int3 hex_neighbor(int3 h, int dir) {
-    return h + hex_dir(dir);
-}
-
-uint2 hex_spiral_polar(uint i) {
-    i -= 1; // forget about ring 0
-    // compute the ring
-    uint r = uint(floor(0.5 * (1.0 + sqrt(1.0 + float(i) * 4.0 / 3.0))));
-    // sum at ring r aka index of the first index in the ring
-    uint r0 = (r * (r - 1) / 2) * 6;
-    // index in the ring
-    uint ri = (i - r0);
-    
-    return int2(r, ri);
-}
-
-uint3 hex_add_polar(int3 h, uint2 pol) {
-    // find which side / direction
-    uint d = pol.y / pol.x;
-    // and index on the ring side
-    uint rsi = pol.y % pol.x;
-
-    h = hex_dir(d, pol.x);
-    h += hex_dir(d + 2, rsi);
-    return h;
-}
+#include "Hexagon_inc.hlsl"
 
 static const float PHI = 0.5 * (1.0 + sqrt(5.0));
 
@@ -108,7 +52,7 @@ struct VertexShaderOutput
     float4 Position : SV_Position;
 };
 
-VertexShaderOutput main_hex(uint ivid : SV_VertexID)
+VertexShaderOutput main_hex_ico(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
 
@@ -144,6 +88,8 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
     }    
     position.xy *= 2.0 / 3.0 / 2.0;
     position = position.xzy;
+
+   // position *= 0.5;
     
     
     //position.y = face_id * 2.0;
@@ -163,7 +109,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
     if (is_summit) {
         position = icosahedron_verts[faceIdxs[tid]];
         float3 delta = icosahedron_verts[faceIdxs[(tid + tvid) % 3]] - icosahedron_verts[faceIdxs[tid]];
-        position += delta * 1.0 / 6.0;
+        position += delta  / 6.0;
     }
 
     position = normalize(position);
@@ -177,3 +123,41 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
     return OUT;
 }
 
+
+VertexShaderOutput main_hex(uint ivid : SV_VertexID)
+{
+    VertexShaderOutput OUT;
+
+    uint hid = ivid / HEX_NUM_INDICES;
+    uint hvid = ivid - hid * HEX_NUM_INDICES;
+    uint tid = 0;
+    uint tvid = 0;
+    uint hex_vid = hex_index_to_vertex(hvid, tid, tvid);
+    
+    float3 position = float3(HEX_VERTS[hex_vid], 0.0);
+    float4 coords = float4(position.xy, hid, 30);
+
+    int3 h = 0;
+
+    int i = hid;
+    if ((i > 0))
+    {
+        uint2 pol = hex_spiral_polar(i);
+        h = hex_add_polar(h, pol);
+        coords.zw = float2(pol);
+        position.xy += mul(HEX_TO_2D, float3(h));
+    }
+  //  position.xy *= 2.0 / 3.0 / 2.0;
+    position = position.xzy;
+
+
+
+    float3 color = float3(1.0, 1.0, 1.0);
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
+    OUT.Position = clipPos;
+    OUT.Coords = coords;
+
+    return OUT;
+}

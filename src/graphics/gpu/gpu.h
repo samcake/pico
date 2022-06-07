@@ -30,6 +30,7 @@
 #include <memory>
 #include <string>
 #include <array>
+#include <vector>
 #include "../dllmain.h" // pick dllmain relative to this file
 
 namespace graphics {
@@ -138,6 +139,8 @@ namespace graphics {
     
         COMPUTE,
 
+        RAYTRACING,
+
         COUNT,
     };
 
@@ -148,12 +151,15 @@ namespace graphics {
 
         COMPUTE = 0x1000,
 
-        COUNT = 4,
+        RAYTRACING = 0x2000,
+
+        COUNT = 5,
     };
 
     enum class PipelineType : uint8_t {
         GRAPHICS = 0,
         COMPUTE,
+        RAYTRACING,
 
         COUNT,
     };
@@ -179,6 +185,12 @@ namespace graphics {
     class Texture;
     using TexturePointer = std::shared_ptr<Texture>;
     struct TextureInit;
+    struct UploadSubresourceLayout;
+    using UploadSubresourceLayoutArray = std::vector<UploadSubresourceLayout>;
+
+    class Geometry;
+    using GeometryPointer = std::shared_ptr<Geometry>;
+    struct GeometryInit;
 
     class Sampler;
     using SamplerPointer = std::shared_ptr<Sampler>;
@@ -207,6 +219,12 @@ namespace graphics {
     using PipelineStateWeakPtr = std::weak_ptr<PipelineState>;
     struct GraphicsPipelineStateInit;
     struct ComputePipelineStateInit;
+    struct RaytracingPipelineStateInit;
+
+    struct ShaderEntry;
+    struct ShaderTableInit;
+    class ShaderTable;
+    using ShaderTablePointer = std::shared_ptr<ShaderTable>;
 
     class Framebuffer;
     using FramebufferPointer = std::shared_ptr<Framebuffer>;
@@ -218,18 +236,19 @@ namespace graphics {
     struct BatchTimerInit;
 
     // Resource Types
-    enum ResourceUsage : uint8_t {
-        INDEX_BUFFER = 0x01,
-        VERTEX_BUFFER = 0x02,
-        UNIFORM_BUFFER = 0x04,
-        RESOURCE_BUFFER = 0x08,
-        RW_RESOURCE_BUFFER = 0x10,
-        RESOURCE_TEXTURE = 0x20,
-        RW_RESOURCE_TEXTURE = 0x40,
-        RENDER_TARGET = 0x80,
+    enum ResourceUsage : uint16_t {
+        INDEX_BUFFER = 0x0001,
+        VERTEX_BUFFER = 0x0002,
+        UNIFORM_BUFFER = 0x0004,
+        RESOURCE_BUFFER = 0x0008,
+        RW_RESOURCE_BUFFER = 0x0010,
+        RESOURCE_TEXTURE = 0x0020,
+        RW_RESOURCE_TEXTURE = 0x0040,
+        RENDER_TARGET = 0x0080,
+        GENERIC_READ_BUFFER = 0x0100,
+        ACCELERATION_STRUCTURE = 0x0200,
 
-
-        COUNT = 8,
+        COUNT = 10,
     };
 
     enum class ResourceState {
@@ -247,11 +266,10 @@ namespace graphics {
         COPY_SOURCE,
         RESOLVE_DEST,
         RESOLVE_SOURCE,
-        _GENERIC_READ,
+        GENERIC_READ_BUFFER,
 
         PRESENT,
         PREDICATION,
-
 
         COUNT,
     };

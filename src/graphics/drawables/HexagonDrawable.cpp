@@ -47,6 +47,7 @@
 #include "SceneTransform_inc.h"
 
 #include "Color_inc.h"
+#include "Hexagon_inc.h"
 
 #include "Hexagon_vert.h"
 #include "Hexagon_frag.h"
@@ -95,6 +96,7 @@ namespace graphics
             SceneTransform_inc::getMapEntry(),
 
             Color_inc::getMapEntry(),
+            Hexagon_inc::getMapEntry(),
         };
 
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_hex", Hexagon_vert::getSource, Hexagon_vert::getSourceFilename(), include };
@@ -133,6 +135,27 @@ namespace graphics
         auto pipeline = this->_primitivePipeline;
 
         // And now a render callback where we describe the rendering sequence
+       /* graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
+
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            PrimitiveObjectData odata{ 0, 0, 1.0f, 1.0f };
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
+
+
+            // A hex is drawnumPentsn with 6 triangles 3 verts
+            // A Pent is drawn with 5 triangles 3 verts
+            int numPents = 12;
+            int numFaces = 20;
+            int numRings = 1;
+            int numHexs = 1 + 6 * (numRings * (numRings + 1)) / 2;
+            args.batch->draw(5 * 3 * numPents + 6 * 3 * numHexs * numFaces, 0);
+        };*/
+
+
+        // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
             args.batch->setViewport(args.camera->getViewportRect());
@@ -142,13 +165,11 @@ namespace graphics
             PrimitiveObjectData odata{ 0, 0, 1.0f, 1.0f };
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
+
             // A hex is drawnumPentsn with 6 triangles 3 verts
-            // A Pent is drawn with 5 triangles 3 verts
-            int numPents = 12;
-            int numFaces = 20;
-            int numRings = 1;
-            int numHexs = 1 + 6 * (numRings * (numRings + 1)) / 2;
-            args.batch->draw(5 * 3 * numPents + 6 * 3 * numHexs * numFaces, 0);
+            int numHexs = 50;
+            int numIndicesPerHex = 6 * 3;
+            args.batch->draw(numHexs * numIndicesPerHex, 0);
         };
         prim._drawcall = drawCallback;
     }

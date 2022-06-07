@@ -341,7 +341,7 @@ int main(int argc, char *argv[])
         args.batch->beginPass(args.swapchain, currentIndex);
 
         args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, textureForGDI);
-        graphics::Batch::UploadSubresourceLayoutArray layouts = { { 0, 0, gdcRenderer->pixelBuffer->_bufferSize}};
+        graphics::UploadSubresourceLayoutArray layouts = { { 0, 0, gdcRenderer->pixelBuffer->bufferSize()}};
         args.batch->uploadTexture(textureForGDI, layouts, gdcRenderer->pixelBuffer);
         args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, textureForGDI);
     

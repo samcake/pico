@@ -35,6 +35,7 @@
 #include <gpu/gpu.h>
 
 namespace graphics {
+
     class Transform {
     public:
         Transform() {}

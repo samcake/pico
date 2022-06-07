@@ -1,6 +1,8 @@
 //
 // Mesh API
 //
+#ifndef MESH_INC
+#define MESH_INC
 
 Buffer<uint>  index_array : register(t2);
 
@@ -121,3 +123,4 @@ float2 mesh_interpolateVertexTexcoord(FaceTexcoords ft, float3 baryPos) {
 }
 
 
+#endif

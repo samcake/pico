@@ -55,6 +55,7 @@
 #include "Paint_inc.h"
 #include "Shading_inc.h"
 #include "Surface_inc.h"
+#include "Sky_inc.h"
 
 #include "ModelPart_vert.h"
 #include "ModelPart_frag.h"
@@ -130,7 +131,7 @@ namespace graphics
             Shading_inc::getMapEntry(),
             Surface_inc::getMapEntry(),
 
-
+            Sky_inc::getMapEntry(),
         };
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
@@ -527,6 +528,35 @@ namespace graphics
         modelDrawable->_parts = std::move(parts);
         modelDrawable->_partAABBs = std::move(partAABBs);
 
+
+
+        //// Ray tracing data structure
+        //D3D12_RAYTRACING_GEOMETRY_DESC geometry;
+        //geometry.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+        //geometry.Triangles.VertexBuffer.StartAddress = vb->GetGPUVirtualAddress();
+        //geometry.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+        //geometry.Triangles.VertexCount = static_cast<UINT>(vertices.size());
+        //geometry.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+        //geometry.Triangles.IndexBuffer = ib->GetGPUVirtualAddress();
+        //geometry.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+        //geometry.Triangles.IndexCount = static_cast<UINT>(indices.size());
+        //geometry.Triangles.Transform3x4 = 0;
+        //geometry.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+
+        GeometryInit geometryInit = {
+            { vbresourceBuffer, 0, sizeof(core::vec4)},
+            modelDrawable->_vertices.size(),
+            PixelFormat::R32G32B32_FLOAT,
+            { ibresourceBuffer, 0 , 4},
+            modelDrawable->_indices.size()
+        };
+        auto geometry = device->createGeometry(geometryInit);
+
+        
+        modelDrawable->_geometry = geometry;
+
+
+
         // Materials
         std::vector<ModelMaterial> materials;
         for (const auto& m : model->_materials) {
@@ -600,6 +630,7 @@ namespace graphics
         }
         modelDrawable->_bound = model_aabb;
 
+
         return modelDrawable;
     }
 
@@ -638,11 +669,11 @@ namespace graphics
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
 
 
-       auto numVertices = model.getVertexBuffer()->getNumElements();
-       auto numIndices = model.getIndexBuffer()->getNumElements();
+       auto numVertices = model.getVertexBuffer()->numElements();
+       auto numIndices = model.getIndexBuffer()->numElements();
        auto vertexStride = model.getVertexBuffer()->_init.structStride;
-       auto numParts = model.getPartBuffer()->getNumElements();
-       auto numMaterials = model.getMaterialBuffer()->getNumElements();
+       auto numParts = model.getPartBuffer()->numElements();
+       auto numMaterials = model.getMaterialBuffer()->numElements();
 
        // NUmber of nodes in the model
        auto numNodes = model._localNodeTransforms.size();
@@ -656,7 +687,7 @@ namespace graphics
             
             if (albedoTex && albedoTex->needUpload()) {
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, albedoTex);
-                args.batch->uploadTextureFromInitdata(args.device, albedoTex);
+                args.batch->uploadTexture(albedoTex);
                 args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, albedoTex);
             }
 

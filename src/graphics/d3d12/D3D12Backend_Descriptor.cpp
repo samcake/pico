@@ -74,6 +74,9 @@ D3D12_SHADER_VISIBILITY EvalShaderVisibility(ShaderStage _shaderStage) {
         // Keep D3D12_SHADER_VISIBILITY_ALL for compute shaders
         ++shader_stage_count;
     }
+    if (shaderStage & ((int)ShaderStage::RAYTRACING)) {
+        ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL; 
+    }
 
     // Go back to all shader stages if there's more than one stage
     if (shader_stage_count > 1) {
@@ -314,6 +317,14 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
         ++parameter_count;
     }
 
+    D3D12_ROOT_SIGNATURE_FLAGS flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    if (init._pipelineType == PipelineType::RAYTRACING) {
+        if (init._localSignature)
+            flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
+        else
+            flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    }
+
 
     D3D12_VERSIONED_ROOT_SIGNATURE_DESC desc;
     if (D3D_ROOT_SIGNATURE_VERSION_1_1 == featureData.HighestVersion) {
@@ -322,7 +333,7 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
         desc.Desc_1_1.pParameters = parameters_11.data();
         desc.Desc_1_1.NumStaticSamplers = 0;
         desc.Desc_1_1.pStaticSamplers = NULL;
-        desc.Desc_1_1.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        desc.Desc_1_1.Flags = flags;
     }
     else if (D3D_ROOT_SIGNATURE_VERSION_1_0 == featureData.HighestVersion) {
         desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_0;
@@ -330,7 +341,7 @@ RootDescriptorLayoutPointer D3D12Backend::createRootDescriptorLayout(const RootD
         desc.Desc_1_0.pParameters = parameters_10.data();
         desc.Desc_1_0.NumStaticSamplers = 0;
         desc.Desc_1_0.pStaticSamplers = NULL;
-        desc.Desc_1_0.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        desc.Desc_1_0.Flags = flags;
     }
 
     ID3DBlob* sig_blob = NULL;
@@ -460,12 +471,13 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
         } break;
 
         case DescriptorType::UNIFORM_BUFFER: {
-            auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffer.get());
+            if (descriptorObject._buffer) {
+                auto dxUbo = static_cast<D3D12BufferBackend*> (descriptorObject._buffer.get());
 
-            ID3D12Resource* resource = dxUbo->_resource.Get();
-            D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
-            _device->CreateConstantBufferView(view_desc, cpuHandle);
-
+                ID3D12Resource* resource = dxUbo->_resource.Get();
+                D3D12_CONSTANT_BUFFER_VIEW_DESC* view_desc = &(dxUbo->_uniformBufferView);
+                _device->CreateConstantBufferView(view_desc, cpuHandle);
+            }
             cpuHandle.ptr += dxDescriptorHeap->_descriptor_increment_size;
         } break;
 
@@ -474,7 +486,11 @@ void D3D12Backend::updateDescriptorSet(DescriptorSetPointer& descriptorSet, Desc
             if (dxBuffer) {
                 ID3D12Resource* resource = dxBuffer->_resource.Get();
                 D3D12_SHADER_RESOURCE_VIEW_DESC* view_desc = &(dxBuffer->_resourceBufferView);
-                _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                if (dxBuffer->_init.usage &= ResourceUsage::ACCELERATION_STRUCTURE) {
+                    _device->CreateShaderResourceView(nullptr, view_desc, cpuHandle);
+                } else {
+                    _device->CreateShaderResourceView(resource, view_desc, cpuHandle);
+                }
             }
             else {
                 D3D12_SHADER_RESOURCE_VIEW_DESC view_desc;
@@ -633,5 +649,6 @@ DescriptorHeapPointer D3D12Backend::getDescriptorHeap() {
 
     return DescriptorHeapPointer(heap);
 }
+
 
 #endif

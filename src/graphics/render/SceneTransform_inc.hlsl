@@ -1,7 +1,8 @@
 //
 // Scene API
 //
-
+#ifndef SCENETRANSFORM_INC
+#define SCENETRANSFORM_INC
 
 #include "Camera_inc.hlsl"
 
@@ -51,3 +52,5 @@ StructuredBuffer<ItemInfo>  item_infos : register(t2);
 ItemInfo item_getInfo(int itemID) {
     return item_infos[itemID];
 }
+
+#endif

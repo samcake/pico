@@ -192,6 +192,9 @@ namespace graphics {
         // local Cameras
         std::vector<ModelCamera> _localCameras;
 
+        // Ray tracing geometry
+        graphics::GeometryPointer  _geometry;
+
     protected:
         friend class ModelDrawableFactory;
         friend class ModelDrawableInspectorFactory;

@@ -48,8 +48,8 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         auto vertexShader = static_cast<D3D12ShaderBackend*> (init.program->getVertexShader().get());
         auto pixelShader = static_cast<D3D12ShaderBackend*> (init.program->getPixelShader().get());
-        ComPtr<ID3DBlob> vertexShaderBlob = vertexShader->_shaderBlob;
-        ComPtr<ID3DBlob> pixelShaderBlob = pixelShader->_shaderBlob;
+        auto vertexShaderBlob = vertexShader->_shaderBlob;
+        auto pixelShaderBlob = pixelShader->_shaderBlob;
 
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
@@ -134,7 +134,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
 
         auto computeShader = static_cast<D3D12ShaderBackend*> (init.program.get());
-        ComPtr<ID3DBlob> computeShaderBlob = computeShader->_shaderBlob;
+        auto computeShaderBlob = computeShader->_shaderBlob;
 
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pipelineState;
@@ -167,6 +167,270 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             pso->_rootSignature = rootSignature;
         }
 
+
+        return true;
+    }
+    else if (pso->getType() == PipelineType::RAYTRACING && pso->_program) {
+        auto& init = pso->_raytracing;
+
+        ComPtr<ID3D12RootSignature> globalRootSignature;
+        ComPtr<ID3D12RootSignature> localRootSignature;
+        ComPtr<ID3D12StateObject> pipelineState;
+
+
+        // Grab the global root signature from the associated pipeline layout.
+        if (pso->_rootSignature) {
+            globalRootSignature = pso->_rootSignature;
+        }
+        else if (init.globalRootDescriptorLayout) {
+            auto dxDescLayout = static_cast<D3D12RootDescriptorLayoutBackend*> (init.globalRootDescriptorLayout.get());
+            globalRootSignature = dxDescLayout->_rootSignature;
+        }
+
+        // Grab the local root signature from the associated pipeline layout.
+        if (pso->_localRootSignature) {
+            localRootSignature = pso->_localRootSignature;
+        }
+        else if (init.localRootDescriptorLayout) {
+            auto dxDescLayout = static_cast<D3D12RootDescriptorLayoutBackend*> (init.localRootDescriptorLayout.get());
+            localRootSignature = dxDescLayout->_rootSignature;
+        }
+
+
+        // Create 7 subobjects that combine into a RTPSO:
+        // Subobjects need to be associated with DXIL exports (i.e. shaders) either by way of default or explicit associations.
+        // Default association applies to every exported shader entrypoint that doesn't have any of the same type of subobject associated with it.
+        // This simple sample utilizes default shader association except for local root signature subobject
+        // which has an explicit association specified purely for demonstration purposes.
+        // 3 - DXIL library
+        // 1 - Triangle hit group
+        // 2 - Shader config
+        // 2 - Local root signature and association
+        // 1 - Global root signature
+        // 1 - Pipeline config
+
+        ID3D12StateObjectProperties* rtpsoInfo;
+
+        // Define state subobjects for shaders, root signatures,
+        // and configuration data.
+        std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+        subobjects.resize(10);
+        UINT index = 0;
+
+
+
+        auto raytracingShader = static_cast<D3D12ShaderBackend*> (init.program->getProgramDesc().shaderLib.at("RAYTRACING").get());
+ 
+        // Describe the DXIL Library entry point and name.
+        D3D12_EXPORT_DESC rgs_exportDesc;
+        rgs_exportDesc.Name = L"MyRaygenShader";
+        rgs_exportDesc.ExportToRename = L"MyRaygenShader";
+        rgs_exportDesc.Flags = D3D12_EXPORT_FLAG_NONE;
+
+        // Describe the DXIL library.
+        D3D12_DXIL_LIBRARY_DESC rgs_libDesc = {};
+        rgs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        rgs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
+        rgs_libDesc.NumExports = 1;
+        rgs_libDesc.pExports = &rgs_exportDesc;
+
+        // Describe the ray generation shader state subobject.
+        D3D12_STATE_SUBOBJECT rgs = {};
+        rgs.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
+        rgs.pDesc = &rgs_libDesc;
+        subobjects[index] = rgs;
+        index++;
+
+
+
+
+
+
+        // Describe the DXIL Library entry point and name.
+        D3D12_EXPORT_DESC chs_exportDesc;
+        chs_exportDesc.Name = L"MyClosestHitShader";
+        chs_exportDesc.ExportToRename = L"MyClosestHitShader";
+        chs_exportDesc.Flags = D3D12_EXPORT_FLAG_NONE;
+
+        // Describe the DXIL library.
+        D3D12_DXIL_LIBRARY_DESC chs_libDesc = {};
+        chs_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        chs_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
+        chs_libDesc.NumExports = 1;
+        chs_libDesc.pExports = &chs_exportDesc;
+
+        // Describe the ray generation shader state subobject.
+        D3D12_STATE_SUBOBJECT chs = {};
+        chs.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
+        chs.pDesc = &chs_libDesc;
+        subobjects[index] = chs;
+        index++;
+
+
+
+
+
+
+        // Describe the DXIL Library entry point and name.
+        D3D12_EXPORT_DESC ms_exportDesc;
+        ms_exportDesc.Name = L"MyMissShader";
+        ms_exportDesc.ExportToRename = L"MyMissShader";
+        ms_exportDesc.Flags = D3D12_EXPORT_FLAG_NONE;
+
+        // Describe the DXIL library.
+        D3D12_DXIL_LIBRARY_DESC ms_libDesc = {};
+        ms_libDesc.DXILLibrary.BytecodeLength = raytracingShader->_shaderBlob->GetBufferSize();
+        ms_libDesc.DXILLibrary.pShaderBytecode = raytracingShader->_shaderBlob->GetBufferPointer();
+        ms_libDesc.NumExports = 1;
+        ms_libDesc.pExports = &ms_exportDesc;
+
+        // Describe the ray generation shader state subobject.
+        D3D12_STATE_SUBOBJECT ms = {};
+        ms.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY;
+        ms.pDesc = &ms_libDesc;
+        subobjects[index] = ms;
+        index++;
+
+
+
+
+        D3D12_HIT_GROUP_DESC hitGroupDesc = {};
+        hitGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+        hitGroupDesc.ClosestHitShaderImport = L"MyClosestHitShader";
+       // hitGroupDesc.AnyHitShaderImport = L"Unique_AHS_Name";
+     //   hitGroupDesc.IntersectionShaderImport = L"Unique_IS_Name";
+        hitGroupDesc.HitGroupExport = L"HitGroup_Name";
+
+        // Describe the hit group state subobject.
+        D3D12_STATE_SUBOBJECT hitGroup = {};
+        hitGroup.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP;
+        hitGroup.pDesc = &hitGroupDesc;
+        subobjects[index] = hitGroup;
+        index++;
+
+
+
+
+        // Describe the shader payload configuration.
+        D3D12_RAYTRACING_SHADER_CONFIG shdrConfigDesc = {};
+        shdrConfigDesc.MaxPayloadSizeInBytes = 4 * sizeof(float);
+        shdrConfigDesc.MaxAttributeSizeInBytes = D3D12_RAYTRACING_MAX_ATTRIBUTE_SIZE_IN_BYTES;
+
+        D3D12_STATE_SUBOBJECT shdrConfig = {};
+        shdrConfig.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG;
+        shdrConfig.pDesc = &shdrConfigDesc;
+        subobjects[index] = shdrConfig;
+        index++;
+
+
+
+
+
+        // Create a list of shader export names that use the payload.
+        const WCHAR* payloadExports[] = { L"MyRaygenShader", L"MyMissShader", L"HitGroup_Name" };
+        // Describe the association of shaders and a local root signature.
+        D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION payload_assocDesc = {};
+        payload_assocDesc.NumExports = _countof(payloadExports);
+        payload_assocDesc.pExports = payloadExports;
+        payload_assocDesc.pSubobjectToAssociate = &subobjects[index - 1];
+
+        // Create the association subobject.
+        D3D12_STATE_SUBOBJECT payload_association = {};
+        payload_association.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
+        payload_association.pDesc = &payload_assocDesc;
+        subobjects[index] = payload_association;
+        index++;
+
+
+
+
+  
+        // Local root signature
+        D3D12_LOCAL_ROOT_SIGNATURE L_R_S = {};
+        L_R_S.pLocalRootSignature = localRootSignature.Get();
+
+        D3D12_STATE_SUBOBJECT localRootSignatureSO = {};
+        localRootSignatureSO.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE;
+        localRootSignatureSO.pDesc = &L_R_S;
+        subobjects[index] = localRootSignatureSO;
+        index++;
+
+
+
+
+
+        // Create a list of shader export names that use the root signature.
+        const WCHAR* lrsExports[] = { L"MyRaygenShader", L"HitGroup_Name", L"MyMissShader" };
+        // Describe the association of shaders and a local root signature.
+        D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION lrs_assocDesc = {};
+        lrs_assocDesc.NumExports = _countof(lrsExports);
+        lrs_assocDesc.pExports = lrsExports;
+        lrs_assocDesc.pSubobjectToAssociate = &subobjects[index - 1];
+
+        // Create the association subobject.
+        D3D12_STATE_SUBOBJECT lrs_association = {};
+        lrs_association.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION;
+        lrs_association.pDesc = &lrs_assocDesc;
+        subobjects[index] = lrs_association;
+        index++;
+
+
+        // Global root signature to be used in a ray gen shader.
+        D3D12_GLOBAL_ROOT_SIGNATURE G_R_S = {};
+        G_R_S.pGlobalRootSignature = globalRootSignature.Get();
+        G_R_S.pGlobalRootSignature = nullptr;
+
+        D3D12_STATE_SUBOBJECT globalRootSignatureSO = {};
+        globalRootSignatureSO.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE;
+        globalRootSignatureSO.pDesc = &G_R_S;
+        subobjects[index] = globalRootSignatureSO;
+        index++;
+
+
+
+        
+       // Describe the ray tracing pipeline configuration.
+        D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfigDesc = {};
+        pipelineConfigDesc.MaxTraceRecursionDepth = 1;
+
+        D3D12_STATE_SUBOBJECT pipelineConfig = {};
+        pipelineConfig.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG;
+        pipelineConfig.pDesc = &pipelineConfigDesc;
+        subobjects[index] = pipelineConfig;
+        index++;
+
+
+
+        // Create the state object.
+        D3D12_STATE_OBJECT_DESC rtpsoDesc;
+        rtpsoDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+        rtpsoDesc.NumSubobjects = index;
+        rtpsoDesc.pSubobjects = subobjects.data();
+
+     //   rtpsoDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+     //   rtpsoDesc.NumSubobjects = 0;
+     //   rtpsoDesc.pSubobjects = nullptr;
+
+        ThrowIfFailed(_device->CreateStateObject(&rtpsoDesc, IID_PPV_ARGS(&pipelineState)));
+
+
+        // Get the ray tracing pipeline state object's properties.
+        pipelineState->QueryInterface(IID_PPV_ARGS(&rtpsoInfo));
+
+
+        // update these
+        if (pso->_stateObject) {
+            ComPtr<ID3D12DeviceChild> c;
+            pso->_stateObject.As(&c);
+            garbageCollect(c);
+        }
+        pso->_stateObject = pipelineState;
+        if (!pso->_rootSignature) {
+            pso->_rootSignature = globalRootSignature;
+        }
+        if (!pso->_localRootSignature) {
+            pso->_localRootSignature = localRootSignature;
+        }
 
         return true;
     }
@@ -203,6 +467,32 @@ PipelineStatePointer D3D12Backend::createComputePipelineState(const ComputePipel
     pso->_compute = init;
     pso->_program = init.program;
     pso->_rootDescriptorLayout = (init.rootDescriptorLayout ? init.rootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout if none specified
+
+
+    if (realizePipelineState(pso.get())) {
+
+        if (pso->_program->hasWatcher()) {
+            auto pipelineRealizer = std::function([&](PipelineState* pipeline) -> bool {
+                return realizePipelineState(pipeline);
+                });
+
+            PipelineState::registerToWatcher(pso, pipelineRealizer);
+        }
+
+        return pso;
+    }
+
+    return nullptr;
+}
+
+
+PipelineStatePointer D3D12Backend::createRaytracingPipelineState(const RaytracingPipelineStateInit& init) {
+    auto pso = std::make_shared<D3D12PipelineStateBackend>();
+    pso->_type = PipelineType::RAYTRACING;
+    pso->_raytracing = init;
+    pso->_program = init.program;
+    pso->_rootDescriptorLayout = (init.globalRootDescriptorLayout ? init.globalRootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout if none specified
+    pso->_localRootDescriptorLayout = (init.localRootDescriptorLayout ? init.localRootDescriptorLayout : _emptyRootDescriptorLayout); // assign empty pipeline layout if none specified
 
 
     if (realizePipelineState(pso.get())) {
@@ -455,6 +745,166 @@ void D3D12PipelineStateBackend::fill_blend_desc(const BlendState& src, D3D12_BLE
     dst.AlphaToCoverageEnable = FALSE;
 
 }
+#define ALIGN(_alignment, _val) (((_val + _alignment - 1) / _alignment) * _alignment)
 
+ShaderEntry D3D12Backend::getShaderEntry(const PipelineStatePointer& pipeline, const std::string& entryName) {
+    auto pipelineState = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
+
+    // Get the  pipeline state object's properties.
+    ID3D12StateObjectProperties* rtpsoInfo;
+    pipelineState->_stateObject->QueryInterface(IID_PPV_ARGS(&rtpsoInfo));
+
+    ShaderEntry entry;
+
+    uint32_t shaderIdSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    uint32_t shaderTableSize = 0;
+    uint32_t shaderTableRecordSize = shaderIdSize;
+    shaderTableRecordSize += 8; // CBV/SRV/UAV descriptor table
+    shaderTableRecordSize = ALIGN(D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT, shaderTableRecordSize);
+
+
+    // Shader Record 0 - Ray Generation program and local root parameter data (descriptor table with constant buffer and IB/VB pointers)
+    auto lEntryName = core::to_wstring(entryName);
+    memcpy(entry._blob.data(), rtpsoInfo->GetShaderIdentifier(lEntryName.c_str()), shaderIdSize);
+
+
+    return entry;
+}
+
+
+D3D12ShaderTableBackend::D3D12ShaderTableBackend()
+{}
+
+D3D12ShaderTableBackend::~D3D12ShaderTableBackend()
+{
+
+}
+
+ShaderTablePointer D3D12Backend::createShaderTable(const ShaderTableInit& init) {
+    auto shaderTable = std::make_shared<D3D12ShaderTableBackend>();
+
+
+#define ALIGN(_alignment, _val) (((_val + _alignment - 1) / _alignment) * _alignment)
+
+    /*
+    The Shader Table layout is as follows:
+        Entry 0 - Ray Generation shader
+        Entry 1 - Miss shader
+        Entry 2 - Closest Hit shader
+    All shader records in the Shader Table must have the same size, so shader record size will be based on the largest required entry.
+    The ray generation program requires the largest entry:
+        32 bytes - D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES
+      +  8 bytes - a CBV/SRV/UAV descriptor table pointer (64-bits)
+      = 40 bytes ->> aligns to 64 bytes
+    The entry size must be aligned up to D3D12_RAYTRACING_SHADER_BINDING_TABLE_RECORD_BYTE_ALIGNMENT
+    */
+    uint32_t shaderIdSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    uint32_t shaderTableSize = 0;
+
+    uint32_t shaderTableRecordSize = shaderIdSize;
+    shaderTableRecordSize += 8;							// CBV/SRV/UAV descriptor table
+    shaderTableRecordSize = ALIGN(D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT, shaderTableRecordSize);
+
+    shaderTableSize = (shaderTableRecordSize * 3);		// 3 shader records in the table
+    shaderTableSize = ALIGN(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT, shaderTableSize);
+
+
+#define TO_DESC(x)(*reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(x))
+    ComPtr<ID3D12Resource> shaderTableBuffer;
+    ID3D12DescriptorHeap* heap;
+    {
+        D3D12_HEAP_PROPERTIES heapDesc = {};
+        heapDesc.Type = D3D12_HEAP_TYPE_UPLOAD;
+        heapDesc.CreationNodeMask = 1;
+        heapDesc.VisibleNodeMask = 1;
+
+        D3D12_RESOURCE_DESC resourceDesc = {};
+        resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+        resourceDesc.Alignment = 0;
+        resourceDesc.Height = 1;
+        resourceDesc.DepthOrArraySize = 1;
+        resourceDesc.MipLevels = 1;
+        resourceDesc.Format = DXGI_FORMAT_UNKNOWN;
+        resourceDesc.SampleDesc.Count = 1;
+        resourceDesc.SampleDesc.Quality = 0;
+        resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        resourceDesc.Width = shaderTableSize;
+        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+        // Create the GPU resource
+        HRESULT hr = _device->CreateCommittedResource(&heapDesc, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&shaderTableBuffer));
+    }
+
+    // Map the buffer
+    uint8_t* pData;
+    HRESULT hr = shaderTableBuffer->Map(0, nullptr, (void**)&pData);
+
+
+    // Shader Record 0 - Ray Generation program and local root parameter data (descriptor table with constant buffer and IB/VB pointers)
+    
+
+    memcpy(pData, init.records[0].shaderEntry._blob.data(), shaderIdSize);
+
+    auto gpuHandle = std::static_pointer_cast<D3D12DescriptorSetBackend>(init.records[0].descriptorSet)->_cbvsrvuav_GPUHandle;
+    memcpy(pData + shaderIdSize, &gpuHandle, sizeof(gpuHandle));
+
+    pData += shaderTableRecordSize;
+
+
+
+    memcpy(pData, init.records[1].shaderEntry._blob.data(), shaderIdSize);
+
+    gpuHandle = std::static_pointer_cast<D3D12DescriptorSetBackend>(init.records[1].descriptorSet)->_cbvsrvuav_GPUHandle;
+    memcpy(pData + shaderIdSize, &gpuHandle, sizeof(gpuHandle));
+
+    pData += shaderTableRecordSize;
+
+
+    memcpy(pData, init.records[2].shaderEntry._blob.data(), shaderIdSize);
+
+    gpuHandle = std::static_pointer_cast<D3D12DescriptorSetBackend>(init.records[2].descriptorSet)->_cbvsrvuav_GPUHandle;
+    memcpy(pData + shaderIdSize, &gpuHandle, sizeof(gpuHandle));
+
+    pData += shaderTableRecordSize;
+/*
+    struct LViewport
+    {
+        float left;
+        float top;
+        float right;
+        float bottom;
+    };
+
+    struct RayGenConstantBuffer
+    {
+        LViewport viewport;
+        LViewport stencil;
+    };
+
+    struct RootArguments {
+        RayGenConstantBuffer cb;
+    } rootArguments;
+    //rootArguments.cb = m_rayGenCB;
+
+    // Set the root parameter data. Point to start of descriptor heap.
+    *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(pData + shaderIdSize) = _descriptorHeap->gpuHandle(allocatedDescriptors);
+
+    // Shader Record 1 - Miss program (no local root arguments to set)
+    pData += shaderTableRecordSize;
+    memcpy(pData, init.records[1].shaderEntry._blob.data(), shaderIdSize);
+
+    // Shader Record 2 - Closest Hit program and local root parameter data (descriptor table with constant buffer and IB/VB pointers)
+    pData += shaderTableRecordSize;
+    memcpy(pData, init.records[2].shaderEntry._blob.data(), shaderIdSize);
+
+    // Set the root parameter data. Point to start of descriptor heap.
+    *reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(pData + shaderIdSize) = descriptorHeap->gpuHandle(allocatedDescriptors);
+*/
+    // Unmap
+    shaderTableBuffer->Unmap(0, nullptr);
+    shaderTable->_shaderTable = shaderTableBuffer;
+
+    return shaderTable;
+}
 
 #endif

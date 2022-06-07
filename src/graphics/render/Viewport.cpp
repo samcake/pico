@@ -27,6 +27,7 @@
 #include "Viewport.h"
 
 #include "Scene.h"
+#include "Sky.h"
 #include "Camera.h"
 #include "Renderer.h"
 #include "Drawable.h"
@@ -39,7 +40,8 @@ using namespace graphics;
 
 // Allocate a rootLayout just for the scene descriptor set
 const DescriptorSetLayout Viewport::viewPassLayout = {
-    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 10, 1},
+    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 10, 1},  // Camera
+    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 11, 1},  // Sky
     { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 20, 1}, // Node Transform
     { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 21, 1}, // Timer
 };
@@ -88,6 +90,7 @@ Viewport::Viewport(const ScenePointer& scene, const CameraPointer& camera, const
 
     DescriptorObjects descriptorObjects = {
         { graphics::DescriptorType::UNIFORM_BUFFER, _camera->getGPUBuffer() },
+        { graphics::DescriptorType::UNIFORM_BUFFER, _scene->_sky->getGPUBuffer() },
         { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_nodes._transforms_buffer },
         { graphics::DescriptorType::RESOURCE_BUFFER, _batchTimer->getBuffer() },
     };

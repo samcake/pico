@@ -3,6 +3,7 @@
 #include "Shading_inc.hlsl"
 #include "SceneModel_inc.hlsl"
 #include "Surface_inc.hlsl"
+#include "Sky_inc.hlsl"
 
 
 
@@ -55,7 +56,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     // Normal and Normal map
     float3 surfNormal = normalize(IN.Normal);
-    float3 mapNor = float4(0.0, 0.0, 0.0, 0.0);
+    float3 mapNor = (0.0);
     float3 normal = surfNormal;
     if (m.textures.y != -1) {
         mapNor = float3(material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.y)).xyz);
@@ -78,7 +79,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float metallic = m.metallic * rmaoMap.y;
     
     // with albedo from property or from texture
-    float3 albedo = m.color;
+    float3 albedo = m.color.xyz;
     if (m.textures.x != -1) {
         albedo = material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }
@@ -98,14 +99,19 @@ float4 main(PixelShaderInput IN) : SV_Target{
     float3 shading = baseColor;
     if (LIGHT_SHADING(_drawMode))
     {
-        const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));
-        const float globalI = 0.3f;
-        const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
-        const float lightI = 2.8f;
+       // const float3 lightD = normalize(float3(-1.0f, -1.0f, 1.0f));
+       // const float lightI = 2.8f;
+
+        float3 lightD = getSunDir();
+        float3 lightI = SkyColor(lightD);
 
         float3 n = normal;
+        
+        lightI = sky_evalIrradianceSH(n) * 3.0;
+        lightD = n;
+        
         float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
-        float3 l = -lightD; //normalize(pointToLight); // Direction from surface point to light
+        float3 l = lightD; //normalize(pointToLight); // Direction from surface point to light
         float3 h = normalize(l + v); // Direction of the vector between l and v, called halfway vector
         float NdotL = clamp(dot(n, l), 0.0, 1.0);
         float NdotV = clamp(dot(n, v), 0.0, 1.0);
@@ -122,8 +128,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
             f0 = lerp(f0, baseColor, metallic);
             float3 f90 = 1.0;
             float alphaRoughness = roughness * roughness;
-//            shading = (NDotL * lightI + NDotG * globalI);
-            //mix(dielectric_brdf, metal_brdf, metallic)
 
             float3 f_diffuse = intensity * NdotL * BRDF_lambertian(f0, f90, C_diff, specularWeight, VdotH);
             float3 f_specular = intensity * NdotL * BRDF_specularGGX(f0, f90, alphaRoughness, specularWeight, VdotH, NdotL, NdotV, NdotH);
@@ -133,7 +137,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
         }
         
-        float NDotG = clamp(dot(normal, -globalD), 0.0f, 1.0f);
         
     }
     

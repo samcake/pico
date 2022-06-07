@@ -1,3 +1,5 @@
+#ifndef MESHEDGE_INC
+#define MESHEDGE_INC
 
 typedef int4 Edge; // x and y are vertex indices, z and w are triangle indices in index buffer
 StructuredBuffer<Edge>  edge_array : register(t5);
@@ -126,3 +128,4 @@ int mesh_triangle_gatherTriangleRingSorted(out int ring[32], uint pivotTriangle,
     return ringLength;
 }
 
+#endif

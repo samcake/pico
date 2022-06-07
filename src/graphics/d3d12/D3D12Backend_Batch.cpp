@@ -44,10 +44,10 @@ ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> devi
     return commandAllocator;
 }
 
-ComPtr<ID3D12GraphicsCommandList> CreateCommandList(ComPtr<ID3D12Device2> device,
+ComPtr<ID3D12GraphicsCommandList4> CreateCommandList(ComPtr<ID3D12Device5> device,
     ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
 {
-    ComPtr<ID3D12GraphicsCommandList> commandList;
+    ComPtr<ID3D12GraphicsCommandList4> commandList;
     ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
 
     ThrowIfFailed(commandList->Close());
@@ -207,6 +207,28 @@ void D3D12BatchBackend::resourceBarrierTransition(
     _commandList->ResourceBarrier(1, &barrier);
 }
 
+void D3D12BatchBackend::resourceBarrierRW(
+    ResourceBarrierFlag flag, const TexturePointer& buffer, uint32_t subresource) {
+    auto d3d12tex = static_cast<D3D12TextureBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.UAV.pResource = d3d12tex->_resource.Get();
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
+void D3D12BatchBackend::resourceBarrierRW(
+    ResourceBarrierFlag flag, const BufferPointer& buffer) {
+    auto d3d12buf = static_cast<D3D12BufferBackend*>(buffer.get());
+
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    barrier.Flags = ResourceBarrieFlags[uint32_t(flag)];
+    barrier.UAV.pResource = d3d12buf->_resource.Get();
+
+    _commandList->ResourceBarrier(1, &barrier);
+}
 
 void D3D12BatchBackend::setViewport(const core::vec4 & viewport) {
     D3D12_VIEWPORT dxViewport;
@@ -276,14 +298,20 @@ void D3D12BatchBackend::bindRootDescriptorLayout(PipelineType type, const RootDe
 void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto dpso = static_cast<D3D12PipelineStateBackend*>(pipeline.get());
 
-    auto dxPso = dpso->_pipelineState;
-    _commandList->SetPipelineState(dxPso.Get());
+    if (dpso->getType() == PipelineType::RAYTRACING) {
+        _commandList->SetPipelineState1(dpso->_stateObject.Get());
+    } else {
 
-    bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
- 
-    if (dpso->getType() == PipelineType::GRAPHICS) {
-        _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
-    } else if (dpso->getType() == PipelineType::COMPUTE) {
+        auto dxPso = dpso->_pipelineState;
+        _commandList->SetPipelineState(dxPso.Get());
+
+        bindRootDescriptorLayout(dpso->getType(), dpso->getRootDescriptorLayout());
+
+        if (dpso->getType() == PipelineType::GRAPHICS) {
+            _commandList->IASetPrimitiveTopology(dpso->_primitive_topology);
+        }
+        else if (dpso->getType() == PipelineType::COMPUTE) {
+        }
     }
 }
 
@@ -467,9 +495,50 @@ void D3D12BatchBackend::uploadTexture(const TexturePointer& dest, const UploadSu
     // ANd one after*/
 }
 
+void D3D12BatchBackend::copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, const BufferPointer& src, uint32_t srcOffset, uint32_t size) {
+    auto srcBackend = static_cast<D3D12BufferBackend*>(src.get());
+    auto dstBackend = static_cast<D3D12BufferBackend*>(dest.get());
+
+    _commandList->CopyBufferRegion(dstBackend->_resource.Get(), destOffset, srcBackend->_resource.Get(), srcOffset, size);
+}
+
+void D3D12BatchBackend::uploadBuffer(const BufferPointer& dest) {
+    auto dstBackend = static_cast<D3D12BufferBackend*>(dest.get());
+   
+    // upload the cpuDataBuffer into dest
+    _commandList->CopyBufferRegion(dstBackend->_resource.Get(), 0, dstBackend->_cpuDataResource.Get(), 0, dstBackend->bufferSize());
+    dstBackend->notifyUploaded();
+}
+
 
 void D3D12BatchBackend::dispatch(uint32_t numThreadsX, uint32_t numThreadsY, uint32_t numThreadsZ) {
     _commandList->Dispatch(numThreadsX, numThreadsY, numThreadsZ);
+}
+
+void D3D12BatchBackend::dispatchRays(const DispatchRaysArgs& args) {
+    auto stb = static_cast<D3D12ShaderTableBackend*>(args.shaderTable.get());
+
+    D3D12_DISPATCH_RAYS_DESC desc = {};
+    desc.RayGenerationShaderRecord.StartAddress = args.generationShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.RayGenerationShaderRecord.SizeInBytes = args.generationShaderRecordSize;
+
+    desc.MissShaderTable.StartAddress = args.missShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.MissShaderTable.SizeInBytes = args.missShaderRecordSize;
+    desc.MissShaderTable.StrideInBytes = args.missShaderRecordStride;
+
+    desc.HitGroupTable.StartAddress = args.hitGroupShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.HitGroupTable.SizeInBytes = args.hitGroupShaderRecordSize;
+    desc.HitGroupTable.StrideInBytes = args.hitGroupShaderRecordStride;
+
+    desc.CallableShaderTable.StartAddress = args.callableShaderRecordStart + stb->_shaderTable->GetGPUVirtualAddress();
+    desc.CallableShaderTable.SizeInBytes = args.callableShaderRecordSize;
+    desc.CallableShaderTable.StrideInBytes = args.callableShaderRecordStride;
+
+    desc.Width = args.width;
+    desc.Height = args.height;
+    desc.Depth = args.depth;
+
+    _commandList->DispatchRays(&desc);
 }
 
 #endif

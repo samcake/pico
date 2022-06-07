@@ -1,6 +1,8 @@
 //
 // Surface Geometry API
 //
+#ifndef SURFACE_INC
+#define SURFACE_INC
 
 // Technique to compute tangent space in fragment shader by
 // Christian Schüler
@@ -22,3 +24,5 @@ float3x3 computeTangentSpace(float3 surfNormal, float3 viewVec, float2 uv) {
     B *= invmax;
     return float3x3(T,B, surfNormal);
 }
+
+#endif

@@ -1,6 +1,8 @@
 //
 // SceneModel API
 //
+#ifndef SCENEMODEL_INC
+#define SCENEMODEL_INC
 
 #include "Mesh_inc.hlsl"
 #include "Part_inc.hlsl"
@@ -16,3 +18,5 @@ SamplerState materialMapSampler() { return uSampler0[0]; }
 
 
 StructuredBuffer<Part>  part_array : register(t1);
+
+#endif
