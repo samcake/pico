@@ -99,7 +99,7 @@ namespace graphics
             Hexagon_inc::getMapEntry(),
         };
 
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_hex", Hexagon_vert::getSource, Hexagon_vert::getSourceFilename(), include };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_fsv", Hexagon_vert::getSource, Hexagon_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
         graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Hexagon_frag::getSource, Hexagon_frag::getSourceFilename(), include };
@@ -167,9 +167,11 @@ namespace graphics
 
 
             // A hex is drawnumPentsn with 6 triangles 3 verts
-            int numHexs = 50;
-            int numIndicesPerHex = 6 * 3;
-            args.batch->draw(numHexs * numIndicesPerHex, 0);
+           // int numHexs = 50;
+           // int numIndicesPerHex = 6 * 3;
+           // args.batch->draw(numHexs * numIndicesPerHex, 0);
+           args.batch->draw(3, 0);
+
         };
         prim._drawcall = drawCallback;
     }

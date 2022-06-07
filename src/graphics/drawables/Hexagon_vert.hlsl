@@ -161,3 +161,36 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
 
     return OUT;
 }
+
+
+
+struct FUllScreenViewportOutput
+{
+    float4 Coords : TEXCOORD;
+    float4 Position : SV_Position;
+};
+
+FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
+{
+    FUllScreenViewportOutput OUT;
+
+    const int num_tris = 1;
+    uint vid = ivid % (3 * num_tris);
+    uint instance = ivid / (3 * num_tris);
+    uint tvid = vid % 3;
+    uint tid = vid / 3;
+
+    float3 position = float3(0.0, 0.0, 0.0);
+    float3 color = float3(1.0, 1.0, 1.0);
+
+    position.xz = float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0)) * 100;
+    position.y = 0;
+    float4 coords = float4(position, 1);
+
+    float3 eyePosition = eyeFromWorldSpace(_view, position);
+    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+
+    OUT.Position = clipPos;
+    OUT.Coords = coords;
+    return OUT;
+}
