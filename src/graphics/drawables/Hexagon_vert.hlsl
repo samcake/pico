@@ -183,7 +183,7 @@ FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
     float3 position = float3(0.0, 0.0, 0.0);
     float3 color = float3(1.0, 1.0, 1.0);
 
-    position.xz = float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0)) * 100;
+    position.xz = (float2(-1, -1) + float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0))) * 100;
     position.y = 0;
     float4 coords = float4(position, 1);
 

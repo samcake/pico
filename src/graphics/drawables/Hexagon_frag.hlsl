@@ -51,10 +51,14 @@ float sdHexagonGrid(in float2 p, in float s)
 
 float4 main(PixelShaderInput IN) : SV_Target
 {
+    float2 p = IN.coords.xz;
+    float dist = length(p);
+    float ring = 5.0;
+    dist = dist / ring;
+    dist -= frac(dist);
   //  float3 color = color_rainbow(IN.coords.w / (6.0 * IN.coords.z), 1.0 - IN.coords.z / 20.0);
-    float3 color = color_rainbow(IN.coords.z / (IN.coords.w));
-    float2 p = IN.coords.xy;
-    float isoscale = 1.0;
+    float3 color = color_rainbow(dist, 100.0 / ring);
+    float isoscale = ring;
         
     float a = clamp(1.0 - abs(sdHexagonGrid(p, isoscale)) * 50.0, 0, 1);
 
