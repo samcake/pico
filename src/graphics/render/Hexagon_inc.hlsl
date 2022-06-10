@@ -18,7 +18,34 @@ int3 hex_add(int3 a, int3 b) {
     return a + b;
 }
 
-int3 hex_neighbor(int3 h, int dir) {
+int3 hex_sub(int3 a, int3 b) {
+    return a - b;
+}
+
+int hex_dist(int3 a, int3 b) {
+    int3 d = abs(a - b);
+    return (d.x + d.y + d.z) >> 1;
+}
+
+int3 hex_round(float3 h)
+{
+    float3 rh = round(h);
+    float check = rh.x + rh.y + rh.z;
+    if (check != 0)
+    {
+        float3 hc = abs(h - rh);
+        if ((hc.x > hc.y) && (hc.x > hc.z))
+            rh.x = -rh.y - rh.z;
+        else if (hc.y > hc.z)
+            rh.y = -rh.x - rh.z;
+        else
+            rh.z = -rh.x - rh.y;
+    }
+    return int3(rh);
+}
+
+int3 hex_neighbor(int3 h, int dir)
+{
     return h + hex_dir(dir);
 }
 
@@ -48,6 +75,7 @@ uint3 hex_add_polar(int3 h, uint2 pol) {
 
 static const float SQRT_3 = sqrt(3.0);
 static const float HALF_SQRT_3 = SQRT_3 * 0.5;
+static const float THIRD_SQRT_3 = SQRT_3 / 3.0;
 
 static const int HEX_NUM_VERTS = 7;
 static const float2 HEX_VERTS[HEX_NUM_VERTS + 1] = {
@@ -61,11 +89,6 @@ static const float2 HEX_VERTS[HEX_NUM_VERTS + 1] = {
     float2(0, 1), // repeat the first corner for easy indexing
 };
 
-static const float2x3 HEX_TO_2D = float2x3(
-    HALF_SQRT_3, 0, -HALF_SQRT_3,
-    -0.5, 1, -0.5
-    );
-
 static const uint HEX_NUM_TRIANGLES = 6;
 static const uint HEX_NUM_INDICES = 3 * HEX_NUM_TRIANGLES;
 
@@ -74,5 +97,24 @@ uint hex_index_to_vertex(uint idx, out uint tid, out uint tvid) {
     tvid = idx - tid * 3;
     return (tvid ? tvid + tid : 0);
 }
+
+
+static const float2x3 HEX_TO_2D = float2x3(
+    HALF_SQRT_3, 0, -HALF_SQRT_3,
+    -0.5, 1, -0.5
+    );
+    
+    
+static const float2x3 _2D_TO_HEX = float2x3(
+    HALF_SQRT_3, 0, -HALF_SQRT_3,
+    -0.5, 1, -0.5
+    );
+
+
+float2 hex_cube_to_ortho(int3 p, float radius = 1.0) {
+    return mul(HEX_TO_2D, float3(p)) * radius;
+}
+
+
 
 #endif

@@ -12,7 +12,16 @@ float3 color_rgbFromHSV(const float3 hsv) {
     return lerp(k.xxx, p, hsv.yyy) * hsv.z;
 }
 
-float3 color_rainbow(float n, float d = 1.0f) {
+float3 color_rainbow(float n, float d = 1.0f)
+{
+    float level = floor(frac(rcp(d) * n) * 6.0);
+    float r = float(level <= 2.0) + float(level > 4.0) * 0.5;
+    float g = max(1.0 - abs(level - 2.0) * 0.5, 0.0);
+    float b = (1.0 - (level - 4.0) * 0.5) * float(level >= 4.0);
+    return float3(r, g, b);
+}
+
+float3 color_rainbowHSV(float n, float d = 1.0f) {
     return color_rgbFromHSV(float3((n / d) * (5.0 / 6.0), 1.0, 1.0));
 }
 

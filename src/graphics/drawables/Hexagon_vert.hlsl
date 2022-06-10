@@ -145,7 +145,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
         uint2 pol = hex_spiral_polar(i);
         h = hex_add_polar(h, pol);
         coords.zw = float2(pol);
-        position.xy += mul(HEX_TO_2D, float3(h));
+        position.xy += hex_cube_to_ortho(h);
     }
   //  position.xy *= 2.0 / 3.0 / 2.0;
     position = position.xzy;
@@ -183,7 +183,8 @@ FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
     float3 position = float3(0.0, 0.0, 0.0);
     float3 color = float3(1.0, 1.0, 1.0);
 
-    position.xz = (float2(-1, -1) + float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0))) * 100;
+   // position.xz = (float2(-1, -1) + float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0))) * 10;
+    position.xz = HEX_VERTS[1 + tvid * 2] * 10.0;
     position.y = 0;
     float4 coords = float4(position, 1);
 
