@@ -49,6 +49,7 @@ static const uint3 icosahedron_indices[20] = {
 struct VertexShaderOutput
 {
     float4 Coords : TEXCOORD;
+    float3 EyePos : EPOS;   
     float4 Position : SV_Position;
 };
 
@@ -119,7 +120,8 @@ VertexShaderOutput main_hex_ico(uint ivid : SV_VertexID)
 
     OUT.Position = clipPos;
     OUT.Coords = coords;
- 
+    OUT.EyePos = eyePosition;
+    
     return OUT;
 }
 
@@ -158,6 +160,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
 
     OUT.Position = clipPos;
     OUT.Coords = coords;
+    OUT.EyePos = eyePosition;
 
     return OUT;
 }
@@ -167,6 +170,7 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
 struct FUllScreenViewportOutput
 {
     float4 Coords : TEXCOORD;
+    float3 EyePos : EPOS;    
     float4 Position : SV_Position;
 };
 
@@ -184,7 +188,7 @@ FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
     float3 color = float3(1.0, 1.0, 1.0);
 
    // position.xz = (float2(-1, -1) + float2(((tvid == 1) ? 2.0 : 0.0), ((tvid == 2) ? 2.0 : 0.0))) * 10;
-    position.xz = HEX_VERTS[1 + tvid * 2] * 20.0;
+    position.xz = HEX_VERTS[1 + tvid * 2] * 100.0;
     position.y = 0;
 
 
@@ -195,5 +199,6 @@ FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
 
     OUT.Position = clipPos;
     OUT.Coords = coords;
+    OUT.EyePos = eyePosition;
     return OUT;
 }
