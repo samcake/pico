@@ -102,7 +102,7 @@ namespace graphics
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main_fsv", Hexagon_vert::getSource, Hexagon_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Hexagon_frag::getSource, Hexagon_frag::getSourceFilename(), include };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main_hexamap", Hexagon_frag::getSource, Hexagon_frag::getSourceFilename(), include };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };

@@ -27,12 +27,10 @@ int hex_dist(int3 a, int3 b) {
     return (d.x + d.y + d.z) >> 1;
 }
 
-int3 hex_round(float3 h)
-{
+float3 hex_round(float3 h) {
     float3 rh = round(h);
     float check = rh.x + rh.y + rh.z;
-    if (check != 0)
-    {
+    if (check != 0) {
         float3 hc = abs(h - rh);
         if ((hc.x > hc.y) && (hc.x > hc.z))
             rh.x = -rh.y - rh.z;
@@ -41,11 +39,10 @@ int3 hex_round(float3 h)
         else
             rh.z = -rh.x - rh.y;
     }
-    return int3(rh);
+    return rh;
 }
 
-int3 hex_neighbor(int3 h, int dir)
-{
+int3 hex_neighbor(int3 h, int dir) {
     return h + hex_dir(dir);
 }
 
@@ -74,7 +71,10 @@ uint3 hex_add_polar(int3 h, uint2 pol) {
 
 
 static const float SQRT_3 = sqrt(3.0);
+static const float INV_SQRT_3 = 1.0 / SQRT_3;
 static const float HALF_SQRT_3 = SQRT_3 * 0.5;
+static const float THIRD = 1.0 / 3.0;
+
 static const float THIRD_SQRT_3 = SQRT_3 / 3.0;
 
 static const int HEX_NUM_VERTS = 7;
@@ -99,22 +99,76 @@ uint hex_index_to_vertex(uint idx, out uint tid, out uint tvid) {
 }
 
 
-static const float2x3 HEX_TO_2D = float2x3(
-    HALF_SQRT_3, 0, -HALF_SQRT_3,
-    -0.5, 1, -0.5
-    );
-    
-    
-static const float2x3 _2D_TO_HEX = float2x3(
+static const float2x3 HEX_CUBE_TO_2D = float2x3(
     HALF_SQRT_3, 0, -HALF_SQRT_3,
     -0.5, 1, -0.5
     );
 
+float2 hex_cube_to_ortho(float3 hp, float radius = 1.0) {
+    return mul(HEX_CUBE_TO_2D, hp) * radius;
+}
 
-float2 hex_cube_to_ortho(int3 p, float radius = 1.0) {
-    return mul(HEX_TO_2D, float3(p)) * radius;
+static const float3x2 HEX_2D_TO_CUBE = float3x2(
+    INV_SQRT_3, -THIRD,
+    0, 2.0 * THIRD,
+    -INV_SQRT_3, -THIRD
+    );
+
+float3 hex_ortho_to_cube(float2 hp, float radius = 1.0) {
+    hp *= rcp(radius);
+    return mul(HEX_2D_TO_CUBE, hp);
 }
 
 
+float3 hex_pointy_to_flat(float3 h) {
+    return INV_SQRT_3 * float3(h.y - h.x, h.x - h.z, h.z - h.y);
+    // same as:  return mul(HEX_2D_TO_CUBE, mul(HEX_CUBE_TO_2D, h).yx);
+}
 
+float hex_signed_distance(float3 h) {
+    h = abs(h);
+    return 1.0 - (h.x + h.y + h.z) * 6.0 / 7.0;
+}
+
+/*
+float sdHexagonH(in float2 p, in float r) {
+    const float3 k = float3(-0.866025404, 0.5, 0.577350269);
+    p = abs(p);
+    p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
+    p -= float2(clamp(p.x, -k.z * r, k.z * r), r);
+    return length(p) * sign(p.y);
+}
+float sdHexagonV(in float2 p, in float r)
+{
+    const float3 k = float3(0.5, -0.866025404, 0.577350269);
+    p = abs(p);
+    p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
+    p -= float2(r, clamp(p.y, -k.z * r, k.z * r));
+    return length(p) * sign(p.x);
+}
+
+float sdHexagonGrid(in float2 p, in float s)
+{
+    float r = 1.0;
+    float h = 0.5 * s;
+    float w = SQRT_3 * h;
+
+    // scale
+    p += float2(w, h);
+    p /= float2(w * 2.0, h * 3.0);
+
+    // offset
+    float even = float(int(floor(p.y)) & 0x01);
+    p.x += 0.5 * even;
+
+    // repeat
+    p = frac(p);
+
+    // unscale
+    p *= float2(w * 2.0, h * 3.0);
+    p -= float2(w, h);
+
+    return sdHexagonV(p, r * w);
+}
+*/
 #endif

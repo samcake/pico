@@ -6,116 +6,65 @@ struct PixelShaderInput
     float4 coords : TEXCOORD;
 };
 
-float sdHexagonH(in float2 p, in float r) {
-    const float3 k = float3(-0.866025404, 0.5, 0.577350269);
-    p = abs(p);
-    p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
-    p -= float2(clamp(p.x, -k.z * r, k.z * r), r);
-    return length(p) * sign(p.y);
-}
-float sdHexagonV(in float2 p, in float r)
+float3 eval_hex_from_ortho(float2 p, int l, out float3 hc)
 {
-    const float3 k = float3(0.5, -0.866025404, 0.577350269);
-    p = abs(p);
-    p -= 2.0 * min(dot(k.xy, p), 0.0) * k.xy;
-    p -= float2(r, clamp(p.y, -k.z * r, k.z * r));
-    return length(p) * sign(p.x);
+    float scale = pow(INV_SQRT_3, float(l));
+    float r = 1.0 * scale; // radius of the hexagon
+
+    if (l & 0x1) p = p.yx;
+
+    hc = hex_ortho_to_cube(p, r); // position converted to the cube coord
+    float3 hi = hex_round(hc); // hexagon coordinate at the 2d position
+
+    return hi;
 }
 
-float sdHexagonGrid(in float2 p, in float s)
+float2 eval_sd_d_hex_from_ortho(float2 p, int l, int3 p0 = int3(0,0,0))
 {
-    float r = 1.0;
-    float h = 0.5 * s;
-    float w = SQRT_3 * h;
-    
-    // scale
-    p += float2(w, h);
-    p /= float2(w * 2.0, h * 3.0);
-    
-    // offset
-    float even = float(int(floor(p.y)) & 0x01) ;
-    p.x += 0.5 * even;
-    
-    // repeat
-    p = frac(p);
-    
-    // unscale
-    p *= float2(w * 2.0, h * 3.0);
-    p -= float2(w, h);
-    
-    return sdHexagonV(p, r * w);
+    float3 hc;
+    float3 hi = eval_hex_from_ortho(p, l, hc);
+
+    int d = hex_dist(hi, p0); // distance in hexagons to p0
+
+    float3 hl = (hc - hi);  // local coord aka cube coord offset at the hexagon center
+    float3 hil = hex_pointy_to_flat(hl); // local coordinate aligned inside the hexagon
+    float s_id = hex_signed_distance(hil); // get signed distance to the hexagon
+
+    return float2(s_id, d);
 }
 
-float3 hex_ortho_to_cube(float2 p, float radius = 1.0)
+float4 main_hexamap(PixelShaderInput IN) : SV_Target
 {
-    p /= radius;
-    float xc = 1.0 / SQRT_3;
-    
-    float q = xc * p.x + (-1.0 / 3.0) * p.y;
-    float r = (2.0 / 3.0) * p.y;
-    float s = -xc * p.x + (-1.0 / 3.0) * p.y;
-    
-    return float3(q, r, -q - r);
-}
-
-
-
-
-float4 main(PixelShaderInput IN) : SV_Target
-{
-    float ring = 1.0;
-
-    float2 p = IN.coords.xz;
-    
-    float3 hf = hex_ortho_to_cube(p, ring);
-    
-    int3 hi = hex_round(hf);
-    
-    float3 hic = (hf - hi) ;
-    float2 ip = mul(HEX_TO_2D, hic);
-   
-    float b0 = 2.0 / 3.0;
-    float b1 = 0.0;
-    float b2 = -1.0 / 3.0;
-    float b3 = SQRT_3 / 3.0;
-    float hic_q = ip.x * b0 + ip.y * b1;
-    float hic_r = ip.x * b2 + ip.y * b3;
-    float3 hic2 = float3(hic_q, hic_r, -hic_r - hic_q);
-    hic2 = abs(hic2);
-    float s_id =  1.0 - (hic2.x + hic2.y + hic2.z) * 6.0 / 7.0;
-    
-    
-    
-    float2 pb = hex_cube_to_ortho(hf, ring);
-        
-    //int d = hex_dist(hi, int3(0, 0, 0));
-    int d = hex_dist(hi, int3(0, 0, 0));
-    
-   
-  //  float3 color = color_rainbow(IN.coords.w / (6.0 * IN.coords.z), 1.0 - IN.coords.z / 20.0);
-  //  float3 color = color_rainbow(float(d), 10);
-  //  float3 color = color_rainbow(pb.y, 10);
+    float2 p = IN.coords.xy; // position in 2d
+    float2 p0 = IN.coords.zw; // position of eye in 2d
   
-   float3 color = color_rainbow(float(d), 6.0);
-    
-   // float3 color = color_rainbow(0.5 * hic.x * 3.0 / 2.0);
-    
-    
-   // float3 color = color_rainbow(length(hic2));
-   // float3 color = color_rainbow(s_id);
-    //float3 color = color_rainbow(ip.x * xc);
-    
-   // float3 color = abs(round(hf) / 6.0);
-  //  float3 color = 1 - frac(abs(hic));
+    int l = 0;
+    int l_step = 2;
+    l = 0 + l_step * l;
 
-  //  color = lerp(color, 0.5, check != 0);
-    
-  //  float a = clamp(1.0 - abs(sdHexagonGrid(p, ring)) * 50.0, 0, 1);
-    float a = clamp(1.0 - abs(s_id) * 20.0, 0, 1);
+    float3 hp0c;
+    float3 hp0 = eval_hex_from_ortho(p0, l, hp0c);
+    float3 hp1 = eval_hex_from_ortho(p0, l + l_step, hp0c);
 
-    color = lerp(color, 0.9, a);
-    
-    color = lerp(color, float3(0.2, 1.0, 0.2), a * (hi.x == 0) * (hi.y == 0) * (hi.z == 0));
+    float2 sd0 = eval_sd_d_hex_from_ortho(p, l - l_step);
+    float2 sd1 = eval_sd_d_hex_from_ortho(p, l, hp0);
+    float2 sd2 = eval_sd_d_hex_from_ortho(p, l + l_step);
+
+
+    float3 color = color_rainbow(sd1.y, 6.0);
+
+    float a0 = clamp(1.0 - abs(sd0.x) * 30.0, 0, 1);
+    float a1 = clamp(1.0 - abs(sd1.x) * 20.0, 0, 1);
+    float a2 = clamp(1.0 - abs(sd2.x) * 20.0, 0, 1);
+
+    color = lerp(color, 0.9, a0);
+    color = lerp(color, 0.95, a1);
+    color = lerp(color, 0.9, a2);
+
+    float eye_sd = clamp(1.0 - distance(p, p0), 0, 1);
+    color = lerp(color, 1.0, eye_sd * eye_sd * eye_sd * eye_sd);
+
+   // color = lerp(color, float3(0.2, 1.0, 0.2), a2 * (hi.x == 0) * (hi.y == 0) * (hi.z == 0));
     
     
     return float4(color, 1.0);
