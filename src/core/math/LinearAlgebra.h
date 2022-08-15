@@ -740,7 +740,7 @@ namespace core
 
     inline void transform_evalOrthonormalBase(const vec3& D, vec3& X, vec3& Y) {
         // evaluate an orthonormal base from a direction D
-        // D is injected as the Z axis and teh function produce the X and Y axis
+        // D is injected as the Z axis and the function produce the X and Y axis
         // Algorithm by Jeppe Revall Frisvad
         // https://backend.orbit.dtu.dk/ws/portalfiles/portal/126824972/onb_frisvad_jgt2012_v2.pdf
         // Handle the singularity

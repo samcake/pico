@@ -353,6 +353,34 @@ void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
 
 }
 
+void Camera::orbit2(float boomLength, float deltaRight, float deltaUp) {
+    WriteLock();
+    auto oriView = _camData._data._view;
+    auto& nextView = _camData._data._view;
+    
+    auto azimuthElevation = core::dir_to_azimuth_elevation(oriView.back());
+
+    // PE is the vector from Pivot to Eye position
+    auto boomVecWS = oriView.back() * (-boomLength);
+    auto pivotWS = oriView.eye() + boomVecWS;
+
+    // the initial Frame Centered on Pivot using the Camera axes
+    // THen Eye expressed relative to that frame is:
+    auto eyeOS = core::vec3(0.0f, 0.0f, -boomLength);
+
+    // Rotate frame by delta right and delta up
+    nextView.setOrientationFromAzimuthElevation(
+        azimuthElevation.x + deltaRight * 1.0f,
+        azimuthElevation.y + deltaUp * 0.5f);
+
+    // Compute PE' in world space form the new frame orientation
+    auto PEr = nextView.right() * eyeOS.x + nextView.up() * eyeOS.y + nextView.back() * eyeOS.z;
+
+    // translate by the pivot point to recover world space
+    nextView.setEye(pivotWS - PEr);
+
+}
+
 float Camera::boom(float boomLength, float delta) {
     float nextBoomLength = boomLength + delta;
     if (nextBoomLength <= 0.0f) {

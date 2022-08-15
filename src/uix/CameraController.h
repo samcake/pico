@@ -72,5 +72,6 @@ namespace uix {
 
         float zoomTo(const core::vec4& sphere);
 
+        bool _orbitOnMouseMoveEnabled = true;
     };
 }

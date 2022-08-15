@@ -401,6 +401,10 @@ int main(int argc, char *argv[])
             }
         }
 
+        if (e.state && e.key == uix::KEY_O) {
+            camControl->_orbitOnMouseMoveEnabled = !camControl->_orbitOnMouseMoveEnabled;
+        }
+
         bool zoomToScene = false;
         if (e.state && e.key == uix::KEY_1) {
             // look side

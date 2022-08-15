@@ -134,6 +134,8 @@ namespace graphics {
         void pan(float deltaRight, float deltaUp);
         void dolly(float deltaBack);
         void orbit(float boomLength, float deltaRight, float deltaUp);
+        void orbit2(float boomLength, float deltaRight, float deltaUp);
+
         float boom(float boomLength, float delta);
 
         // zoom to a sphere

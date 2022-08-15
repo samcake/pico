@@ -58,6 +58,11 @@ namespace core
             _mat._columns[1] = normalize(cross(_mat._columns[2], _mat._columns[0])); // make sure Up is orthogonal to XZ and normalized
         }
 
+        void setOrientationFromAzimuthElevation(float azimuth, float elevation) {
+            _mat._columns[2] = core::dir_from_azimuth_elevation(azimuth, elevation);
+            core::transform_evalOrthonormalBase(_mat._columns[2], _mat._columns[0], _mat._columns[1]);
+        }
+
         void setEye(const core::vec3& eyePos) {
             _mat._columns[3] = eyePos;
         }

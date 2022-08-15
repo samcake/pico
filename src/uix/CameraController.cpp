@@ -192,6 +192,11 @@ bool CameraController::onMouse(const MouseEvent& e) {
                     _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
             }
         }
+
+        if (_orbitOnMouseMoveEnabled && (e.state & uix::MOUSE_CONTROL)) {
+            float orbitScale = 0.01f;
+            _cam->orbit2(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+        }
     }
     else if (e.state & uix::MOUSE_WHEEL) {
         if (e.state & uix::MOUSE_CONTROL) {
