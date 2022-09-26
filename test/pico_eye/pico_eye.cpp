@@ -355,13 +355,13 @@ int main(int argc, char *argv[])
 
                 const float c_rad_to_deg = 180.0 / acos(-1);
                 auto sunDir = state.scene->_sky->getSunDir();
-                auto sunAE = core::dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
+                auto sunAE = core::spherical_dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
                 bool sunChanged = false;
                 sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
                 sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
                 if (sunChanged) {
                     sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
-                    sunDir = core::dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                    sunDir = core::spherical_dir_from_azimuth_elevation(sunAE.x, sunAE.y);
                     state.scene->_sky->setSunDir(sunDir);
                 }
 
@@ -431,6 +431,10 @@ int main(int argc, char *argv[])
                 state.scene->deleteItem(state.models.modelItemID);
                 state.models.modelItemID = graphics::INVALID_NODE_ID;
             }
+        }
+
+        if (e.state && e.key == uix::KEY_O) {
+            camControl->_orbitOnMouseMoveEnabled = !camControl->_orbitOnMouseMoveEnabled;
         }
 
         bool zoomToScene = false;
