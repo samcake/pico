@@ -26,7 +26,6 @@
 //
 #pragma once
 #include <core/math/LinearAlgebra.h>
-#include "core/Log.h"
 
 namespace core 
 {
