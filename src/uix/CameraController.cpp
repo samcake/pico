@@ -164,7 +164,7 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 }
                 else {
                     float orbitScale = 0.01f;
-                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                    _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
                 }
             }
         }
@@ -188,10 +188,16 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
             }
             else {
-                    float orbitScale = 0.01f;
-                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                float orbitScale = 0.01f;
+                _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
             }
         }
+
+        if (_orbitOnMouseMoveEnabled && (e.state & uix::MOUSE_CONTROL)) {
+            float orbitScale = 0.01f;
+            _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
+        }
+
     }
     else if (e.state & uix::MOUSE_WHEEL) {
         if (e.state & uix::MOUSE_CONTROL) {

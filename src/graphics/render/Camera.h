@@ -134,6 +134,7 @@ namespace graphics {
         void pan(float deltaRight, float deltaUp);
         void dolly(float deltaBack);
         void orbit(float boomLength, float deltaRight, float deltaUp);
+        void orbitHorizontal(float boomLength, float deltaRight, float deltaUp); // Orbit but keep the view horizontal, X axis is in horizontal plane
         float boom(float boomLength, float delta);
 
         // zoom to a sphere

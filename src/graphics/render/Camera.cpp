@@ -28,6 +28,7 @@
 
 #include "gpu/Device.h"
 #include "gpu/Resource.h"
+#include "core/Log.h"
 
 using namespace graphics;
 
@@ -351,6 +352,11 @@ void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
     // translate by the pivot point to recover world space
     nextView.setEye( pivotWS - PEr );
 
+}
+
+void Camera::orbitHorizontal(float boomLength, float deltaRight, float deltaUp) {
+    WriteLock();
+    _camData._data._view.orbitHorizontal(boomLength, deltaRight, deltaUp);
 }
 
 float Camera::boom(float boomLength, float delta) {

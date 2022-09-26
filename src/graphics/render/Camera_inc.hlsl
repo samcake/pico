@@ -13,4 +13,10 @@ cbuffer UniformBlock0 : register(b10) {
     float4 _viewport;
 };
 
+float cam_pixelSizeAt(float eyeDepth)
+{
+    float pixelSize = _projection.sensorHeight() / _viewport.w;
+    return abs(eyeDepth) * pixelSize / _projection.focal();
+}
+
 #endif
