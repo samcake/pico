@@ -76,10 +76,17 @@ namespace graphics {
         // Drawables
         DrawableStore _drawables;
         Drawable getDrawable(DrawableID drawableId) const;
-
         template <typename T>
         Drawable createDrawable(T& x) {
             return _drawables.createDrawable(x);
+        }
+
+        // Cameras
+        CameraStore _cameras;
+        Cam getCam(CamID camId) const;
+        template <typename T>
+        Cam createCam(T& x) {
+            return _cams.createCam(x);
         }
 
         // Bound;

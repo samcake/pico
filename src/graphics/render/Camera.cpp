@@ -433,3 +433,84 @@ core::vec2 Camera::eyeSpaceFromImageSpace2D(float x, float y) const {
         return core::Projection::eyeFromClipSpace2D(proj._height, proj._aspectRatio, m_nc);
     }
 }
+
+
+
+CamID CameraStore::newID() {
+    return _indexTable.allocate();
+}
+
+Cam CameraStore::allocate(const Cam& cam) {
+
+    CamID new_id = cam.id();
+    bool allocated = new_id == (_indexTable.getNumAllocatedElements() - 1);
+
+    if (allocated) {
+        _cameras.push_back(cam);
+    } else {
+        _cameras[new_id] = (cam);
+    }
+
+    if (new_id < _num_buffers_elements) {
+        reinterpret_cast<CameraData*>(_cameras_buffer->_cpuMappedAddress)[new_id] = (camera);
+    }
+
+    return cam;
+}
+
+void CameraStore::free(CamID index) {
+    if (_indexTable.isValid(index)) {
+        _indexTable.free(index);
+        _cameras[index] = Cam();
+    }
+}
+
+void CameraStore::freeAll() {
+
+}
+
+
+Item CameraStore::getValidItemAt(ItemID startIndex) const {
+    if (startIndex < _items.size()) {
+        do {
+            const auto* item = _items.data() + startIndex;
+            if (item->isValid()) {
+                return (*item);
+            }
+            startIndex++;
+        } while (startIndex < _items.size());
+    }
+    return Item::null;
+}
+
+void CameraStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
+
+    if (_num_buffers_elements < numElements) {
+        auto capacity = (numElements);
+
+        graphics::BufferInit items_buffer_init{};
+        items_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+        items_buffer_init.hostVisible = true;
+        items_buffer_init.bufferSize = capacity * sizeof(ItemInfo);
+        items_buffer_init.firstElement = 0;
+        items_buffer_init.numElements = capacity;
+        items_buffer_init.structStride = sizeof(ItemInfo);
+
+        _items_buffer = device->createBuffer(items_buffer_init);
+
+        _num_buffers_elements = capacity;
+    }
+}
+
+void CameraStore::syncBuffer() {
+    if (_touchedElements.empty()) {
+        return;
+    }
+
+    if (_itemInfos.size() < _num_buffers_elements) {
+        for (auto index : _touchedElements) {
+            reinterpret_cast<ItemInfo*>(_items_buffer->_cpuMappedAddress)[index] = _itemInfos[index];
+        }
+        _touchedElements.clear();
+    }
+}

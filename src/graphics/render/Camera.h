@@ -27,6 +27,8 @@
 #pragma once
 
 #include <core/math/CameraTransform.h>
+#include <core/stl/IndexTable.h>
+
 #include <mutex>
 
 #include "render.h"
@@ -148,5 +150,51 @@ namespace graphics {
 
         // from 2d pos in the image space of the viewport to the 2d pos in eye space in the clipping plane
         core::vec2 eyeSpaceFromImageSpace2D(float x, float y) const;
+
+        const CameraData* data() const { return &_camData._data; }
+    };
+
+    using CamID = core::IndexTable::Index;
+    using CamIDs = core::IndexTable::Indices;
+    static const CamID INVALID_CAMERA_ID = core::IndexTable::INVALID_INDEX;
+
+    class Cam
+    {
+        CamID _id = INVALID_CAMERA_ID;
+    public:
+        CamID id() const { return _id; };
+        std::unique_ptr<Camera> _cam;
+
+        Cam(CamID id, Camera* c) : _id(id), _cam(c) {}
+    };
+    class VISUALIZATION_API CameraStore
+    {
+        CamID newID();
+        Cam allocate(Cam cam);
+    public:
+
+        template <typename T>
+        Cam createCam(T x) {
+            return allocate(Cam(newID(), x));
+        }
+
+        void free(CamID index);
+        int32_t reference(CamID index);
+        int32_t release(CamID index);
+
+        Camera* getCamera(CamID index) const { return (_cameras[index]._cam.get()); }
+
+        std::vector<CameraData> _cameraData_array;
+
+    protected:
+        core::IndexTable _indexTable;
+        std::vector<Cam> _cameras;
+
+        uint32_t  _num_buffers_elements{ 0 };
+    public:
+        BufferPointer _cameras_buffer;
+        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
+
+
     };
 }
