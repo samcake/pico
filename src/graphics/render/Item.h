@@ -114,9 +114,10 @@ namespace graphics {
     using ItemIDMap = std::unordered_map<ItemID, Items>;
 
     class ItemStore {
-        ItemID newID();
         Item allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
     public:
+
+        void reserve(const DevicePointer& device, uint32_t  capacity);
 
         enum Flags {
             IS_VISIBLE = 0x00000001,
@@ -133,7 +134,7 @@ namespace graphics {
             inline bool isVisible() const { return ((_flags & IS_VISIBLE) != 0); }
             inline bool toggleVisible() { _flags ^= IS_VISIBLE; return isVisible(); }
 
-            inline void setVisible(bool camera) { if (isCamera() != camera) toggleCamera(); }
+            inline void setCamera(bool camera) { if (isCamera() != camera) toggleCamera(); }
             inline bool isCamera() const { return ((_flags & IS_CAMERA) != 0); }
             inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
         };
@@ -147,7 +148,7 @@ namespace graphics {
         Item getValidItemAt(ItemID index) const;
 
         const Items& getItems() const { return _items; };
-        const ItemInfo& getInfo(ItemID index) const { return _itemInfos[index]; }
+        const ItemInfo& getInfo(ItemID index) const { return *_itemInfos.data(index); }
 
         ItemIDs getItemGroup(ItemID owner) const;
     protected:
@@ -155,16 +156,16 @@ namespace graphics {
         friend class Scene;
         core::IndexTable _indexTable;
         Items _items;
-        mutable std::vector<ItemInfo> _itemInfos;
-        
-        ItemInfo& editInfo(ItemID index) const { _touchedElements.push_back(index);  return _itemInfos[index]; }
+        using ItemInfos = StructuredBuffer<ItemInfo>;
 
-        uint32_t  _num_buffers_elements{ 0 };
+        mutable ItemInfos _itemInfos;
+        
+        ItemInfo& editInfo(ItemID index) const { _touchedElements.push_back(index);  return *_itemInfos.data(index); }
+
         mutable std::vector<ItemID> _touchedElements;
     public:
-        BufferPointer _items_buffer;
-        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
-        void syncBuffer();
+        inline BufferPointer getGPUBuffer() const { return _itemInfos._gpu_buffer; }
+        void syncGPUBuffer(const BatchPointer& batch);
     };
 
     inline void Item::Concept::setVisible(bool visible) { _store->editInfo(_id).setVisible(visible); }

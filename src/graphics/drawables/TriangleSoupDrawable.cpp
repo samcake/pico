@@ -203,7 +203,7 @@ namespace graphics
         };
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-        // Assign the Camera UBO just created as the resource of the descriptorSet
+        // Assign the the resource of the descriptorSet
         graphics::DescriptorObjects descriptorObjects = {
             { graphics::DescriptorType::RESOURCE_BUFFER, triangleSoup.getVertexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, triangleSoup.getIndexBuffer() }

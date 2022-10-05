@@ -58,6 +58,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
         position.z -= 0.1;   
     }
     
+    Projection _projection = cam_projection();
+    
     float3 eyePosition = position;
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

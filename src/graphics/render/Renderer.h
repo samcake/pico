@@ -28,6 +28,7 @@
 
 #include "render.h"
 #include <functional>
+#include "Camera.h"
 
 namespace graphics {
 

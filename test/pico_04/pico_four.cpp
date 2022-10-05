@@ -45,6 +45,7 @@
 #include <graphics/render/Scene.h>
 #include <graphics/render/Viewport.h>
 
+
 #include <document/PointCloud.h>
 #include <graphics/drawables/PointcloudDrawable.h>
 
@@ -111,20 +112,18 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 200);
-    scene->_nodes.resizeBuffers(gpuDevice, 200);
-    scene->_drawables.resizeBuffers(gpuDevice, 200);
+    auto scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice});
   
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
     // The viewport managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice);
+    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
+
 
     // A point cloud drawable factory
     auto pointCloudDrawableFactory = std::make_shared<graphics::PointCloudDrawableFactory>();
@@ -307,8 +306,6 @@ int main(int argc, char *argv[])
             }*/
         }
 
-        scene->_items.syncBuffer();
-        scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!

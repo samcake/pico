@@ -18,7 +18,9 @@ struct VertexShaderOutput
 VertexShaderOutput main(uint ivid : SV_VertexID)
 {
     VertexShaderOutput OUT;
-
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    
     const int num_tris = 1;
     uint vid = ivid % (3 * num_tris);
     uint instance = ivid / (3 * num_tris);

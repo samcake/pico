@@ -26,6 +26,7 @@
 //
 #pragma once
 
+#include <core/math/LinearAlgebra.h>
 #include <core/api.h>
 
 #include "gpu.h"
@@ -63,6 +64,8 @@ namespace graphics {
         uint32_t width() const { return _init.width; }
         uint32_t height() const { return _init.height; }
         PixelFormat colorBufferFormat() const { return _init.colorBufferFormat; }
+
+        core::vec4 viewportRect() const { return core::vec4( 0, 0, width(), height());}
 
     };
 }

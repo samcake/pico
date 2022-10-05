@@ -221,7 +221,7 @@ namespace graphics
 
        graphics::DescriptorObjects descriptorObjects = {{
             { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items._items_buffer },
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
 
        }};
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
@@ -262,7 +262,7 @@ namespace graphics
 
        graphics::DescriptorObjects descriptorObjects = { {
             { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items._items_buffer },
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
 
        } };
        device->updateDescriptorSet(descriptorSet, descriptorObjects);

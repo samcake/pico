@@ -43,6 +43,7 @@
 #include <graphics/drawables/PrimitiveDrawable.h>
 #include <graphics/drawables/ModelDrawable.h>
 #include <graphics/drawables/ModelDrawableInspector.h>
+#include <graphics/drawables/SkyDrawable.h>
 
 #include <uix/Window.h>
 #include <uix/Imgui.h>
@@ -174,22 +175,21 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 250000);
-    scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    scene->_drawables.resizeBuffers(gpuDevice, 250000);
-    state._scene = scene;
+    auto scene = state._scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice, 10000, 10000, 10000, 10});
 
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = state._scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
-    // The view managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice,
-        uix::Imgui::standardPostSceneRenderCallback);
+    // A sky drawable factory
+    auto skyDrawableFactory = scene->_skyFactory;
+
+    // The view managing the rendering of the scene
+    graphics::ViewportInit viewportInit = { state._scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback };
+    auto viewport = std::make_shared<graphics::Viewport>(viewportInit);
 
     // A gizmo drawable factory
     auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items._items_buffer->numElements());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items.getGPUBuffer()->numElements());
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
 
@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
 
 
     // A UV space camera to look at the uv space
-    auto uv_camera = std::make_shared<graphics::Camera>();
+    auto uv_camera = scene->createCamera();
     uv_camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     uv_camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     uv_camera->setOrthoHeight(1.0f);
@@ -474,8 +474,6 @@ int main(int argc, char *argv[])
         }
         ImGui::End();
 
-        scene->_items.syncBuffer();
-        scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
         uv_camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
         if (state.params) {
