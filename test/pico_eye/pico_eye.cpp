@@ -391,16 +391,17 @@ int main(int argc, char *argv[])
     // On resize deal with it
     windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
         // only resize the swapchain when we re done with the resize
-      //  if (e.over) {
+      //  if (e.done) {
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
       //  }
 
         camControl->onResize(e);
 
-        if (e.over) {
+        if (e.done) {
             camControl->onResize(e);
         }
     };
+    windowHandler->_onResizeDelegate({ window->width(), window->height(), true });
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
         if (e.state && e.key == uix::KEY_SPACE) {

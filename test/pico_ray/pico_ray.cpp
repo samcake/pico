@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 
         camControl->onResize(e);
 
-        if (e.over) {
+        if (e.done) {
             camControl->onResize(e);
         }
     };

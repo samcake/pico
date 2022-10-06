@@ -545,10 +545,10 @@ namespace graphics
 
         GeometryInit geometryInit = {
             { vbresourceBuffer, 0, sizeof(core::vec4)},
-            modelDrawable->_vertices.size(),
+            (uint32_t) modelDrawable->_vertices.size(),
             PixelFormat::R32G32B32_FLOAT,
             { ibresourceBuffer, 0 , 4},
-            modelDrawable->_indices.size()
+            (uint32_t) modelDrawable->_indices.size()
         };
         auto geometry = device->createGeometry(geometryInit);
 

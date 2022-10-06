@@ -43,9 +43,9 @@ namespace graphics {
         DevicePointer device; // need a device to create the scene
 
         // And allocate all the capacities for the various stores
-        int32_t items_capacity = 1000; 
-        int32_t nodes_capacity = 1000;
-        int32_t drawables_capacity = 100;
+        int32_t items_capacity = 100000; 
+        int32_t nodes_capacity = 100000;
+        int32_t drawables_capacity = 1000;
         int32_t cameras_capacity = 10;
     };
 

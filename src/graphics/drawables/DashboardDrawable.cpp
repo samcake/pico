@@ -64,8 +64,8 @@ namespace graphics
 
     // Custom data uniforms
     struct PrimitiveObjectData {
-        uint32_t nodeID{0};
-        float numVertices{ 0 };
+        int32_t nodeID{0};
+        int32_t numVertices{ 0 };
         float numIndices{ 0 };
         float stride{ 0 };
     };
