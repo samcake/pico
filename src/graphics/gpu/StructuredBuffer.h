@@ -38,8 +38,10 @@ namespace graphics {
     template <typename T>
     struct StructuredBuffer {
         using Index = uint32_t;
+        using IndexArray = std::vector<Index>;
         using Array = std::vector<T>;
 
+    private:
         mutable std::mutex  _cpu_access;
 
         std::atomic_uint32_t _cpu_version{ 0xFFFFFFFF };
@@ -50,15 +52,16 @@ namespace graphics {
         BufferPointer       _gpu_buffer;
         Index               _gpu_capacity{ 0 };
 
+    public:
 
-        inline const T* data(uint32_t index) const {
+        inline const T* unsafe_data(uint32_t index) const {
             return _cpu_array.data() + index;
         }
-        inline T* data(uint32_t index) {
+        inline T* unsafe_data(uint32_t index) {
             return _cpu_array.data() + index;
         }
 
-        inline void allocate_element(Index index, T* init) {
+        inline void allocate_element(Index index, const T* init) {
             const std::lock_guard<std::mutex> access_lock(_cpu_access);
             ++_cpu_version;
             if (index < _cpu_array.size()) {
@@ -67,6 +70,12 @@ namespace graphics {
                 _cpu_array.emplace_back((init ? *init : T()));
                 _cpu_capacity = _cpu_array.capacity();
             }
+        }
+
+        inline void set_element(Index index, const T* val) {
+            const std::lock_guard<std::mutex> access_lock(_cpu_access);
+            ++_cpu_version;
+            _cpu_array[index] = (val ? *val : T());
         }
 
         inline void reserve(const DevicePointer& device, Index capacity) {
@@ -114,15 +123,49 @@ namespace graphics {
             }
         }
 
+        inline void sync_gpu_from_cpu(const BatchPointer& batch, const IndexArray& touchedElementsOrdered) {
+            // Capture the cpu version right now
+            auto cpu_version = _cpu_version.load();
+
+            // Schedule copy data from cpu to gpu here if versions are different
+            if (touchedElementsOrdered.size() || _gpu_version != cpu_version) {
+                const std::lock_guard<std::mutex> cpulock(_cpu_access);
+
+                _gpu_version = cpu_version;
+
+                // only copy the touched values              
+                auto begin = 0;
+                auto end = _cpu_array.size();
+
+                if (touchedElementsOrdered.size()) {
+                    begin = touchedElementsOrdered.front();
+                    end = touchedElementsOrdered.back() + 1;
+                }
+                auto count = end - begin;
+                if (count > 0) {
+
+                    auto gpu_p = reinterpret_cast<T*>(_gpu_buffer->_cpuMappedAddress) + begin;
+                    auto cpu_p = _cpu_array.data() + begin;
+                    memcpy(gpu_p, (void*)cpu_p, count * sizeof(T));
+                }
+
+                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::COPY_DEST, _gpu_buffer);
+                batch->uploadBuffer(_gpu_buffer);
+                batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::COPY_DEST, graphics::ResourceState::SHADER_RESOURCE, _gpu_buffer);
+            }
+        }
+
+        inline BufferPointer gpu_buffer() const { return _gpu_buffer; }
+
         using ReadLock = std::pair< const T*, std::lock_guard<std::mutex>>;
         using WriteLock = std::pair< T*, std::lock_guard<std::mutex>>;
 
         inline ReadLock read(Index index) const {
-            return  ReadLock(data(index), _cpu_access);
+            return  ReadLock(unsafe_data(index), _cpu_access);
         }
         inline WriteLock write(Index index) {
             ++_cpu_version; // Write access increment cpu version
-            return  WriteLock(data(index), _cpu_access);
+            return  WriteLock(unsafe_data(index), _cpu_access);
         }
 
         struct Handle {

@@ -149,13 +149,31 @@ void Viewport::renderScene(RenderArgs& args) {
     args.timer = _batchTimer;
     args.viewPassDescriptorSet = _viewPassDescriptorSet;
 
+    auto itemInfos = _scene->_items.fetchItemInfos();
+
+    for (int i = 1; i < itemInfos.size(); i++) {
+        const auto& info = itemInfos[i];
+        if (info.isValid() && info.isVisible() && info.isDrawable()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+            drawcall(info._nodeID, args);
+        }
+    }
+
+    if (itemInfos.size() > 0) {
+        const auto& info = itemInfos[0];
+        if (info.isValid() && info.isVisible() && info.isDrawable()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+            drawcall(info._nodeID, args);
+        }
+    }
+/*
     for (int i = 1; i < _scene->getItems().size(); i++) {
         auto& item = _scene->getItems()[i];
         if (item.isValid() && item.isVisible()) {
             auto drawable = item.getDrawableID();
             if (drawable != INVALID_DRAWABLE_ID) {
                 auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item.getNodeID(), args);
+                drawcall(item.nodeID(), args);
             }
         }
     }
@@ -166,8 +184,8 @@ void Viewport::renderScene(RenderArgs& args) {
             auto drawable = item0.getDrawableID();
             if (drawable != INVALID_DRAWABLE_ID) {
                 auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item0.getNodeID(), args);
+                drawcall(item0.nodeID(), args);
             }
         }
-    }
+    }*/
 }

@@ -41,15 +41,6 @@ Camera::~Camera() {
 
 }
 
-#define useLocks 1
-#ifdef useLocks 
-#define WriteLock() const std::lock_guard<std::mutex> cpulock(_camData._buffer->_cpu_access); _camData._buffer->_cpu_version++;
-#define ReadLock() const std::lock_guard<std::mutex> cpulock(_camData._buffer->_cpu_access);
-#else
-#define WriteLock()  _camData._version++;
-#define ReadLock() 
-#endif
-
 void Camera::setView(const core::View& view) {
     auto [d, l] = _camData.write();
     d->_view = view;

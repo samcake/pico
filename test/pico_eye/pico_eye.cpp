@@ -112,7 +112,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
         // let's offset the root to not overlap on previous model
         if (modelItemIDs.size()) {
-            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
+            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).nodeID();
 
             auto modelBound = modelDrawablePtr->getBound();
             auto minCorner = modelBound.minPos();
