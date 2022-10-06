@@ -200,26 +200,19 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    state.scene = std::make_shared<graphics::Scene>();
-    state.scene->_items.resizeBuffers(gpuDevice, 250000);
-    state.scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    state.scene->_drawables.resizeBuffers(gpuDevice, 250000);
+    state.scene = std::make_shared<graphics::Scene>(graphics::SceneInit{ gpuDevice });
 
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = state.scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
-    // A sky drawable factory
-    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
-    skyDrawableFactory->allocateGPUShared(gpuDevice);
-    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+    // The view managing the rendering of the scene
+    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ state.scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback, camera->id()});
 
-    // The view managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
-        uix::Imgui::standardPostSceneRenderCallback);
+    auto skyDrawableFactory = state.scene->_skyFactory;
 
     // a sky drawable to draw the sky
     auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
@@ -241,7 +234,7 @@ int main(int argc, char *argv[])
 
     auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->numElements());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items.getGPUBuffer()->numElements());
     auto gzitem_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
     gzitem_item.setVisible(false);
 
@@ -356,11 +349,7 @@ int main(int argc, char *argv[])
         ImGui::End();
         */
 
-        state.scene->_items.syncBuffer();
-        state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
-
-        state.scene->_sky->updateGPUData();
 
         // Render!
         viewport->present(swapchain);

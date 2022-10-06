@@ -27,12 +27,16 @@
 #pragma once
 
 #include <core/math/CameraTransform.h>
-#include <mutex>
+#include <core/stl/IndexTable.h>
 
 #include "render.h"
-
+#include "gpu/StructuredBuffer.h"
 
 namespace graphics {
+
+    using CameraID = core::IndexTable::Index;
+    using CameraIDs = core::IndexTable::Indices;
+    static const CameraID INVALID_CAMERA_ID = core::IndexTable::INVALID_INDEX;
 
     struct VISUALIZATION_API CameraData {
         core::View _view;
@@ -40,25 +44,26 @@ namespace graphics {
         core::ViewportRect _viewport;
     };
 
+    struct VISUALIZATION_API CameraInit {
+        CameraData cam;
+    };
+
+    using CameraStructBuffer = StructuredBuffer<CameraData>;
+
     class VISUALIZATION_API Camera {
-        struct CameraCPU {
-            uint32_t _version{ 0xFFFFFFFF };
-            mutable std::mutex _access;
-            CameraData _data;
-        };
+    protected:
 
-        struct CameraGPU {
-            uint32_t _version{ 0xFFFFFFFF };
-            mutable std::mutex _access;
-            BufferPointer _buffer;
-        };
+        // Camera is created from the CameraStore
+        friend class CameraStore;
+        Camera(CameraStructBuffer::Handle handle);
 
-        CameraCPU _camData;
-        CameraGPU _gpuData;
+        CameraStructBuffer::Handle _camData;
 
     public:
-        Camera();
-        ~Camera();
+
+        virtual ~Camera(); // not really expecting to derive Camera but who knows...
+
+        inline CameraID id() const { return _camData._index; }
 
         // View
         void setView(const core::View& view);
@@ -125,11 +130,6 @@ namespace graphics {
         // in perspective at specified depth (positive in front of the camera)
         float getPerspPixelSize(float depth) const;
 
-        // Gpu version of the camera Data
-        void allocateGPUData(const DevicePointer& device);
-        bool updateGPUData();
-        BufferPointer getGPUBuffer() const;
-
         // Some nice relative moves
         void pan(float deltaRight, float deltaUp);
         void dolly(float deltaBack);
@@ -148,5 +148,27 @@ namespace graphics {
 
         // from 2d pos in the image space of the viewport to the 2d pos in eye space in the clipping plane
         core::vec2 eyeSpaceFromImageSpace2D(float x, float y) const;
+    };
+    using Camera_wp = std::weak_ptr<Camera>;
+
+    class VISUALIZATION_API CameraStore
+    {
+    protected:
+        core::IndexTable _indexTable;
+
+        CameraStructBuffer _cameraStructBuffer;
+
+        std::vector<Camera_wp>  _cameras;
+
+        friend class Camera;
+    public:
+        void reserve(const DevicePointer& device, uint32_t capacity);
+
+        CameraPointer createCamera();
+
+        inline CameraPointer getCamera(CameraID index) const { return _cameras[index].lock(); }
+
+        inline BufferPointer getGPUBuffer() const { return _cameraStructBuffer._gpu_buffer; }
+        void syncGPUBuffer(const BatchPointer& batch);
     };
 }

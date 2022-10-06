@@ -67,6 +67,10 @@ struct AppState {
         graphics::ItemID modelItemID;
     } models;
 
+    struct {
+        graphics::CameraID _current = graphics::INVALID_CAMERA_ID;
+    } cams;
+
 
     core::vec3 _modelInsertOffset;
 
@@ -202,27 +206,23 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    state.scene = std::make_shared<graphics::Scene>();
-    state.scene->_items.resizeBuffers(gpuDevice, 250000);
-    state.scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    state.scene->_drawables.resizeBuffers(gpuDevice, 250000);
+    state.scene = std::make_shared<graphics::Scene>(graphics::SceneInit{ gpuDevice, 10000, 10000, 10000, 10 });
 
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = state.scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
+    state.cams._current = camera->id();
+
     // A sky drawable factory
-    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
-    skyDrawableFactory->allocateGPUShared(gpuDevice);
-    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+    auto skyDrawableFactory = state.scene->_skyFactory;
 
     // The view managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
-        uix::Imgui::standardPostSceneRenderCallback);
-
+    graphics::ViewportInit viewportInit = { state.scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback };
+    auto viewport = std::make_shared<graphics::Viewport>(viewportInit);
 
     // a sky drawable to draw the sky
     auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
@@ -245,7 +245,7 @@ int main(int argc, char *argv[])
 
     auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->numElements());
+    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items.getGPUBuffer()->numElements());
     state.tools.tree_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
     state.tools.tree_item.setVisible(false);
 
@@ -299,7 +299,6 @@ int main(int argc, char *argv[])
 
     graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
-
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
@@ -383,13 +382,7 @@ int main(int argc, char *argv[])
         ImGui::End();
 
 
-
-        state.scene->_items.syncBuffer();
-        state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
-
-        state.scene->_sky->updateGPUData();
-
 
         // Render!
         viewport->present(swapchain);
@@ -438,6 +431,11 @@ int main(int argc, char *argv[])
         }
 
         bool zoomToScene = false;
+        if (e.state && e.key == uix::KEY_1) {
+            // look side
+            camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });
+            zoomToScene = true;
+        }
         if (e.state && e.key == uix::KEY_1) {
             // look side
             camera->setOrientationFromRightUp({ 1.f, 0.f, 0.f }, { 0.f, 1.f, 0.0f });

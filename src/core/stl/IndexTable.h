@@ -59,22 +59,24 @@ namespace core {
             return true;
         }
 
-        Index allocate() {
+        auto allocate() {
+            struct result { Index index; bool recycle; };
             Index new_index;
             if (_invalid_elements.size()) {
                 new_index = _invalid_elements.back();
                 _invalid_elements.pop_back();
+                return result{ new_index, true};
             } else {
                 new_index = _num_allocated_elements;
                 _num_allocated_elements++;
+                return result{ new_index, false};
             }
-            return new_index;
         }
 
         Indices allocate(Index num_elements) {
             Indices allocated(num_elements, INVALID_INDEX);
             for (auto& index : allocated) {
-                index = allocate();
+                index = allocate().index;
             }
             return std::move(allocated);
         }

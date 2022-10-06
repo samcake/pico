@@ -62,6 +62,10 @@ namespace graphics {
         bool isVisible() const { return _self->isVisible(); }
         bool toggleVisible() { return _self->toggleVisible(); }
 
+        void setAsCamera(bool asCamera) { _self->setCamera(asCamera); }
+        bool isCamera() const { return _self->isCamera(); }
+        bool toggleCamera() { return _self->toggleCamera(); }
+
         NodeID getNodeID() const { return _self->getNodeID(); }
 
         DrawableID getDrawableID() const { return _self->getDrawableID(); }
@@ -86,6 +90,11 @@ namespace graphics {
             void setVisible(bool visible);
             bool isVisible() const;
             bool toggleVisible();
+
+            void setCamera(bool isCam);
+            bool isCamera() const;
+            bool toggleCamera();
+
             void setNode(Node node);
             NodeID getNodeID() const;
             void setDrawable(Drawable drawable);
@@ -105,17 +114,29 @@ namespace graphics {
     using ItemIDMap = std::unordered_map<ItemID, Items>;
 
     class ItemStore {
-        ItemID newID();
         Item allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
     public:
+
+        void reserve(const DevicePointer& device, uint32_t  capacity);
+
+        enum Flags {
+            IS_VISIBLE = 0x00000001,
+            IS_CAMERA = 0x00000002,
+        };
 
         struct ItemInfo {
             NodeID _nodeID{ INVALID_NODE_ID };
             DrawableID _drawableID{ INVALID_DRAWABLE_ID };
             ItemID _groupID{ INVALID_ITEM_ID };
-            uint32_t _isVisible{ true };
+            uint32_t _flags{ IS_VISIBLE };
 
-            inline bool toggleVisible() { _isVisible = !_isVisible; return _isVisible; }
+            inline void setVisible(bool visible) { if (isVisible() != visible) toggleVisible(); }
+            inline bool isVisible() const { return ((_flags & IS_VISIBLE) != 0); }
+            inline bool toggleVisible() { _flags ^= IS_VISIBLE; return isVisible(); }
+
+            inline void setCamera(bool camera) { if (isCamera() != camera) toggleCamera(); }
+            inline bool isCamera() const { return ((_flags & IS_CAMERA) != 0); }
+            inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
         };
 
         Item createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner = INVALID_ITEM_ID);
@@ -127,7 +148,7 @@ namespace graphics {
         Item getValidItemAt(ItemID index) const;
 
         const Items& getItems() const { return _items; };
-        const ItemInfo& getInfo(ItemID index) const { return _itemInfos[index]; }
+        const ItemInfo& getInfo(ItemID index) const { return *_itemInfos.data(index); }
 
         ItemIDs getItemGroup(ItemID owner) const;
     protected:
@@ -135,21 +156,25 @@ namespace graphics {
         friend class Scene;
         core::IndexTable _indexTable;
         Items _items;
-        mutable std::vector<ItemInfo> _itemInfos;
-        
-        ItemInfo& editInfo(ItemID index) const { _touchedElements.push_back(index);  return _itemInfos[index]; }
+        using ItemInfos = StructuredBuffer<ItemInfo>;
 
-        uint32_t  _num_buffers_elements{ 0 };
+        mutable ItemInfos _itemInfos;
+        
+        ItemInfo& editInfo(ItemID index) const { _touchedElements.push_back(index);  return *_itemInfos.data(index); }
+
         mutable std::vector<ItemID> _touchedElements;
     public:
-        BufferPointer _items_buffer;
-        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
-        void syncBuffer();
+        inline BufferPointer getGPUBuffer() const { return _itemInfos._gpu_buffer; }
+        void syncGPUBuffer(const BatchPointer& batch);
     };
 
-    inline void Item::Concept::setVisible(bool visible) { _store->editInfo(_id)._isVisible = visible; }
-    inline bool Item::Concept::isVisible() const { return _store->getInfo(_id)._isVisible; }
+    inline void Item::Concept::setVisible(bool visible) { _store->editInfo(_id).setVisible(visible); }
+    inline bool Item::Concept::isVisible() const { return _store->getInfo(_id).isVisible(); }
     inline bool Item::Concept::toggleVisible() { return _store->editInfo(_id).toggleVisible(); }
+    inline void Item::Concept::setCamera(bool isCamera) { _store->editInfo(_id).setCamera(isCamera); }
+    inline bool Item::Concept::isCamera() const { return _store->getInfo(_id).isCamera(); }
+    inline bool Item::Concept::toggleCamera() { return _store->editInfo(_id).toggleCamera(); }
+
     inline void Item::Concept::setNode(Node node) { _store->editInfo(_id)._nodeID = node.id(); }
     inline NodeID Item::Concept::getNodeID() const { return _store->getInfo(_id)._nodeID; }
     inline void Item::Concept::setDrawable(Drawable drawable) { _store->editInfo(_id)._drawableID = drawable.id(); }

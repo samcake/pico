@@ -171,7 +171,17 @@ namespace graphics
         return gizmoDrawable;
     }
 
-   void GizmoDrawableFactory::allocateDrawcallObject(
+    graphics::CameraGizmo* GizmoDrawableFactory::createCameraGizmo(const graphics::DevicePointer& device) {
+
+        auto gizmoDrawable = new CameraGizmo();
+
+        // Create the triangle soup drawable using the shared uniforms of the factory
+        gizmoDrawable->_uniforms = _sharedUniforms;
+
+        return gizmoDrawable;
+    }
+
+    void GizmoDrawableFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
         graphics::NodeGizmo& gizmo)
@@ -211,7 +221,7 @@ namespace graphics
 
        graphics::DescriptorObjects descriptorObjects = {{
             { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items._items_buffer },
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
 
        }};
        device->updateDescriptorSet(descriptorSet, descriptorObjects);
@@ -222,6 +232,47 @@ namespace graphics
        // And now a render callback where we describe the rendering sequence
        graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
            
+           args.batch->bindPipeline(pipeline);
+           args.batch->setViewport(args.camera->getViewportRect());
+           args.batch->setScissor(args.camera->getViewportRect());
+
+           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+
+           auto flags = pgizmo->getUniforms()->buildFlags();
+           GizmoObjectData odata{ node, flags, 0, 0 };
+           args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+
+           args.batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
+       };
+       gizmo._drawcall = drawCallback;
+   }
+
+   void GizmoDrawableFactory::allocateDrawcallObject(
+       const graphics::DevicePointer& device,
+       const graphics::ScenePointer& scene,
+       graphics::CameraGizmo& gizmo)
+   {
+       // Create DescriptorSet #1, #0 is ViewPassDS
+       graphics::DescriptorSetInit descriptorSetInit{
+           _itemPipeline->getRootDescriptorLayout(),
+            1
+       };
+       auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
+
+       graphics::DescriptorObjects descriptorObjects = { {
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
+            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
+
+       } };
+       device->updateDescriptorSet(descriptorSet, descriptorObjects);
+
+       auto pgizmo = &gizmo;
+       auto pipeline = this->_itemPipeline;
+
+       // And now a render callback where we describe the rendering sequence
+       graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
+
            args.batch->bindPipeline(pipeline);
            args.batch->setViewport(args.camera->getViewportRect());
            args.batch->setScissor(args.camera->getViewportRect());

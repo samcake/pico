@@ -34,7 +34,7 @@ using namespace graphics;
 Drawable Drawable::null;
 
 DrawableID DrawableStore::newID() {
-    return _indexTable.allocate();
+    return _indexTable.allocate().index;
 }
 
 Drawable DrawableStore::allocate(Drawable drawable) {

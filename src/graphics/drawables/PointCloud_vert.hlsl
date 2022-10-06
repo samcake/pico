@@ -46,7 +46,10 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
     float3 position = float3(BufferIn[vid].x, BufferIn[vid].y, BufferIn[vid].z);
 
     Transform _model = node_getWorldTransform(_instance.x);
-
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    float4 _viewport = cam_viewport();
+    
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
@@ -107,6 +110,9 @@ VertexShaderOutput0 main0(VertexPosColor0 IN) {
 
     float3 position = IN.Position;
 
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);

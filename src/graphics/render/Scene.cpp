@@ -27,12 +27,24 @@
 #include "Scene.h"
 
 #include "Sky.h"
-
+#include "drawables/SkyDrawable.h"
 
 namespace graphics {
 
-Scene::Scene() {
-    _sky = std::make_shared<Sky>();
+Scene::Scene(const SceneInit& init) {
+
+    _items.reserve(init.device, init.items_capacity);
+    _nodes.resizeBuffers(init.device, init.nodes_capacity);
+    _drawables.resizeBuffers(init.device, init.drawables_capacity);
+    _cameras.reserve(init.device, init.cameras_capacity);
+
+
+    // A sky drawable factory
+    // Assign the sky to the scene here ....
+    // TODO: NO!
+    _skyFactory = std::make_shared<graphics::SkyDrawableFactory>();
+    _skyFactory->allocateGPUShared(init.device);
+    _sky = _skyFactory->getUniforms()._sky;
 }
 
 Scene::~Scene() {
@@ -179,7 +191,7 @@ Drawable Scene::getDrawable(DrawableID drawableId) const {
 void Scene::updateBounds() {
 
     core::aabox3 b;
-    const auto& itemInfos = _items._itemInfos;
+    const auto& itemInfos = _items._itemInfos._cpu_array;
     const auto& transforms = _nodes._tree._worldTransforms;
     const auto& bounds = _drawables._bounds;
     int i = 0;
@@ -197,6 +209,20 @@ void Scene::updateBounds() {
     _bounds._midPos = b.center;
     _bounds._minPos = b.minPos();
     _bounds._maxPos = b.maxPos();
+}
+
+CameraPointer Scene::getCamera(CameraID camId) const {
+    return _cameras.getCamera(camId);
+}
+
+
+void syncSceneResourcesForFrame(const ScenePointer& scene, const BatchPointer& batch) {
+    scene->_items.syncGPUBuffer(batch);
+    scene->_nodes.updateTransforms();
+    scene->_cameras.syncGPUBuffer(batch);
+
+    scene->_sky->updateGPUData(); // arggg
+
 }
 
 }

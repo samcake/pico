@@ -44,25 +44,20 @@ namespace graphics {
         }
     }
 
-    ItemID ItemStore::newID() {
-        return _indexTable.allocate();
-    }
-
     Item ItemStore::allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner) {
-
-        ItemID new_id = newID();
+        auto alloc = _indexTable.allocate();
+        auto new_id = alloc.index;
         Item item(new Item::Concept(scene, this, new_id));
 
-        bool allocated = new_id == (_indexTable.getNumAllocatedElements() - 1);
+        ItemInfo info = { node, drawable, owner, true };
+        _itemInfos.allocate_element(new_id, &info);
 
-        if (allocated) {
-            _items.push_back(item);
-            _itemInfos.push_back({node, drawable, owner, true});
+        if (alloc.recycle) {
+            _items[new_id] = (item);
         }
         else {
-            _items[new_id] = (item);
-            _itemInfos[new_id] = { node, drawable, owner, true };
-        }
+            _items.push_back(item);
+        }          
 
         _touchedElements.push_back(new_id);
 
@@ -80,7 +75,10 @@ namespace graphics {
         if (_indexTable.isValid(index)) {
             _indexTable.free(index);
             _items[index] = Item::null;
-            _itemInfos[index] = ItemInfo();
+            {
+
+                _itemInfos._cpu_array[index] = ItemInfo();
+            }
             _touchedElements.push_back(index);
         }
     }
@@ -91,9 +89,10 @@ namespace graphics {
 
 
     ItemIDs ItemStore::getItemGroup(ItemID group) const {
+        auto lockedInfos = _itemInfos.read(0);
         ItemIDs itemGroup;
         for (uint32_t i = 0; i < _items.size(); ++i) {
-            if (_items[i].isValid() && _itemInfos[i]._groupID == group) {
+            if (_items[i].isValid() && lockedInfos.first[i]._groupID == group) {
                 itemGroup.emplace_back(i);
             }
         }
@@ -113,36 +112,21 @@ namespace graphics {
         return Item::null;
     }
 
-    void ItemStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
-
-        if (_num_buffers_elements < numElements) {
-            auto capacity = (numElements);
-
-            graphics::BufferInit items_buffer_init{};
-            items_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-            items_buffer_init.hostVisible = true;
-            items_buffer_init.bufferSize = capacity * sizeof(ItemInfo);
-            items_buffer_init.firstElement = 0;
-            items_buffer_init.numElements = capacity;
-            items_buffer_init.structStride = sizeof(ItemInfo);
-
-            _items_buffer = device->createBuffer(items_buffer_init);
-
-            _num_buffers_elements = capacity;
-        }
+    void ItemStore::reserve(const DevicePointer& device, uint32_t capacity) {
+        _itemInfos.reserve(device, capacity);
     }
 
-    void ItemStore::syncBuffer() {
+    void ItemStore::syncGPUBuffer(const BatchPointer& batch) {
         if (_touchedElements.empty()) {
-             return;
+            return;
         }
-
-        if (_itemInfos.size() < _num_buffers_elements) {
-            for(auto index : _touchedElements) {
-                reinterpret_cast<ItemInfo*>(_items_buffer->_cpuMappedAddress)[index] = _itemInfos[index];
-            }
-            _touchedElements.clear();
+        
+        for (auto index : _touchedElements) {
+            reinterpret_cast<ItemInfo*>(_itemInfos._gpu_buffer->_cpuMappedAddress)[index] = _itemInfos._cpu_array[index];
         }
+        _touchedElements.clear();
+        
+        _itemInfos.sync_gpu_from_cpu(batch);
     }
-
+ 
 }

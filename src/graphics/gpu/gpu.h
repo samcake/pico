@@ -296,3 +296,4 @@ namespace graphics {
     };
 }
 
+#define createBuffer(init) _createBuffer(init, __FILE__)

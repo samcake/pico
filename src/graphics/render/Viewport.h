@@ -35,10 +35,20 @@
 
 namespace graphics {
 
+    struct VISUALIZATION_API ViewportInit {
+        ScenePointer    scene;
+        DevicePointer   device;
+        RenderCallback  postSceneRC = nullptr;
+        CameraID        cameraID = 0;
+    };
+
     class VISUALIZATION_API Viewport {
     public:
-        Viewport(const ScenePointer& scene, const CameraPointer& camera, const DevicePointer& device, RenderCallback postSceneRC = nullptr);
+        Viewport(const ViewportInit& init);
         ~Viewport();
+
+        void setCamera(CameraID camID) { _cameraID = camID; }
+        CameraID getCamera() const { return _cameraID; }
 
         void present(const SwapchainPointer& swapchain);
 
@@ -52,7 +62,6 @@ namespace graphics {
         void renderScene(RenderArgs& args);
 
         ScenePointer _scene;
-        CameraPointer _camera;
         DevicePointer _device;
         RendererPointer _renderer;
 
@@ -63,7 +72,9 @@ namespace graphics {
         BatchTimerPointer _batchTimer;
 
         DescriptorSetPointer _viewPassDescriptorSet;
-        RootDescriptorLayoutPointer _viewPassRootLayout;
+
+        // Bag of interesting constants for the Viewport ?
+        CameraID _cameraID = 0;
 
     };
 }

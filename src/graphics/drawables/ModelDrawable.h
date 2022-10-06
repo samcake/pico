@@ -36,8 +36,6 @@
 namespace graphics {
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
     class Buffer;
     using BufferPointer = std::shared_ptr<Buffer>;
     class PipelineState;

@@ -22,7 +22,8 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
     float3 dir = normalize(IN.wdir);
 
     float3 color = sky_fetchEnvironmentMap(dir, sky_map, uSampler0[0], uSampler0[1]);
-
+    Transform _view = cam_view();
+    float4 _viewport = cam_viewport();
     
     if (_drawControl.x == 1)
     { // Scopes

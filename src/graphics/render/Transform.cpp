@@ -35,22 +35,21 @@ using namespace graphics;
 
 TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, NodeID parent) {
 
-    NodeID new_node_id = _indexTable.allocate();
-    bool allocated = new_node_id == (_indexTable.getNumAllocatedElements() - 1);
+    auto new_node_alloc = _indexTable.allocate();
 
-    if (allocated) {
+    if (new_node_alloc.recycle) {
+        _treeNodes[new_node_alloc.index] = Node();
+        _nodeTransforms[new_node_alloc.index] = rts;
+        _worldTransforms[new_node_alloc.index] = rts;
+    } else {
         _treeNodes.push_back(Node());
         _nodeTransforms.push_back(rts);
         _worldTransforms.push_back(rts);
-    } else {
-        _treeNodes[new_node_id] = Node();
-        _nodeTransforms[new_node_id] = rts;
-        _worldTransforms[new_node_id] = rts;
     }
 
-    attachNode(new_node_id, parent);
+    attachNode(new_node_alloc.index, parent);
 
-    return new_node_id;
+    return new_node_alloc.index;
 }
 
 TransformTree::NodeIDs TransformTree::allocateBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets) {

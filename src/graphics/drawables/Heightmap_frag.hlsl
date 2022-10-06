@@ -97,7 +97,7 @@ float4 main(PixelShaderInput IN) : SV_Target
     float3 N = normalize(cross(ddy(IN.WPos), ddx(IN.WPos)));
 
 
-    float3 E2F = IN.WPos - _view.col_w();
+    float3 E2F = IN.WPos - cam_view().col_w();
     float E2Flen = length(E2F);
     float3 V = -normalize(E2F);
     float3 H = normalize(V + L);

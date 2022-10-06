@@ -49,12 +49,17 @@ namespace graphics {
 
     class Viewport;
     using ViewportPointer = std::shared_ptr<Viewport>;
+    struct ViewportInit;
 
     class Mesh;
     using MeshPointer = std::shared_ptr<Mesh>;
 
     class Sky;
     using SkyPointer = std::shared_ptr<Sky>;
+    using Sky_sp = SkyPointer;
+
+    class SkyDrawableFactory;
+    using SkyDrawableFactory_sp = std::shared_ptr<SkyDrawableFactory>;
 
 }
 
