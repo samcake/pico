@@ -287,7 +287,6 @@ int main(int argc, char *argv[])
         if (e.done) {
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
         }
-
         camControl->onResize(e);
     };
 
