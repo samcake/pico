@@ -134,7 +134,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     bi.structStride =  8 * 2;
     bi.numElements = init.numSamples;
   //  bi.raw = true;
-    timer->_buffer = createBuffer(bi, "batch_timer_buffer");
+    timer->_buffer = _createBuffer(bi, "batch_timer_buffer");
 
  //   auto d3d12bb = static_cast<D3D12BufferBackend*>(timer->_buffer.get());
  //   timer->_queryResult = (d3d12bb->_resource);

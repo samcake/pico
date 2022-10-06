@@ -160,6 +160,13 @@ int main(int argc, char *argv[])
 
     auto enode = scene->createNode(core::translation(core::vec3(0.0f, 1.0f, 4.0f)), rnode.id());
 
+    //  node0
+    //    +---- rnode
+    //            +---- bnode
+    //            |       +---- cnode
+    //            |               +---- dnode
+    //            +---- enode            
+    //
 
     // Some items unique instaces of the drawable and the specified nodes
     auto pcitem = scene->createItem(node0, pcdrawable);
@@ -184,26 +191,41 @@ int main(int argc, char *argv[])
     p_drawable.as<graphics::PrimitiveDrawable>()._size = {1.0, 2.0, 0.7 };
 
     std::vector<graphics::NodeID> prim_nodes;
-    int width = 10;
-    for (int i = 0; i < width * width; ++i) {
-        float t = acos(-1.0f) * i / float(width * width);
-        auto p_node = scene->createNode(
-            core::translation_rotation(
-                core::vec3(-4.0f * (i % width), -1.0f, 4.0f * (i / width)),
-                core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
-            ),
-            rnode.id());
-           // node0.id());
-        auto p_item = scene->createItem(p_node, p_drawable);
-        prim_nodes.push_back(p_node.id());
+    {
+        int width = 100;
+        float space = 4.0f;
+        float pos_offset = width / 2 * space;
+        for (int i = 0; i < width * width; ++i) {
+            float t = acos(-1.0f) * i / float(width * width);
+            auto p_node = scene->createNode(
+                core::translation_rotation(
+                    core::vec3(-space * (i % width) + pos_offset, -1.0f, space * (i / width) - pos_offset),
+                    core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
+                ),
+                rnode.id());
+            // node0.id());
+            auto p_item = scene->createItem(p_node, p_drawable);
+            prim_nodes.push_back(p_node.id());
+        }
     }
 
+    //  node0
+    //    +---- rnode
+    //            +---- bnode
+    //            |       +---- cnode
+    //            |               +---- dnode
+    //            +---- enode            
+    //            |
+    //            +---- pnode 0 
+    //            +---- pnode 0  
+    //            +---- pnode ...  
+    //            +---- pnode (width * width - 1)  
 
 
     // a gizmo drawable to draw the transforms
-    auto gzdrawable = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable.as<graphics::NodeGizmo>());
-    gzdrawable.as<graphics::NodeGizmo>().nodes.resize(6);
+    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
+    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(6);
 
     auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
@@ -211,8 +233,9 @@ int main(int argc, char *argv[])
 
 
     auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
-    auto gzitem = scene->createItem(graphics::Node::null, gzdrawable);
-
+    gzitem_item.setVisible(false);
+    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
+    gzitem_node.setVisible(false);
 
     // A dashboard factory and drawable to represent some debug data
     auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
@@ -255,9 +278,17 @@ int main(int argc, char *argv[])
     auto window = uix::Window::createWindow(windowInit);
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
+    graphics::SwapchainInit swapchainInit{ (HWND)window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
+    // On resize deal with it
+    windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
+        // only resize the swapchain when we re done with the resize
+        if (e.done) {
+            gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
+        }
+        camControl->onResize(e);
+    };
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
@@ -297,13 +328,13 @@ int main(int argc, char *argv[])
                 return true;
             });
 
-          /*  for (auto prim_node : prim_nodes) {
+            for (auto prim_node : prim_nodes) {
                 scene->_nodes.editTransform(prim_node, [t](core::mat4x3& rts) -> bool {
                     core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.005 * t), 0.0f, sin(0.005 * t)));
                     core::rotate(rts, rotor);
                     return true;
                 });
-            }*/
+            }
         }
 
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
@@ -311,16 +342,6 @@ int main(int argc, char *argv[])
         // Render!
         viewport->present(swapchain);
     });
-
-    // On resize deal with it
-    windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
-        // only resize the swapchain when we re done with the resize
-        if (e.over) {
-            gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
-        }
-
-        camControl->onResize(e);
-    };
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
         if (e.state && e.key == uix::KEY_SPACE) {

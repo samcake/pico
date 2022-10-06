@@ -495,11 +495,6 @@ int main(int argc, char *argv[])
 
         camControl->onResize(e);
         uv_camControl->onResize(e);
-
-        if (e.over) {
-            camControl->onResize(e);
-            uv_camControl->onResize(e);
-        }
     };
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {

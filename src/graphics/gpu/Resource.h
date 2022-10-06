@@ -151,11 +151,11 @@ namespace graphics {
 
     struct VISUALIZATION_API GeometryInit {
         BufferElementView vertexBuffer;
-        int32_t vertexCount = 0;
+        uint32_t vertexCount = 0;
         PixelFormat vertexFormat = PixelFormat::R32G32B32_FLOAT;
 
         BufferElementView indexBuffer;
-        int32_t indexCount = 0;
+        uint32_t indexCount = 0;
     };
 
     class VISUALIZATION_API Geometry {
