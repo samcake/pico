@@ -44,7 +44,7 @@ namespace core {
         ~IndexTable() {}
 
         Index getCapacity() const { return _capacity; }
-        Index getNumElements() const { return _num_allocated_elements - (Index) _invalid_elements.size(); }
+        Index getNumValidElements() const { return _num_allocated_elements - (Index)_invalid_elements.size(); }
         Index getNumAllocatedElements() const { return _num_allocated_elements; }
 
         bool isValid(Index index) const {

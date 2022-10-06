@@ -52,13 +52,6 @@ Viewport::Viewport(const ViewportInit& init) :
     _postSceneRC(init.postSceneRC),
     _cameraID(init.cameraID)
 {
-    // Configure the Camera to look at the scene
- /*   _camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
-    _camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
-    _camera->setEye(_camera->getBack() * 10.0f);
-    _camera->setFar(100.0f);
-    */
-
     _batchTimer = _device->createBatchTimer({});
 
     _renderer = std::make_shared<Renderer>(_device,
@@ -149,25 +142,21 @@ void Viewport::renderScene(RenderArgs& args) {
     args.timer = _batchTimer;
     args.viewPassDescriptorSet = _viewPassDescriptorSet;
 
-    for (int i = 1; i < _scene->getItems().size(); i++) {
-        auto& item = _scene->getItems()[i];
-        if (item.isValid() && item.isVisible()) {
-            auto drawable = item.getDrawableID();
-            if (drawable != INVALID_DRAWABLE_ID) {
-                auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item.getNodeID(), args);
-            }
+    auto itemInfos = _scene->_items.fetchItemInfos();
+
+    for (int i = 1; i < itemInfos.size(); i++) {
+        const auto& info = itemInfos[i];
+        if (info.isValid() && info.isVisible() && info.isDrawable()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+            drawcall(info._nodeID, args);
         }
     }
 
-    if (_scene->getItems().size() > 0) {
-        auto item0 = _scene->getItems()[0];
-        if (item0.isValid() && item0.isVisible()) {
-            auto drawable = item0.getDrawableID();
-            if (drawable != INVALID_DRAWABLE_ID) {
-                auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item0.getNodeID(), args);
-            }
+    if (itemInfos.size() > 0) {
+        const auto& info = itemInfos[0];
+        if (info.isValid() && info.isVisible() && info.isDrawable()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+            drawcall(info._nodeID, args);
         }
     }
 }

@@ -168,7 +168,7 @@ namespace graphics {
 
         inline CameraPointer getCamera(CameraID index) const { return _cameras[index].lock(); }
 
-        inline BufferPointer getGPUBuffer() const { return _cameraStructBuffer._gpu_buffer; }
+        inline BufferPointer getGPUBuffer() const { return _cameraStructBuffer.gpu_buffer(); }
         void syncGPUBuffer(const BatchPointer& batch);
     };
 }
