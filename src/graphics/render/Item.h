@@ -73,7 +73,9 @@ namespace graphics {
             inline bool isCamera() const { return ((_flags & IS_CAMERA) != 0); }
             inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
 
+            inline bool hasNode() const { return _nodeID != INVALID_NODE_ID; }
             inline bool isDrawable() const { return _drawableID != INVALID_DRAWABLE_ID; }
+            inline bool isGrouped() const { return _groupID != INVALID_ITEM_ID; }
 
             inline bool isValid() const { return _flags != 0xFFFFFFFF; }
         };

@@ -52,13 +52,6 @@ Viewport::Viewport(const ViewportInit& init) :
     _postSceneRC(init.postSceneRC),
     _cameraID(init.cameraID)
 {
-    // Configure the Camera to look at the scene
- /*   _camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
-    _camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
-    _camera->setEye(_camera->getBack() * 10.0f);
-    _camera->setFar(100.0f);
-    */
-
     _batchTimer = _device->createBatchTimer({});
 
     _renderer = std::make_shared<Renderer>(_device,
@@ -166,26 +159,4 @@ void Viewport::renderScene(RenderArgs& args) {
             drawcall(info._nodeID, args);
         }
     }
-/*
-    for (int i = 1; i < _scene->getItems().size(); i++) {
-        auto& item = _scene->getItems()[i];
-        if (item.isValid() && item.isVisible()) {
-            auto drawable = item.getDrawableID();
-            if (drawable != INVALID_DRAWABLE_ID) {
-                auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item.nodeID(), args);
-            }
-        }
-    }
-
-    if (_scene->getItems().size() > 0) {
-        auto item0 = _scene->getItems()[0];
-        if (item0.isValid() && item0.isVisible()) {
-            auto drawable = item0.getDrawableID();
-            if (drawable != INVALID_DRAWABLE_ID) {
-                auto drawcall = _scene->_drawables.getDrawcall(drawable);
-                drawcall(item0.nodeID(), args);
-            }
-        }
-    }*/
 }
