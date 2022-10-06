@@ -57,21 +57,24 @@ namespace graphics {
 
         // Items
         ItemStore _items;
-        Item getItem(ItemID id) const;
         
         Item createItem(Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
         Item createItem(NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
         Item createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
         Item createSubItem(ItemID group, Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
 
-        void deleteAllItems();  // delete all user objects
         void deleteAll();
         void deleteItem(ItemID id);
-        void deleteItemFromID(UserID id);
+        inline Item getItem(ItemID id) const { return _items.getItem(id); } // Item is either null or valid
+        inline Item getValidItemAt(uint32_t startIndex) const { return _items.getValidItemAt(startIndex); } // next valid Item found at startId or after OR return a null item if none valid after
+        inline Item getUnsafeItem(ItemID id) const { return _items.getUnsafeItem(id); } // ItemID is not checked for validity and could return an invalid item
+        inline ItemIDs fetchValidItems() const { return _items.fetchValidItems(); }
 
-        Item getItemFromID(UserID id) const;
-        Item getValidItemAt(uint32_t startIndex) const;
-        const Items& getItems() const; // THe all items, beware this contains  INVALID items
+        // Access item from a UserID
+        void deleteAllItemsWithUserID();
+        void deleteItemFromUserID(UserID id);
+        Item getItemFromUserID(UserID id) const;
+
 
         // Nodes
         NodeStore _nodes;
@@ -111,7 +114,7 @@ namespace graphics {
 
     protected:
 
-        IDToIndices _idToIndices;
+        IDToIndices _userIDToItemIDs;
 
         core::Bounds _bounds;
     };

@@ -31,54 +31,39 @@
 #include "Drawable.h"
 #include "Scene.h"
 
+#include <algorithm>
+
 namespace graphics {
 
     Item Item::null;
 
-    core::aabox3 Item::Concept::fetchWorldBound() const {
-        const auto& info = _store->getInfo(_id);
-        if ((info._nodeID != INVALID_NODE_ID) && (info._drawableID != INVALID_DRAWABLE_ID)) {
-            return core::aabox_transformFrom(_scene->_nodes._tree._worldTransforms[info._nodeID], _scene->_drawables.getBound(info._drawableID));
-        } else {
-            return core::aabox3();
-        }
+
+    void ItemStore::reserve(const Scene* scene, const DevicePointer& device, uint32_t capacity) {
+        _scene = scene;
+        _itemInfos.reserve(device, capacity);
     }
 
-    Item ItemStore::allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner) {
-        auto alloc = _indexTable.allocate();
-        auto new_id = alloc.index;
-        Item item(new Item::Concept(scene, this, new_id));
+    Item ItemStore::allocate(NodeID node, DrawableID drawable, ItemID owner) {
+        auto [new_id, recycle] = _indexTable.allocate();
 
-        ItemInfo info = { node, drawable, owner, true };
+        ItemInfo info = { node, drawable, owner, IS_VISIBLE };
         _itemInfos.allocate_element(new_id, &info);
-
-        if (alloc.recycle) {
-            _items[new_id] = (item);
-        }
-        else {
-            _items.push_back(item);
-        }          
-
         _touchedElements.push_back(new_id);
 
-        return item;
+        return Item(Handle{ this, new_id });
     }
 
-    Item ItemStore::createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner) {
-        return allocate(scene, node.id(), drawable.id(), owner);
+    Item ItemStore::createItem(Node node, Drawable drawable, ItemID owner) {
+        return allocate(node.id(), drawable.id(), owner);
     }
-    Item ItemStore::createItem(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner) {
-        return allocate(scene, node, drawable, owner);
+    Item ItemStore::createItem(NodeID node, DrawableID drawable, ItemID owner) {
+        return allocate(node, drawable, owner);
     }
 
     void ItemStore::free(ItemID index) {
         if (_indexTable.isValid(index)) {
             _indexTable.free(index);
-            _items[index] = Item::null;
-            {
-
-                _itemInfos._cpu_array[index] = ItemInfo();
-            }
+            _itemInfos.set_element(index, nullptr);
             _touchedElements.push_back(index);
         }
     }
@@ -87,46 +72,98 @@ namespace graphics {
 
     }
 
+    Item ItemStore::getValidItemAt(ItemID startID) const {
+        auto itemCount = numAllocatedItems();
+        if (startID < itemCount && startID != INVALID_ITEM_ID) {
+            // lock the item store info array as a whole
+            // so we can use the unsafe data accessor in the search loop
+            auto [begin_info, l] = _itemInfos.read(0);
 
-    ItemIDs ItemStore::getItemGroup(ItemID group) const {
-        auto lockedInfos = _itemInfos.read(0);
+            do {
+                const auto* info = begin_info + startID;
+                if (info->isValid()) {
+                    return getUnsafeItem(startID);
+                }
+                startID++;
+            } while (startID < itemCount);
+        }
+        return Item::null;
+    }
+
+    ItemIDs ItemStore::fetchValidItems() const {
+        // lock the item store info array as a whole
+        // so we can use the unsafe data accessor in the search loop
+        auto [begin_info, l] = _itemInfos.read(0);
+
+        // Pre allocate the result with the expected size
+        ItemIDs validItems(numValidItems(), INVALID_ITEM_ID);
+
+        // Collect all the valid item ids
+        auto itemCount = numAllocatedItems();
+        for (ItemID i = 0; i < itemCount; ++i) {
+            if ((begin_info + i)->isValid())
+                validItems.emplace_back(i);
+        }
+        
+        // done
+        return validItems;
+    }
+
+    ItemInfos ItemStore::fetchItemInfos() const {
+        // lock the item store info array as a whole
+        // so we can use the unsafe data accessor in the search loop
+        auto [begin_info, l] = _itemInfos.read(0);
+
+        auto itemCount = numAllocatedItems();
+
+        // Pre allocate the result with the expected size
+        ItemInfos itemInfos(itemCount, ItemInfo());
+
+        // copy
+        memcpy(itemInfos.data(), begin_info, itemCount * sizeof(ItemInfo));
+
+        // done
+        return itemInfos;
+    }
+
+    core::aabox3 ItemStore::fetchWorldBound(ItemID id) const {
+        auto [info, l] = _itemInfos.read(id);
+        if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawableID != INVALID_DRAWABLE_ID)) {
+            return core::aabox_transformFrom(_scene->_nodes._tree._worldTransforms[info->_nodeID], _scene->_drawables.getBound(info->_drawableID));
+        } else {
+            return core::aabox3();
+        }
+    }
+
+    ItemIDs ItemStore::fetchItemGroup(ItemID groupID) const {
         ItemIDs itemGroup;
-        for (uint32_t i = 0; i < _items.size(); ++i) {
-            if (_items[i].isValid() && lockedInfos.first[i]._groupID == group) {
-                itemGroup.emplace_back(i);
+        if (groupID != INVALID_ITEM_ID) {
+            // lock the item store info array as a whole
+            // so we can use the unsafe data accessor in the search loop
+            auto [info, l] = _itemInfos.read(0);
+
+            auto itemCount = numAllocatedItems();
+            for (ItemID i = 0; i < itemCount; ++i) {
+                auto info = _itemInfos.unsafe_data(i);
+                if (info->isValid() && (info->_groupID == groupID)) {
+                    itemGroup.emplace_back(i);
+                }
             }
         }
         return itemGroup;
     }
 
-    Item ItemStore::getValidItemAt(ItemID startIndex) const {
-        if (startIndex < _items.size()) {
-            do {
-                const auto* item = _items.data() + startIndex;
-                if (item->isValid()) {
-                    return (*item);
-                }
-                startIndex++;
-            } while (startIndex < _items.size());
-        }
-        return Item::null;
-    }
+    void ItemStore::syncGPUBuffer(const BatchPointer& batch) {        
+        // Clean the touched elements
+        std::sort(_touchedElements.begin(), _touchedElements.end());
+        auto newEnd = std::unique(_touchedElements.begin(), _touchedElements.end());
+        _touchedElements.erase(newEnd);
 
-    void ItemStore::reserve(const DevicePointer& device, uint32_t capacity) {
-        _itemInfos.reserve(device, capacity);
-    }
+        // Sync the gpu buffer version
+        _itemInfos.sync_gpu_from_cpu(batch, _touchedElements);
 
-    void ItemStore::syncGPUBuffer(const BatchPointer& batch) {
-        if (_touchedElements.empty()) {
-            return;
-        }
-        
-        for (auto index : _touchedElements) {
-            reinterpret_cast<ItemInfo*>(_itemInfos._gpu_buffer->_cpuMappedAddress)[index] = _itemInfos._cpu_array[index];
-        }
+        // Start fresh
         _touchedElements.clear();
-        
-        _itemInfos.sync_gpu_from_cpu(batch);
     }
  
 }

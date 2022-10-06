@@ -33,7 +33,7 @@ namespace graphics {
 
 Scene::Scene(const SceneInit& init) {
 
-    _items.reserve(init.device, init.items_capacity);
+    _items.reserve(this, init.device, init.items_capacity);
     _nodes.resizeBuffers(init.device, init.nodes_capacity);
     _drawables.resizeBuffers(init.device, init.drawables_capacity);
     _cameras.reserve(init.device, init.cameras_capacity);
@@ -58,26 +58,26 @@ Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
 
 Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
 
-    Item newItem = _items.createItem(this, node, drawable);
+    Item newItem = _items.createItem(node, drawable);
     
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _idToIndices[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem.id();
     }
 
     return newItem;
 }
 
 Item Scene::createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID) {
-    Item newItem = _items.createItem(this, node, drawable, group);
+    Item newItem = _items.createItem(node, drawable, group);
 
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _idToIndices[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem.id();
     }
 
     return newItem;
@@ -87,40 +87,25 @@ Item Scene::createSubItem(ItemID group, Node node, Drawable drawable, UserID use
     return createSubItem(group, node.id(), drawable.id(), userID);
 }
 
-Item Scene::getItem(ItemID id) const {
-    return _items.getItem(id);
-}
-
-const Items& Scene::getItems() const {
-    return _items.getItems();
-}
-
 void Scene::deleteAll() {
-    _idToIndices.clear();
+    _userIDToItemIDs.clear();
     _items.freeAll();
+    // TODO : this is doing nothing really ?
 }
-
-// delete all user objects
-void Scene::deleteAllItems() {
-    auto indexIt = _idToIndices.begin();
-    while (_idToIndices.size() && indexIt != _idToIndices.end())
-        deleteItem(indexIt->first);
-}
-
 
 void Scene::deleteItem(ItemID id) {
-    if (!_nodes._tree._indexTable.isValid(id))
+    auto itemInfo = _items.getItemInfo(id);
+    if (!itemInfo.isValid())
         return;
 
     // If item is a group item then also delete group items;
-    auto group = _items.getItemGroup(id);
+    auto group = _items.fetchItemGroup(id);
     for (auto subItem : group) {
         deleteItem(subItem);
     }
 
-    auto item = _items.getItem(id);
-    auto nodeID = item.getNodeID();
-    auto drawableID = item.getDrawableID();
+    auto nodeID = itemInfo._nodeID;
+    auto drawableID = itemInfo._drawableID;
 
     if (_nodes.release(nodeID) <= 0) {
         _nodes.deleteNode(nodeID);
@@ -130,30 +115,37 @@ void Scene::deleteItem(ItemID id) {
     }
 
     _items.free(id);
-
 }
 
-void Scene::deleteItemFromID(UserID id) {
-    auto indexIt = _idToIndices.find(id);
-    if (indexIt != _idToIndices.end()) {
-         auto removedItemIdx = indexIt->second;
-         _idToIndices.erase(indexIt); // frmove from id to idx table
-    
-        _items.free(removedItemIdx);
+// Access item from a UserID
+
+// delete all items with a user id
+void Scene::deleteAllItemsWithUserID() {
+    auto indexIt = _userIDToItemIDs.begin();
+    while (_userIDToItemIDs.size() && indexIt != _userIDToItemIDs.end()) {
+        deleteItem(indexIt->second);
+        indexIt = _userIDToItemIDs.begin();
     }
 }
 
+// delete item with a user id
+void Scene::deleteItemFromUserID(UserID id) {
+    auto indexIt = _userIDToItemIDs.find(id);
+    if (indexIt != _userIDToItemIDs.end()) {
+         auto removedItemId = indexIt->second;
+         _userIDToItemIDs.erase(indexIt); // frmove from id to idx table
+    
+        _items.free(removedItemId);
+    }
+}
 
-Item Scene::getItemFromID(UserID id) const {
-    auto indexIt = _idToIndices.find(id);
-    if (indexIt != _idToIndices.end()) {
-         return getItems()[indexIt->second];
+// get item with a user id
+Item Scene::getItemFromUserID(UserID id) const {
+    auto indexIt = _userIDToItemIDs.find(id);
+    if (indexIt != _userIDToItemIDs.end()) {
+         return _items.getUnsafeItem(indexIt->second);
     }
     return Item::null;
-}
-
-Item Scene::getValidItemAt(uint32_t startIndex) const {
-    return _items.getValidItemAt(startIndex);
 }
 
 // Nodes
@@ -189,9 +181,9 @@ Drawable Scene::getDrawable(DrawableID drawableId) const {
 
 
 void Scene::updateBounds() {
+    auto itemInfos = _items.fetchItemInfos();
 
     core::aabox3 b;
-    const auto& itemInfos = _items._itemInfos._cpu_array;
     const auto& transforms = _nodes._tree._worldTransforms;
     const auto& bounds = _drawables._bounds;
     int i = 0;

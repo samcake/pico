@@ -112,7 +112,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
         // let's offset the root to not overlap on previous model
         if (modelItemIDs.size()) {
-            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
+            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).nodeID();
 
             auto modelBound = modelDrawablePtr->getBound();
             auto minCorner = modelBound.minPos();
@@ -299,6 +299,7 @@ int main(int argc, char *argv[])
 
     graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
+
 
     //Now that we have created all the elements, 
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
