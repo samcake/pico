@@ -32,44 +32,43 @@
 using namespace core;
 using namespace graphics;
 
-
-TransformTree::NodeID TransformTree::allocate(const core::mat4x3& rts, NodeID parent) {
-
-    auto new_node_alloc = _indexTable.allocate();
-
-    if (new_node_alloc.recycle) {
-        _treeNodes[new_node_alloc.index] = Node();
-        _nodeTransforms[new_node_alloc.index] = rts;
-        _worldTransforms[new_node_alloc.index] = rts;
-    } else {
-        _treeNodes.push_back(Node());
-        _nodeTransforms.push_back(rts);
-        _worldTransforms.push_back(rts);
-    }
-
-    attachNode(new_node_alloc.index, parent);
-
-    return new_node_alloc.index;
+void NodeStore::reserve(const DevicePointer& device, uint32_t capacity) {
+    _nodeInfos.reserve(device, capacity);
+    _nodeTransforms.reserve(device, capacity);
 }
 
-TransformTree::NodeIDs TransformTree::allocateBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets) {
-    NodeIDs new_node_ids = _indexTable.allocate(transforms.size());
+
+NodeID NodeStore::createNode(const Transform& localTransform, NodeID parent) {
+    auto [new_id, recycle] = _indexTable.allocate();
+
+    NodeInfo info;
+    _nodeInfos.allocate_element(new_id, &info);
+    _touchedInfos.push_back(new_id);
+
+    NodeTransform transform = { localTransform, localTransform };
+    _nodeTransforms.allocate_element(new_id, &transform);
+    _touchedTransforms.push_back(new_id);
+
+    attachNode(new_id, parent);
+
+    return new_id;
+}
+
+NodeIDs NodeStore::createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets) {
+    auto [new_node_ids, numRecycled] = _indexTable.allocate(localTransforms.size());
 
     // first pass 
     uint32_t i = 0;
-    for (auto new_node_id : new_node_ids) {
-       // bool allocated = new_node_id == (_indexTable.getNumAllocatedElements() - 1);
-        bool allocated = new_node_id == (_treeNodes.size());
-        if (allocated) {
-            _treeNodes.push_back(Node());
-            _nodeTransforms.push_back(transforms[i]);
-            _worldTransforms.push_back(transforms[i]);
-        }
-        else {
-            _treeNodes[new_node_id] = Node();
-            _nodeTransforms[new_node_id] = transforms[i];
-            _worldTransforms[new_node_id] = transforms[i];
-        }
+    for (auto new_id : new_node_ids) {
+
+        NodeInfo info;
+        _nodeInfos.allocate_element(new_id, &info);
+        _touchedInfos.push_back(new_id);
+
+        NodeTransform transform = { localTransforms[i], localTransforms[i] };
+        _nodeTransforms.allocate_element(new_id, &transform);
+        _touchedTransforms.push_back(new_id);
+
         ++i;
     }
 
@@ -84,27 +83,30 @@ TransformTree::NodeIDs TransformTree::allocateBranch(NodeID rootParent, const st
     return new_node_ids;
 }
 
-void TransformTree::free(NodeID nodeId) {
+void NodeStore::free(NodeID nodeId) {
     if (_indexTable.isValid(nodeId)) {
         _indexTable.free(nodeId);
 
-        _treeNodes[nodeId] = Node();
-        _nodeTransforms[nodeId] = core::mat4x3();
-        _worldTransforms[nodeId] = core::mat4x3();
+        _nodeInfos.set_element(nodeId, nullptr);
+        _touchedInfos.push_back(nodeId);
+
+        _nodeTransforms.set_element(nodeId, nullptr);
+        _touchedTransforms.push_back(nodeId);
     }
 }
 
-void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
+void NodeStore::attachNode(NodeID node_id, NodeID parent_id) {
     picoAssert(_indexTable.isValid(node_id));
 
     // Make sure the node is detached first
     detachNode(node_id);
 
-    auto& the_node = _treeNodes[node_id];
+    auto& the_node = *_nodeInfos.unsafe_data(node_id);
     the_node.parent = parent_id;
 
-    if (parent_id != INVALID_ID) {
-        auto& parent_node = _treeNodes[parent_id];
+    if (parent_id != INVALID_NODE_ID) {
+        auto& parent_node = *_nodeInfos.unsafe_data(parent_id);
+        _touchedInfos.push_back(parent_id);
 
         the_node.parent = parent_id;
         the_node.sybling = parent_node.children_head;
@@ -113,6 +115,7 @@ void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
         parent_node.num_children++;
     }
 
+    _touchedInfos.push_back(node_id);
     _touchedTransforms.push_back(node_id);
 
 
@@ -121,12 +124,12 @@ void TransformTree::attachNode(NodeID node_id, NodeID parent_id) {
     // children world transform and world sphere
 }
 
-void TransformTree::detachNode(NodeID node_id) {
-    auto& the_node = _treeNodes[node_id];
-    if (the_node.parent == INVALID_ID) {
+void NodeStore::detachNode(NodeID node_id) {
+    auto& the_node = *_nodeInfos.unsafe_data(node_id);
+    if (the_node.parent == INVALID_NODE_ID) {
         return;
     }
-    auto& parent_node = _treeNodes[the_node.parent];
+    auto& parent_node = *_nodeInfos.unsafe_data(the_node.parent);
 
     auto left_sybling_id = parent_node.children_head;
     if (left_sybling_id == node_id) {
@@ -135,7 +138,7 @@ void TransformTree::detachNode(NodeID node_id) {
     } else {
 
         for (int i = 0; i < parent_node.num_children; i++) {
-            auto& sybling_node = _treeNodes[left_sybling_id];
+            auto& sybling_node = *_nodeInfos.unsafe_data(left_sybling_id);
             if (sybling_node.sybling == node_id) {
                 sybling_node.sybling = the_node.sybling;
                 parent_node.num_children--;
@@ -143,78 +146,83 @@ void TransformTree::detachNode(NodeID node_id) {
             }
 
             left_sybling_id = sybling_node.sybling;
-            picoAssert(left_sybling_id != INVALID_ID);
+            picoAssert(left_sybling_id != INVALID_NODE_ID);
         }
 
         // Should never happen
-        picoAssert(left_sybling_id != INVALID_ID);
+        picoAssert(left_sybling_id != INVALID_NODE_ID);
     }
 
 
-    the_node.parent = INVALID_ID;
-    the_node.sybling = INVALID_ID;
+    the_node.parent = INVALID_NODE_ID;
+    the_node.sybling = INVALID_NODE_ID;
 }
 
-int32_t TransformTree::reference(NodeID nodeId) {
+int32_t NodeStore::reference(NodeID nodeId) {
     if (_indexTable.isValid(nodeId)) {
-        auto& the_node = _treeNodes[nodeId];
+        auto& the_node = *_nodeInfos.unsafe_data(nodeId);
         the_node.refCount++;
+        _touchedInfos.push_back(nodeId);
         return the_node.refCount;
     } else {
         return 0;
     }
 }
-int32_t TransformTree::release(NodeID nodeId) {
+int32_t NodeStore::release(NodeID nodeId) {
     if (_indexTable.isValid(nodeId)) {
-        auto& the_node = _treeNodes[nodeId];
+        auto& the_node = *_nodeInfos.unsafe_data(nodeId);
         the_node.refCount--;
+        _touchedInfos.push_back(nodeId);
         return the_node.refCount;
     } else {
         return 0;
     }
 }
 
-void TransformTree::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {
-    if (editor(_nodeTransforms[nodeId])) {
+void NodeStore::editTransform(NodeID nodeId, std::function<bool(Transform& rts)> editor) {
+    if (editor(_nodeTransforms.unsafe_data(nodeId)->local)) {
         _touchedTransforms.push_back(nodeId);
     }
 }
 
-TransformTree::NodeIDs TransformTree::updateTransforms() {
+NodeIDs NodeStore::updateTransforms() {
     NodeIDs touched;
-    for (auto node_id : _touchedTransforms) {
-        const auto& node = _treeNodes[node_id];
-        if (node.parent == INVALID_ID) {
-            _worldTransforms[node_id] = _nodeTransforms[node_id];
+    for (auto nodeId : _touchedTransforms) {
+        const auto& info = *_nodeInfos.unsafe_data(nodeId);
+        if (info.parent == INVALID_NODE_ID) {
+            _nodeTransforms.unsafe_data(nodeId)->world = _nodeTransforms.unsafe_data(nodeId)->local;
         } else {
-            _worldTransforms[node_id] = core::mul(_worldTransforms[node.parent], _nodeTransforms[node_id]);
+            _nodeTransforms.unsafe_data(nodeId)->world = core::mul(_nodeTransforms.unsafe_data(info.parent)->world, _nodeTransforms.unsafe_data(nodeId)->local);
         }
-        touched.push_back(node_id);
-        updateChildrenTransforms(node_id, touched);
+        _nodeTransforms.write(nodeId);
+        updateChildrenTransforms(nodeId, touched);
     }
+    
     _touchedTransforms.clear();
 
     return touched;
 }
 
 
-void TransformTree::updateChildrenTransforms(NodeID parentId, NodeIDs& touched) {
+void NodeStore::updateChildrenTransforms(NodeID parentId, NodeIDs& touched) {
 
-    const auto& node = _treeNodes[parentId];
-    if (node.num_children == 0) {
+    const auto& info = *_nodeInfos.unsafe_data(parentId);
+    _nodeTransforms.write(parentId);
+
+    if (info.num_children == 0) {
         return;
     }
-    const auto& parent_world_transform = _worldTransforms[parentId];
+    const auto& parent_world_transform = _nodeTransforms.unsafe_data(parentId)->world;
 
     NodeIDs children;
-    children.reserve(node.num_children);
+    children.reserve(info.num_children);
 
-    NodeID child_id = node.children_head;
-    for (int i = 0; i < node.num_children; ++i) {
-        _worldTransforms[child_id] = core::mul(parent_world_transform, _nodeTransforms[child_id]);
+    NodeID child_id = info.children_head;
+    for (int i = 0; i < info.num_children; ++i) {
+        _nodeTransforms.unsafe_data(child_id)->world = core::mul(parent_world_transform, _nodeTransforms.unsafe_data(child_id)->local);
         touched.push_back(child_id);
 
-        const auto& child = _treeNodes[child_id];
+        const auto& child = *_nodeInfos.unsafe_data(child_id);
         if (child.num_children > 0) {
             children.push_back(child_id);
         } else {
@@ -225,100 +233,18 @@ void TransformTree::updateChildrenTransforms(NodeID parentId, NodeIDs& touched) 
 
     for (auto& id : children) {
         updateChildrenTransforms(id, touched);
-
-    }
-}
-
-void NodeStore::resizeBuffers(const DevicePointer& device, uint32_t  numElements) {
-
-    if (_num_buffers_elements < numElements) {
-        auto capacity = (numElements);
-
-        graphics::BufferInit nodes_buffer_init{};
-        nodes_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        nodes_buffer_init.hostVisible = true;
-        nodes_buffer_init.bufferSize = capacity * sizeof(vec4);
-        nodes_buffer_init.firstElement = 0;
-        nodes_buffer_init.numElements = capacity;
-        nodes_buffer_init.structStride = sizeof(vec4);
-
-        _nodes_buffer = device->createBuffer(nodes_buffer_init);
-
-
-        graphics::BufferInit transforms_buffer_init{};
-        transforms_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        transforms_buffer_init.hostVisible = true;
-        transforms_buffer_init.bufferSize = 2 * capacity * sizeof(mat4x3);
-        transforms_buffer_init.firstElement = 0;
-        transforms_buffer_init.numElements = 2 * capacity;
-        transforms_buffer_init.structStride = sizeof(mat4x3);
-
-        _transforms_buffer = device->createBuffer(transforms_buffer_init);
-
-        _num_buffers_elements = capacity;
     }
 }
 
 
-NodeID NodeStore::createNode(const core::mat4x3& rts, NodeID parent) {
-    auto nodeId = _tree.allocate(rts, parent);
-    
-    if (nodeId < _num_buffers_elements) {
-        reinterpret_cast<TransformTree::Node*>(_nodes_buffer->_cpuMappedAddress)[nodeId] = _tree._treeNodes[nodeId];
-        reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress)[2 * nodeId] = _tree._nodeTransforms[nodeId];
-    }
+void NodeStore::syncGPUBuffer(const BatchPointer& batch) {
+    updateTransforms();
 
-    return nodeId;
-}
-
-NodeIDs NodeStore::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& transforms, const NodeIDs& parentsOffsets) {
-    auto nodeIds = _tree.allocateBranch(rootParent, transforms, parentsOffsets);
-
-    if (nodeIds.back() < _num_buffers_elements) {
-        for (auto n: nodeIds) {
-            reinterpret_cast<TransformTree::Node*>(_nodes_buffer->_cpuMappedAddress)[n] = _tree._treeNodes[n];
-            reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress)[2 * n] = _tree._nodeTransforms[n];
-        }
-    }
-
-    return nodeIds;
-}
-
-void NodeStore::deleteNode(NodeID nodeId) {
-    _tree.free(nodeId);
-}
-
-void NodeStore::attachNode(NodeID child, NodeID parent) {
-    _tree.attachNode(child, parent);
-}
-
-void NodeStore::detachNode(NodeID child) {
-    _tree.detachNode(child);
+    _nodeInfos.sync_gpu_from_cpu(batch);
+    _nodeTransforms.sync_gpu_from_cpu(batch);
 }
 
 
-int32_t NodeStore::reference(NodeID nodeId) {
-    return _tree.reference(nodeId);
-}
-int32_t NodeStore::release(NodeID nodeId) {
-    return _tree.release(nodeId);
-}
-
-void NodeStore::editTransform(NodeID nodeId, std::function<bool(core::mat4x3& rts)> editor) {
-    _tree.editTransform(nodeId, editor);
-}
-
-void NodeStore::updateTransforms() {
-    auto touched_ids = _tree.updateTransforms();
-    if (!touched_ids.empty()) {
-        auto gpu_transforms = reinterpret_cast<core::mat4x3*>(_transforms_buffer->_cpuMappedAddress);
-    
-        for (const auto& id : touched_ids) {
-            gpu_transforms[2 * id] = _tree._nodeTransforms[id];
-            gpu_transforms[2 * id + 1] = _tree._worldTransforms[id];
-        }
-    }
-}
 
 const Node Node::null {};
 

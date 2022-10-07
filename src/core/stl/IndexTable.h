@@ -60,25 +60,30 @@ namespace core {
         }
 
         auto allocate() {
-            struct result { Index index; bool recycle; };
+            struct Result { Index index; bool recycle; };
             Index new_index;
             if (_invalid_elements.size()) {
                 new_index = _invalid_elements.back();
                 _invalid_elements.pop_back();
-                return result{ new_index, true};
+                return Result{ new_index, true};
             } else {
                 new_index = _num_allocated_elements;
                 _num_allocated_elements++;
-                return result{ new_index, false};
+                return Result{ new_index, false};
             }
         }
 
-        Indices allocate(Index num_elements) {
+        auto allocate(Index num_elements) {
+            struct Result { Indices indices; Index numRecycled; };
             Indices allocated(num_elements, INVALID_INDEX);
+            Index num_recycled = _invalid_elements.size();
+
             for (auto& index : allocated) {
                 index = allocate().index;
             }
-            return std::move(allocated);
+            num_recycled -= _invalid_elements.size();
+
+            return Result{ std::move(allocated), num_recycled };
         }
 
         Index allocateContiguous(Index num_elements) {

@@ -129,7 +129,7 @@ namespace graphics {
     core::aabox3 ItemStore::fetchWorldBound(ItemID id) const {
         auto [info, l] = _itemInfos.read(id);
         if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawableID != INVALID_DRAWABLE_ID)) {
-            return core::aabox_transformFrom(_scene->_nodes._tree._worldTransforms[info->_nodeID], _scene->_drawables.getBound(info->_drawableID));
+            return core::aabox_transformFrom(_scene->_nodes.getWorldTransform(info->_nodeID), _scene->_drawables.getBound(info->_drawableID));
         } else {
             return core::aabox3();
         }

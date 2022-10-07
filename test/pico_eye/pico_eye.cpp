@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->numElements());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes.getNodeInfoGPUBuffer()->numElements());
     state.tools.tree_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
     state.tools.tree_node.setVisible(false);
 

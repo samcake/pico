@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes._nodes_buffer->numElements());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes.getNodeInfoGPUBuffer()->numElements());
     auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
     gzitem_node.setVisible(false);
 

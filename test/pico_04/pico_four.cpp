@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
 
     std::vector<graphics::NodeID> prim_nodes;
     {
-        int width = 100;
+        int width = 300;
         float space = 4.0f;
         float pos_offset = width / 2 * space;
         for (int i = 0; i < width * width; ++i) {
