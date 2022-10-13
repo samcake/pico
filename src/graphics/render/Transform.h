@@ -50,33 +50,37 @@ namespace graphics {
         void reserve(const DevicePointer& device, uint32_t  numElements);
 
         static const NodeID ROOT_ID = 0;
+        static const uint16_t INVALID_REFCOUNT_INFO = 0xFFFF;
 
         struct NodeInfo {
             NodeID parent{ INVALID_NODE_ID };
             NodeID sybling{ INVALID_NODE_ID };
             NodeID children_head{ INVALID_NODE_ID };
             uint16_t num_children{ 0 };
-            uint16_t refCount{ 0 };
+            uint16_t refCount{ INVALID_REFCOUNT_INFO };
 
             NodeInfo(NodeID p): parent(p) {}
             NodeInfo() {}
+
+            inline bool isValid() const { return refCount != INVALID_REFCOUNT_INFO; }
         };
+        using NodeInfoStructBuffer = StructuredBuffer<NodeInfo>;
+        using NodeInfos = NodeInfoStructBuffer::Array;
 
         struct NodeTransform {
             Transform local;
             Transform world;
         };
-
-        using NodeInfoStructBuffer = StructuredBuffer<NodeInfo>;
         using NodeTransformStructBuffer = StructuredBuffer<NodeTransform>;
+        using NodeTransforms = NodeTransformStructBuffer::Array;
 
     private:
         core::IndexTable _indexTable;
         mutable NodeInfoStructBuffer _nodeInfos;
         mutable NodeTransformStructBuffer _nodeTransforms;
 
-        mutable std::vector<NodeID> _touchedInfos;
-        mutable std::vector<NodeID> _touchedTransforms;
+        mutable NodeIDs _touchedInfos;
+        mutable NodeIDs _touchedTransforms;
 
         using ReadInfoLock = std::pair< const NodeInfo*, std::lock_guard<std::mutex>>;
         using WriteInfoLock = std::pair< NodeInfo*, std::lock_guard<std::mutex>>;
@@ -85,7 +89,7 @@ namespace graphics {
             return  _nodeInfos.read(id);
         }
         inline WriteInfoLock writeInfo(NodeID id) const {
-            _touchedInfos.emplace_back(id); // take not of the write for this element
+            _touchedInfos.emplace_back(id); // take note of the write for this element
             return  _nodeInfos.write(id);
         }
 
@@ -96,57 +100,108 @@ namespace graphics {
             return  _nodeTransforms.read(id);
         }
         inline WriteTransformLock writeTransform(NodeID id) const {
-            _touchedTransforms.emplace_back(id); // take not of the write for this element
+            _touchedTransforms.emplace_back(id); // take note of the write for this element
             return  _nodeTransforms.write(id);
         }
 
+        struct Handle {
+            NodeStore* _store = nullptr;
+            NodeID     _id = INVALID_NODE_ID;
+
+            inline bool isValidHandle() const {
+                return (_store != nullptr) && (_id != INVALID_NODE_ID);
+            }
+        };
+
     public:
+
+
+        // Node struct is  just an interface on a particular NodeInfo stored in the Node Store at NodeID.
+        // Node can be copied by value
+        struct Node {
+        public:
+            static Node null;
+
+            Node() {} // null item
+            Node(const Node& src) = default;
+            Node& Node::operator= (const Node&) = default;
+
+            inline bool isValid() const {
+                if (_self.isValidHandle())
+                    return true; //  store()->isValid(id());
+                return false;
+            }
+            inline NodeID   id() const { return  _self._id; }
+            inline const NodeStore* store() const { return _self._store; }
+            inline NodeStore* store() { return _self._store; }
+
+            inline NodeInfo info() const { return store()->getNodeInfo(id()); }
+            inline NodeTransform transform() const { return store()->getNodeTransform(id()); }
+
+
+        private:
+            Handle _self;
+
+            friend NodeStore;
+            Node(Handle& h) : _self(h) {}
+        };
+        inline Node makeNode(NodeID id) { return { Handle{ this, id } }; }
 
         NodeID createNode(const Transform& local, NodeID parent);
         NodeIDs createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets);
-
         void free(NodeID nodeId);
-
-        void attachNode(NodeID child, NodeID parent);
-        void detachNode(NodeID child);
 
         int32_t reference(NodeID nodeId);
         int32_t release(NodeID nodeId);
 
-        void editTransform(NodeID nodeId, std::function<bool(Transform& rts)> editor);
+        inline auto numValidNodes() const { return _indexTable.getNumValidElements(); }
+        inline auto numAllocatedNodes() const { return _indexTable.getNumAllocatedElements(); }
+
+        inline Node getNode(NodeID id) const { return (isValid(id) ? Node(Handle{ const_cast<NodeStore*>(this), id }) : Node::null); }
+        inline Node getUnsafeNode(NodeID id) const { return Node(Handle{ const_cast<NodeStore*>(this), id }); } // We do not check that the nodeID is valid here, so could get a fake valid node
+
+        NodeIDs fetchValidNodes() const;
+        NodeInfos fetchNodeInfos() const; // Collect all the NodeInfos in an array, there could be INVALID itemInfos
+        NodeTransforms fetchNodeTransforms() const; // Collect all the NodeTransforms in an array, there could be INVALID itemInfos
+
+        // Connect the nodes
+        void attachNode(NodeID child, NodeID parent);
+        void detachNode(NodeID child);
+
+        // Node Interface
+        inline bool isValid(NodeID id) const { return getNodeInfo(id).isValid(); }
+     
+        inline NodeInfo getNodeInfo(NodeID id) const {
+            auto [i, l] = readInfo(id);
+            return *i;
+        }
+
+        inline NodeTransform getNodeTransform(NodeID id) const {
+            auto [t, l] = readTransform(id);
+            return *t;
+        }
+
+        inline void editNodeTransform(NodeID id, std::function<bool(Transform& rts)> editor) {
+            auto [t, l] = writeTransform(id);
+            if (!editor(t->local)) { _touchedTransforms.pop_back(); }
+        }
+
+        // Update and Manage the transform tree once per loop
         NodeIDs updateTransforms();
         void updateChildrenTransforms(NodeID parent, NodeIDs& touched);
 
-        Transform getWorldTransform(NodeID nodeId) const { return _nodeTransforms.unsafe_data(nodeId)->world; }
     
+    public:
+        // gpu api
         inline BufferPointer getNodeInfoGPUBuffer() const { return _nodeInfos.gpu_buffer(); }
         inline BufferPointer getNodeTransformGPUBuffer() const { return _nodeTransforms.gpu_buffer(); }
-
         void syncGPUBuffer(const BatchPointer& batch);  
     };
 
-
-    class VISUALIZATION_API Node {
-        friend class Scene;
-        Node(const NodeStore* transformTree, NodeID index) : _transformTree(transformTree), _index(index) { }
-
-        mutable const NodeStore* _transformTree { nullptr };
-        mutable NodeID _index { INVALID_NODE_ID };
-    public:
-        static const Node null;
-        Node() {}
-
-        Node(const Node& node) : _transformTree(node._transformTree), _index(node._index) {}
-        Node& operator= (const Node& node) {
-            _transformTree = node._transformTree;
-            _index = node._index;
-            return (*this);
-        }
-
-        const NodeStore* tree() const { return _transformTree; }
-        NodeID id() const { return _index; }
-    };
-
-
+    using Node = NodeStore::Node;
+    using NodeInfo = NodeStore::NodeInfo;
+    using NodeInfos = NodeStore::NodeInfos;
+    using NodeTransform = NodeStore::NodeTransform;
+    using NodeTransforms = NodeStore::NodeTransforms;
 }
 

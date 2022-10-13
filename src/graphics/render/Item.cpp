@@ -43,20 +43,17 @@ namespace graphics {
         _itemInfos.reserve(device, capacity);
     }
 
-    Item ItemStore::allocate(NodeID node, DrawableID drawable, ItemID group) {
+    ItemID ItemStore::allocate(NodeID node, DrawableID drawable, ItemID group) {
         auto [new_id, recycle] = _indexTable.allocate();
 
         ItemInfo info = { node, drawable, group, IS_VISIBLE };
         _itemInfos.allocate_element(new_id, &info);
         _touchedElements.push_back(new_id);
 
-        return Item(Handle{ this, new_id });
+        return new_id;
     }
 
-    Item ItemStore::createItem(Node node, Drawable drawable, ItemID group) {
-        return allocate(node.id(), drawable.id(), group);
-    }
-    Item ItemStore::createItem(NodeID node, DrawableID drawable, ItemID group) {
+    ItemID ItemStore::createItem(NodeID node, DrawableID drawable, ItemID group) {
         return allocate(node, drawable, group);
     }
 
@@ -129,7 +126,7 @@ namespace graphics {
     core::aabox3 ItemStore::fetchWorldBound(ItemID id) const {
         auto [info, l] = _itemInfos.read(id);
         if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawableID != INVALID_DRAWABLE_ID)) {
-            return core::aabox_transformFrom(_scene->_nodes.getWorldTransform(info->_nodeID), _scene->_drawables.getBound(info->_drawableID));
+            return core::aabox_transformFrom(_scene->_nodes.getNodeTransform(info->_nodeID).world, _scene->_drawables.getBound(info->_drawableID));
         } else {
             return core::aabox3();
         }

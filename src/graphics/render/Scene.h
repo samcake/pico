@@ -77,7 +77,7 @@ namespace graphics {
 
         // Nodes
         NodeStore _nodes;
-        Node getNode(NodeID nodeId) const;
+        inline Node getNode(NodeID id) const { return _nodes.getNode(id); } // Node is either null or valid
 
         Node createNode(const core::mat4x3& rts, NodeID parent);
         NodeIDs createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentsOffsets);
@@ -102,7 +102,7 @@ namespace graphics {
             return _cameras.createCamera();
         }
 
-        // Bound;
+        // Bounds
         void updateBounds();
         const core::Bounds& getBounds() const { return _bounds; }
 

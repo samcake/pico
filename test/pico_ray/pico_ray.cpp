@@ -65,7 +65,7 @@ struct AppState {
 
     graphics::ScenePointer scene;
     struct {
-        graphics::Node rootNode;
+        graphics::NodeID rootNodeID;
         graphics::ItemID modelItemID;
     } models;
 
@@ -83,7 +83,7 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::NodeID nodeRoot) {
 
     if (!state._postSceneDrawableFactory) {
         state._postSceneDrawableFactory = std::make_shared<graphics::PostSceneDrawableFactory>();
@@ -102,7 +102,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
     graphics::ItemIDs modelItemIDs;
 
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+    modelItemIDs = state._modelDrawableFactory->createModelParts(nodeRoot, scene, *modelDrawablePtr);
 
     // let's offset the root to not overlap on previous model
     if (modelItemIDs.size()) {
@@ -120,7 +120,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
         modelPos = modelPos - boundCenter;
 
-        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+        scene->_nodes.editNodeTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
             core::translation(rts, modelPos);
             return true;
             });
@@ -131,7 +131,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
     state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
     auto ppDrawable = scene->createDrawable(*postProcessDrawablePtr);
-    auto pcitem = scene->createItem(root, ppDrawable);
+    auto pcitem = scene->createItem(nodeRoot, ppDrawable.id());
 
 
     return modelItemIDs;
@@ -250,9 +250,9 @@ int main(int argc, char *argv[])
     auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
 
     // Some nodes to layout the scene and animate objects
-    state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
+    state.models.rootNodeID = state.scene->createNode(core::mat4x3(), -1).id();
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
     if (modelItemIDs.size()) {
          state.models.modelItemID = modelItemIDs[0];
     }
@@ -421,7 +421,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNodeID);
             }
         }
         return;

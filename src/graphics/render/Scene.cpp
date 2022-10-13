@@ -58,29 +58,30 @@ Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
 
 Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
 
-    Item newItem = _items.createItem(node, drawable);
+    auto newItem = _items.createItem(node, drawable);
     
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _userIDToItemIDs[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem;
     }
 
-    return newItem;
+    return _items.makeItem(newItem);
 }
 
 Item Scene::createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID) {
-    Item newItem = _items.createItem(node, drawable, group);
+    auto newItem = _items.createItem(node, drawable, group);
 
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _userIDToItemIDs[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem;
     }
 
-    return newItem;
+    return _items.makeItem(newItem);
+
 }
 
 Item Scene::createSubItem(ItemID group, Node node, Drawable drawable, UserID userID) {
@@ -150,12 +151,9 @@ Item Scene::getItemFromUserID(UserID id) const {
 }
 
 // Nodes
-Node Scene::getNode(NodeID nodeId) const {
-    return Node(&_nodes, nodeId);
-}
 
 Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-    return Node(&_nodes, _nodes.createNode(rts, parent));
+    return _nodes.makeNode(_nodes.createNode(rts, parent));
 }
 
 NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
@@ -183,13 +181,14 @@ Drawable Scene::getDrawable(DrawableID drawableId) const {
 
 void Scene::updateBounds() {
     auto itemInfos = _items.fetchItemInfos();
+    auto nodeTransforms = _nodes.fetchNodeTransforms();
 
     core::aabox3 b;
     const auto& bounds = _drawables._bounds;
     int i = 0;
     for (const auto& info : itemInfos) {
         if (info._nodeID != INVALID_NODE_ID && info._drawableID != INVALID_DRAWABLE_ID) {
-            auto ibw = core::aabox_transformFrom(_nodes.getWorldTransform(info._nodeID), bounds[info._drawableID]._local_box);
+            auto ibw = core::aabox_transformFrom(nodeTransforms[info._nodeID].world, bounds[info._drawableID]._local_box);
             if (i == 0) {
                 b = ibw;
             } else {
