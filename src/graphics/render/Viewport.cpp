@@ -69,7 +69,7 @@ Viewport::Viewport(const ViewportInit& init) :
     DescriptorObjects descriptorObjects = {
         { graphics::DescriptorType::UNIFORM_BUFFER, _scene->_sky->getGPUBuffer() },
         { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_cameras.getGPUBuffer() },
-        { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_nodes._transforms_buffer },
+        { graphics::DescriptorType::RESOURCE_BUFFER, _scene->_nodes.getNodeTransformGPUBuffer()},
         { graphics::DescriptorType::RESOURCE_BUFFER, _batchTimer->getBuffer() },
     };
     _device->updateDescriptorSet(_viewPassDescriptorSet, descriptorObjects);

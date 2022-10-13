@@ -733,16 +733,16 @@ namespace graphics
                     const graphics::ScenePointer& scene,
                     graphics::ModelDrawable& model) {
    
-        auto rootNodeID = scene->createNode(core::mat4x3(), root).id();
+        auto rootNode = scene->createNode(core::mat4x3(), root);
 
         // Allocating the new instances of scene::nodes, one per local node
-        auto modelNodes = scene->createNodeBranch(rootNodeID, model._localNodeTransforms, model._localNodeParents);
+        auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
 
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
         
         // first item is the model drawable itself 
-        auto rootItemId = scene->createItem(rootNodeID, model._drawableID).id();
+        auto rootItemId = scene->createItem(rootNode.id(), model._drawableID).id();
         items.emplace_back(rootItemId);
 
         for (const auto& li : model._localItems) {

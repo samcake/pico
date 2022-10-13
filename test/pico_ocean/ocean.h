@@ -340,7 +340,7 @@ void updateHeights(float t) {
  //   for (auto prim_node : prim_nodes) {
 
    
-        lscene->_nodes.editTransform(prim_nodes[i], [&](core::mat4x3& rts) -> bool {
+        lscene->_nodes.editNodeTransform(prim_nodes[i], [&](core::mat4x3& rts) -> bool {
             
             auto h = locean->GetHeight(rts._columns[3].x, rts._columns[3].z);
            // auto h = locean->_heights[i]; //GetHeight(rts._columns[3].x, rts._columns[3].z);

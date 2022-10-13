@@ -79,10 +79,18 @@ namespace graphics {
 
             inline bool isValid() const { return _flags != 0xFFFFFFFF; }
         };
-        using ItemInfos = std::vector<ItemInfo>;
+        using ItemStructBuffer = StructuredBuffer<ItemInfo>;
+        using ItemInfos = ItemStructBuffer::Array;
 
     private:
-        using ItemStructBuffer = StructuredBuffer<ItemInfo>;
+        ItemID allocate(NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
+
+        core::IndexTable _indexTable;
+        mutable ItemStructBuffer _itemInfos;
+
+        mutable ItemIDs _touchedElements;
+
+        const Scene* _scene = nullptr;
 
         using ReadLock = std::pair< const ItemInfo*, std::lock_guard<std::mutex>>;
         using WriteLock = std::pair< ItemInfo*, std::lock_guard<std::mutex>>;
@@ -98,13 +106,6 @@ namespace graphics {
         struct Handle {
             ItemStore* _store = nullptr;
             ItemID     _id = INVALID_ITEM_ID;
-
-            inline ReadLock read() const {
-                return  _store->_itemInfos.read(_id);
-            }
-            inline WriteLock write() const {
-                return  _store->_itemInfos.write(_id);
-            }
 
             inline bool isValidHandle() const {
                 return (_store != nullptr) && (_id != INVALID_ITEM_ID);
@@ -132,6 +133,8 @@ namespace graphics {
             inline const ItemStore* store() const { return _self._store; }
             inline ItemStore* store() { return _self._store; }
 
+            inline ItemInfo info() const { return store()->getItemInfo(id()); }
+        
             inline void setVisible(bool visible) { store()->setVisible(id(), visible); }
             inline bool isVisible() const { return store()->isVisible(id()); }
             inline bool toggleVisible() { return store()->toggleVisible(id()); }
@@ -144,7 +147,6 @@ namespace graphics {
             inline DrawableID drawableID() const { return store()->getDrawableID(id()); }
             inline ItemID groupID() const { return store()->getGroupID(id()); }
 
-            inline ItemInfo info() const { return store()->getItemInfo(id()); }
 
 
             inline core::aabox3 fetchWorldBound() const { return store()->fetchWorldBound(id()); }
@@ -157,12 +159,9 @@ namespace graphics {
             friend ItemStore;
             Item(Handle& h) : _self(h) {}
         };
+        inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
 
-        using Items = std::vector<Item>;
-        using ItemIDMap = std::unordered_map<ItemID, Items>;
-
-        Item createItem(Node node, Drawable drawable, ItemID group = INVALID_ITEM_ID);
-        Item createItem(NodeID node, DrawableID drawable, ItemID group = INVALID_ITEM_ID);
+        ItemID createItem(NodeID node, DrawableID drawable, ItemID group = INVALID_ITEM_ID);
         void free(ItemID id);
         void freeAll();
 
@@ -172,24 +171,23 @@ namespace graphics {
         inline Item getItem(ItemID id) const { return (isValid(id) ? Item(Handle{ const_cast<ItemStore*>(this), id }) : Item::null); }
         inline Item getUnsafeItem(ItemID id) const { return Item(Handle{ const_cast<ItemStore*>(this), id }); } // We do not check that the itemID is valid here, so could get a fake valid item
         Item getValidItemAt(ItemID id) const;
-        ItemIDs fetchValidItems() const;
 
+        ItemIDs fetchValidItems() const;
         ItemInfos fetchItemInfos() const; // Collect all the ItemInfos in an array, there could be INVALID itemInfos
 
         // Item interface replicated
-        inline bool isValid(ItemID id) const {
+        inline bool isValid(ItemID id) const { return getItemInfo(id).isValid(); }
+  
+        inline ItemInfo getItemInfo(ItemID id) const {
             auto [i, l] = read(id);
-            return i->isValid();
+            return *i;
         }
 
         inline void setVisible(ItemID id, bool visible) {
             auto [i, l] = write(id);
             i->setVisible(visible);
         }
-        inline bool isVisible(ItemID id) const {
-            auto [i, l] = read(id);
-            return i->isVisible();
-        }
+        inline bool isVisible(ItemID id) const { return getItemInfo(id).isVisible(); }
         inline bool toggleVisible(ItemID id) {
             auto [i, l] = write(id);
             return i->toggleVisible();
@@ -199,58 +197,27 @@ namespace graphics {
             auto [i, l] = write(id);
             i->setCamera(isCamera);
         }
-        inline bool isCamera(ItemID id) const {
-            auto [i, l] = read(id);
-            return i->isCamera();
-        }
+        inline bool isCamera(ItemID id) const { return getItemInfo(id).isCamera(); }
         inline bool toggleCamera(ItemID id) {
             auto [i, l] = write(id);
             return i->toggleCamera();
         }
 
-        inline NodeID getNodeID(ItemID id) const {
-            auto [i, l] = read(id);
-            return i->_nodeID;
-        }
-
-        inline DrawableID getDrawableID(ItemID id) const {
-            auto [i, l] = read(id);
-            return i->_drawableID;
-        }
-
-        inline ItemID getGroupID(ItemID id) const {
-            auto [i, l] = read(id);
-            return i->_groupID;
-        }
-
-        inline ItemInfo getItemInfo(ItemID id) const {
-            auto [i, l] = read(id);
-            return *i;
-        }
+        inline NodeID getNodeID(ItemID id) const { return getItemInfo(id)._nodeID; }
+        inline DrawableID getDrawableID(ItemID id) const { return getItemInfo(id)._drawableID; }
+        inline ItemID getGroupID(ItemID id) const { return getItemInfo(id)._groupID; }
 
         core::aabox3 fetchWorldBound(ItemID id) const;
 
         ItemIDs fetchItemGroup(ItemID ownerID) const;
 
-    private:
-        Item allocate(NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
-
-        core::IndexTable _indexTable;
-        mutable ItemStructBuffer _itemInfos;
-
-        Items _items;
-
-        mutable std::vector<ItemID> _touchedElements;
-
-        const Scene* _scene = nullptr;
     public:
+        // gpu api
         inline BufferPointer getGPUBuffer() const { return _itemInfos.gpu_buffer(); }
         void syncGPUBuffer(const BatchPointer& batch);
     };
 
     using Item = ItemStore::Item;
-    using Items = ItemStore::Items;
-    using ItemIDMap = ItemStore::ItemIDMap;
     using ItemFlags = ItemStore::ItemFlags;
     using ItemInfo = ItemStore::ItemInfo;
     using ItemInfos = ItemStore::ItemInfos;

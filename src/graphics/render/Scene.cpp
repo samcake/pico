@@ -34,7 +34,7 @@ namespace graphics {
 Scene::Scene(const SceneInit& init) {
 
     _items.reserve(this, init.device, init.items_capacity);
-    _nodes.resizeBuffers(init.device, init.nodes_capacity);
+    _nodes.reserve(init.device, init.nodes_capacity);
     _drawables.resizeBuffers(init.device, init.drawables_capacity);
     _cameras.reserve(init.device, init.cameras_capacity);
 
@@ -58,29 +58,30 @@ Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
 
 Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
 
-    Item newItem = _items.createItem(node, drawable);
+    auto newItem = _items.createItem(node, drawable);
     
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _userIDToItemIDs[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem;
     }
 
-    return newItem;
+    return _items.makeItem(newItem);
 }
 
 Item Scene::createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID) {
-    Item newItem = _items.createItem(node, drawable, group);
+    auto newItem = _items.createItem(node, drawable, group);
 
     _nodes.reference(node);
     _drawables.reference(drawable);
 
     if (userID != INVALID_ITEM_ID) {
-        _userIDToItemIDs[userID] = newItem.id();
+        _userIDToItemIDs[userID] = newItem;
     }
 
-    return newItem;
+    return _items.makeItem(newItem);
+
 }
 
 Item Scene::createSubItem(ItemID group, Node node, Drawable drawable, UserID userID) {
@@ -108,7 +109,7 @@ void Scene::deleteItem(ItemID id) {
     auto drawableID = itemInfo._drawableID;
 
     if (_nodes.release(nodeID) <= 0) {
-        _nodes.deleteNode(nodeID);
+        _nodes.free(nodeID);
     }
     if (_drawables.release(drawableID) <= 0) {
         _drawables.free(drawableID);
@@ -150,12 +151,9 @@ Item Scene::getItemFromUserID(UserID id) const {
 }
 
 // Nodes
-Node Scene::getNode(NodeID nodeId) const {
-    return Node(&_nodes, nodeId);
-}
 
 Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-    return Node(&_nodes, _nodes.createNode(rts, parent));
+    return _nodes.makeNode(_nodes.createNode(rts, parent));
 }
 
 NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
@@ -164,7 +162,7 @@ NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x
 
 
 void Scene::deleteNode(NodeID nodeId) {
-    _nodes.deleteNode(nodeId);
+    _nodes.free(nodeId);
 }
 
 void Scene::attachNode(NodeID child, NodeID parent) {
@@ -183,14 +181,14 @@ Drawable Scene::getDrawable(DrawableID drawableId) const {
 
 void Scene::updateBounds() {
     auto itemInfos = _items.fetchItemInfos();
+    auto nodeTransforms = _nodes.fetchNodeTransforms();
 
     core::aabox3 b;
-    const auto& transforms = _nodes._tree._worldTransforms;
     const auto& bounds = _drawables._bounds;
     int i = 0;
     for (const auto& info : itemInfos) {
         if (info._nodeID != INVALID_NODE_ID && info._drawableID != INVALID_DRAWABLE_ID) {
-            auto ibw = core::aabox_transformFrom(transforms[info._nodeID], bounds[info._drawableID]._local_box);
+            auto ibw = core::aabox_transformFrom(nodeTransforms[info._nodeID].world, bounds[info._drawableID]._local_box);
             if (i == 0) {
                 b = ibw;
             } else {
@@ -211,7 +209,7 @@ CameraPointer Scene::getCamera(CameraID camId) const {
 
 void syncSceneResourcesForFrame(const ScenePointer& scene, const BatchPointer& batch) {
     scene->_items.syncGPUBuffer(batch);
-    scene->_nodes.updateTransforms();
+    scene->_nodes.syncGPUBuffer(batch);
     scene->_cameras.syncGPUBuffer(batch);
 
     scene->_sky->updateGPUData(); // arggg

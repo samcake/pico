@@ -63,7 +63,7 @@ struct AppState {
 
     graphics::ScenePointer scene;
     struct {
-        graphics::Node rootNode;
+        graphics::NodeID rootNodeID;
         graphics::ItemID modelItemID;
     } models;
 
@@ -94,7 +94,7 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::NodeID nodeRoot) {
 
     if (!state._modelDrawableFactory) {
         state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
@@ -108,7 +108,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
 
 
-        modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+        modelItemIDs = state._modelDrawableFactory->createModelParts(nodeRoot, scene, *modelDrawablePtr);
 
         // let's offset the root to not overlap on previous model
         if (modelItemIDs.size()) {
@@ -126,7 +126,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
             modelPos = modelPos - boundCenter;
 
-            scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+            scene->_nodes.editNodeTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
                 core::translation(rts, modelPos);
                 return true;
                 });
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
     // a gizmo drawable to draw the transforms
     auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
     gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->numElements());
+    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes.getNodeInfoGPUBuffer()->numElements());
     state.tools.tree_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
     state.tools.tree_node.setVisible(false);
 
@@ -261,9 +261,9 @@ int main(int argc, char *argv[])
     state.tools.dashboard.setVisible(false);
 
     // Some nodes to layout the scene and animate objects
-    state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
+    state.models.rootNodeID = state.scene->createNode(core::mat4x3(), -1).id();
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
     if (modelItemIDs.size()) {
          state.models.modelItemID = modelItemIDs[0];
     }
@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNodeID);
             }
         }
         return;
