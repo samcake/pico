@@ -1,7 +1,7 @@
 #include "SceneTransform_inc.hlsl"
 
 cbuffer UniformBlock1 : register(b1) {
-    int _nodeID;
+    int _indexOffset;
     int _flags;
     int _spareA;
     int _spareB;
@@ -41,7 +41,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 
     ItemInfo _item = item_getInfo(itemid);
     Transform _model = node_getWorldTransform(_item.nodeID);
-    Box _box = drawable_getLocalBox(_item.drawableID);
+    Box _box = drawable_getLocalBox(_item.drawID);
 
     if ((_flags & SHOW_LOCAL_BOUND) && lid < (box_num_edges)) {
         //lid -= 0;

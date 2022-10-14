@@ -1,4 +1,4 @@
-// ModelDrawableInspector.h 
+// ModelDrawInspector.h 
 //
 // Sam Gateau - June 2021
 // 
@@ -26,8 +26,8 @@
 //
 #pragma once
 
-// helper class to model Drawable
-#include "ModelDrawable.h"
+// helper class to model Draw
+#include "ModelDraw.h"
 
 namespace graphics {
 
@@ -36,13 +36,13 @@ namespace graphics {
     using ModelUVSeam = uint32_t;
     using ModelUVSeamArray = std::vector<ModelUVSeam>;
     //  generate uvmap seams edge list
-    ModelUVSeamArray computeUVSeamsEdges(const ModelDrawable& model);
+    ModelUVSeamArray computeUVSeamsEdges(const ModelDraw& model);
 
 
-    class ModelDrawableInspector;
-    class ModelDrawableInspectorPart;
+    class ModelDrawInspector;
+    class ModelDrawInspectorPart;
 
-    struct VISUALIZATION_API ModelDrawableInspectorUniforms {
+    struct VISUALIZATION_API ModelDrawInspectorUniforms {
         int32_t numNodes{ 0 };
         int32_t numParts{ 0 };
         int32_t numTriangles{ 0 };
@@ -106,7 +106,7 @@ namespace graphics {
         void setFilterKernelTechnique(uint8_t ftk) {
             if (filterKernelTechnique != ftk) {
                 filterKernelTechnique = ftk;
-                if (filterKernelTechnique == graphics::ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE) {
+                if (filterKernelTechnique == graphics::ModelDrawInspectorUniforms::FKT_IMAGE_SPACE) {
                     kernelRadius = 5.f;
                     kernelRadiusMax = 10.0f;
                 }
@@ -158,36 +158,36 @@ namespace graphics {
                 ;
         }
     };
-    using ModelDrawableInspectorUniformsPointer = std::shared_ptr<ModelDrawableInspectorUniforms>;
+    using ModelDrawInspectorUniformsPointer = std::shared_ptr<ModelDrawInspectorUniforms>;
 
-    class VISUALIZATION_API ModelDrawableInspectorFactory {
+    class VISUALIZATION_API ModelDrawInspectorFactory {
     public:
-        ModelDrawableInspectorFactory();
-        ~ModelDrawableInspectorFactory();
+        ModelDrawInspectorFactory();
+        ~ModelDrawInspectorFactory();
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create ModelDrawable for a given Model document
-        graphics::ModelDrawableInspector* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDrawable* drawable);
+        // Create ModelDraw for a given Model document
+        graphics::ModelDrawInspector* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDraw* draw);
 
-        // Create Drawcall object drawing the ModelDrawable in the rendering context
+        // Create Drawcall object drawing the ModelDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
-            graphics::ModelDrawableInspector& model);
+            graphics::ModelDrawInspector& model);
 
         
-        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawableInspector& model);
+        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawInspector& model);
 
 
         // Read / write shared uniforms
-        const ModelDrawableInspectorUniforms& getUniforms() const { return (*_sharedUniforms); }
-        ModelDrawableInspectorUniforms& editUniforms() { return (*_sharedUniforms); }
-        ModelDrawableInspectorUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
+        const ModelDrawInspectorUniforms& getUniforms() const { return (*_sharedUniforms); }
+        ModelDrawInspectorUniforms& editUniforms() { return (*_sharedUniforms); }
+        ModelDrawInspectorUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
 
     protected:
-        ModelDrawableInspectorUniformsPointer _sharedUniforms;
+        ModelDrawInspectorUniformsPointer _sharedUniforms;
 
         graphics::PipelineStatePointer _pipeline_draw_mesh;
         graphics::PipelineStatePointer _pipeline_draw_edges;
@@ -206,26 +206,26 @@ namespace graphics {
         graphics::PipelineStatePointer _pipeline_compute_imageSpaceBlur;
         graphics::PipelineStatePointer _pipeline_compute_meshSpaceBlur;
     };
-    using ModelDrawableInspectorFactoryPointer = std::shared_ptr< ModelDrawableInspectorFactory>;
+    using ModelDrawInspectorFactoryPointer = std::shared_ptr< ModelDrawInspectorFactory>;
 
 
-    class VISUALIZATION_API ModelDrawableInspector : public ModelDrawable {
+    class VISUALIZATION_API ModelDrawInspector : public ModelDraw {
     public:
 
-        void swapUniforms(const ModelDrawableInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const ModelDrawableInspectorUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const ModelDrawInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const ModelDrawInspectorUniformsPointer& getUniforms() const { return _uniforms; }
         
         // PRE pass DrawbleID
-        DrawableID _pre_pass_ID;
+        DrawID _pre_pass_ID;
 
         // POST pass DrawbleID
-        DrawableID _post_pass_ID;
+        DrawID _post_pass_ID;
 
 
     protected:
-        friend class ModelDrawableInspectorFactory;
+        friend class ModelDrawInspectorFactory;
 
-        const ModelDrawable* _inspectedModelDrawable;
+        const ModelDraw* _inspectedModelDraw;
 
         graphics::BufferPointer _buffer_edge;
 
@@ -237,18 +237,18 @@ namespace graphics {
 
         graphics::TexturePointer _texture_compute;
 
-        ModelDrawableInspectorUniformsPointer _uniforms;
+        ModelDrawInspectorUniformsPointer _uniforms;
     };
 
     
-    class VISUALIZATION_API ModelDrawableInspectorPart {
+    class VISUALIZATION_API ModelDrawInspectorPart {
     public:
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
         
         
     protected:
-        friend class ModelDrawableInspectorFactory;
+        friend class ModelDrawInspectorFactory;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };

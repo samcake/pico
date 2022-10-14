@@ -33,7 +33,7 @@
 
 #include "render/Transform.h"
 
-#include "render/Drawable.h"
+#include "render/Draw.h"
 
 #include "render/Renderer.h"
 
@@ -61,7 +61,7 @@ namespace graphics {
 
         struct ItemInfo {
             NodeID _nodeID{ INVALID_NODE_ID };
-            DrawableID _drawableID{ INVALID_DRAWABLE_ID };
+            DrawID _drawID{ INVALID_DRAW_ID };
             ItemID _groupID{ INVALID_ITEM_ID };
             uint32_t _flags{ IS_INVALID }; // by default the Info is invalid!
 
@@ -74,7 +74,7 @@ namespace graphics {
             inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
 
             inline bool hasNode() const { return _nodeID != INVALID_NODE_ID; }
-            inline bool isDrawable() const { return _drawableID != INVALID_DRAWABLE_ID; }
+            inline bool isDraw() const { return _drawID != INVALID_DRAW_ID; }
             inline bool isGrouped() const { return _groupID != INVALID_ITEM_ID; }
 
             inline bool isValid() const { return _flags != 0xFFFFFFFF; }
@@ -83,7 +83,7 @@ namespace graphics {
         using ItemInfos = ItemStructBuffer::Array;
 
     private:
-        ItemID allocate(NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
+        ItemID allocate(NodeID node, DrawID draw, ItemID owner = INVALID_ITEM_ID);
 
         core::IndexTable _indexTable;
         mutable ItemStructBuffer _itemInfos;
@@ -144,7 +144,7 @@ namespace graphics {
             inline bool toggleCamera() { return store()->toggleCamera(id()); }
 
             inline NodeID nodeID() const { return store()->getNodeID(id()); }
-            inline DrawableID drawableID() const { return store()->getDrawableID(id()); }
+            inline DrawID DrawID() const { return store()->getDrawID(id()); }
             inline ItemID groupID() const { return store()->getGroupID(id()); }
 
 
@@ -161,7 +161,7 @@ namespace graphics {
         };
         inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
 
-        ItemID createItem(NodeID node, DrawableID drawable, ItemID group = INVALID_ITEM_ID);
+        ItemID createItem(NodeID node, DrawID draw, ItemID group = INVALID_ITEM_ID);
         void free(ItemID id);
         void freeAll();
 
@@ -204,7 +204,7 @@ namespace graphics {
         }
 
         inline NodeID getNodeID(ItemID id) const { return getItemInfo(id)._nodeID; }
-        inline DrawableID getDrawableID(ItemID id) const { return getItemInfo(id)._drawableID; }
+        inline DrawID getDrawID(ItemID id) const { return getItemInfo(id)._drawID; }
         inline ItemID getGroupID(ItemID id) const { return getItemInfo(id)._groupID; }
 
         core::aabox3 fetchWorldBound(ItemID id) const;

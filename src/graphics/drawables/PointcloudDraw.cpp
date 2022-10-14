@@ -1,4 +1,4 @@
-// PointCloud_Drawable.cpp
+// PointCloud_Draw.cpp
 //
 // Sam Gateau - March 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "PointCloudDrawable.h"
+#include "PointCloudDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -55,11 +55,11 @@
 //using namespace view3d;
 namespace graphics
 {
-    PointCloudDrawableFactory::PointCloudDrawableFactory() :
-        _sharedUniforms( std::make_shared<PointCloudDrawableUniforms>()) {
+    PointCloudDrawFactory::PointCloudDrawFactory() :
+        _sharedUniforms( std::make_shared<PointCloudDrawUniforms>()) {
 
     }
-    PointCloudDrawableFactory::~PointCloudDrawableFactory() {
+    PointCloudDrawFactory::~PointCloudDrawFactory() {
 
     }
 
@@ -72,7 +72,7 @@ namespace graphics
         float showPerspectiveDepthPlane{ 0.0f };
     };
 
-    void PointCloudDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void PointCloudDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         graphics::RootDescriptorLayoutInit descriptorLayoutInit{
             {
@@ -130,7 +130,7 @@ namespace graphics
 
     }
 
-    graphics::PointCloudDrawable* PointCloudDrawableFactory::createPointCloudDrawable(const graphics::DevicePointer& device, const document::PointCloudPointer& pointCloud) {
+    graphics::PointCloudDraw* PointCloudDrawFactory::createPointCloudDraw(const graphics::DevicePointer& device, const document::PointCloudPointer& pointCloud) {
         if (!pointCloud) {
             return nullptr;
         }
@@ -169,21 +169,21 @@ namespace graphics
         auto resourceBuffer = device->createBuffer(resourceBufferInit);
         memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
 
-        auto pointCloudDrawable = new PointCloudDrawable();
-        pointCloudDrawable->_vertexBuffer = resourceBuffer;
-        pointCloudDrawable->_bounds = mesh->_bounds;
-        pointCloudDrawable->_transform = pointCloud->_transform;
+        auto pointCloudDraw = new PointCloudDraw();
+        pointCloudDraw->_vertexBuffer = resourceBuffer;
+        pointCloudDraw->_bounds = mesh->_bounds;
+        pointCloudDraw->_transform = pointCloud->_transform;
     
-        // Create the point cloud drawable using the shared uniforms of the factory
-        pointCloudDrawable->_uniforms = _sharedUniforms;
+        // Create the point cloud draw using the shared uniforms of the factory
+        pointCloudDraw->_uniforms = _sharedUniforms;
 
-        return pointCloudDrawable;
+        return pointCloudDraw;
     }
 
-    void PointCloudDrawableFactory::allocateDrawcallObject(
+    void PointCloudDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::PointCloudDrawable& pointcloud)
+        graphics::PointCloudDraw& pointcloud)
     {
         graphics::DescriptorSetInit descriptorSetInit{
             _pipeline->getRootDescriptorLayout(),
@@ -221,10 +221,10 @@ namespace graphics
     }
 
 
-    PointCloudDrawable::PointCloudDrawable() {
+    PointCloudDraw::PointCloudDraw() {
 
     }
-    PointCloudDrawable::~PointCloudDrawable() {
+    PointCloudDraw::~PointCloudDraw() {
 
     }
 

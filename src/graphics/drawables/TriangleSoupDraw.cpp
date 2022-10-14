@@ -1,4 +1,4 @@
-// TriangleSoupDrawable.cpp
+// TriangleSoupDraw.cpp
 //
 // Sam Gateau - June 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "TriangleSoupDrawable.h"
+#include "TriangleSoupDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -55,11 +55,11 @@
 namespace graphics
 {
 
-    TriangleSoupDrawableFactory::TriangleSoupDrawableFactory() :
-        _sharedUniforms(std::make_shared<TriangleSoupDrawableUniforms>()) {
+    TriangleSoupDrawFactory::TriangleSoupDrawFactory() :
+        _sharedUniforms(std::make_shared<TriangleSoupDrawUniforms>()) {
 
     }
-    TriangleSoupDrawableFactory::~TriangleSoupDrawableFactory() {
+    TriangleSoupDrawFactory::~TriangleSoupDrawFactory() {
 
     }
 
@@ -72,7 +72,7 @@ namespace graphics
         float triangleScale { 0.1f };
     };
 
-    void TriangleSoupDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void TriangleSoupDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootDescriptorLayoutInit{
@@ -120,7 +120,7 @@ namespace graphics
         _pipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::TriangleSoupDrawable* TriangleSoupDrawableFactory::createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
+    graphics::TriangleSoupDraw* TriangleSoupDrawFactory::createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
         if (!triangleSoup) {
             return nullptr;
         }
@@ -179,21 +179,21 @@ namespace graphics
         memcpy(ibresourceBuffer->_cpuMappedAddress, mesh->_indexStream._buffers[0]->_data.data(), ibresourceBufferInit.bufferSize);
 
 
-        auto triangleSoupDrawable = new TriangleSoupDrawable();
-        triangleSoupDrawable->_vertexBuffer = vbresourceBuffer;
-        triangleSoupDrawable->_indexBuffer = ibresourceBuffer;
-        triangleSoupDrawable->_bounds = mesh->_bounds;
+        auto triangleSoupDraw = new TriangleSoupDraw();
+        triangleSoupDraw->_vertexBuffer = vbresourceBuffer;
+        triangleSoupDraw->_indexBuffer = ibresourceBuffer;
+        triangleSoupDraw->_bounds = mesh->_bounds;
 
-        // Create the triangle soup drawable using the shared uniforms of the factory
-        triangleSoupDrawable->_uniforms = _sharedUniforms;
+        // Create the triangle soup draw using the shared uniforms of the factory
+        triangleSoupDraw->_uniforms = _sharedUniforms;
 
-        return triangleSoupDrawable;
+        return triangleSoupDraw;
     }
 
-    void TriangleSoupDrawableFactory::allocateDrawcallObject(
+    void TriangleSoupDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::TriangleSoupDrawable& triangleSoup)
+        graphics::TriangleSoupDraw& triangleSoup)
     {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
@@ -241,10 +241,10 @@ namespace graphics
     }
 
 
-    TriangleSoupDrawable::TriangleSoupDrawable() {
+    TriangleSoupDraw::TriangleSoupDraw() {
 
     }
-    TriangleSoupDrawable::~TriangleSoupDrawable() {
+    TriangleSoupDraw::~TriangleSoupDraw() {
 
     }
 

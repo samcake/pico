@@ -31,7 +31,7 @@
 #include "dllmain.h"
 #include <document/Model.h>
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 
 namespace graphics {
     class Device;
@@ -41,51 +41,51 @@ namespace graphics {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class ModelDrawable;
-    class ModelDrawablePart;
+    class ModelDraw;
+    class ModelDrawPart;
     
     static const uint32_t MODEL_INVALID_INDEX = document::model::INVALID_INDEX;
 
-    struct VISUALIZATION_API ModelDrawableUniforms {
+    struct VISUALIZATION_API ModelDrawUniforms {
         int numNodes{ 0 };
         bool lightShading{ false };
         uint8_t displayedColor{ 0 }; // 0 for albedo, 1 for normal ...
 
         uint32_t makeDrawMode() const;
     };
-    using ModelDrawableUniformsPointer = std::shared_ptr<ModelDrawableUniforms>;
+    using ModelDrawUniformsPointer = std::shared_ptr<ModelDrawUniforms>;
 
-    class VISUALIZATION_API ModelDrawableFactory {
+    class VISUALIZATION_API ModelDrawFactory {
     public:
-        ModelDrawableFactory();
-        ~ModelDrawableFactory();
+        ModelDrawFactory();
+        ~ModelDrawFactory();
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create ModelDrawable for a given Model document
-        graphics::ModelDrawable* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model);
+        // Create ModelDraw for a given Model document
+        graphics::ModelDraw* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model);
 
-        // Create Drawcall object drawing the ModelDrawable in the rendering context
+        // Create Drawcall object drawing the ModelDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
-            graphics::ModelDrawable& model);
+            graphics::ModelDraw& model);
 
         
-        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawable& model);
+        graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDraw& model);
 
 
         // Read / write shared uniforms
-        const ModelDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        ModelDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
-        ModelDrawableUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
+        const ModelDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        ModelDrawUniforms& editUniforms() { return (*_sharedUniforms); }
+        ModelDrawUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
 
     protected:
-        ModelDrawableUniformsPointer _sharedUniforms;
+        ModelDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
     };
-    using ModelDrawableFactoryPointer = std::shared_ptr< ModelDrawableFactory>;
+    using ModelDrawFactoryPointer = std::shared_ptr< ModelDrawFactory>;
 
     struct ModelItem {
         uint32_t node{ MODEL_INVALID_INDEX };
@@ -139,12 +139,12 @@ namespace graphics {
     using ModelEdge = core::ivec4; // 2 vertex indices and 2 adjacent triangle indices (in index buffer)
     using ModelFace = core::ivec4; // 3 edge indices of the face
 
-    class VISUALIZATION_API ModelDrawable {
+    class VISUALIZATION_API ModelDraw {
     public:
-        virtual ~ModelDrawable() {}
+        virtual ~ModelDraw() {}
 
-        void swapUniforms(const ModelDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const ModelDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const ModelDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const ModelDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
@@ -172,11 +172,11 @@ namespace graphics {
         std::vector<ModelFace> _faces;
 
         // Utility mesh connectivity information:
-        // For each part, we create one drawable
-        DrawableIDs _partDrawables;
+        // For each part, we create one draw
+        DrawIDs _partDraws;
 
-        // Self DrawableID
-        DrawableID _drawableID;
+        // Self DrawID
+        DrawID _drawID;
 
         // Local nodes hierarchy in the model, used to create concrete instances of scene nodes when
         // instanciating a model in the scene 
@@ -194,8 +194,8 @@ namespace graphics {
         graphics::GeometryPointer  _geometry;
 
     protected:
-        friend class ModelDrawableFactory;
-        friend class ModelDrawableInspectorFactory;
+        friend class ModelDrawFactory;
+        friend class ModelDrawInspectorFactory;
 
         graphics::BufferPointer _vertexBuffer; // core vertex attribs: pos
         graphics::BufferPointer _vertexAttribBuffer; // extra vertex attribs texcoord, ...
@@ -210,20 +210,20 @@ namespace graphics {
 
         graphics::DescriptorSetPointer  _descriptorSet;
 
-        ModelDrawableUniformsPointer _uniforms;
+        ModelDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };
 
     
-    class VISUALIZATION_API ModelDrawablePart {
+    class VISUALIZATION_API ModelDrawPart {
     public:
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
         
         
     protected:
-        friend class ModelDrawableFactory;
+        friend class ModelDrawFactory;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };

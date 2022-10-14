@@ -41,23 +41,23 @@
 #include <graphics/render/Renderer.h>
 #include <graphics/render/Camera.h>
 #include <graphics/render/Mesh.h>
-#include <graphics/render/Drawable.h>
+#include <graphics/render/Draw.h>
 #include <graphics/render/Scene.h>
 #include <graphics/render/Viewport.h>
 
 
 #include <document/PointCloud.h>
-#include <graphics/drawables/PointcloudDrawable.h>
+#include <graphics/drawables/PointcloudDraw.h>
 
 
 #include <document/TriangleSoup.h>
-#include <graphics/drawables/TriangleSoupDrawable.h>
+#include <graphics/drawables/TriangleSoupDraw.h>
 
-#include <graphics/drawables/GizmoDrawable.h>
+#include <graphics/drawables/GizmoDraw.h>
 
-#include <graphics/drawables/PrimitiveDrawable.h>
+#include <graphics/drawables/PrimitiveDraw.h>
 
-#include <graphics/drawables/DashboardDrawable.h>
+#include <graphics/drawables/DashboardDraw.h>
 
 
 #include <uix/Window.h>
@@ -71,7 +71,7 @@
 // render::Scene
 // render::Camera
 // render::Viewport
-// drawable::PointcloudDrawable
+// draw::PointcloudDraw
 // uix::CameraController
 //--------------------------------------------------------------------------------------
 
@@ -125,27 +125,23 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
 
-    // A point cloud drawable factory
-    auto pointCloudDrawableFactory = std::make_shared<graphics::PointCloudDrawableFactory>();
-    pointCloudDrawableFactory->allocateGPUShared(gpuDevice);
+    // A point cloud draw factory
+    auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>();
+    pointCloudDrawFactory->allocateGPUShared(gpuDevice);
 
-    // a drawable from the pointcloud
-    graphics::PointCloudDrawable* pointCloudDrawable(pointCloudDrawableFactory->createPointCloudDrawable(gpuDevice, pointCloud));
-    pointCloudDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *pointCloudDrawable);
-    auto pcdrawable = scene->createDrawable(*pointCloudDrawable);
+    // a draw from the pointcloud
+    graphics::PointCloudDraw* pointCloudDraw(pointCloudDrawFactory->createPointCloudDraw(gpuDevice, pointCloud));
+    pointCloudDrawFactory->allocateDrawcallObject(gpuDevice, scene, *pointCloudDraw);
+    auto pcdrawable = scene->createDraw(*pointCloudDraw);
 
-    // A triangel soup drawable factory
-    auto triangleSoupDrawableFactory = std::make_shared<graphics::TriangleSoupDrawableFactory>();
-    triangleSoupDrawableFactory->allocateGPUShared(gpuDevice);
+    // A triangel soup draw factory
+    auto triangleSoupDrawFactory = std::make_shared<graphics::TriangleSoupDrawFactory>();
+    triangleSoupDrawFactory->allocateGPUShared(gpuDevice);
 
-    // a drawable from the trianglesoup
-    graphics::TriangleSoupDrawable* triangleSoupDrawable(triangleSoupDrawableFactory->createTriangleSoupDrawable(gpuDevice, triangleSoup));
-    triangleSoupDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *triangleSoupDrawable);
-    auto tsdrawable = scene->createDrawable(*triangleSoupDrawable);
-
-    // A gizmo drawable factory
-    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
-    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
+    // a draw from the trianglesoup
+    graphics::TriangleSoupDraw* triangleSoupDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
+    triangleSoupDrawFactory->allocateDrawcallObject(gpuDevice, scene, *triangleSoupDraw);
+    auto tsdrawable = scene->createDraw(*triangleSoupDraw);
 
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
@@ -168,7 +164,7 @@ int main(int argc, char *argv[])
     //            +---- enode            
     //
 
-    // Some items unique instaces of the drawable and the specified nodes
+    // Some items unique instaces of the draw and the specified nodes
     auto pcitem = scene->createItem(node0, pcdrawable);
 
     auto tsitem = scene->createItem(enode, tsdrawable);
@@ -177,18 +173,15 @@ int main(int argc, char *argv[])
 
     auto tsitem2 = scene->createItem(dnode, tsdrawable);
 
-
-
-
     
-    // A Primitive drawable factory
-    auto primitiveDrawableFactory = std::make_shared<graphics::PrimitiveDrawableFactory>();
-    primitiveDrawableFactory->allocateGPUShared(gpuDevice);
+    // A Primitive draw factory
+    auto primitiveDrawFactory = std::make_shared<graphics::PrimitiveDrawFactory>();
+    primitiveDrawFactory->allocateGPUShared(gpuDevice);
 
     // a Primitive
-    auto p_drawable = scene->createDrawable(*primitiveDrawableFactory->createPrimitive(gpuDevice));
-    primitiveDrawableFactory->allocateDrawcallObject(gpuDevice, scene, p_drawable.as<graphics::PrimitiveDrawable>());
-    p_drawable.as<graphics::PrimitiveDrawable>()._size = {1.0, 2.0, 0.7 };
+    auto p_drawable = scene->createDraw(*primitiveDrawFactory->createPrimitive(gpuDevice));
+    primitiveDrawFactory->allocateDrawcallObject(gpuDevice, scene, p_drawable.as<graphics::PrimitiveDraw>());
+    p_drawable.as<graphics::PrimitiveDraw>()._size = {1.0, 2.0, 0.7 };
 
     std::vector<graphics::NodeID> prim_nodes;
     {
@@ -222,34 +215,11 @@ int main(int argc, char *argv[])
     //            +---- pnode (width * width - 1)  
 
 
-    // a gizmo drawable to draw the transforms
-    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(6);
+    // Create gizmos to draw the node transform and item tree
+    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);
 
-    auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
-
-
-    auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
-    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
-
-    // A dashboard factory and drawable to represent some debug data
-    auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
-    dashboardDrawableFactory->allocateGPUShared(gpuDevice);
-
-    // a dashboard
-    auto dashboard_drawable = scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
-    dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, scene, dashboard_drawable.as<graphics::DashboardDrawable>());
-
-    auto dashboard_item = scene->createItem(graphics::Node::null, dashboard_drawable);
-    dashboard_item.setVisible(false);
-
-    scene->_nodes.updateTransforms();
-
+    // Dashboard
+    auto dashboard_item = graphics::DashboardDraw_createSceneWidgets(scene, gpuDevice);
 
     scene->updateBounds();
     core::vec4 sceneSphere = scene->getBounds().toSphere();
@@ -407,26 +377,26 @@ int main(int argc, char *argv[])
 
         if (e.state & uix::MOUSE_MOVE) {
             if (e.state & uix::MOUSE_LBUTTON) {
-                if (pointCloudDrawableFactory) {
+                if (pointCloudDrawFactory) {
                     if (editPointCloudSize) {
-                        auto v = pointCloudDrawableFactory->getUniforms().getSpriteSize();
+                        auto v = pointCloudDrawFactory->getUniforms().getSpriteSize();
                         v -= e.delta.y * 0.01f;
-                        pointCloudDrawableFactory->editUniforms().setSpriteSize(v);
+                        pointCloudDrawFactory->editUniforms().setSpriteSize(v);
                     }
                     if (editPointCloudPerspectiveSpriteX) {
-                        auto v = pointCloudDrawableFactory->getUniforms().getPerspectiveSprite();
+                        auto v = pointCloudDrawFactory->getUniforms().getPerspectiveSprite();
                         v = e.pos.x / ((float)window->width());
-                        pointCloudDrawableFactory->editUniforms().setPerspectiveSprite(v);
+                        pointCloudDrawFactory->editUniforms().setPerspectiveSprite(v);
                     }
                     if (editPointCloudPerspectiveDepth) {
-                        auto v = pointCloudDrawableFactory->getUniforms().getPerspectiveDepth();
+                        auto v = pointCloudDrawFactory->getUniforms().getPerspectiveDepth();
                         v -= e.delta.y * 0.01f;
-                        pointCloudDrawableFactory->editUniforms().setPerspectiveDepth(v);
+                        pointCloudDrawFactory->editUniforms().setPerspectiveDepth(v);
                     }
                     if (editPointCloudShowPerspectiveDepth) {
-                        auto v = pointCloudDrawableFactory->getUniforms().getShowPerspectiveDepthPlane();
+                        auto v = pointCloudDrawFactory->getUniforms().getShowPerspectiveDepthPlane();
                         v = e.pos.x / ((float)window->width());
-                        pointCloudDrawableFactory->editUniforms().setShowPerspectiveDepthPlane(v);
+                        pointCloudDrawFactory->editUniforms().setShowPerspectiveDepthPlane(v);
                     }
                 }
             }

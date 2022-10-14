@@ -1,4 +1,4 @@
-// GizmoDrawable.h 
+// GizmoDraw.h 
 //
 // Sam Gateau - October 2020
 // 
@@ -31,7 +31,7 @@
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 
 namespace graphics {
     class Device;
@@ -47,8 +47,9 @@ namespace graphics {
     class ItemGizmo;
     class CameraGizmo;
 
-    struct VISUALIZATION_API GizmoDrawableUniforms {
-        int numNodes{ 0 };
+    struct VISUALIZATION_API GizmoDrawUniforms {
+        uint32_t  indexOffset{ 0 };
+        uint32_t  indexCount{ uint32_t(-1)}; // -1 means we are going to draw from offset until the end of the scene store
         bool showTransform{ true };
         bool showBranch{ true };
         bool showLocalBound{ true };
@@ -60,24 +61,24 @@ namespace graphics {
             SHOW_LOCAL_BOUND_BIT = 0x00000004,
             SHOW_WORLD_BOUND_BIT = 0x00000008,
         };
-        uint32_t buildFlags();
+        uint32_t buildFlags() const;
     };
-    using GizmoDrawableUniformsPointer = std::shared_ptr<GizmoDrawableUniforms>;
+    using GizmoDrawUniformsPointer = std::shared_ptr<GizmoDrawUniforms>;
 
-    class VISUALIZATION_API GizmoDrawableFactory {
-    public:
-        GizmoDrawableFactory();
-        ~GizmoDrawableFactory();
-
+    class VISUALIZATION_API GizmoDrawFactory {
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create GizmoDrawable for a given Gizmo document, building the gpu vertex buffer
+    public:
+        GizmoDrawFactory(const graphics::DevicePointer& device);
+        ~GizmoDrawFactory();
+
+        // Create GizmoDraw for a given Gizmo document, building the gpu vertex buffer
         graphics::NodeGizmo* createNodeGizmo(const graphics::DevicePointer& device);
         graphics::ItemGizmo* createItemGizmo(const graphics::DevicePointer& device);
         graphics::CameraGizmo* createCameraGizmo(const graphics::DevicePointer& device);
 
-        // Create Drawcall object drawing the GizmoDrawable in the rendering context
+        // Create Drawcall object drawing the GizmoDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
@@ -92,67 +93,65 @@ namespace graphics {
             graphics::CameraGizmo& gizmo);
 
         // Read / write shared uniforms
-        const GizmoDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        GizmoDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        const GizmoDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        GizmoDrawUniforms& editUniforms() { return (*_sharedUniforms); }
 
     protected:
-        GizmoDrawableUniformsPointer _sharedUniforms;
+        GizmoDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _nodePipeline;
         graphics::PipelineStatePointer _itemPipeline;
         graphics::PipelineStatePointer _cameraPipeline;
     };
-    using GizmoDrawableFactoryPointer = std::shared_ptr< GizmoDrawableFactory>;
+    using GizmoDrawFactoryPointer = std::shared_ptr< GizmoDrawFactory>;
 
 
     class VISUALIZATION_API NodeGizmo {
     public:
-        std::vector<NodeID> nodes; 
-
-        void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class GizmoDrawableFactory;
+        friend class GizmoDrawFactory;
 
-        GizmoDrawableUniformsPointer _uniforms;
+        GizmoDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };
 
     class VISUALIZATION_API ItemGizmo {
     public:
-        std::vector<ItemID> items;
 
-        void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class GizmoDrawableFactory;
+        friend class GizmoDrawFactory;
 
-        GizmoDrawableUniformsPointer _uniforms;
+        GizmoDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };
 
     class VISUALIZATION_API CameraGizmo {
     public:
-        std::vector<ItemID> items;
 
-        void swapUniforms(const GizmoDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const GizmoDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class GizmoDrawableFactory;
+        friend class GizmoDrawFactory;
 
-        GizmoDrawableUniformsPointer _uniforms;
+        GizmoDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };
+
+    std::tuple<graphics::Item, graphics::Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpudevice);
 
 } // !namespace graphics

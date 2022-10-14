@@ -1,4 +1,4 @@
-// ModelDrawable.cpp
+// ModelDraw.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "ModelDrawable.h"
+#include "ModelDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -64,15 +64,15 @@
 namespace graphics
 {
 
-    ModelDrawableFactory::ModelDrawableFactory() :
-        _sharedUniforms(std::make_shared<ModelDrawableUniforms>()) {
+    ModelDrawFactory::ModelDrawFactory() :
+        _sharedUniforms(std::make_shared<ModelDrawUniforms>()) {
 
     }
-    ModelDrawableFactory::~ModelDrawableFactory() {
+    ModelDrawFactory::~ModelDrawFactory() {
 
     }
 
-    uint32_t ModelDrawableUniforms::makeDrawMode() const {
+    uint32_t ModelDrawUniforms::makeDrawMode() const {
 
         return displayedColor | (lightShading ? 0x80 : 0);
     }
@@ -87,7 +87,7 @@ namespace graphics
         uint32_t drawMode{ 0 };
     };
 
-    void ModelDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void ModelDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit descriptorLayoutInit{
@@ -163,37 +163,37 @@ namespace graphics
             return  *reinterpret_cast<uint64_t*>((uint64_t*)&a);
     }
 
-    graphics::ModelDrawable* ModelDrawableFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model) {
+    graphics::ModelDraw* ModelDrawFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model) {
 
-        auto modelDrawable = new graphics::ModelDrawable();
+        auto modelDraw = new graphics::ModelDraw();
 
         if (model->_scenes.size())
-            modelDrawable->_localRootNodes = model->_scenes[0]._nodes;
+            modelDraw->_localRootNodes = model->_scenes[0]._nodes;
 
         // Define the local nodes used by the model with the original transforms and the parents
-        modelDrawable->_localNodeTransforms.reserve(model->_nodes.size());
-        modelDrawable->_localNodeParents.reserve(model->_nodes.size());
+        modelDraw->_localNodeTransforms.reserve(model->_nodes.size());
+        modelDraw->_localNodeParents.reserve(model->_nodes.size());
         for (const auto& n : model->_nodes) {
-            modelDrawable->_localNodeTransforms.emplace_back(n._transform);
-            modelDrawable->_localNodeParents.emplace_back(n._parent);
+            modelDraw->_localNodeTransforms.emplace_back(n._transform);
+            modelDraw->_localNodeParents.emplace_back(n._parent);
         }
 
         // Define the items
-        modelDrawable->_localItems.reserve(model->_items.size());
+        modelDraw->_localItems.reserve(model->_items.size());
         for (const auto& si : model->_items) {
-            modelDrawable->_localItems.emplace_back(ModelItem{si._node, si._mesh, si._camera });
+            modelDraw->_localItems.emplace_back(ModelItem{si._node, si._mesh, si._camera });
         }
 
         // Define the shapes
-        modelDrawable->_shapes.reserve(model->_meshes.size());
+        modelDraw->_shapes.reserve(model->_meshes.size());
         for (const auto& m : model->_meshes) {
-            modelDrawable->_shapes.emplace_back(ModelShape{ m._primitiveStart, m._primitiveCount });
+            modelDraw->_shapes.emplace_back(ModelShape{ m._primitiveStart, m._primitiveCount });
         }
 
         // Define the cameras
-        modelDrawable->_localCameras.reserve(model->_cameras.size());
+        modelDraw->_localCameras.reserve(model->_cameras.size());
         for (const auto& cam : model->_cameras) {
-            modelDrawable->_localCameras.emplace_back(ModelCamera{ cam._projection });
+            modelDraw->_localCameras.emplace_back(ModelCamera{ cam._projection });
         }
 
         // Build the geometry vb, ib and pb
@@ -496,8 +496,8 @@ namespace graphics
         auto ebuniformBuffer = device->createBuffer(edgeBufferInit);
         memcpy(ebuniformBuffer->_cpuMappedAddress, edge_buffer.data(), edgeBufferInit.bufferSize);
 
-        modelDrawable->_edges = std::move(edge_buffer);
-        modelDrawable->_edgeBuffer = ebuniformBuffer;
+        modelDraw->_edges = std::move(edge_buffer);
+        modelDraw->_edgeBuffer = ebuniformBuffer;
 
         // Face buffer
         BufferInit faceBufferInit;
@@ -511,22 +511,22 @@ namespace graphics
         auto fbuniformBuffer = device->createBuffer(faceBufferInit);
         memcpy(fbuniformBuffer->_cpuMappedAddress, face_buffer.data(), faceBufferInit.bufferSize);
 
-        modelDrawable->_faces = std::move(face_buffer);
-        modelDrawable->_faceBuffer = fbuniformBuffer;
+        modelDraw->_faces = std::move(face_buffer);
+        modelDraw->_faceBuffer = fbuniformBuffer;
 
 
-        modelDrawable->_uniforms = _sharedUniforms;
-        modelDrawable->_indexBuffer = ibresourceBuffer;
-        modelDrawable->_vertexBuffer = vbresourceBuffer;
-        modelDrawable->_vertexAttribBuffer = vabresourceBuffer;
-        modelDrawable->_partBuffer = pbuniformBuffer;
+        modelDraw->_uniforms = _sharedUniforms;
+        modelDraw->_indexBuffer = ibresourceBuffer;
+        modelDraw->_vertexBuffer = vbresourceBuffer;
+        modelDraw->_vertexAttribBuffer = vabresourceBuffer;
+        modelDraw->_partBuffer = pbuniformBuffer;
 
         // Also need a version of the mesh and parts and their bound on the cpu side
-        modelDrawable->_vertices = std::move(vertex_buffer);
-        modelDrawable->_vertex_attribs = std::move(vertex_attrib_buffer);
-        modelDrawable->_indices = std::move(index_buffer);
-        modelDrawable->_parts = std::move(parts);
-        modelDrawable->_partAABBs = std::move(partAABBs);
+        modelDraw->_vertices = std::move(vertex_buffer);
+        modelDraw->_vertex_attribs = std::move(vertex_attrib_buffer);
+        modelDraw->_indices = std::move(index_buffer);
+        modelDraw->_parts = std::move(parts);
+        modelDraw->_partAABBs = std::move(partAABBs);
 
 
 
@@ -545,15 +545,15 @@ namespace graphics
 
         GeometryInit geometryInit = {
             { vbresourceBuffer, 0, sizeof(core::vec4)},
-            (uint32_t) modelDrawable->_vertices.size(),
+            (uint32_t) modelDraw->_vertices.size(),
             PixelFormat::R32G32B32_FLOAT,
             { ibresourceBuffer, 0 , 4},
-            (uint32_t) modelDrawable->_indices.size()
+            (uint32_t) modelDraw->_indices.size()
         };
         auto geometry = device->createGeometry(geometryInit);
 
         
-        modelDrawable->_geometry = geometry;
+        modelDraw->_geometry = geometry;
 
 
 
@@ -583,7 +583,7 @@ namespace graphics
         auto mbresourceBuffer = device->createBuffer(materialBufferInit);
         memcpy(mbresourceBuffer->_cpuMappedAddress, materials.data(), materialBufferInit.bufferSize);
 
-        modelDrawable->_materialBuffer = mbresourceBuffer;
+        modelDraw->_materialBuffer = mbresourceBuffer;
 
         // Allocate the textures
         if (model->_images.size()) {
@@ -604,40 +604,40 @@ namespace graphics
             albedoTexInit.initData = std::move(pixels);
             auto albedoresourceTexture = device->createTexture(albedoTexInit);
 
-            modelDrawable->_albedoTexture = albedoresourceTexture;
+            modelDraw->_albedoTexture = albedoresourceTexture;
         }
         
         // Model local bound is the containing box for all the local items of the model
         core::aabox3 model_aabb;
-        for (const auto& i : modelDrawable->_localItems) {
+        for (const auto& i : modelDraw->_localItems) {
             if (i.shape != MODEL_INVALID_INDEX) {
                 auto nodeIdx = i.node;
-                core::mat4x3 transform = modelDrawable->_localNodeTransforms[nodeIdx];
-                nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
+                core::mat4x3 transform = modelDraw->_localNodeTransforms[nodeIdx];
+                nodeIdx = modelDraw->_localNodeParents[nodeIdx];
                 while(nodeIdx != INVALID_NODE_ID) {
-                    transform = core::mul(modelDrawable->_localNodeTransforms[nodeIdx], transform);
-                    nodeIdx = modelDrawable->_localNodeParents[nodeIdx];
+                    transform = core::mul(modelDraw->_localNodeTransforms[nodeIdx], transform);
+                    nodeIdx = modelDraw->_localNodeParents[nodeIdx];
                 }
 
-                const auto& s = modelDrawable->_shapes[i.shape];
-                core::aabox3 shape_aabb = modelDrawable->_partAABBs[s.partOffset];
+                const auto& s = modelDraw->_shapes[i.shape];
+                core::aabox3 shape_aabb = modelDraw->_partAABBs[s.partOffset];
                 for (int p = 1; p < s.numParts; ++p) {
-                    shape_aabb = core::aabox3::fromBound(shape_aabb, modelDrawable->_partAABBs[p + s.partOffset]);
+                    shape_aabb = core::aabox3::fromBound(shape_aabb, modelDraw->_partAABBs[p + s.partOffset]);
                 };
                 shape_aabb = core::aabox_transformFrom(transform, shape_aabb);
                 model_aabb = core::aabox3::fromBound(model_aabb, shape_aabb);
             }
         }
-        modelDrawable->_bound = model_aabb;
+        modelDraw->_bound = model_aabb;
 
 
-        return modelDrawable;
+        return modelDraw;
     }
 
-   void ModelDrawableFactory::allocateDrawcallObject(
+   void ModelDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::ModelDrawable& model)
+        graphics::ModelDraw& model)
     {
        // It s time to create a descriptorSet that matches the expected pipeline descriptor set
         // then we will assign a uniform buffer in it
@@ -699,14 +699,14 @@ namespace graphics
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
        };
        model._drawcall = drawCallback;
-       model._drawableID = scene->createDrawable(model).id();
+       model._drawID = scene->createDraw(model).id();
 
        auto uniforms = model.getUniforms();
 
-       // one drawable per part
-       DrawableIDs drawables;
+       // one draw per part
+       DrawIDs drawables;
        for (int d = 0; d < model._partAABBs.size(); ++d) {
-           auto part = new ModelDrawablePart();
+           auto part = new ModelDrawPart();
            part->_bound = model._partAABBs[d];
 
             auto partNumIndices = model._parts[d].numIndices;
@@ -720,18 +720,18 @@ namespace graphics
 
            part->_drawcall = drawCallback;
 
-           auto partDrawable = scene->createDrawable(*part);
-           drawables.emplace_back(partDrawable.id());
+           auto partDraw = scene->createDraw(*part);
+           drawables.emplace_back(partDraw.id());
        }
 
-       model._partDrawables = drawables;
+       model._partDraws = drawables;
 
     }
 
-   graphics::ItemIDs ModelDrawableFactory::createModelParts(
+   graphics::ItemIDs ModelDrawFactory::createModelParts(
                     const graphics::NodeID root,
                     const graphics::ScenePointer& scene,
-                    graphics::ModelDrawable& model) {
+                    graphics::ModelDraw& model) {
    
         auto rootNode = scene->createNode(core::mat4x3(), root);
 
@@ -741,15 +741,15 @@ namespace graphics
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
         
-        // first item is the model drawable itself 
-        auto rootItemId = scene->createItem(rootNode.id(), model._drawableID).id();
+        // first item is the model draw itself 
+        auto rootItemId = scene->createItem(rootNode.id(), model._drawID).id();
         items.emplace_back(rootItemId);
 
         for (const auto& li : model._localItems) {
             if (li.shape != MODEL_INVALID_INDEX) {
                 const auto& s = model._shapes[li.shape];
                 for (uint32_t si = 0; si < s.numParts; ++si) {
-                    items.emplace_back(scene->createSubItem(rootItemId, modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
+                    items.emplace_back(scene->createSubItem(rootItemId, modelNodes[li.node], model._partDraws[si + s.partOffset]).id());
                 }
             }
             if (li.camera != MODEL_INVALID_INDEX) {

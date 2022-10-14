@@ -58,8 +58,8 @@ namespace graphics {
     using SkyPointer = std::shared_ptr<Sky>;
     using Sky_sp = SkyPointer;
 
-    class SkyDrawableFactory;
-    using SkyDrawableFactory_sp = std::shared_ptr<SkyDrawableFactory>;
+    class SkyDrawFactory;
+    using SkyDrawFactory_sp = std::shared_ptr<SkyDrawFactory>;
 
 }
 

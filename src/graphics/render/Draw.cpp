@@ -1,4 +1,4 @@
-// Drawable.cpp
+// Draw.cpp
 //
 // Sam Gateau - January 2020
 // 
@@ -24,56 +24,56 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "Drawable.h"
+#include "Draw.h"
 #include "gpu/Resource.h"
 #include "gpu/Device.h"
 
 using namespace graphics;
 
 
-Drawable Drawable::null;
+Draw Draw::null;
 
-DrawableID DrawableStore::newID() {
+DrawID DrawStore::newID() {
     return _indexTable.allocate().index;
 }
 
-Drawable DrawableStore::allocate(Drawable drawable) {
+Draw DrawStore::allocate(Draw draw) {
 
-    DrawableID new_id = drawable.id();
+    DrawID new_id = draw.id();
     bool allocated = new_id == (_indexTable.getNumAllocatedElements() - 1);
 
-    auto bound = drawable.getBound();
+    auto bound = draw.getBound();
 
     if (allocated) {
-        _drawables.push_back(drawable);
+        _drawables.push_back(draw);
         _bounds.push_back({ bound });
     }
     else {
-        _drawables[new_id] = (drawable);
+        _drawables[new_id] = (draw);
         _bounds[new_id] = { bound };
     }
 
     if (new_id < _num_buffers_elements) {
-        reinterpret_cast<GPUDrawableBound*>(_drawables_buffer->_cpuMappedAddress)[new_id]._local_box = (bound);
+        reinterpret_cast<GPUDrawBound*>(_drawables_buffer->_cpuMappedAddress)[new_id]._local_box = (bound);
     }
 
-    return drawable;
+    return draw;
 }
 
-void DrawableStore::free(DrawableID index) {
+void DrawStore::free(DrawID index) {
     if (_indexTable.isValid(index)) {
         _indexTable.free(index);
 
-        _drawables[index] = Drawable::null;
+        _drawables[index] = Draw::null;
         _bounds[index] = { };
 
         if (index < _num_buffers_elements) {
-            reinterpret_cast<GPUDrawableBound*>(_drawables_buffer->_cpuMappedAddress)[index]._local_box = core::aabox3();
+            reinterpret_cast<GPUDrawBound*>(_drawables_buffer->_cpuMappedAddress)[index]._local_box = core::aabox3();
         }
     }
 }
 
-int32_t DrawableStore::reference(DrawableID index) {
+int32_t DrawStore::reference(DrawID index) {
     if (_indexTable.isValid(index)) {
         return _drawables[index].reference();
     } else { 
@@ -81,7 +81,7 @@ int32_t DrawableStore::reference(DrawableID index) {
     }
 }
 
-int32_t DrawableStore::release(DrawableID index) {
+int32_t DrawStore::release(DrawID index) {
     if (_indexTable.isValid(index)) {
         return _drawables[index].release();
     }
@@ -90,7 +90,7 @@ int32_t DrawableStore::release(DrawableID index) {
     }
 }
 
-void DrawableStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
+void DrawStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
 
     if (_num_buffers_elements < numElements) {
         auto capacity = (numElements);
@@ -98,10 +98,10 @@ void DrawableStore::resizeBuffers(const DevicePointer& device, uint32_t numEleme
         graphics::BufferInit drawables_buffer_init{};
         drawables_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
         drawables_buffer_init.hostVisible = true;
-        drawables_buffer_init.bufferSize = capacity * sizeof(GPUDrawableBound);
+        drawables_buffer_init.bufferSize = capacity * sizeof(GPUDrawBound);
         drawables_buffer_init.firstElement = 0;
         drawables_buffer_init.numElements = capacity;
-        drawables_buffer_init.structStride = sizeof(GPUDrawableBound);
+        drawables_buffer_init.structStride = sizeof(GPUDrawBound);
 
         _drawables_buffer = device->createBuffer(drawables_buffer_init);
         

@@ -1,6 +1,6 @@
-// DashboardDrawable.cpp
+// PrimitiveDraw.cpp
 //
-// Sam Gateau - October 2021
+// Sam Gateau - June 2020
 // 
 // MIT License
 //
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "DashboardDrawable.h"
+#include "PrimitiveDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,40 +37,40 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
+
 
 #include "Transform_inc.h"
 #include "Projection_inc.h"
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
-#include "Viewport_inc.h"
 
-#include "Dashboard_vert.h"
-#include "Dashboard_frag.h"
+#include "Primitive_vert.h"
+#include "Primitive_frag.h"
 
 //using namespace view3d;
 namespace graphics
 {
 
-    DashboardDrawableFactory::DashboardDrawableFactory() :
-        _sharedUniforms(std::make_shared<DashboardDrawableUniforms>()) {
+    PrimitiveDrawFactory::PrimitiveDrawFactory() :
+        _sharedUniforms(std::make_shared<PrimitiveDrawUniforms>()) {
 
     }
-    DashboardDrawableFactory::~DashboardDrawableFactory() {
+    PrimitiveDrawFactory::~PrimitiveDrawFactory() {
 
     }
 
     // Custom data uniforms
     struct PrimitiveObjectData {
-        int32_t nodeID{0};
-        int32_t numVertices{ 0 };
+        uint32_t nodeID{0};
+        float numVertices{ 0 };
         float numIndices{ 0 };
         float stride{ 0 };
     };
 
-    void DashboardDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void PrimitiveDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{
@@ -79,7 +79,7 @@ namespace graphics
             },
             {
                 // ViewPass descriptorSet Layout
-                Viewport::viewPassLayout
+                Viewport::viewPassLayout,
             }
          };
         auto rootDescriptorLayout = device->createRootDescriptorLayout(rootLayoutInit);
@@ -88,16 +88,15 @@ namespace graphics
 
         // test: create shader
         graphics::ShaderIncludeLib include = {
-           Transform_inc::getMapEntry(),
-           Projection_inc::getMapEntry(),
-           Camera_inc::getMapEntry(),
-           SceneTransform_inc::getMapEntry(),
-           Viewport_inc::getMapEntry(),
+            Transform_inc::getMapEntry(),
+            Projection_inc::getMapEntry(),
+            Camera_inc::getMapEntry(),
+            SceneTransform_inc::getMapEntry(),
         };
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename(), include };
+        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Primitive_vert::getSource, Primitive_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename(), include };
+        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Primitive_frag::getSource, Primitive_frag::getSourceFilename() };
         graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
@@ -115,34 +114,32 @@ namespace graphics
         _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::DashboardDrawable* DashboardDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
-        auto primitiveDrawable = new DashboardDrawable();
-        primitiveDrawable->_uniforms = _sharedUniforms;
-        return primitiveDrawable;
+    graphics::PrimitiveDraw* PrimitiveDrawFactory::createPrimitive(const graphics::DevicePointer& device) {
+        auto primitiveDraw = new PrimitiveDraw();
+        primitiveDraw->_uniforms = _sharedUniforms;
+        return primitiveDraw;
     }
 
-   void DashboardDrawableFactory::allocateDrawcallObject(
+   void PrimitiveDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::DashboardDrawable& prim)
+        graphics::PrimitiveDraw& prim)
     {
         auto prim_ = &prim;
         auto pipeline = this->_primitivePipeline;
 
         // And now a render callback where we describe the rendering sequence
         graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
-            if (args.timer) {
-                args.batch->bindPipeline(pipeline);
-                args.batch->setViewport(args.camera->getViewportRect());
-                args.batch->setScissor(args.camera->getViewportRect());
+            args.batch->bindPipeline(pipeline);
+            args.batch->setViewport(args.camera->getViewportRect());
+            args.batch->setScissor(args.camera->getViewportRect());
 
-                args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
-                PrimitiveObjectData odata{ args.timer->getCurrentSampleIndex(), args.timer->getNumSamples(), 1.0f, 1.0f };
-                args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
+            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            PrimitiveObjectData odata{ node, prim_->_size.x * 0.5f, prim_->_size.y * 0.5f, prim_->_size.z * 0.5f };
+            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
-                // A quad is drawn with one triangle 3 verts
-                args.batch->draw(3 * args.timer->getNumSamples(), 0);
-            }
+            // A box is 6 faces * 2 trianglestrip * 4 verts + -1
+            args.batch->draw(6 * 2 * 3, 0);
         };
         prim._drawcall = drawCallback;
     }
