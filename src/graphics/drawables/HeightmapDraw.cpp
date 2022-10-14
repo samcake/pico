@@ -1,4 +1,4 @@
-// HeightmapDrawable.cpp
+// HeightmapDraw.cpp
 //
 // Sam Gateau - June 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "HeightmapDrawable.h"
+#include "HeightmapDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -54,11 +54,11 @@
 namespace graphics
 {
 
-    HeightmapDrawableFactory::HeightmapDrawableFactory() :
-        _sharedUniforms(std::make_shared<HeightmapDrawableUniforms>()) {
+    HeightmapDrawFactory::HeightmapDrawFactory() :
+        _sharedUniforms(std::make_shared<HeightmapDrawUniforms>()) {
 
     }
-    HeightmapDrawableFactory::~HeightmapDrawableFactory() {
+    HeightmapDrawFactory::~HeightmapDrawFactory() {
 
     }
 
@@ -75,7 +75,7 @@ namespace graphics
         float mesh_spacing{ 0 };
     };
 
-    void HeightmapDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void HeightmapDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{ 
@@ -147,10 +147,10 @@ namespace graphics
         }
     }
 
-    graphics::HeightmapDrawable* HeightmapDrawableFactory::createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap) {
-        auto HeightmapDrawable = new graphics::HeightmapDrawable();
-        HeightmapDrawable->_heightmap = heightmap;
-        HeightmapDrawable->_uniforms = _sharedUniforms;
+    graphics::HeightmapDraw* HeightmapDrawFactory::createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap) {
+        auto HeightmapDraw = new graphics::HeightmapDraw();
+        HeightmapDraw->_heightmap = heightmap;
+        HeightmapDraw->_uniforms = _sharedUniforms;
 
         auto numHeights = heightmap.getMapNumElements();
 
@@ -162,23 +162,23 @@ namespace graphics
         hbresourceBufferInit.numElements = numHeights;
         hbresourceBufferInit.structStride = sizeof(float);
 
-        HeightmapDrawable->_heightBuffer = device->createBuffer(hbresourceBufferInit);
+        HeightmapDraw->_heightBuffer = device->createBuffer(hbresourceBufferInit);
 
         if ( heightmap.heights.size() > 0) {
-             memcpy(HeightmapDrawable->_heightBuffer->_cpuMappedAddress, heightmap.heights.data(), hbresourceBufferInit.bufferSize);
+             memcpy(HeightmapDraw->_heightBuffer->_cpuMappedAddress, heightmap.heights.data(), hbresourceBufferInit.bufferSize);
         }
 
-        return HeightmapDrawable;
+        return HeightmapDraw;
     }
 
-   void HeightmapDrawableFactory::allocateDrawcallObject(
+   void HeightmapDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
         const graphics::CameraPointer& camera,
-        graphics::HeightmapDrawable& drawable)
+        graphics::HeightmapDraw& draw)
     {
 
-       auto heightmap = &drawable;
+       auto heightmap = &draw;
        bool doCompute = heightmap->_heightmap.heights.empty();
 
        graphics::DescriptorSetInit compDescriptorSetInit{
@@ -189,7 +189,7 @@ namespace graphics
 
        if (doCompute) {
            graphics::DescriptorObjects compute_descriptorObjects = {{
-                { graphics::DescriptorType::RW_RESOURCE_BUFFER, drawable.getHeightBuffer() }
+                { graphics::DescriptorType::RW_RESOURCE_BUFFER, draw.getHeightBuffer() }
            }};
            device->updateDescriptorSet(compDescriptorSet, compute_descriptorObjects);
        }
@@ -202,7 +202,7 @@ namespace graphics
         auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
         graphics::DescriptorObjects descriptorObjects = {
-           { graphics::DescriptorType::RESOURCE_BUFFER, drawable.getHeightBuffer() }
+           { graphics::DescriptorType::RESOURCE_BUFFER, draw.getHeightBuffer() }
         };
         device->updateDescriptorSet(descriptorSet, descriptorObjects);
         auto compute_pipeline = this->_computePipeline;
@@ -237,7 +237,7 @@ namespace graphics
             // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
             args.batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
         };
-        drawable._drawcall = drawCallback;
+        draw._drawcall = drawCallback;
     }
 
 } // !namespace graphics

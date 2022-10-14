@@ -2,8 +2,8 @@
 #include <stdint.h>
 #include <math.h>
 #include <core/math/LinearAlgebra.h>
-#include <graphics/drawables/PrimitiveDrawable.h>
-#include <graphics/drawables/HeightmapDrawable.h>
+#include <graphics/drawables/PrimitiveDraw.h>
+#include <graphics/drawables/HeightmapDraw.h>
 
 
 

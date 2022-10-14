@@ -59,7 +59,7 @@ namespace graphics {
             uint16_t num_children{ 0 };
             uint16_t refCount{ INVALID_REFCOUNT_INFO };
 
-            NodeInfo(NodeID p): parent(p) {}
+            NodeInfo(NodeID p) : parent(p) {}
             NodeInfo() {}
 
             inline bool isValid() const { return refCount != INVALID_REFCOUNT_INFO; }
@@ -85,11 +85,12 @@ namespace graphics {
         using ReadInfoLock = std::pair< const NodeInfo*, std::lock_guard<std::mutex>>;
         using WriteInfoLock = std::pair< NodeInfo*, std::lock_guard<std::mutex>>;
 
+        inline void touchInfo(NodeID id) const { _touchedInfos.emplace_back(id); }
         inline ReadInfoLock readInfo(NodeID id) const {
             return  _nodeInfos.read(id);
         }
         inline WriteInfoLock writeInfo(NodeID id) const {
-            _touchedInfos.emplace_back(id); // take note of the write for this element
+            touchInfo(id); // take note of the write for this element
             return  _nodeInfos.write(id);
         }
 

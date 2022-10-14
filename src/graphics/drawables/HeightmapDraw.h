@@ -31,7 +31,7 @@
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 
 namespace graphics {
     class Device;
@@ -43,7 +43,7 @@ namespace graphics {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class HeightmapDrawable;
+    class HeightmapDraw;
 
     struct Heightmap {
         uint32_t map_width{ 1 };
@@ -70,47 +70,47 @@ namespace graphics {
 
     };
 
-    struct VISUALIZATION_API HeightmapDrawableUniforms {
+    struct VISUALIZATION_API HeightmapDrawUniforms {
     };
-    using HeightmapDrawableUniformsPointer = std::shared_ptr<HeightmapDrawableUniforms>;
+    using HeightmapDrawUniformsPointer = std::shared_ptr<HeightmapDrawUniforms>;
 
-    class VISUALIZATION_API HeightmapDrawableFactory {
+    class VISUALIZATION_API HeightmapDrawFactory {
     public:
-        HeightmapDrawableFactory();
-        ~HeightmapDrawableFactory();
+        HeightmapDrawFactory();
+        ~HeightmapDrawFactory();
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create HeightmapDrawable for a given Heightmap document
-        graphics::HeightmapDrawable* createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap);
+        // Create HeightmapDraw for a given Heightmap document
+        graphics::HeightmapDraw* createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap);
 
-        // Create Drawcall object drawing the HeightmapDrawable in the rendering context
+        // Create Drawcall object drawing the HeightmapDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
             const graphics::CameraPointer& camera,
-            graphics::HeightmapDrawable& Heightmap);
+            graphics::HeightmapDraw& Heightmap);
 
         // Read / write shared uniforms
-        const HeightmapDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        HeightmapDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        const HeightmapDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        HeightmapDrawUniforms& editUniforms() { return (*_sharedUniforms); }
 
     protected:
-        HeightmapDrawableUniformsPointer _sharedUniforms;
+        HeightmapDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _HeightmapPipeline;
 
         graphics::PipelineStatePointer _computePipeline;
 
     };
-    using HeightmapDrawableFactoryPointer = std::shared_ptr< HeightmapDrawableFactory>;
+    using HeightmapDrawFactoryPointer = std::shared_ptr< HeightmapDrawFactory>;
 
 
-    class VISUALIZATION_API HeightmapDrawable {
+    class VISUALIZATION_API HeightmapDraw {
     public:
 
-        void swapUniforms(const HeightmapDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const HeightmapDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const HeightmapDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const HeightmapDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(core::vec3(0.f), core::vec3(_heightmap.map_width, 2.0f, _heightmap.map_height) * 0.5f *_heightmap.map_spacing); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
@@ -120,10 +120,10 @@ namespace graphics {
         const Heightmap& getDesc() const { return _heightmap; }
 
     protected:
-        friend class HeightmapDrawableFactory;
+        friend class HeightmapDrawFactory;
         Heightmap _heightmap;
         graphics::BufferPointer _heightBuffer;
-        HeightmapDrawableUniformsPointer _uniforms;
+        HeightmapDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
 
     };

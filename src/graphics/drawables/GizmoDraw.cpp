@@ -1,4 +1,4 @@
-// GizmoDrawable.cpp
+// GizmoDraw.cpp
 //
 // Sam Gateau - June 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "GizmoDrawable.h"
+#include "GizmoDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -54,23 +54,24 @@
 namespace graphics
 {
 
-    GizmoDrawableFactory::GizmoDrawableFactory() :
-        _sharedUniforms(std::make_shared<GizmoDrawableUniforms>()) {
+    GizmoDrawFactory::GizmoDrawFactory(const graphics::DevicePointer& device) :
+        _sharedUniforms(std::make_shared<GizmoDrawUniforms>()) {
 
+        allocateGPUShared(device);
     }
-    GizmoDrawableFactory::~GizmoDrawableFactory() {
+    GizmoDrawFactory::~GizmoDrawFactory() {
 
     }
 
     // Custom data uniforms
     struct GizmoObjectData {
-        uint32_t nodeID{0};
+        uint32_t indexOffset{0};
         uint32_t flags{0};
         uint32_t spareA{ 0 };
         uint32_t spareB{0};
     };
 
-    uint32_t GizmoDrawableUniforms::buildFlags() {
+    uint32_t GizmoDrawUniforms::buildFlags() const {
         return (uint32_t) 
                   (showTransform) * SHOW_TRANSFORM_BIT 
                 | (showBranch) * SHOW_BRANCH_BIT
@@ -78,7 +79,7 @@ namespace graphics
                 | (showWorldBound)  *SHOW_WORLD_BOUND_BIT;
     }
 
-    void GizmoDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void GizmoDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
         // Let's describe the pipeline Descriptors for _node
         graphics::RootDescriptorLayoutInit rootDescriptorLayoutInit{
             {
@@ -151,37 +152,37 @@ namespace graphics
         _itemPipeline = device->createGraphicsPipelineState(pipelineInit_item);
     }
 
-    graphics::NodeGizmo* GizmoDrawableFactory::createNodeGizmo(const graphics::DevicePointer& device) {
+    graphics::NodeGizmo* GizmoDrawFactory::createNodeGizmo(const graphics::DevicePointer& device) {
 
-        auto gizmoDrawable = new NodeGizmo();
+        auto gizmoDraw = new NodeGizmo();
 
-        // Create the triangle soup drawable using the shared uniforms of the factory
-        gizmoDrawable->_uniforms = _sharedUniforms;
+        // Create the triangle soup draw using the shared uniforms of the factory
+        gizmoDraw->_uniforms = _sharedUniforms;
 
-        return gizmoDrawable;
+        return gizmoDraw;
     }
 
-    graphics::ItemGizmo* GizmoDrawableFactory::createItemGizmo(const graphics::DevicePointer& device) {
+    graphics::ItemGizmo* GizmoDrawFactory::createItemGizmo(const graphics::DevicePointer& device) {
 
-        auto gizmoDrawable = new ItemGizmo();
+        auto gizmoDraw = new ItemGizmo();
 
-        // Create the triangle soup drawable using the shared uniforms of the factory
-        gizmoDrawable->_uniforms = _sharedUniforms;
+        // Create the triangle soup draw using the shared uniforms of the factory
+        gizmoDraw->_uniforms = _sharedUniforms;
 
-        return gizmoDrawable;
+        return gizmoDraw;
     }
 
-    graphics::CameraGizmo* GizmoDrawableFactory::createCameraGizmo(const graphics::DevicePointer& device) {
+    graphics::CameraGizmo* GizmoDrawFactory::createCameraGizmo(const graphics::DevicePointer& device) {
 
-        auto gizmoDrawable = new CameraGizmo();
+        auto gizmoDraw = new CameraGizmo();
 
-        // Create the triangle soup drawable using the shared uniforms of the factory
-        gizmoDrawable->_uniforms = _sharedUniforms;
+        // Create the triangle soup draw using the shared uniforms of the factory
+        gizmoDraw->_uniforms = _sharedUniforms;
 
-        return gizmoDrawable;
+        return gizmoDraw;
     }
 
-    void GizmoDrawableFactory::allocateDrawcallObject(
+    void GizmoDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
         graphics::NodeGizmo& gizmo)
@@ -197,17 +198,19 @@ namespace graphics
 
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
 
-            auto flags = pgizmo->getUniforms()->buildFlags();
-            GizmoObjectData odata{ node, flags, 0, 0};
+            const auto& uni = *pgizmo->getUniforms();
+            auto count = core::min(uni.indexCount, args.scene->_nodes.numAllocatedNodes() - uni.indexOffset);
+            auto flags = uni.buildFlags();
+            GizmoObjectData odata{ uni.indexOffset, flags, 0, 0};
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-            args.batch->draw(pgizmo->nodes.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawableUniforms::SHOW_BRANCH_BIT) * 1), 0);
+            args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawUniforms::SHOW_BRANCH_BIT) * 1), 0);
         };
         gizmo._drawcall = drawCallback;
     }
 
 
-   void GizmoDrawableFactory::allocateDrawcallObject(
+   void GizmoDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
         graphics::ItemGizmo& gizmo)
@@ -239,16 +242,18 @@ namespace graphics
            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-           auto flags = pgizmo->getUniforms()->buildFlags();
-           GizmoObjectData odata{ node, flags, 0, 0 };
+           const auto& uni = *pgizmo->getUniforms();
+           auto count = core::min(uni.indexCount, args.scene->_items.numAllocatedItems() - uni.indexOffset);
+           auto flags = uni.buildFlags();
+           GizmoObjectData odata{ uni.indexOffset, flags, 0, 0 };
            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-           args.batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
+           args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };
        gizmo._drawcall = drawCallback;
    }
 
-   void GizmoDrawableFactory::allocateDrawcallObject(
+   void GizmoDrawFactory::allocateDrawcallObject(
        const graphics::DevicePointer& device,
        const graphics::ScenePointer& scene,
        graphics::CameraGizmo& gizmo)
@@ -280,13 +285,34 @@ namespace graphics
            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-           auto flags = pgizmo->getUniforms()->buildFlags();
-           GizmoObjectData odata{ node, flags, 0, 0 };
+           const auto& uni = *pgizmo->getUniforms();
+           auto count = core::min(uni.indexCount, args.scene->_items.numAllocatedItems() - uni.indexOffset);
+           auto flags = uni.buildFlags();
+           GizmoObjectData odata{ uni.indexOffset, flags, 0, 0 };
            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
-           args.batch->draw(pgizmo->items.size() * 2 * ((flags & GizmoDrawableUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawableUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
+           args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };
        gizmo._drawcall = drawCallback;
+   }
+
+   std::tuple<graphics::Item, graphics::Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpuDevice) {
+       // A gizmo draw factory
+       auto gizmoDrawFactory = std::make_shared<GizmoDrawFactory>(gpuDevice);
+
+       // a gizmo draw to draw the transforms
+       auto node_tree_draw = scene->createDraw(*gizmoDrawFactory->createNodeGizmo(gpuDevice));
+       gizmoDrawFactory->allocateDrawcallObject(gpuDevice, scene, node_tree_draw.as<NodeGizmo>());
+       auto node_tree = scene->createItem(graphics::Node::null, node_tree_draw);
+       node_tree.setVisible(true);
+
+
+       auto item_tree_draw = scene->createDraw(*gizmoDrawFactory->createItemGizmo(gpuDevice));
+       gizmoDrawFactory->allocateDrawcallObject(gpuDevice, scene, item_tree_draw.as<ItemGizmo>());
+       auto item_tree = scene->createItem(graphics::Node::null, item_tree_draw);
+       item_tree.setVisible(true);
+
+       return std::tuple<graphics::Item, graphics::Item>{node_tree, item_tree};
    }
 
 } // !namespace graphics

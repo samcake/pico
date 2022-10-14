@@ -39,11 +39,11 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
-#include <graphics/drawables/GizmoDrawable.h>
-#include <graphics/drawables/PrimitiveDrawable.h>
-#include <graphics/drawables/ModelDrawable.h>
-#include <graphics/drawables/ModelDrawableInspector.h>
-#include <graphics/drawables/SkyDrawable.h>
+#include <graphics/drawables/GizmoDraw.h>
+#include <graphics/drawables/PrimitiveDraw.h>
+#include <graphics/drawables/ModelDraw.h>
+#include <graphics/drawables/ModelDrawInspector.h>
+#include <graphics/drawables/SkyDraw.h>
 
 #include <uix/Window.h>
 #include <uix/Imgui.h>
@@ -58,9 +58,9 @@ struct AppState {
     uint32_t makeUVMapFrame = 0;
     uint32_t makeFilteredMapFrame = 0;
 
-    graphics::ModelDrawableFactoryPointer _modelDrawableFactory;
-    graphics::ModelDrawableInspectorFactoryPointer _modelDrawableInspectorFactory;
-    graphics::ModelDrawableInspectorUniformsPointer params;
+    graphics::ModelDrawFactoryPointer _modelDrawFactory;
+    graphics::ModelDrawInspectorFactoryPointer _modelDrawInspectorFactory;
+    graphics::ModelDrawInspectorUniformsPointer params;
 
 
     graphics::ScenePointer _scene;
@@ -76,7 +76,7 @@ AppState state;
 //--------------------------------------------------------------------------------------
 // pico model:
 //  Explore the definition of a document::model created from loading a gltf file
-//  and its drawable counterpart, MOdelDrawable
+//  and its draw counterpart, MOdelDraw
 //--------------------------------------------------------------------------------------
 
 document::ModelPointer lmodel;
@@ -122,33 +122,33 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
     
     lmodel = document::model::Model::createFromGLTF(modelFile);
 
-    if (!state._modelDrawableFactory) {
-        state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
-        state._modelDrawableFactory->allocateGPUShared(gpuDevice);
+    if (!state._modelDrawFactory) {
+        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>();
+        state._modelDrawFactory->allocateGPUShared(gpuDevice);
     }
 
-    auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr);
+    auto modelDrawPtr = state._modelDrawFactory->createModel(gpuDevice, lmodel);
+    state._modelDrawFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawPtr);
 
-    auto modelDrawable = scene->createDrawable(*modelDrawablePtr);
+    auto modelDraw = scene->createDraw(*modelDrawPtr);
 
     graphics::ItemIDs modelItemIDs;
 
     if (withInspector) {
-        if (!state._modelDrawableInspectorFactory) {
-            state._modelDrawableInspectorFactory = std::make_shared<graphics::ModelDrawableInspectorFactory>();
-            state._modelDrawableInspectorFactory->allocateGPUShared(gpuDevice);
-            state.params = state._modelDrawableInspectorFactory->getUniformsPtr();
-            state.params->setFilterKernelTechnique(graphics::ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE);
+        if (!state._modelDrawInspectorFactory) {
+            state._modelDrawInspectorFactory = std::make_shared<graphics::ModelDrawInspectorFactory>();
+            state._modelDrawInspectorFactory->allocateGPUShared(gpuDevice);
+            state.params = state._modelDrawInspectorFactory->getUniformsPtr();
+            state.params->setFilterKernelTechnique(graphics::ModelDrawInspectorUniforms::FKT_IMAGE_SPACE);
         }
-        auto modelDrawableInspectorPtr = state._modelDrawableInspectorFactory->createModel(gpuDevice, lmodel, modelDrawablePtr);
-        state._modelDrawableInspectorFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawableInspectorPtr);
+        auto modelDrawInspectorPtr = state._modelDrawInspectorFactory->createModel(gpuDevice, lmodel, modelDrawPtr);
+        state._modelDrawInspectorFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawInspectorPtr);
 
-        auto modelDrawableInspector = scene->createDrawable(*modelDrawableInspectorPtr);
+        auto modelDrawInspector = scene->createDraw(*modelDrawInspectorPtr);
 
-        modelItemIDs = state._modelDrawableInspectorFactory->createModelParts(nodeRoot, scene, *modelDrawableInspectorPtr);
+        modelItemIDs = state._modelDrawInspectorFactory->createModelParts(nodeRoot, scene, *modelDrawInspectorPtr);
     } else {
-        modelItemIDs = state._modelDrawableFactory->createModelParts(nodeRoot, scene, *modelDrawablePtr);
+        modelItemIDs = state._modelDrawFactory->createModelParts(nodeRoot, scene, *modelDrawPtr);
     }
 
     return modelItemIDs;
@@ -184,32 +184,15 @@ int main(int argc, char *argv[])
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
-    // A sky drawable factory
-    auto skyDrawableFactory = scene->_skyFactory;
+    // A sky draw factory
+    auto skyDrawFactory = scene->_skyFactory;
 
     // The view managing the rendering of the scene
     graphics::ViewportInit viewportInit = { state._scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback };
     auto viewport = std::make_shared<graphics::Viewport>(viewportInit);
 
-    // A gizmo drawable factory
-    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
-    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
-
-    // a gizmo drawable to draw the transforms
-    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(scene->_nodes.getNodeInfoGPUBuffer()->numElements());
-    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
-
-
-    auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(scene->_items.getGPUBuffer()->numElements());
-    auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
-
-
+    // Create gizmos to draw the node transform and item tree
+    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(state._scene, gpuDevice);
 
     // Some nodes to layout the scene and animate objects
     state._modelRootNodeID = scene->createNode(core::mat4x3(), -1).id();
@@ -503,10 +486,10 @@ int main(int argc, char *argv[])
         }
 
         if (e.state && e.key == uix::KEY_N) {
-            gzitem_node.setVisible(!gzitem_node.isVisible());
+            gznode_tree.setVisible(!gznode_tree.isVisible());
         }
         if (e.state && e.key == uix::KEY_B) {
-            gzitem_item.setVisible(!gzitem_item.isVisible());
+            gzitem_tree.setVisible(!gzitem_tree.isVisible());
         }
 
         if (e.state && e.key == uix::KEY_DELETE) {

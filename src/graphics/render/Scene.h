@@ -32,7 +32,7 @@
 
 #include "Renderer.h"
 #include "render/Transform.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Item.h"
 #include "render/Camera.h"
 
@@ -58,10 +58,10 @@ namespace graphics {
         // Items
         ItemStore _items;
         
-        Item createItem(Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
-        Item createItem(NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
-        Item createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID = INVALID_ITEM_ID);
-        Item createSubItem(ItemID group, Node node, Drawable drawable, UserID userID = INVALID_ITEM_ID);
+        Item createItem(Node node, Draw draw, UserID userID = INVALID_ITEM_ID);
+        Item createItem(NodeID node, DrawID draw, UserID userID = INVALID_ITEM_ID);
+        Item createSubItem(ItemID group, NodeID node, DrawID draw, UserID userID = INVALID_ITEM_ID);
+        Item createSubItem(ItemID group, Node node, Draw draw, UserID userID = INVALID_ITEM_ID);
 
         void deleteAll();
         void deleteItem(ItemID id);
@@ -87,12 +87,12 @@ namespace graphics {
         void detachNode(NodeID child);
 
 
-        // Drawables
-        DrawableStore _drawables;
-        Drawable getDrawable(DrawableID drawableId) const;
+        // Draws
+        DrawStore _drawables;
+        Draw getDraw(DrawID DrawID) const;
         template <typename T>
-        Drawable createDrawable(T& x) {
-            return _drawables.createDrawable(x);
+        Draw createDraw(T& x) {
+            return _drawables.createDraw(x);
         }
 
         // Cameras
@@ -108,7 +108,7 @@ namespace graphics {
 
         
         // TODO: Find a better way....
-        SkyDrawableFactory_sp _skyFactory;
+        SkyDrawFactory_sp _skyFactory;
         Sky_sp _sky;
 
     protected:

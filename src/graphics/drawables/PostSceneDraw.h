@@ -1,4 +1,4 @@
-// SkyDrawable.h 
+// PostSceneDraw.h 
 //
 // Sam Gateau - October 2021
 // 
@@ -31,76 +31,74 @@
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
-#include <render/Sky.h>
+#include <render/Draw.h>
 #include <gpu/Query.h>
 
 namespace graphics {
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
     class Buffer;
     using BufferPointer = std::shared_ptr<Buffer>;
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class SkyDrawable;
+    class PostSceneDraw;
 
-
-
-    struct VISUALIZATION_API SkyDrawableUniforms {
-        SkyPointer _sky;
+    struct VISUALIZATION_API PostSceneDrawUniforms {
+        int numNodes{ 0 };
     };
+    using PostSceneDrawUniformsPointer = std::shared_ptr<PostSceneDrawUniforms>;
 
-    using SkyDrawableUniformsPointer = std::shared_ptr<SkyDrawableUniforms>;
-
-    class VISUALIZATION_API SkyDrawableFactory {
+    class VISUALIZATION_API PostSceneDrawFactory {
     public:
-        SkyDrawableFactory();
-        ~SkyDrawableFactory();
+        PostSceneDrawFactory();
+        ~PostSceneDrawFactory();
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create SkyDrawable
-        graphics::SkyDrawable* createDrawable(const graphics::DevicePointer& device);
+        // Create PostSceneDraw
+        graphics::PostSceneDraw* createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry);
 
-        // Create Drawcall object drawing the SkyDrawable in the rendering context
+        // Create Drawcall object drawing the PostSceneDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
-            graphics::SkyDrawable& primitive);
+            graphics::PostSceneDraw& primitive);
 
         // Read / write shared uniforms
-        const SkyDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        SkyDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        const PostSceneDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        PostSceneDrawUniforms& editUniforms() { return (*_sharedUniforms); }
+        PostSceneDrawUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
 
     protected:
-        SkyDrawableUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _skyPipeline;
-
-        graphics::PipelineStatePointer _skymapPipeline;
-        graphics::PipelineStatePointer _diffuseSkymapPipeline[2];
+        PostSceneDrawUniformsPointer _sharedUniforms;
+        graphics::PipelineStatePointer _primitivePipeline;
     };
-    using SkyDrawableFactoryPointer = std::shared_ptr< SkyDrawableFactory>;
+    using PostSceneDrawFactoryPointer = std::shared_ptr< PostSceneDrawFactory>;
 
 
-    class VISUALIZATION_API SkyDrawable {
+    class VISUALIZATION_API PostSceneDraw {
     public:
 
-        void swapUniforms(const SkyDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const SkyDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        void swapUniforms(const PostSceneDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+        const PostSceneDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
-    protected:
-        friend class SkyDrawableFactory;
+        graphics::TexturePointer getOutput() const { return _output; }
 
-        SkyDrawableUniformsPointer _uniforms;
+    protected:
+        friend class PostSceneDrawFactory;
+
+        PostSceneDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
+      
+        graphics::TexturePointer _output;
+        graphics::GeometryPointer _geometry;
+        graphics::ShaderTablePointer _shaderTable;
     };
 
 } // !namespace graphics

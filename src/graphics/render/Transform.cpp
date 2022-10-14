@@ -158,23 +158,22 @@ namespace graphics {
         // Make sure the node is detached first
         detachNode(node_id);
 
-        auto& the_node = *_nodeInfos.unsafe_data(node_id);
-        the_node.parent = parent_id;
+        // Write access and lock the nodeInfos
+        auto [the_node, l] = _nodeInfos.write(node_id);
+
+        the_node->parent = parent_id;
 
         if (parent_id != INVALID_NODE_ID) {
             auto& parent_node = *_nodeInfos.unsafe_data(parent_id);
-            _touchedInfos.push_back(parent_id);
+            touchInfo(parent_id);
 
-            the_node.parent = parent_id;
-            the_node.sybling = parent_node.children_head;
+            the_node->sybling = parent_node.children_head;
 
             parent_node.children_head = node_id;
             parent_node.num_children++;
         }
 
-        _touchedInfos.push_back(node_id);
         _touchedTransforms.push_back(node_id);
-
 
         // invalid:
         // node world transform and world sphere
@@ -182,22 +181,24 @@ namespace graphics {
     }
 
     void NodeStore::detachNode(NodeID node_id) {
-        auto& the_node = *_nodeInfos.unsafe_data(node_id);
-        if (the_node.parent == INVALID_NODE_ID) {
+        auto [the_node, l] = writeInfo(node_id); // write or not, but lock
+        if (the_node->parent == INVALID_NODE_ID) {
             return;
         }
-        auto& parent_node = *_nodeInfos.unsafe_data(the_node.parent);
+        auto& parent_node = *_nodeInfos.unsafe_data(the_node->parent);
+        touchInfo(the_node->parent);
 
         auto left_sybling_id = parent_node.children_head;
         if (left_sybling_id == node_id) {
-            parent_node.children_head = the_node.sybling;
+            parent_node.children_head = the_node->sybling;
             parent_node.num_children--;
         } else {
 
             for (int i = 0; i < parent_node.num_children; i++) {
                 auto& sybling_node = *_nodeInfos.unsafe_data(left_sybling_id);
                 if (sybling_node.sybling == node_id) {
-                    sybling_node.sybling = the_node.sybling;
+                    sybling_node.sybling = the_node->sybling;
+                    touchInfo(left_sybling_id);
                     parent_node.num_children--;
                     break;
                 }
@@ -211,8 +212,8 @@ namespace graphics {
         }
 
 
-        the_node.parent = INVALID_NODE_ID;
-        the_node.sybling = INVALID_NODE_ID;
+        the_node->parent = INVALID_NODE_ID;
+        the_node->sybling = INVALID_NODE_ID;
     }
 
     int32_t NodeStore::reference(NodeID nodeId) {

@@ -28,7 +28,7 @@
 
 #include "gpu/Resource.h"
 #include "gpu/Device.h"
-#include "Drawable.h"
+#include "Draw.h"
 #include "Scene.h"
 
 #include <algorithm>
@@ -43,18 +43,18 @@ namespace graphics {
         _itemInfos.reserve(device, capacity);
     }
 
-    ItemID ItemStore::allocate(NodeID node, DrawableID drawable, ItemID group) {
+    ItemID ItemStore::allocate(NodeID node, DrawID draw, ItemID group) {
         auto [new_id, recycle] = _indexTable.allocate();
 
-        ItemInfo info = { node, drawable, group, IS_VISIBLE };
+        ItemInfo info = { node, draw, group, IS_VISIBLE };
         _itemInfos.allocate_element(new_id, &info);
         _touchedElements.push_back(new_id);
 
         return new_id;
     }
 
-    ItemID ItemStore::createItem(NodeID node, DrawableID drawable, ItemID group) {
-        return allocate(node, drawable, group);
+    ItemID ItemStore::createItem(NodeID node, DrawID draw, ItemID group) {
+        return allocate(node, draw, group);
     }
 
     void ItemStore::free(ItemID index) {
@@ -125,8 +125,8 @@ namespace graphics {
 
     core::aabox3 ItemStore::fetchWorldBound(ItemID id) const {
         auto [info, l] = _itemInfos.read(id);
-        if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawableID != INVALID_DRAWABLE_ID)) {
-            return core::aabox_transformFrom(_scene->_nodes.getNodeTransform(info->_nodeID).world, _scene->_drawables.getBound(info->_drawableID));
+        if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawID != INVALID_DRAW_ID)) {
+            return core::aabox_transformFrom(_scene->_nodes.getNodeTransform(info->_nodeID).world, _scene->_drawables.getBound(info->_drawID));
         } else {
             return core::aabox3();
         }

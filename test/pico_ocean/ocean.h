@@ -3,8 +3,8 @@
 #include <complex>
 #include <math.h>
 #include <core/math/LinearAlgebra.h>
-#include <graphics/drawables/PrimitiveDrawable.h>
-#include <graphics/drawables/HeightmapDrawable.h>
+#include <graphics/drawables/PrimitiveDraw.h>
+#include <graphics/drawables/HeightmapDraw.h>
 
 
 
@@ -293,7 +293,7 @@ public:
 ocean::Ocean* locean;
 std::vector<graphics::NodeID> prim_nodes;
 graphics::ScenePointer lscene;
-graphics::Drawable heightmap_drawable;
+graphics::Draw heightmap_drawable;
 
 void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, float mesh_spacing, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
@@ -302,16 +302,16 @@ void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, flo
 
     lscene = scene;
 
-    // A Heightmap drawable factory
-    auto HeightmapDrawableFactory = std::make_shared<graphics::HeightmapDrawableFactory>();
-    HeightmapDrawableFactory->allocateGPUShared(gpuDevice);
+    // A Heightmap draw factory
+    auto HeightmapDrawFactory = std::make_shared<graphics::HeightmapDrawFactory>();
+    HeightmapDrawFactory->allocateGPUShared(gpuDevice);
 
     // a Heightmap
-    heightmap_drawable = scene->createDrawable(*HeightmapDrawableFactory->createHeightmap(gpuDevice, {
+    heightmap_drawable = scene->createDraw(*HeightmapDrawFactory->createHeightmap(gpuDevice, {
          map_res, map_res, map_spacing,
          mesh_res, mesh_res, mesh_spacing
        }));
-    HeightmapDrawableFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDrawable>());
+    HeightmapDrawFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDraw>());
 
 
 
@@ -322,7 +322,7 @@ void updateHeights(float t) {
 
     locean->UpdateHeights(t);
 
-    graphics::HeightmapDrawable& heightmap =  heightmap_drawable.as<graphics::HeightmapDrawable>();
+    graphics::HeightmapDraw& heightmap =  heightmap_drawable.as<graphics::HeightmapDraw>();
 
     auto buffer = heightmap.getHeightBuffer();
     auto desc = heightmap.getDesc();

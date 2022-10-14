@@ -30,7 +30,7 @@
 #include "Sky.h"
 #include "Camera.h"
 #include "Renderer.h"
-#include "Drawable.h"
+#include "Draw.h"
 #include "gpu/Swapchain.h"
 #include "gpu/Batch.h"
 #include "gpu/Query.h"
@@ -141,21 +141,22 @@ void Viewport::_renderCallback(RenderArgs& args) {
 void Viewport::renderScene(RenderArgs& args) {
     args.timer = _batchTimer;
     args.viewPassDescriptorSet = _viewPassDescriptorSet;
+    args.scene = _scene;
 
     auto itemInfos = _scene->_items.fetchItemInfos();
 
     for (int i = 1; i < itemInfos.size(); i++) {
         const auto& info = itemInfos[i];
-        if (info.isValid() && info.isVisible() && info.isDrawable()) {
-            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+        if (info.isValid() && info.isVisible() && info.isDraw()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawID);
             drawcall(info._nodeID, args);
         }
     }
 
     if (itemInfos.size() > 0) {
         const auto& info = itemInfos[0];
-        if (info.isValid() && info.isVisible() && info.isDrawable()) {
-            auto drawcall = _scene->_drawables.getDrawcall(info._drawableID);
+        if (info.isValid() && info.isVisible() && info.isDraw()) {
+            auto drawcall = _scene->_drawables.getDrawcall(info._drawID);
             drawcall(info._nodeID, args);
         }
     }
