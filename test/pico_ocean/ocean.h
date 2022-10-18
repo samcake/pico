@@ -293,7 +293,7 @@ public:
 ocean::Ocean* locean;
 std::vector<graphics::NodeID> prim_nodes;
 graphics::ScenePointer lscene;
-graphics::Draw heightmap_drawable;
+graphics::Draw heightmap_draw;
 
 void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, float mesh_spacing, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::CameraPointer& camera, graphics::Node& root) {
 
@@ -303,37 +303,20 @@ void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, flo
     lscene = scene;
 
     // A Heightmap draw factory
-    auto HeightmapDrawFactory = std::make_shared<graphics::HeightmapDrawFactory>();
-    HeightmapDrawFactory->allocateGPUShared(gpuDevice);
+    auto HeightmapDrawFactory = std::make_shared<graphics::HeightmapDrawFactory>(gpuDevice);
 
     // a Heightmap
-    heightmap_drawable = scene->createDraw(*HeightmapDrawFactory->createHeightmap(gpuDevice, {
+    heightmap_draw = scene->createDraw(HeightmapDrawFactory->createHeightmap(gpuDevice, {
          map_res, map_res, map_spacing,
          mesh_res, mesh_res, mesh_spacing
        }));
-    HeightmapDrawFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDraw>());
 
-
-
-    scene->createItem(root, heightmap_drawable);
+    scene->createItem(root, heightmap_draw);
 }
 
 void updateHeights(float t) {
 
     locean->UpdateHeights(t);
-
-    graphics::HeightmapDraw& heightmap =  heightmap_drawable.as<graphics::HeightmapDraw>();
-
-    auto buffer = heightmap.getHeightBuffer();
-    auto desc = heightmap.getDesc();
-
-    auto numElements = desc.getMapNumElements();
-
- //   memcpy(buffer->_cpuMappedAddress, locean->_heights.data(), locean->_heights.size() * sizeof(float));
-
-
-    
-
 
     for (int i = 0; i < prim_nodes.size(); i++) {
 

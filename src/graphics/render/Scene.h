@@ -89,10 +89,9 @@ namespace graphics {
 
         // Draws
         DrawStore _drawables;
-        Draw getDraw(DrawID DrawID) const;
         template <typename T>
-        Draw createDraw(T& x) {
-            return _drawables.createDraw(x);
+        Draw createDraw(T x) {
+            return _drawables.createDraw(std::move(x));
         }
 
         // Cameras

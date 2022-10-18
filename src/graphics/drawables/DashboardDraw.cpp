@@ -115,26 +115,26 @@ namespace graphics
         _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::DashboardDraw* DashboardDrawFactory::createDraw(const graphics::DevicePointer& device) {
-        auto primitiveDraw = new DashboardDraw();
-        primitiveDraw->_uniforms = _sharedUniforms;
+    graphics::DashboardDraw DashboardDrawFactory::createDraw(
+        const graphics::DevicePointer& device)
+    {
+        DashboardDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+        allocateDrawcallObject(device, primitiveDraw);
+
         return primitiveDraw;
     }
 
    void DashboardDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
         graphics::DashboardDraw& prim)
     {
-        auto prim_ = &prim;
         auto pipeline = this->_primitivePipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [pipeline](const NodeID node, RenderArgs& args) {
             if (args.timer) {
                 args.batch->bindPipeline(pipeline);
-                args.batch->setViewport(args.camera->getViewportRect());
-                args.batch->setScissor(args.camera->getViewportRect());
 
                 args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                 PrimitiveObjectData odata{ args.timer->getCurrentSampleIndex(), args.timer->getNumSamples(), 1.0f, 1.0f };
@@ -144,7 +144,6 @@ namespace graphics
                 args.batch->draw(3 * args.timer->getNumSamples(), 0);
             }
         };
-        prim._drawcall = drawCallback;
     }
 
 
@@ -153,9 +152,8 @@ namespace graphics
        auto dashboardDrawFactory = std::make_shared<DashboardDrawFactory>(gpuDevice);
 
        // a dashboard
-       auto dashboard_draw = scene->createDraw(*dashboardDrawFactory->createDraw(gpuDevice));
-       dashboardDrawFactory->allocateDrawcallObject(gpuDevice, scene, dashboard_draw.as<DashboardDraw>());
-       auto dashboard = scene->createItem(graphics::Node::null, dashboard_draw);
+       auto dashboardDraw = scene->createDraw(dashboardDrawFactory->createDraw(gpuDevice));
+       auto dashboard = scene->createItem(graphics::Node::null, dashboardDraw);
        dashboard.setVisible(false);
 
        return dashboard;

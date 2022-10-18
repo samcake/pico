@@ -69,12 +69,11 @@
 namespace graphics
 {
 
-    ModelDrawInspectorFactory::ModelDrawInspectorFactory() :
+    ModelDrawInspectorFactory::ModelDrawInspectorFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<ModelDrawInspectorUniforms>()) {
-
+        allocateGPUShared(device);
     }
     ModelDrawInspectorFactory::~ModelDrawInspectorFactory() {
-
     }
 
     // Custom data uniforms
@@ -618,8 +617,8 @@ namespace graphics
                             args.batch->clear(uvmeshFramebuffer, { 0, 0, 0, 0 });
 
                             core::vec4 viewport(0, 0, uvmeshFramebuffer->width(), uvmeshFramebuffer->height());
-                            args.batch->setViewport(viewport);
-                            args.batch->setScissor(viewport);
+                            args.batch->pushViewport(viewport);
+                            args.batch->pushScissor(viewport);
 
                             // Draw faces of the mesh in the edge map
                             args.batch->bindPipeline(pipeline_uvmesh_face);
@@ -659,7 +658,8 @@ namespace graphics
 
 
                             params->makeUVMeshMap = false;
-
+                            args.batch->popViewport();
+                            args.batch->popScissor();
                         }
 
                         if (first) {
@@ -696,8 +696,6 @@ namespace graphics
                         // in uv space mode, draw uvspace inspect quad
                         if (params->renderUVSpace) {
                             args.batch->bindPipeline(pipeline_draw_uvspace);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -711,8 +709,6 @@ namespace graphics
 
                         if (params->renderConnectivity && (params->inspectedTriangle > -1)) {
                             args.batch->bindPipeline(pipeline_draw_connectivity);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -730,8 +726,6 @@ namespace graphics
 
                         if (params->renderKernelSamples && (params->inspectedTexelX > -1) && (params->inspectedTexelY > -1)) {
                             args.batch->bindPipeline(pipeline_draw_kernelSamples);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -761,8 +755,6 @@ namespace graphics
                     // this all works because the main texture is populated in the very first drawcall on the first call
 
                     args.batch->bindPipeline(pipeline_draw_mesh);
-                    args.batch->setViewport(args.camera->getViewportRect());
-                    args.batch->setScissor(args.camera->getViewportRect());
 
                     args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                     args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -815,8 +807,6 @@ namespace graphics
 
                     if (params->renderWireframe || params->renderUVEdgeLines) {
                         args.batch->bindPipeline(pipeline_draw_edges);
-                        args.batch->setViewport(args.camera->getViewportRect());
-                        args.batch->setScissor(args.camera->getViewportRect());
 
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -841,8 +831,6 @@ namespace graphics
                     // draw the cloud point of samples from the uv mesh
                     if (params->renderUVMeshPoints) {
                         args.batch->bindPipeline(pipeline_draw_uvmesh_point);
-                        args.batch->setViewport(args.camera->getViewportRect());
-                        args.batch->setScissor(args.camera->getViewportRect());
 
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);

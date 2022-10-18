@@ -114,7 +114,8 @@ namespace graphics {
         auto itemCount = numAllocatedItems();
 
         // Pre allocate the result with the expected size
-        ItemInfos itemInfos(itemCount, ItemInfo());
+        // I wish we could avoid initializing all the N  new elements here, ... std::vector in c++30 ?
+        ItemInfos itemInfos(itemCount);
 
         // copy
         memcpy(itemInfos.data(), begin_info, itemCount * sizeof(ItemInfo));
@@ -126,7 +127,7 @@ namespace graphics {
     core::aabox3 ItemStore::fetchWorldBound(ItemID id) const {
         auto [info, l] = _itemInfos.read(id);
         if ((info->_nodeID != INVALID_NODE_ID) && (info->_drawID != INVALID_DRAW_ID)) {
-            return core::aabox_transformFrom(_scene->_nodes.getNodeTransform(info->_nodeID).world, _scene->_drawables.getBound(info->_drawID));
+            return core::aabox_transformFrom(_scene->_nodes.getNodeTransform(info->_nodeID).world, _scene->_drawables.getDrawBound(info->_drawID));
         } else {
             return core::aabox3();
         }

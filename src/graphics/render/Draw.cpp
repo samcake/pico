@@ -28,83 +28,120 @@
 #include "gpu/Resource.h"
 #include "gpu/Device.h"
 
-using namespace graphics;
+#include <algorithm>
 
+namespace graphics {
 
-Draw Draw::null;
+    Draw Draw::null;
 
-DrawID DrawStore::newID() {
-    return _indexTable.allocate().index;
-}
-
-Draw DrawStore::allocate(Draw draw) {
-
-    DrawID new_id = draw.id();
-    bool allocated = new_id == (_indexTable.getNumAllocatedElements() - 1);
-
-    auto bound = draw.getBound();
-
-    if (allocated) {
-        _drawables.push_back(draw);
-        _bounds.push_back({ bound });
-    }
-    else {
-        _drawables[new_id] = (draw);
-        _bounds[new_id] = { bound };
+    void DrawStore::reserve(const DevicePointer& device, uint32_t capacity) {
+        _drawInfos.reserve(device, capacity);
     }
 
-    if (new_id < _num_buffers_elements) {
-        reinterpret_cast<GPUDrawBound*>(_drawables_buffer->_cpuMappedAddress)[new_id]._local_box = (bound);
+    DrawID DrawStore::allocate(DrawObjectCallback drawcall, const DrawBound& bound, const Draw& draw) {
+        auto [new_id, recycle] = _indexTable.allocate();
+
+        //auto bound = draw.getBound();
+
+        DrawInfo info = { bound };
+        _drawInfos.allocate_element(new_id, &info);
+        _touchedElements.push_back(new_id);
+
+        if (recycle) {
+            _drawcalls[new_id] = drawcall;
+            _drawConcepts[new_id] = draw._self;
+        }
+        else {
+            _drawcalls.emplace_back(drawcall);
+            _drawConcepts.emplace_back(draw._self);
+        }
+
+        return new_id;
     }
 
-    return draw;
-}
 
-void DrawStore::free(DrawID index) {
-    if (_indexTable.isValid(index)) {
-        _indexTable.free(index);
+    DrawID DrawStore::createDraw(DrawObjectCallback drawcall, const DrawBound& bound, const Draw& draw) {
+        return allocate(drawcall, bound, draw);
+    }
 
-        _drawables[index] = Draw::null;
-        _bounds[index] = { };
-
-        if (index < _num_buffers_elements) {
-            reinterpret_cast<GPUDrawBound*>(_drawables_buffer->_cpuMappedAddress)[index]._local_box = core::aabox3();
+    void DrawStore::free(DrawID id) {
+        if (_indexTable.isValid(id)) {
+            _indexTable.free(id);
+            _drawInfos.set_element(id, nullptr);
+            _touchedElements.push_back(id);
+            _drawcalls[id] = nullptr;
+            _drawConcepts[id].reset();
         }
     }
-}
 
-int32_t DrawStore::reference(DrawID index) {
-    if (_indexTable.isValid(index)) {
-        return _drawables[index].reference();
-    } else { 
-        return 0;
+    DrawIDs DrawStore::fetchValidDraws() const {
+        // lock the store info array as a whole
+        // so we can use the unsafe data accessor in the search loop
+        auto [begin_info, l] = _drawInfos.read(0);
+
+        // Pre allocate the result with the expected size
+        DrawIDs validDraws(numValidDraws(), INVALID_DRAW_ID);
+
+        // Collect all the valid draw ids
+        auto drawCount = numAllocatedDraws();
+        for (DrawID i = 0; i < drawCount; ++i) {
+            if ((begin_info + i)->isValid())
+                validDraws.emplace_back(i);
+        }
+
+        // done
+        return validDraws;
+    }
+
+    DrawInfos DrawStore::fetchDrawInfos() const {
+        // lock the item store info array as a whole
+        // so we can use the unsafe data accessor in the search loop
+        auto [begin_info, l] = _drawInfos.read(0);
+
+        auto drawCount = numAllocatedDraws();
+
+        // Pre allocate the result with the expected size
+        DrawInfos drawInfos(drawCount, DrawInfo());
+
+        // copy
+        memcpy(drawInfos.data(), begin_info, drawCount * sizeof(DrawInfo));
+
+        // done
+        return drawInfos;
+    }
+
+    int32_t DrawStore::reference(DrawID id) {
+        if (_indexTable.isValid(id)) {
+            auto& the_node = *_drawInfos.unsafe_data(id);
+            the_node._refCount++;
+            _touchedElements.push_back(id);
+            return the_node._refCount;
+        } else {
+            return 0;
+        }
+    }
+    int32_t DrawStore::release(DrawID id) {
+        if (_indexTable.isValid(id)) {
+            auto& the_node = *_drawInfos.unsafe_data(id);
+            the_node._refCount--;
+            _touchedElements.push_back(id);
+            return the_node._refCount;
+        } else {
+            return 0;
+        }
+    }
+
+    void DrawStore::syncGPUBuffer(const BatchPointer& batch) {
+        // Clean the touched elements
+        std::sort(_touchedElements.begin(), _touchedElements.end());
+        auto newEnd = std::unique(_touchedElements.begin(), _touchedElements.end());
+        if (newEnd != _touchedElements.end()) _touchedElements.erase(newEnd);
+
+        // Sync the gpu buffer version
+        _drawInfos.sync_gpu_from_cpu(batch, _touchedElements);
+
+        // Start fresh
+        _touchedElements.clear();
     }
 }
 
-int32_t DrawStore::release(DrawID index) {
-    if (_indexTable.isValid(index)) {
-        return _drawables[index].release();
-    }
-    else {
-        return 0;
-    }
-}
-
-void DrawStore::resizeBuffers(const DevicePointer& device, uint32_t numElements) {
-
-    if (_num_buffers_elements < numElements) {
-        auto capacity = (numElements);
-
-        graphics::BufferInit drawables_buffer_init{};
-        drawables_buffer_init.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
-        drawables_buffer_init.hostVisible = true;
-        drawables_buffer_init.bufferSize = capacity * sizeof(GPUDrawBound);
-        drawables_buffer_init.firstElement = 0;
-        drawables_buffer_init.numElements = capacity;
-        drawables_buffer_init.structStride = sizeof(GPUDrawBound);
-
-        _drawables_buffer = device->createBuffer(drawables_buffer_init);
-        
-        _num_buffers_elements = capacity;
-    }
-}

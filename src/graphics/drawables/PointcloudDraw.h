@@ -78,18 +78,12 @@ namespace graphics {
 
     class VISUALIZATION_API PointCloudDrawFactory {
     public:
-        PointCloudDrawFactory();
+        PointCloudDrawFactory(const graphics::DevicePointer& device);
         ~PointCloudDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create PointCloudDraw for a given PointCloud document, building the gpu vertex buffer
-        graphics::PointCloudDraw* createPointCloudDraw(const graphics::DevicePointer& device, const document::PointCloudPointer& pointcloud);
-
-        // Create Drawcall object drawing the PointCloudDraw in the rendering context
-        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, graphics::PointCloudDraw& pointcloudDraw);
-    
+        graphics::PointCloudDraw createPointCloudDraw(const graphics::DevicePointer& device, const document::PointCloudPointer& pointcloud);
+ 
         // Read / write shared uniforms
         const PointCloudDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
         PointCloudDrawUniforms& editUniforms() { return (*_sharedUniforms); }
@@ -97,16 +91,18 @@ namespace graphics {
     protected:
         PointCloudDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the PointCloudDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::PointCloudDraw& pointcloudDraw);
     };
     using PointCloudDrawFactoryPointer = std::shared_ptr< PointCloudDrawFactory>;
     
 
-    class VISUALIZATION_API PointCloudDraw {
+    struct VISUALIZATION_API PointCloudDraw {
     public:
-        PointCloudDraw();
-        ~PointCloudDraw();
-
-        void swapUniforms(const PointCloudDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const PointCloudDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }

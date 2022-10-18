@@ -56,17 +56,13 @@ namespace graphics {
 
     class VISUALIZATION_API TriangleSoupDrawFactory {
     public:
-        TriangleSoupDrawFactory();
+        TriangleSoupDrawFactory(const graphics::DevicePointer& device);
         ~TriangleSoupDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create TriangleSoupDraw for a given TriangleSoup document, building the gpu vertex buffer
-        graphics::TriangleSoupDraw* createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
+        // Create TriangleSoupDraw for a given TriangleSoup document, building the gpu resource
+        graphics::TriangleSoupDraw createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
 
-        // Create Drawcall object drawing the TriangleSoupDraw in the rendering context
-        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, graphics::TriangleSoupDraw& pointcloudDraw);
 
         // Read / write shared uniforms
         const TriangleSoupDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -75,20 +71,20 @@ namespace graphics {
     protected:
         TriangleSoupDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the TriangleSoupDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::TriangleSoupDraw& pointcloudDraw);
+
     };
     using TriangleSoupDrawFactoryPointer = std::shared_ptr< TriangleSoupDrawFactory>;
 
 
-    /*
-    const pico::DrawcallObjectPointer& getDraw(const TriangleSoupDraw& x) {
-        return x.getDraw();
-    }*/
-    class VISUALIZATION_API TriangleSoupDraw {
-    public:
-        TriangleSoupDraw();
-        ~TriangleSoupDraw();
 
-        void swapUniforms(const TriangleSoupDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
+    struct VISUALIZATION_API TriangleSoupDraw {
+    public:
         const TriangleSoupDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }

@@ -34,14 +34,6 @@
 #include <render/Draw.h>
 
 namespace graphics {
-    class Device;
-    using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-    class Buffer;
-    using BufferPointer = std::shared_ptr<Buffer>;
-    class PipelineState;
-    using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
     class PrimitiveDraw;
 
@@ -50,22 +42,17 @@ namespace graphics {
     };
     using PrimitiveDrawUniformsPointer = std::shared_ptr<PrimitiveDrawUniforms>;
 
+    struct PrimititveDrawInit {
+        core::vec3 size{ 1.0f };
+    };
+
     class VISUALIZATION_API PrimitiveDrawFactory {
     public:
-        PrimitiveDrawFactory();
+        PrimitiveDrawFactory(const DevicePointer& device);
         ~PrimitiveDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create PrimitiveDraw for a given Primitive document
-        graphics::PrimitiveDraw* createPrimitive(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the PrimitiveDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::PrimitiveDraw& primitive);
+        PrimitiveDraw createPrimitive(const DevicePointer& device, const PrimititveDrawInit& init = PrimititveDrawInit());
 
         // Read / write shared uniforms
         const PrimitiveDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -73,20 +60,28 @@ namespace graphics {
 
     protected:
         PrimitiveDrawUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _primitivePipeline;
+        PipelineStatePointer _primitivePipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const DevicePointer& device);
+
+        // Create Drawcall object drawing the PrimitiveDraw in the rendering context
+        void allocateDrawcallObject(
+            const DevicePointer& device,
+            PrimitiveDraw& primitive);
+
     };
     using PrimitiveDrawFactoryPointer = std::shared_ptr< PrimitiveDrawFactory>;
 
 
-    class VISUALIZATION_API PrimitiveDraw {
+    struct VISUALIZATION_API PrimitiveDraw {
     public:
-
-        void swapUniforms(const PrimitiveDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const PrimitiveDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };
-        core::aabox3 getBound() const { return core::aabox3(); }
-        DrawObjectCallback getDrawcall() const { return _drawcall; }
+
+        inline core::aabox3 getBound() const { return core::aabox3(0, _size * 0.5); }
+        inline DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
         friend class PrimitiveDrawFactory;

@@ -42,113 +42,185 @@ namespace graphics {
     using DrawIDs = core::IndexTable::Indices;
     static const DrawID INVALID_DRAW_ID = core::IndexTable::INVALID_INDEX;
 
+    //using Drawcall = void(const NodeID node, RenderArgs& args);
     using DrawObjectCallback = std::function<void(
         const NodeID node,
         RenderArgs& args)>;
 
-    // Here we define the DrawcallObject as the container of the various pico gpu objects we need to render an item.
-    // this will evolve and probably clean up over time and move the genralized concepts in the visualization library
+    using DrawBound = core::aabox3;
 
-    template <typename T> core::aabox3 drawable_getBound(const T& x) {
+
+    // 
+    // Draw class
+    //
+    template <typename T> DrawBound drawable_getBound(const T& x) {
         return x.getBound();
     }
     template <typename T> DrawObjectCallback drawable_getDrawcall(const T& x) {
         return x.getDrawcall();
     }
 
-
-
-    class VISUALIZATION_API Draw {
-      
-
-        friend class DrawStore;
-
-        template <typename T> Draw(DrawID id, T x) :
-            _self(std::make_shared<Model<T>>(id, std::move(x))) {
-        }
-
-
-        int32_t reference() { return _self->reference(); }
-        int32_t release() { return _self->release(); }
-
+    struct VISUALIZATION_API Draw {
     public:
-        Draw() { } // invalid
         static Draw null;
+        Draw() {} // Same as the null Draw
 
         DrawID id() const { return _self->_id; }
-        core::aabox3 getBound() const { return _self->getBound(); }
+        DrawBound getBound() const { return _self->getBound(); }
         DrawObjectCallback getDrawcall() const { return _self->getDrawcall(); }
 
     private:
+        friend class DrawStore;
+
+
+        template <typename T>
+        Draw(T x) :
+            _self(std::make_shared<Model<T>>(x)) {
+        }
+
+
         struct Concept {
-            Concept(DrawID index) : _id(index) {}
+            mutable DrawID _id{ INVALID_DRAW_ID };
+
             virtual ~Concept() = default;
-            virtual core::aabox3 getBound() const = 0;
+
+            virtual DrawBound getBound() const = 0;
             virtual DrawObjectCallback getDrawcall() const = 0;
 
-            const DrawID _id{ INVALID_DRAW_ID };
-            mutable int32_t _refCount{ 0 };
-
-            int32_t reference() const { return ++ _refCount; }
-            int32_t release() const { return -- _refCount; }
         };
+        using DrawConcepts = std::vector<std::shared_ptr<const Concept>>;
+     
         template <typename T> struct Model final : Concept {
-            Model(DrawID index, T x) : Concept(index), _data(std::move(x)) {}
+ 
+            T _data; // The data is moved per value in the model
 
-            core::aabox3 getBound() const override { return drawable_getBound(_data); }
+            Model(T x) : _data(std::move(x)) {}
+
+            DrawBound getBound() const override { return drawable_getBound(_data); }
             DrawObjectCallback getDrawcall() const override { return drawable_getDrawcall(_data); }
-
-            T _data;
         };
 
         std::shared_ptr<const Concept> _self;
+
     public:
         template <typename T> T& as() const {
             return (const_cast<Model<T>*> (
-                        reinterpret_cast<const Model<T>*>(
-                            _self.get()
-                        )
-                    )->_data); }
+                reinterpret_cast<const Model<T>*>(
+                    _self.get()
+                    )
+                )->_data);
+        }
 
     };
 
-    class DrawStore {
-        DrawID newID();
-        Draw allocate(Draw draw);
-    public:
+    using Draws = std::vector<Draw>;
 
+    // 
+    // Draw store
+    //
+    class VISUALIZATION_API DrawStore {
+    public:
+        // Right after allocation, MUST call the reserve function to allocate the memory chuncks
+        void reserve(const DevicePointer& device, uint32_t capacity);
+
+        static const int32_t INVALID_REFCOUNT_INFO = -1;
+
+        struct DrawInfo {
+            DrawBound _local_box;
+            float  _spareA;
+            mutable int32_t _refCount{ INVALID_REFCOUNT_INFO };
+
+            inline bool isValid() const { return _refCount != INVALID_REFCOUNT_INFO; }
+        };
+        using DrawInfoStructBuffer = StructuredBuffer<DrawInfo>;
+        using DrawInfos = DrawInfoStructBuffer::Array;
+
+    private:
+        DrawID allocate(DrawObjectCallback drawcall, const DrawBound& bound, const Draw& draw);
+
+        core::IndexTable _indexTable;
+        mutable DrawInfoStructBuffer _drawInfos;
+
+        mutable DrawIDs _touchedElements;
+
+        using ReadLock = std::pair< const DrawInfo*, std::lock_guard<std::mutex>>;
+        using WriteLock = std::pair< DrawInfo*, std::lock_guard<std::mutex>>;
+
+        inline ReadLock read(DrawID id) const {
+            return  _drawInfos.read(id);
+        }
+        inline WriteLock write(DrawID id) const {
+            _touchedElements.emplace_back(id); // take not of the write for this element
+            return  _drawInfos.write(id);
+        }
+
+        struct Handle {
+            DrawStore* _store = nullptr;
+            DrawID     _id = INVALID_DRAW_ID;
+
+            inline bool isValidHandle() const {
+                return (_store != nullptr) && (_id != INVALID_DRAW_ID);
+            }
+        };
+
+        using Drawcalls = std::vector< DrawObjectCallback >;
+        mutable Drawcalls _drawcalls;
+
+        struct DefaultModel : Draw::Concept {
+            DefaultModel(DrawStore* store) : Draw::Concept(), _store(store) {}
+
+            DrawStore* _store = nullptr;
+
+            DrawBound getBound() const override { return _store->getDrawBound(_id); }
+            DrawObjectCallback getDrawcall() const override { return _store->getDrawcall(_id); }
+        };
+
+        Draw::DrawConcepts _drawConcepts;
+
+    public:
+        
         template <typename T>
         Draw createDraw(T x) {
-            return allocate(Draw(newID(), x));
+            auto draw = Draw(std::move(x));
+            draw._self->_id = createDraw(draw.getDrawcall(), draw.getBound(), draw);
+            return draw;
         }
-        
-        void free(DrawID index);
-        int32_t reference(DrawID index);
-        int32_t release(DrawID index);
 
-        core::aabox3 getBound(DrawID index) const { return _bounds[index]._local_box; }
-        DrawObjectCallback getDrawcall(DrawID index) const { return _drawables[index].getDrawcall(); }
-        Draw getDraw(DrawID index) const { return _drawables[index]; }
+        DrawID createDraw(DrawObjectCallback drawcall, const DrawBound& bound, const Draw& draw = Draw::null);
+        void free(DrawID id);
 
-        struct VISUALIZATION_API GPUDrawBound {
-            core::aabox3 _local_box;
-            float  _spareA;
-            float  _spareB;
-        };
-        std::vector<GPUDrawBound> _bounds;
+        int32_t reference(DrawID id);
+        int32_t release(DrawID id);
 
-    protected:
-        core::IndexTable _indexTable;
-        std::vector<Draw> _drawables;
+        inline auto numValidDraws() const { return _indexTable.getNumValidElements(); }
+        inline auto numAllocatedDraws() const { return _indexTable.getNumAllocatedElements(); }
 
-        uint32_t  _num_buffers_elements{ 0 };
+        DrawIDs fetchValidDraws() const;
+        DrawInfos fetchDrawInfos() const; // Collect all the DrawInfos in an array, there could be INVALID drawInfos
+
+        inline bool isValid(DrawID id) const { return getDrawInfo(id).isValid(); }
+
+        inline DrawInfo getDrawInfo(DrawID id) const {
+            auto [i, l] = read(id);
+            return *i;
+        }
+
+        // Access the drawbounds by reference and avoid any copy of the lambda
+
+        inline const DrawBound& getDrawBound(DrawID id) const { return getDrawInfo(id)._local_box; }
+
+        // Access the drawcalls by reference and avoid any copy of the lambda
+        // THis should be called from a critical section during the rendering pass
+        inline const DrawObjectCallback& getDrawcall(DrawID id) const { return _drawcalls[id]; }
+
+
     public:
-        BufferPointer _drawables_buffer;
-        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
-
-       
+        // gpu api
+        inline BufferPointer getGPUBuffer() const { return _drawInfos.gpu_buffer(); }
+        void syncGPUBuffer(const BatchPointer& batch);
     };
 
-
+    using DrawInfo = DrawStore::DrawInfo;
+    using DrawInfos = DrawStore::DrawInfos;
 }
 

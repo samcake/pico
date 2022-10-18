@@ -76,21 +76,11 @@ namespace graphics {
 
     class VISUALIZATION_API HeightmapDrawFactory {
     public:
-        HeightmapDrawFactory();
+        HeightmapDrawFactory(const graphics::DevicePointer& device);
         ~HeightmapDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create HeightmapDraw for a given Heightmap document
-        graphics::HeightmapDraw* createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap);
-
-        // Create Drawcall object drawing the HeightmapDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            const graphics::CameraPointer& camera,
-            graphics::HeightmapDraw& Heightmap);
+        graphics::HeightmapDraw createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap);
 
         // Read / write shared uniforms
         const HeightmapDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -102,14 +92,17 @@ namespace graphics {
 
         graphics::PipelineStatePointer _computePipeline;
 
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the HeightmapDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::HeightmapDraw& Heightmap);
     };
     using HeightmapDrawFactoryPointer = std::shared_ptr< HeightmapDrawFactory>;
 
 
-    class VISUALIZATION_API HeightmapDraw {
+    struct VISUALIZATION_API HeightmapDraw {
     public:
-
-        void swapUniforms(const HeightmapDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const HeightmapDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(core::vec3(0.f), core::vec3(_heightmap.map_width, 2.0f, _heightmap.map_height) * 0.5f *_heightmap.map_spacing); }

@@ -123,21 +123,17 @@ graphics::NodeIDs generateModel(graphics::DevicePointer& gpuDevice, graphics::Sc
     lmodel = document::model::Model::createFromGLTF(modelFile);
 
     if (!state._modelDrawFactory) {
-        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>();
-        state._modelDrawFactory->allocateGPUShared(gpuDevice);
+        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>(gpuDevice);
     }
 
     auto modelDrawPtr = state._modelDrawFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawPtr);
-
     auto modelDraw = scene->createDraw(*modelDrawPtr);
 
     graphics::ItemIDs modelItemIDs;
 
     if (withInspector) {
         if (!state._modelDrawInspectorFactory) {
-            state._modelDrawInspectorFactory = std::make_shared<graphics::ModelDrawInspectorFactory>();
-            state._modelDrawInspectorFactory->allocateGPUShared(gpuDevice);
+            state._modelDrawInspectorFactory = std::make_shared<graphics::ModelDrawInspectorFactory>(gpuDevice);
             state.params = state._modelDrawInspectorFactory->getUniformsPtr();
             state.params->setFilterKernelTechnique(graphics::ModelDrawInspectorUniforms::FKT_IMAGE_SPACE);
         }

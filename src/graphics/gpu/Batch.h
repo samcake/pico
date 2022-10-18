@@ -72,8 +72,41 @@ namespace graphics {
         virtual void resourceBarrierRW(
             ResourceBarrierFlag flag, const TexturePointer& texture, uint32_t subresource);
 
-        virtual void setViewport(const core::vec4& viewport);
-        virtual void setScissor(const core::vec4& scissor);
+        // Viewport and scissor provide a stack management system
+        
+        inline virtual void setViewport(const core::vec4& viewport) final {
+            _viewportStack.back() = viewport;
+            _setViewport(viewport);
+        }
+
+        inline virtual void pushViewport(const core::vec4& viewport) final {
+            _viewportStack.emplace_back(viewport);
+            _setViewport(viewport);
+        }
+        inline virtual void popViewport() final {
+            _viewportStack.pop_back();
+            _setViewport(_viewportStack.back());
+        }
+
+        inline virtual void setScissor(const core::vec4& scissor) final {
+            _scissorStack.back() = scissor;
+            _setScissor(scissor);
+        }
+
+        inline virtual void pushScissor(const core::vec4& scissor) final {
+            _scissorStack.emplace_back(scissor);
+            _setScissor(scissor);
+        }
+        inline virtual void popScissor() final {
+            _scissorStack.pop_back();
+            _setScissor(_scissorStack.back());
+        }
+
+    protected:
+        virtual void _setViewport(const core::vec4& viewport) {}
+        virtual void _setScissor(const core::vec4& scissor) {}
+
+    public:
 
         virtual void bindFramebuffer(const FramebufferPointer& framebuffer);
 
@@ -120,5 +153,8 @@ namespace graphics {
             uint16_t depth = 1;
         };
         virtual void dispatchRays(const DispatchRaysArgs& args);
+
+        std::vector< core::vec4 > _viewportStack = std::vector< core::vec4 >(1); // The stack of viewports used by the set push pop viewport system
+        std::vector< core::vec4 > _scissorStack = std::vector< core::vec4 >(1); // The stack of scissors used by the set push pop scissor system
     };
 }

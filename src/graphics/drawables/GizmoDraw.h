@@ -67,30 +67,15 @@ namespace graphics {
 
     class VISUALIZATION_API GizmoDrawFactory {
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
+        void allocateGPUShared(const DevicePointer& device, const ScenePointer& scene);
 
     public:
-        GizmoDrawFactory(const graphics::DevicePointer& device);
+        GizmoDrawFactory(const DevicePointer& device, const ScenePointer& scene);
         ~GizmoDrawFactory();
 
         // Create GizmoDraw for a given Gizmo document, building the gpu vertex buffer
-        graphics::NodeGizmo* createNodeGizmo(const graphics::DevicePointer& device);
-        graphics::ItemGizmo* createItemGizmo(const graphics::DevicePointer& device);
-        graphics::CameraGizmo* createCameraGizmo(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the GizmoDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::NodeGizmo& gizmo);
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::ItemGizmo& gizmo);
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::CameraGizmo& gizmo);
+        NodeGizmo createNodeGizmo(const DevicePointer& device);
+        ItemGizmo createItemGizmo(const DevicePointer& device, const ScenePointer& scene);
 
         // Read / write shared uniforms
         const GizmoDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -98,16 +83,20 @@ namespace graphics {
 
     protected:
         GizmoDrawUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _nodePipeline;
-        graphics::PipelineStatePointer _itemPipeline;
-        graphics::PipelineStatePointer _cameraPipeline;
+        PipelineStatePointer _nodePipeline;
+        PipelineStatePointer _itemPipeline;
+
+        DescriptorSetPointer _descriptorSet;
+
+        // Create Drawcall object drawing the GizmoDraw in the rendering context
+        void allocateDrawcallObject( const DevicePointer& device, NodeGizmo& gizmo);
+        void allocateDrawcallObject( const DevicePointer& device, const ScenePointer& scene, ItemGizmo& gizmo);
     };
     using GizmoDrawFactoryPointer = std::shared_ptr< GizmoDrawFactory>;
 
 
-    class VISUALIZATION_API NodeGizmo {
+    struct VISUALIZATION_API NodeGizmo {
     public:
-        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
@@ -120,10 +109,8 @@ namespace graphics {
         DrawObjectCallback _drawcall;
     };
 
-    class VISUALIZATION_API ItemGizmo {
+    struct VISUALIZATION_API ItemGizmo {
     public:
-
-        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
@@ -136,10 +123,8 @@ namespace graphics {
         DrawObjectCallback _drawcall;
     };
 
-    class VISUALIZATION_API CameraGizmo {
+    struct VISUALIZATION_API CameraGizmo {
     public:
-
-        void swapUniforms(const GizmoDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const GizmoDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::aabox3 getBound() const { return core::aabox3(); }
@@ -152,6 +137,6 @@ namespace graphics {
         DrawObjectCallback _drawcall;
     };
 
-    std::tuple<graphics::Item, graphics::Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpudevice);
+    std::tuple<Item, Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpudevice);
 
 } // !namespace graphics

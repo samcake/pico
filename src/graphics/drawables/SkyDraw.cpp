@@ -62,10 +62,11 @@ namespace graphics
 
 
 
-    SkyDrawFactory::SkyDrawFactory() :
+    SkyDrawFactory::SkyDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<SkyDrawUniforms>()) {
         _sharedUniforms->_sky = std::make_shared<Sky>();
 
+        allocateGPUShared(device);
     }
     SkyDrawFactory::~SkyDrawFactory() {
 
@@ -210,18 +211,20 @@ namespace graphics
 
     }
 
-    graphics::SkyDraw* SkyDrawFactory::createDraw(const graphics::DevicePointer& device) {
-        auto primitiveDraw = new SkyDraw();
-        primitiveDraw->_uniforms = _sharedUniforms;
+    graphics::SkyDraw SkyDrawFactory::createDraw(const graphics::DevicePointer& device) {
+        SkyDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+
+        allocateDrawcallObject(device, primitiveDraw);
+
         return primitiveDraw;
     }
 
    void SkyDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
         graphics::SkyDraw& prim)
     {
-        auto prim_ = &prim;
+        auto prim_ = prim;
         auto drawPipeline = this->_skyPipeline;
         auto skymapPipeline = this->_skymapPipeline;
         auto diffusePipelineFirst = this->_diffuseSkymapPipeline[0];
@@ -290,9 +293,9 @@ namespace graphics
         device->updateDescriptorSet(diffuse_descriptorSet, diffuse_descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [THREAD_GROUP_SIDE, prim_, drawPipeline, skymapPipeline, diffusePipelineFirst, diffusePipelineNext, draw_descriptorSet, skymap_descriptorSet, diffuse_descriptorSet, diffuse_skybuf](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [THREAD_GROUP_SIDE, prim_, drawPipeline, skymapPipeline, diffusePipelineFirst, diffusePipelineNext, draw_descriptorSet, skymap_descriptorSet, diffuse_descriptorSet, diffuse_skybuf](const NodeID node, RenderArgs& args) {
             auto& batch = args.batch;
-            auto uniforms = prim_->getUniforms();
+            auto uniforms = prim_.getUniforms();
             if (uniforms->_sky->needSkymapUpdate()) {
 
                 batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::VERTEX_AND_CONSTANT_BUFFER, graphics::ResourceState::COPY_DEST, uniforms->_sky->getGPUBuffer());
@@ -341,8 +344,6 @@ namespace graphics
             }
 
             batch->bindPipeline(drawPipeline);
-            batch->setViewport(args.camera->getViewportRect());
-            batch->setScissor(args.camera->getViewportRect());
 
             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, draw_descriptorSet);
@@ -353,7 +354,6 @@ namespace graphics
             // A quad is drawn with one triangle 3 verts
             batch->draw(3 * args.timer->getNumSamples(), 0);
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

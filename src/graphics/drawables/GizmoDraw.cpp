@@ -54,10 +54,10 @@
 namespace graphics
 {
 
-    GizmoDrawFactory::GizmoDrawFactory(const graphics::DevicePointer& device) :
+    GizmoDrawFactory::GizmoDrawFactory(const DevicePointer& device, const ScenePointer& scene) :
         _sharedUniforms(std::make_shared<GizmoDrawUniforms>()) {
 
-        allocateGPUShared(device);
+        allocateGPUShared(device, scene);
     }
     GizmoDrawFactory::~GizmoDrawFactory() {
 
@@ -79,11 +79,11 @@ namespace graphics
                 | (showWorldBound)  *SHOW_WORLD_BOUND_BIT;
     }
 
-    void GizmoDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void GizmoDrawFactory::allocateGPUShared(const DevicePointer& device, const ScenePointer& scene) {
         // Let's describe the pipeline Descriptors for _node
-        graphics::RootDescriptorLayoutInit rootDescriptorLayoutInit{
+        RootDescriptorLayoutInit rootDescriptorLayoutInit{
             {
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(GizmoObjectData) >> 2},
+            { DescriptorType::PUSH_UNIFORM, ShaderStage::VERTEX, 1, sizeof(GizmoObjectData) >> 2},
             },
             {
                 // ViewPass descriptorSet Layout
@@ -95,8 +95,8 @@ namespace graphics
         // Let's describe the pipeline Descriptors layout same as _node + another descriptorset
         rootDescriptorLayoutInit._setLayouts.push_back(
                 {
-                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 1, 1},
-                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1},
+                { DescriptorType::RESOURCE_BUFFER, ShaderStage::VERTEX, 1, 1},
+                { DescriptorType::RESOURCE_BUFFER, ShaderStage::VERTEX, 2, 1},
                 }
                 );
 
@@ -106,7 +106,7 @@ namespace graphics
 
 
         // test: create shader
-        graphics::ShaderIncludeLib include = {
+        ShaderIncludeLib include = {
             Transform_inc::getMapEntry(),
             Projection_inc::getMapEntry(),
             Camera_inc::getMapEntry(),
@@ -114,205 +114,150 @@ namespace graphics
         };
 
 
-        graphics::ShaderInit vertexShaderInit_node{ graphics::ShaderType::VERTEX, "main", GizmoNode_vert::getSource, GizmoNode_vert::getSourceFilename(), include };
-        graphics::ShaderPointer vertexShader_node = device->createShader(vertexShaderInit_node);
+        ShaderInit vertexShaderInit_node{ ShaderType::VERTEX, "main", GizmoNode_vert::getSource, GizmoNode_vert::getSourceFilename(), include };
+        ShaderPointer vertexShader_node = device->createShader(vertexShaderInit_node);
 
-        graphics::ShaderInit vertexShaderInit_item{ graphics::ShaderType::VERTEX, "main", GizmoItem_vert::getSource, GizmoItem_vert::getSourceFilename(), include };
-        graphics::ShaderPointer vertexShader_item = device->createShader(vertexShaderInit_item);
+        ShaderInit vertexShaderInit_item{ ShaderType::VERTEX, "main", GizmoItem_vert::getSource, GizmoItem_vert::getSourceFilename(), include };
+        ShaderPointer vertexShader_item = device->createShader(vertexShaderInit_item);
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Gizmo_frag::getSource, Gizmo_frag::getSourceFilename(), include };
-        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+        ShaderInit pixelShaderInit{ ShaderType::PIXEL, "main", Gizmo_frag::getSource, Gizmo_frag::getSourceFilename(), include };
+        ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
-        graphics::ProgramInit programInit_node{ vertexShader_node, pixelShader };
-        graphics::ShaderPointer programShader_node = device->createProgram(programInit_node);
+        ProgramInit programInit_node{ vertexShader_node, pixelShader };
+        ShaderPointer programShader_node = device->createProgram(programInit_node);
 
-        graphics::ProgramInit programInit_item{ vertexShader_item, pixelShader };
-        graphics::ShaderPointer programShader_item = device->createProgram(programInit_item);
+        ProgramInit programInit_item{ vertexShader_item, pixelShader };
+        ShaderPointer programShader_item = device->createProgram(programInit_item);
 
-        graphics::GraphicsPipelineStateInit pipelineInit_node{
+        GraphicsPipelineStateInit pipelineInit_node{
                     programShader_node,
                     rootDescriptorLayout_node,
                     StreamLayout(),
-                    graphics::PrimitiveTopology::LINE,
+                    PrimitiveTopology::LINE,
                     RasterizerState(),
                     true, // enable depth
                     BlendState()
         };
         _nodePipeline = device->createGraphicsPipelineState(pipelineInit_node);
 
-        graphics::GraphicsPipelineStateInit pipelineInit_item{
+        GraphicsPipelineStateInit pipelineInit_item{
                     programShader_item,
                     rootDescriptorLayout_item,
                     StreamLayout(),
-                    graphics::PrimitiveTopology::LINE,
+                    PrimitiveTopology::LINE,
                     RasterizerState(),
                     true, // enable depth
                     BlendState()
         };
         _itemPipeline = device->createGraphicsPipelineState(pipelineInit_item);
+
     }
 
-    graphics::NodeGizmo* GizmoDrawFactory::createNodeGizmo(const graphics::DevicePointer& device) {
+    NodeGizmo GizmoDrawFactory::createNodeGizmo(const DevicePointer& device) {
 
-        auto gizmoDraw = new NodeGizmo();
+        NodeGizmo gizmoDraw;
 
         // Create the triangle soup draw using the shared uniforms of the factory
-        gizmoDraw->_uniforms = _sharedUniforms;
+        gizmoDraw._uniforms = _sharedUniforms;
+
+        allocateDrawcallObject(device, gizmoDraw);
 
         return gizmoDraw;
     }
 
-    graphics::ItemGizmo* GizmoDrawFactory::createItemGizmo(const graphics::DevicePointer& device) {
+    ItemGizmo GizmoDrawFactory::createItemGizmo(const DevicePointer& device, const ScenePointer& scene) {
 
-        auto gizmoDraw = new ItemGizmo();
-
-        // Create the triangle soup draw using the shared uniforms of the factory
-        gizmoDraw->_uniforms = _sharedUniforms;
-
-        return gizmoDraw;
-    }
-
-    graphics::CameraGizmo* GizmoDrawFactory::createCameraGizmo(const graphics::DevicePointer& device) {
-
-        auto gizmoDraw = new CameraGizmo();
+        ItemGizmo gizmoDraw;
 
         // Create the triangle soup draw using the shared uniforms of the factory
-        gizmoDraw->_uniforms = _sharedUniforms;
+        gizmoDraw._uniforms = _sharedUniforms;
 
+        allocateDrawcallObject(device, scene, gizmoDraw);
+        
         return gizmoDraw;
     }
 
     void GizmoDrawFactory::allocateDrawcallObject(
-        const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::NodeGizmo& gizmo)
+        const DevicePointer& device,
+        NodeGizmo& gizmo)
     {
-        auto pgizmo = &gizmo;
         auto pipeline = this->_nodePipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [pgizmo, pipeline](const NodeID node, RenderArgs& args) {
+        gizmo._drawcall = [pg = gizmo, pipeline](const NodeID node, RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
 
-            args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+            args.batch->bindDescriptorSet(PipelineType::GRAPHICS, args.viewPassDescriptorSet);
 
-            const auto& uni = *pgizmo->getUniforms();
+            const auto& uni = *pg.getUniforms();
             auto count = core::min(uni.indexCount, args.scene->_nodes.numAllocatedNodes() - uni.indexOffset);
             auto flags = uni.buildFlags();
             GizmoObjectData odata{ uni.indexOffset, flags, 0, 0};
-            args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+            args.batch->bindPushUniform(PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
             args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_TRANSFORM_BIT) * 3 + (flags & GizmoDrawUniforms::SHOW_BRANCH_BIT) * 1), 0);
         };
-        gizmo._drawcall = drawCallback;
     }
 
 
    void GizmoDrawFactory::allocateDrawcallObject(
-        const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::ItemGizmo& gizmo)
+        const DevicePointer& device,
+        const ScenePointer& scene,
+        ItemGizmo& gizmo)
    {
-       // Create DescriptorSet #1, #0 is ViewPassDS
-       graphics::DescriptorSetInit descriptorSetInit{
-           _itemPipeline->getRootDescriptorLayout(),
-            1
-       };
-       auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
-
-       graphics::DescriptorObjects descriptorObjects = {{
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
-
-       }};
-       device->updateDescriptorSet(descriptorSet, descriptorObjects);
-
-       auto pgizmo = &gizmo;
+       auto pgizmo = gizmo;
        auto pipeline = this->_itemPipeline;
 
-       // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
-           
-           args.batch->bindPipeline(pipeline);
-           args.batch->setViewport(args.camera->getViewportRect());
-           args.batch->setScissor(args.camera->getViewportRect());
-
-           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
-           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
-
-           const auto& uni = *pgizmo->getUniforms();
-           auto count = core::min(uni.indexCount, args.scene->_items.numAllocatedItems() - uni.indexOffset);
-           auto flags = uni.buildFlags();
-           GizmoObjectData odata{ uni.indexOffset, flags, 0, 0 };
-           args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
-
-           args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
-       };
-       gizmo._drawcall = drawCallback;
-   }
-
-   void GizmoDrawFactory::allocateDrawcallObject(
-       const graphics::DevicePointer& device,
-       const graphics::ScenePointer& scene,
-       graphics::CameraGizmo& gizmo)
-   {
        // Create DescriptorSet #1, #0 is ViewPassDS
-       graphics::DescriptorSetInit descriptorSetInit{
+       DescriptorSetInit descriptorSetInit{
            _itemPipeline->getRootDescriptorLayout(),
             1
        };
-       auto descriptorSet = device->createDescriptorSet(descriptorSetInit);
 
-       graphics::DescriptorObjects descriptorObjects = { {
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_drawables._drawables_buffer },
-            { graphics::DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
+       _descriptorSet = device->createDescriptorSet(descriptorSetInit);
+
+       DescriptorObjects descriptorObjects = { {
+            { DescriptorType::RESOURCE_BUFFER, scene->_drawables.getGPUBuffer()},
+            { DescriptorType::RESOURCE_BUFFER, scene->_items.getGPUBuffer()},
 
        } };
-       device->updateDescriptorSet(descriptorSet, descriptorObjects);
+       device->updateDescriptorSet(_descriptorSet, descriptorObjects);
 
-       auto pgizmo = &gizmo;
-       auto pipeline = this->_itemPipeline;
+       auto descriptorSet = this->_descriptorSet;
 
        // And now a render callback where we describe the rendering sequence
-       graphics::DrawObjectCallback drawCallback = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
-
+       gizmo._drawcall = [pgizmo, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
+           
            args.batch->bindPipeline(pipeline);
-           args.batch->setViewport(args.camera->getViewportRect());
-           args.batch->setScissor(args.camera->getViewportRect());
 
-           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
-           args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
+           args.batch->bindDescriptorSet(PipelineType::GRAPHICS, args.viewPassDescriptorSet);
+           args.batch->bindDescriptorSet(PipelineType::GRAPHICS, descriptorSet);
 
-           const auto& uni = *pgizmo->getUniforms();
+           const auto& uni = *pgizmo.getUniforms();
            auto count = core::min(uni.indexCount, args.scene->_items.numAllocatedItems() - uni.indexOffset);
            auto flags = uni.buildFlags();
            GizmoObjectData odata{ uni.indexOffset, flags, 0, 0 };
-           args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
+           args.batch->bindPushUniform(PipelineType::GRAPHICS, 0, sizeof(GizmoObjectData), (const uint8_t*)&odata);
 
            args.batch->draw(count * 2 * ((flags & GizmoDrawUniforms::SHOW_LOCAL_BOUND_BIT) * 12 + (flags & GizmoDrawUniforms::SHOW_WORLD_BOUND_BIT) * 12), 0);
        };
-       gizmo._drawcall = drawCallback;
    }
 
-   std::tuple<graphics::Item, graphics::Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpuDevice) {
+   std::tuple<Item, Item> GizmoDraw_createSceneGizmos(const ScenePointer& scene, const DevicePointer& gpuDevice) {
        // A gizmo draw factory
-       auto gizmoDrawFactory = std::make_shared<GizmoDrawFactory>(gpuDevice);
+       auto gizmoDrawFactory = std::make_unique<GizmoDrawFactory>(gpuDevice, scene);
 
        // a gizmo draw to draw the transforms
-       auto node_tree_draw = scene->createDraw(*gizmoDrawFactory->createNodeGizmo(gpuDevice));
-       gizmoDrawFactory->allocateDrawcallObject(gpuDevice, scene, node_tree_draw.as<NodeGizmo>());
-       auto node_tree = scene->createItem(graphics::Node::null, node_tree_draw);
-       node_tree.setVisible(true);
+       auto node_tree_draw = scene->createDraw(gizmoDrawFactory->createNodeGizmo(gpuDevice));
+       auto node_tree = scene->createItem(Node::null, node_tree_draw);
+       node_tree.setVisible(false);
 
 
-       auto item_tree_draw = scene->createDraw(*gizmoDrawFactory->createItemGizmo(gpuDevice));
-       gizmoDrawFactory->allocateDrawcallObject(gpuDevice, scene, item_tree_draw.as<ItemGizmo>());
-       auto item_tree = scene->createItem(graphics::Node::null, item_tree_draw);
-       item_tree.setVisible(true);
+       auto item_tree_draw = scene->createDraw(gizmoDrawFactory->createItemGizmo(gpuDevice, scene));
+       auto item_tree = scene->createItem(Node::null, item_tree_draw);
+       item_tree.setVisible(false);
 
-       return std::tuple<graphics::Item, graphics::Item>{node_tree, item_tree};
+       return std::tuple<Item, Item>{node_tree, item_tree};
    }
 
 } // !namespace graphics

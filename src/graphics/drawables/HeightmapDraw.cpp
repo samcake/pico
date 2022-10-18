@@ -54,9 +54,10 @@
 namespace graphics
 {
 
-    HeightmapDrawFactory::HeightmapDrawFactory() :
+    HeightmapDrawFactory::HeightmapDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<HeightmapDrawUniforms>()) {
 
+        allocateGPUShared(device);
     }
     HeightmapDrawFactory::~HeightmapDrawFactory() {
 
@@ -147,10 +148,10 @@ namespace graphics
         }
     }
 
-    graphics::HeightmapDraw* HeightmapDrawFactory::createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap) {
-        auto HeightmapDraw = new graphics::HeightmapDraw();
-        HeightmapDraw->_heightmap = heightmap;
-        HeightmapDraw->_uniforms = _sharedUniforms;
+    graphics::HeightmapDraw HeightmapDrawFactory::createHeightmap(const graphics::DevicePointer& device, const Heightmap& heightmap) {
+        HeightmapDraw heightmapDraw;
+        heightmapDraw._heightmap = heightmap;
+        heightmapDraw._uniforms = _sharedUniforms;
 
         auto numHeights = heightmap.getMapNumElements();
 
@@ -162,24 +163,22 @@ namespace graphics
         hbresourceBufferInit.numElements = numHeights;
         hbresourceBufferInit.structStride = sizeof(float);
 
-        HeightmapDraw->_heightBuffer = device->createBuffer(hbresourceBufferInit);
+        heightmapDraw._heightBuffer = device->createBuffer(hbresourceBufferInit);
 
         if ( heightmap.heights.size() > 0) {
-             memcpy(HeightmapDraw->_heightBuffer->_cpuMappedAddress, heightmap.heights.data(), hbresourceBufferInit.bufferSize);
+             memcpy(heightmapDraw._heightBuffer->_cpuMappedAddress, heightmap.heights.data(), hbresourceBufferInit.bufferSize);
         }
 
-        return HeightmapDraw;
+        allocateDrawcallObject(device, heightmapDraw);
+
+        return heightmapDraw;
     }
 
    void HeightmapDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        const graphics::CameraPointer& camera,
         graphics::HeightmapDraw& draw)
     {
-
-       auto heightmap = &draw;
-       bool doCompute = heightmap->_heightmap.heights.empty();
+       bool doCompute = draw._heightmap.heights.empty();
 
        graphics::DescriptorSetInit compDescriptorSetInit{
            _computePipeline->getRootDescriptorLayout(),
@@ -209,14 +208,12 @@ namespace graphics
         auto pipeline = this->_HeightmapPipeline;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [heightmap, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
-    
+        draw._drawcall = [draw, doCompute, compDescriptorSet, compute_pipeline, descriptorSet, pipeline](const NodeID node, RenderArgs& args) {
+  
             static uint32_t frameNum = 0;
             frameNum++;
-            HeightmapObjectData odata{ frameNum, heightmap->_heightmap.map_width,  heightmap->_heightmap.map_height, heightmap->_heightmap.map_spacing,
-                                       heightmap->_heightmap.mesh_resolutionX,  heightmap->_heightmap.mesh_resolutionY, heightmap->_heightmap.mesh_spacing };
+            HeightmapObjectData odata{ frameNum, draw._heightmap.map_width,  draw._heightmap.map_height, draw._heightmap.map_spacing,
+                                       draw._heightmap.mesh_resolutionX,  draw._heightmap.mesh_resolutionY, draw._heightmap.mesh_spacing };
 
             if (doCompute) {
                 args.batch->bindPipeline(compute_pipeline);
@@ -224,8 +221,8 @@ namespace graphics
                 args.batch->bindPushUniform(graphics::PipelineType::COMPUTE, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
             
             //   args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::SHADER_RESOURCE, graphics::ResourceState::UNORDERED_ACCESS, heightmap->getHeightBuffer());
-                args.batch->dispatch(heightmap->_heightmap.map_width / 32, heightmap->_heightmap.map_height / 32);
-                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, heightmap->getHeightBuffer());
+                args.batch->dispatch(draw._heightmap.map_width / 32, draw._heightmap.map_height / 32);
+                args.batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::UNORDERED_ACCESS, graphics::ResourceState::SHADER_RESOURCE, draw.getHeightBuffer());
             }
 
             odata.nodeID = node;
@@ -235,9 +232,8 @@ namespace graphics
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(HeightmapObjectData), (const uint8_t*)&odata);
 
             // A heightmap is drawn with triangle strips patch of (2 * (width + 1) + 1) * (height) verts
-            args.batch->draw(heightmap->_heightmap.getMeshNumIndices(), 0);
+            args.batch->draw(draw._heightmap.getMeshNumIndices(), 0);
         };
-        draw._drawcall = drawCallback;
     }
 
 } // !namespace graphics

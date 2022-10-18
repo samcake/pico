@@ -55,9 +55,9 @@
 namespace graphics
 {
 
-    TriangleSoupDrawFactory::TriangleSoupDrawFactory() :
+    TriangleSoupDrawFactory::TriangleSoupDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<TriangleSoupDrawUniforms>()) {
-
+            allocateGPUShared(device);
     }
     TriangleSoupDrawFactory::~TriangleSoupDrawFactory() {
 
@@ -120,9 +120,9 @@ namespace graphics
         _pipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::TriangleSoupDraw* TriangleSoupDrawFactory::createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
+    graphics::TriangleSoupDraw TriangleSoupDrawFactory::createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& triangleSoup) {
         if (!triangleSoup) {
-            return nullptr;
+            return TriangleSoupDraw();
         }
 
         // Step 1, create a Mesh from the triangle soup data
@@ -179,20 +179,21 @@ namespace graphics
         memcpy(ibresourceBuffer->_cpuMappedAddress, mesh->_indexStream._buffers[0]->_data.data(), ibresourceBufferInit.bufferSize);
 
 
-        auto triangleSoupDraw = new TriangleSoupDraw();
-        triangleSoupDraw->_vertexBuffer = vbresourceBuffer;
-        triangleSoupDraw->_indexBuffer = ibresourceBuffer;
-        triangleSoupDraw->_bounds = mesh->_bounds;
+        TriangleSoupDraw triangleSoupDraw;
+        triangleSoupDraw._vertexBuffer = vbresourceBuffer;
+        triangleSoupDraw._indexBuffer = ibresourceBuffer;
+        triangleSoupDraw._bounds = mesh->_bounds;
 
         // Create the triangle soup draw using the shared uniforms of the factory
-        triangleSoupDraw->_uniforms = _sharedUniforms;
+        triangleSoupDraw._uniforms = _sharedUniforms;
+
+        allocateDrawcallObject(device, triangleSoupDraw);
 
         return triangleSoupDraw;
     }
 
     void TriangleSoupDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
         graphics::TriangleSoupDraw& triangleSoup)
     {
         // It s time to create a descriptorSet that matches the expected pipeline descriptor set
@@ -215,37 +216,22 @@ namespace graphics
         auto numIndices = triangleSoup.getIndexBuffer()->numElements();
         auto vertexStride = triangleSoup.getVertexBuffer()->_init.structStride;
 
-        auto ptriangleSoup = &triangleSoup;
-        auto pipeline = this->_pipeline;
-
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [ptriangleSoup, descriptorSet, numVertices, numIndices, vertexStride, pipeline](
+        triangleSoup._drawcall = [ptriangleSoup = triangleSoup, descriptorSet, numVertices, numIndices, vertexStride, pipeline = this->_pipeline](
             const NodeID node,
             RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
 
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             //       args.batch->bindVertexBuffers(1, &vertexBuffer);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-            auto uniforms = ptriangleSoup->getUniforms();
+            auto uniforms = ptriangleSoup.getUniforms();
             TSObjectData odata{ { (int32_t)node }, numVertices, numIndices, vertexStride, uniforms->triangleScale };
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(TSObjectData), (const uint8_t*)&odata);
 
             args.batch->draw(numIndices, 0);
         };
-        triangleSoup._drawcall = drawCallback;
-
-    }
-
-
-    TriangleSoupDraw::TriangleSoupDraw() {
-
-    }
-    TriangleSoupDraw::~TriangleSoupDraw() {
-
     }
 
 } // !namespace graphics

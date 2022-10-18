@@ -97,8 +97,7 @@ AppState state;
 graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::NodeID nodeRoot) {
 
     if (!state._modelDrawFactory) {
-        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>();
-        state._modelDrawFactory->allocateGPUShared(gpuDevice);
+        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>(gpuDevice);
         state._modelDrawParams = state._modelDrawFactory->getUniformsPtr();
     }
 
@@ -225,8 +224,7 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(viewportInit);
 
     // a sky draw to draw the sky
-    auto skyDraw = state.scene->createDraw(*skyDrawFactory->createDraw(gpuDevice));
-    skyDrawFactory->allocateDrawcallObject(gpuDevice, state.scene, skyDraw.as<graphics::SkyDraw>());
+    auto skyDraw = state.scene->createDraw(skyDrawFactory->createDraw(gpuDevice));;
     auto skyitem = state.scene->createItem(graphics::Node::null, skyDraw);
     skyitem.setVisible(true);
 
