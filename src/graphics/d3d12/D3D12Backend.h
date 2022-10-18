@@ -196,6 +196,8 @@ namespace graphics {
         D3D12_CPU_DESCRIPTOR_HANDLE _dsv;
     };
 
+    class D3D12PipelineStateBackend;
+    class D3D12DescriptorSetBackend;
     class D3D12BatchBackend : public Batch {
     public:
         friend class D3D12Backend;
@@ -226,8 +228,8 @@ namespace graphics {
         void resourceBarrierRW(
             ResourceBarrierFlag flag, const TexturePointer& texture, uint32_t subresource) override;
 
-        void setViewport(const core::vec4& viewport) override;
-        void setScissor(const core::vec4& scissor) override;
+        void _setViewport(const core::vec4& viewport) override;
+        void _setScissor(const core::vec4& scissor) override;
 
         void bindDescriptorHeap(const DescriptorHeapPointer& descriptorHeap);
 
@@ -265,6 +267,10 @@ namespace graphics {
         UINT _currentGraphicsRootLayout_samplerRootIndex = 0;
         UINT _currentComputeRootLayout_setRootIndex = 0;
         UINT _currentComputeRootLayout_samplerRootIndex = 0;
+
+        D3D12PipelineStateBackend* _currentGraphicsPipeline = nullptr;
+
+        D3D12DescriptorSetBackend* _currentGraphicsDescriptorSets[4] = { nullptr, nullptr, nullptr, nullptr };
 
         BatchTimerPointer _timer;
 

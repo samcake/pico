@@ -47,9 +47,9 @@
 namespace graphics
 {
 
-    PostSceneDrawFactory::PostSceneDrawFactory() :
+    PostSceneDrawFactory::PostSceneDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<PostSceneDrawUniforms>()) {
-
+        allocateGPUShared(device);
     }
     PostSceneDrawFactory::~PostSceneDrawFactory() {
 
@@ -129,18 +129,18 @@ namespace graphics
         _primitivePipeline = device->createRaytracingPipelineState(pipelineInit);
     }
 
-    graphics::PostSceneDraw* PostSceneDrawFactory::createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry) {
-        auto primitiveDraw = new PostSceneDraw();
-        primitiveDraw->_uniforms = _sharedUniforms;
-        primitiveDraw->_geometry = geometry;
+    graphics::PostSceneDraw PostSceneDrawFactory::createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry) {
+        PostSceneDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+        primitiveDraw._geometry = geometry;
 
+        allocateDrawcallObject(device, primitiveDraw);
 
         return primitiveDraw;
     }
 
    void PostSceneDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
         graphics::PostSceneDraw& prim)
     {
 
@@ -175,7 +175,7 @@ namespace graphics
         auto shaderTable = prim._shaderTable;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline, shaderTable](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [prim_, pipeline, shaderTable](const NodeID node, RenderArgs& args) {
 
             graphics::Batch::DispatchRaysArgs rayArgs = {};
             rayArgs.shaderTable = shaderTable;
@@ -197,7 +197,6 @@ namespace graphics
             args.batch->bindPipeline(pipeline);
             args.batch->dispatchRays(rayArgs);
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

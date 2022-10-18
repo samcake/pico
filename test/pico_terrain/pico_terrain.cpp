@@ -82,23 +82,19 @@ void generateTerrain(uint32_t map_res, float map_spacing, graphics::DevicePointe
 
 
       // A Heightmap draw factory
-    auto HeightmapDrawFactory = std::make_shared<graphics::HeightmapDrawFactory>();
-    HeightmapDrawFactory->allocateGPUShared(gpuDevice);
+    auto HeightmapDrawFactory = std::make_shared<graphics::HeightmapDrawFactory>(gpuDevice);
 
-    // a Heightmap
-    graphics::Draw heightmap_drawable;
-
+    // a Heightmap draw
     map_res = lterrain->_resolution;
     map_spacing = lterrain->_spacing;
-
-    heightmap_drawable = scene->createDraw(*HeightmapDrawFactory->createHeightmap(gpuDevice, {
+    auto heightmap_draw = scene->createDraw(HeightmapDrawFactory->createHeightmap(gpuDevice, {
          map_res, map_res, map_spacing,
          map_res, map_res, map_spacing,
          lterrain->_heights
         }));
-    HeightmapDrawFactory->allocateDrawcallObject(gpuDevice, scene, camera, heightmap_drawable.as<graphics::HeightmapDraw>());
 
-    scene->createItem(root, heightmap_drawable);
+    // In an item
+    scene->createItem(root, heightmap_draw);
 }
 
 //--------------------------------------------------------------------------------------
@@ -136,11 +132,12 @@ int main(int argc, char *argv[])
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
 
+    // Create gizmos to draw the node transform and item tree
+    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);
+
     auto terrain_resolution = 512;
     generateTerrain(terrain_resolution, 1.0f, gpuDevice, scene, camera, node0);
 
-    // Create gizmos to draw the node transform and item tree
-    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);
 
     // Bounds
     scene->updateBounds();

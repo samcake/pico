@@ -162,11 +162,8 @@ namespace graphics {
 
     class VISUALIZATION_API ModelDrawInspectorFactory {
     public:
-        ModelDrawInspectorFactory();
+        ModelDrawInspectorFactory(const graphics::DevicePointer& device);
         ~ModelDrawInspectorFactory();
-
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
 
         // Create ModelDraw for a given Model document
         graphics::ModelDrawInspector* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDraw* draw);
@@ -175,9 +172,8 @@ namespace graphics {
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
             const graphics::ScenePointer& scene,
-            graphics::ModelDrawInspector& model);
+            graphics::ModelDrawInspector& model); 
 
-        
         graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDrawInspector& model);
 
 
@@ -205,14 +201,16 @@ namespace graphics {
 
         graphics::PipelineStatePointer _pipeline_compute_imageSpaceBlur;
         graphics::PipelineStatePointer _pipeline_compute_meshSpaceBlur;
+
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
     };
     using ModelDrawInspectorFactoryPointer = std::shared_ptr< ModelDrawInspectorFactory>;
 
 
     class VISUALIZATION_API ModelDrawInspector : public ModelDraw {
     public:
-
-        void swapUniforms(const ModelDrawInspectorUniformsPointer& uniforms) { _uniforms = uniforms; }
         const ModelDrawInspectorUniformsPointer& getUniforms() const { return _uniforms; }
         
         // PRE pass DrawbleID
@@ -241,7 +239,7 @@ namespace graphics {
     };
 
     
-    class VISUALIZATION_API ModelDrawInspectorPart {
+    struct VISUALIZATION_API ModelDrawInspectorPart {
     public:
         core::aabox3 getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }

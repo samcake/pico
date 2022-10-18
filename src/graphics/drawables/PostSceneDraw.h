@@ -51,20 +51,12 @@ namespace graphics {
 
     class VISUALIZATION_API PostSceneDrawFactory {
     public:
-        PostSceneDrawFactory();
+        PostSceneDrawFactory(const graphics::DevicePointer& device);
         ~PostSceneDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create PostSceneDraw
-        graphics::PostSceneDraw* createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry);
+        graphics::PostSceneDraw createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry);
 
-        // Create Drawcall object drawing the PostSceneDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::PostSceneDraw& primitive);
 
         // Read / write shared uniforms
         const PostSceneDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -74,14 +66,20 @@ namespace graphics {
     protected:
         PostSceneDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _primitivePipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the PostSceneDraw in the rendering context
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            graphics::PostSceneDraw& primitive);
     };
     using PostSceneDrawFactoryPointer = std::shared_ptr< PostSceneDrawFactory>;
 
 
-    class VISUALIZATION_API PostSceneDraw {
+    struct VISUALIZATION_API PostSceneDraw {
     public:
-
-        void swapUniforms(const PostSceneDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const PostSceneDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };

@@ -36,18 +36,8 @@
 #include <gpu/Query.h>
 
 namespace graphics {
-    class Device;
-    using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-    class Buffer;
-    using BufferPointer = std::shared_ptr<Buffer>;
-    class PipelineState;
-    using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
     class SkyDraw;
-
-
 
     struct VISUALIZATION_API SkyDrawUniforms {
         SkyPointer _sky;
@@ -57,20 +47,11 @@ namespace graphics {
 
     class VISUALIZATION_API SkyDrawFactory {
     public:
-        SkyDrawFactory();
+        SkyDrawFactory(const graphics::DevicePointer& device);
         ~SkyDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create SkyDraw
-        graphics::SkyDraw* createDraw(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the SkyDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::SkyDraw& primitive);
+        graphics::SkyDraw createDraw(const graphics::DevicePointer& device);
 
         // Read / write shared uniforms
         const SkyDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -82,14 +63,21 @@ namespace graphics {
 
         graphics::PipelineStatePointer _skymapPipeline;
         graphics::PipelineStatePointer _diffuseSkymapPipeline[2];
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the SkyDraw in the rendering context
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            graphics::SkyDraw& primitive);
+
     };
     using SkyDrawFactoryPointer = std::shared_ptr< SkyDrawFactory>;
 
 
-    class VISUALIZATION_API SkyDraw {
+    struct VISUALIZATION_API SkyDraw {
     public:
-
-        void swapUniforms(const SkyDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const SkyDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };

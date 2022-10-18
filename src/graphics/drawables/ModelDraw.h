@@ -57,11 +57,8 @@ namespace graphics {
 
     class VISUALIZATION_API ModelDrawFactory {
     public:
-        ModelDrawFactory();
+        ModelDrawFactory(const graphics::DevicePointer& device);
         ~ModelDrawFactory();
-
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
 
         // Create ModelDraw for a given Model document
         graphics::ModelDraw* createModel(const graphics::DevicePointer& device, const document::ModelPointer& model);
@@ -72,7 +69,6 @@ namespace graphics {
             const graphics::ScenePointer& scene,
             graphics::ModelDraw& model);
 
-        
         graphics::ItemIDs createModelParts(const graphics::NodeID root, const graphics::ScenePointer& scene, graphics::ModelDraw& model);
 
 
@@ -84,6 +80,9 @@ namespace graphics {
     protected:
         ModelDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _pipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
     };
     using ModelDrawFactoryPointer = std::shared_ptr< ModelDrawFactory>;
 
@@ -143,10 +142,9 @@ namespace graphics {
     public:
         virtual ~ModelDraw() {}
 
-        void swapUniforms(const ModelDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const ModelDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
-        core::aabox3 getBound() const { return _bound; }
+        DrawBound getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
         // immutable buffer containing the vertices, indices, parts and materials of the model
@@ -216,9 +214,9 @@ namespace graphics {
     };
 
     
-    class VISUALIZATION_API ModelDrawPart {
+    struct VISUALIZATION_API ModelDrawPart {
     public:
-        core::aabox3 getBound() const { return _bound; }
+        DrawBound getBound() const { return _bound; }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
         
         

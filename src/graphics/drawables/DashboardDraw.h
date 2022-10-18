@@ -55,13 +55,7 @@ namespace graphics {
         ~DashboardDrawFactory();
 
         // Create DashboardDraw
-        graphics::DashboardDraw* createDraw(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the DashboardDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::DashboardDraw& primitive);
+        graphics::DashboardDraw createDraw(const graphics::DevicePointer& device);
 
         // Read / write shared uniforms
         const DashboardDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -73,14 +67,16 @@ namespace graphics {
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the DashboardDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::DashboardDraw& primitive);
     };
-    using DashboardDrawFactoryPointer = std::shared_ptr< DashboardDrawFactory>;
+
+    using DashboardDrawFactoryPointer = std::shared_ptr<DashboardDrawFactory>;
 
 
-    class VISUALIZATION_API DashboardDraw {
+    struct VISUALIZATION_API DashboardDraw {
     public:
-
-        void swapUniforms(const DashboardDrawUniformsPointer& uniforms) { _uniforms = uniforms; }
         const DashboardDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };

@@ -35,15 +35,14 @@ namespace graphics {
 
         _items.reserve(this, init.device, init.items_capacity);
         _nodes.reserve(init.device, init.nodes_capacity);
-        _drawables.resizeBuffers(init.device, init.drawables_capacity);
+        _drawables.reserve(init.device, init.drawables_capacity);
         _cameras.reserve(init.device, init.cameras_capacity);
 
 
         // A sky draw factory
         // Assign the sky to the scene here ....
         // TODO: NO!
-        _skyFactory = std::make_shared<graphics::SkyDrawFactory>();
-        _skyFactory->allocateGPUShared(init.device);
+        _skyFactory = std::make_shared<graphics::SkyDrawFactory>(init.device);
         _sky = _skyFactory->getUniforms()._sky;
 
    
@@ -176,21 +175,21 @@ namespace graphics {
     }
 
     // Draws
-    Draw Scene::getDraw(DrawID DrawID) const {
+ /*   Draw Scene::getDraw(DrawID DrawID) const {
         return _drawables.getDraw(DrawID);
-    }
+    }*/
 
 
     void Scene::updateBounds() {
         auto itemInfos = _items.fetchItemInfos();
         auto nodeTransforms = _nodes.fetchNodeTransforms();
+        auto drawInfos = _drawables.fetchDrawInfos();
 
         core::aabox3 b;
-        const auto& bounds = _drawables._bounds;
         int i = 0;
         for (const auto& info : itemInfos) {
             if (info._nodeID != INVALID_NODE_ID && info._drawID != INVALID_DRAW_ID) {
-                auto ibw = core::aabox_transformFrom(nodeTransforms[info._nodeID].world, bounds[info._drawID]._local_box);
+                auto ibw = core::aabox_transformFrom(nodeTransforms[info._nodeID].world, drawInfos[info._drawID]._local_box);
                 if (i == 0) {
                     b = ibw;
                 } else {
@@ -212,6 +211,7 @@ namespace graphics {
     void syncSceneResourcesForFrame(const ScenePointer& scene, const BatchPointer& batch) {
         scene->_items.syncGPUBuffer(batch);
         scene->_nodes.syncGPUBuffer(batch);
+        scene->_drawables.syncGPUBuffer(batch);
         scene->_cameras.syncGPUBuffer(batch);
 
         scene->_sky->updateGPUData(); // arggg

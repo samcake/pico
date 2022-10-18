@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice});
+    auto scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice, 1000100, 1000100, 1000, 10});
   
     // A Camera to look at the scene
     auto camera = scene->createCamera();
@@ -126,22 +126,16 @@ int main(int argc, char *argv[])
 
 
     // A point cloud draw factory
-    auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>();
-    pointCloudDrawFactory->allocateGPUShared(gpuDevice);
+    auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>(gpuDevice);
 
     // a draw from the pointcloud
-    graphics::PointCloudDraw* pointCloudDraw(pointCloudDrawFactory->createPointCloudDraw(gpuDevice, pointCloud));
-    pointCloudDrawFactory->allocateDrawcallObject(gpuDevice, scene, *pointCloudDraw);
-    auto pcdrawable = scene->createDraw(*pointCloudDraw);
+    auto pcdrawable = scene->createDraw(pointCloudDrawFactory->createPointCloudDraw(gpuDevice, pointCloud));
 
     // A triangel soup draw factory
-    auto triangleSoupDrawFactory = std::make_shared<graphics::TriangleSoupDrawFactory>();
-    triangleSoupDrawFactory->allocateGPUShared(gpuDevice);
+    auto triangleSoupDrawFactory = std::make_shared<graphics::TriangleSoupDrawFactory>(gpuDevice);
 
     // a draw from the trianglesoup
-    graphics::TriangleSoupDraw* triangleSoupDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
-    triangleSoupDrawFactory->allocateDrawcallObject(gpuDevice, scene, *triangleSoupDraw);
-    auto tsdrawable = scene->createDraw(*triangleSoupDraw);
+    auto tsdrawable = scene->createDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
 
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
@@ -175,17 +169,22 @@ int main(int argc, char *argv[])
 
     
     // A Primitive draw factory
-    auto primitiveDrawFactory = std::make_shared<graphics::PrimitiveDrawFactory>();
-    primitiveDrawFactory->allocateGPUShared(gpuDevice);
+    auto primitiveDrawFactory = std::make_unique<graphics::PrimitiveDrawFactory>(gpuDevice);
 
-    // a Primitive
-    auto p_drawable = scene->createDraw(*primitiveDrawFactory->createPrimitive(gpuDevice));
-    primitiveDrawFactory->allocateDrawcallObject(gpuDevice, scene, p_drawable.as<graphics::PrimitiveDraw>());
-    p_drawable.as<graphics::PrimitiveDraw>()._size = {1.0, 2.0, 0.7 };
+    // a Primitive draw
+    int numPrimitiveDraws = 100;
+    graphics::Draws primitiveDraws(numPrimitiveDraws);
+    for (int i = 0; i < numPrimitiveDraws; ++i) {
+        float t = sin(core::pi()*float(i) / float(numPrimitiveDraws));
+        core::vec3 size = { 1.0f + 2.0f * t, 2.0f + 3.0f * t, 0.7f + 2.0f * t };
+        primitiveDraws[i] = scene->createDraw(primitiveDrawFactory->createPrimitive(gpuDevice, { {size} }));
 
+    }
+
+    // And many primitive items using the on of the primitive_draws
     std::vector<graphics::NodeID> prim_nodes;
     {
-        int width = 100;
+        int width = 200;
         float space = 4.0f;
         float pos_offset = width / 2 * space;
         for (int i = 0; i < width * width; ++i) {
@@ -196,8 +195,8 @@ int main(int argc, char *argv[])
                     core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
                 ),
                 rnode.id());
-            // node0.id());
-            auto p_item = scene->createItem(p_node, p_drawable);
+
+            auto p_item = scene->createItem(p_node, primitiveDraws[i % numPrimitiveDraws]);
             prim_nodes.push_back(p_node.id());
         }
     }
@@ -361,6 +360,15 @@ int main(int argc, char *argv[])
             zoomToScene = true;
         }
 
+        if (e.state && e.key == uix::KEY_N) {
+            gznode_tree.toggleVisible();
+        }
+        if (e.state && e.key == uix::KEY_B) {
+            gzitem_tree.toggleVisible();
+        }
+        if (e.state && e.key == uix::KEY_M) {
+            dashboard_item.toggleVisible();
+        }
         if (zoomToScene) {
             camControl->zoomTo(sceneSphere);
         }

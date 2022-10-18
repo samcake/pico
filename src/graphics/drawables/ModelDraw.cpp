@@ -64,9 +64,9 @@
 namespace graphics
 {
 
-    ModelDrawFactory::ModelDrawFactory() :
+    ModelDrawFactory::ModelDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<ModelDrawUniforms>()) {
-
+        allocateGPUShared(device);
     }
     ModelDrawFactory::~ModelDrawFactory() {
 
@@ -630,7 +630,6 @@ namespace graphics
         }
         modelDraw->_bound = model_aabb;
 
-
         return modelDraw;
     }
 
@@ -692,8 +691,6 @@ namespace graphics
             }
 
             args.batch->bindPipeline(pipeline);
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
 
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
@@ -706,21 +703,19 @@ namespace graphics
        // one draw per part
        DrawIDs drawables;
        for (int d = 0; d < model._partAABBs.size(); ++d) {
-           auto part = new ModelDrawPart();
-           part->_bound = model._partAABBs[d];
+           ModelDrawPart part;
+           part._bound = model._partAABBs[d];
 
             auto partNumIndices = model._parts[d].numIndices;
            // And now a render callback where we describe the rendering sequence
-           graphics::DrawObjectCallback drawCallback = [d, uniforms, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
+            part._drawcall = [d, uniforms, partNumIndices, numNodes, numParts, numMaterials, descriptorSet, pipeline](
                const NodeID node, RenderArgs& args) {
                    ModelObjectData odata{ (uint32_t)node, (uint32_t)d, (uint32_t)numNodes, (uint32_t)numParts, (uint32_t)numMaterials, (uint32_t)uniforms->makeDrawMode() };
                    args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(ModelObjectData), (const uint8_t*)&odata);
                    args.batch->draw(partNumIndices, 0);
            };
 
-           part->_drawcall = drawCallback;
-
-           auto partDraw = scene->createDraw(*part);
+           auto partDraw = scene->createDraw(part);
            drawables.emplace_back(partDraw.id());
        }
 
