@@ -28,7 +28,7 @@
 
 #include <vector>
 
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "gpu/StreamLayout.h"
 #include "render.h"
 

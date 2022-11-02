@@ -28,8 +28,7 @@
 
 #include <vector>
 #include <unordered_map>
-#include <iostream>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 
 #include "render/Transform.h"
 

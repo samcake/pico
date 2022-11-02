@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <complex>
 #include <math.h>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include <graphics/drawables/PrimitiveDraw.h>
 #include <graphics/drawables/HeightmapDraw.h>
 

@@ -1,6 +1,6 @@
-// Noise.h 
+// LinearAlgebraCore.h 
 //
-// Sam Gateau - August 2020
+// Sam Gateau - November 2022
 // 
 // MIT License
 //
@@ -25,35 +25,28 @@
 // SOFTWARE.
 //
 #pragma once
-#include "math.h"
+#include <stdint.h>
+#include <cmath>
+//#define PICO_SIMD
+#ifdef PICO_SIMD
+#include <immintrin.h>
+#endif
 
-namespace core 
-{
-    // Noise function by Squirrel Eiserloh 'Squirrel3'
-    inline uint32_t noise1D(int32_t pos, uint32_t seed) {
-        const uint32_t BIT_NOISE1 = 0x68E31DA4;
-        const uint32_t BIT_NOISE2 = 0xB5297A4D;
-        const uint32_t BIT_NOISE3 = 0x1B56C4E9;
+namespace core {
+    template <typename T>
+    inline void swap(T& a, T& b) { T t = a; a = b; b = t; }
 
-        uint32_t mangled = (uint32_t) pos;
-        mangled *= BIT_NOISE1;
-        mangled += seed;
-        mangled ^= (mangled >> 8);
-        mangled += BIT_NOISE2;
-        mangled ^= (mangled << 8);
-        mangled *= BIT_NOISE3;
-        mangled ^= (mangled >> 8);
-        return mangled;
-    }
+    inline constexpr double pi() { return 3.14159265358979323846; }
+    inline constexpr double two_pi() { return pi() * 2.0; }
+    inline constexpr double half_pi() { return pi() * 0.5; }
+    inline constexpr double inv_pi() { return 1.0 / pi(); }
+    inline constexpr double inv_two_pi() { return 1.0 / two_pi(); }
+    inline constexpr double rad2deg() { return 180.0 * inv_pi(); }
+    inline constexpr double deg2rad() { return pi() / 180.0; }
 
-    inline uint32_t noise2D(int32_t x, int32_t y, uint32_t seed) {
-        const int32_t PRIME_NUMBER = 198491317;
-        return noise1D(x + (PRIME_NUMBER * y), seed);
-    }
+    inline float rad_to_deg(float r) { return r * rad2deg(); }
+    inline float deg_to_rad(float d) { return d * deg2rad(); }
 
-    inline uint32_t noise3D(int32_t x, int32_t y, int32_t z, uint32_t seed) {
-        const int32_t PRIME_NUMBER1 = 198491317;
-        const int32_t PRIME_NUMBER2 = 6542989;
-        return noise1D(x + (PRIME_NUMBER1 * y) + (PRIME_NUMBER2 * z), seed);
-    }
+    static const float FLOAT_EPSILON{ 0.0001f };
+
 }

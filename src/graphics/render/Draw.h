@@ -28,7 +28,7 @@
 
 #include <functional>
 
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 
 #include "Renderer.h"
 #include "render/Transform.h"

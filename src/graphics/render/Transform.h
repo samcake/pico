@@ -27,7 +27,7 @@
 #pragma once
 
 #include <functional>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include <core/stl/IndexTable.h>
 
 #include "dllmain.h"
