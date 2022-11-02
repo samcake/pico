@@ -192,7 +192,7 @@ int main(int argc, char *argv[])
             auto p_node = scene->createNode(
                 core::translation_rotation(
                     core::vec3(-space * (i % width) + pos_offset, -1.0f, space * (i / width) - pos_offset),
-                    core::rotor3(core::vec3::X, core::vec3(cos(t), 0, sin(t)))
+                    core::rotor3::make_from_x_to_dir(core::vec3(cos(t), 0, sin(t)))
                 ),
                 rnode.id());
 
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
         if (doAnimate) {
             // Move something
             scene->_nodes.editNodeTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
-                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(-t), 0.0f, sin(-t)));
+                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(-t), 0.0f, sin(-t)));
                 core::rotation(rts, rotor);
                 return true;
             });
@@ -287,19 +287,19 @@ int main(int argc, char *argv[])
                 return true;
             });
             scene->_nodes.editNodeTransform(cnode.id(), [t](core::mat4x3& rts) -> bool {
-                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
+                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
                 core::rotation(rts, rotor);
                 return true;
             });
             scene->_nodes.editNodeTransform(dnode.id(), [t](core::mat4x3& rts) -> bool {
-                core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
+                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
                 core::rotation(rts, rotor);
                 return true;
             });
 
             for (auto prim_node : prim_nodes) {
                 scene->_nodes.editNodeTransform(prim_node, [t](core::mat4x3& rts) -> bool {
-                    core::rotor3 rotor(core::vec3(1.0f, 0.0f, 0.0f), core::vec3(cos(0.005 * t), 0.0f, sin(0.005 * t)));
+                    core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3((float)cos(0.005 * t), 0.0f, (float)sin(0.005 * t)));
                     core::rotate(rts, rotor);
                     return true;
                 });

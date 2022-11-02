@@ -27,7 +27,7 @@
 #pragma once
 
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Vec.h>
 #include "dllmain.h"
 
 #include <render/Scene.h>

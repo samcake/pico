@@ -29,7 +29,7 @@
 #include <functional>
 #include <vector>
 
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Vec.h>
 #include <core/api.h>
 
 #include "dllmain.h"

@@ -25,7 +25,7 @@
 // SOFTWARE.
 //
 #pragma once
-#include <core/math/LinearAlgebra.h>
+#include "Math3D.h"
 
 namespace core 
 {

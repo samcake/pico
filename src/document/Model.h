@@ -29,7 +29,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include <core/math/CameraTransform.h>
 #include <document/dllmain.h>
 #include <document/Image.h>

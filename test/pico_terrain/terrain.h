@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <math.h>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include <graphics/drawables/PrimitiveDraw.h>
 #include <graphics/drawables/HeightmapDraw.h>
 
