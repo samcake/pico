@@ -40,8 +40,8 @@
     
 namespace core {
 
- //   class Graph;
- //   using GraphPointer = std::shared_ptr<Graph>;
+    class Graph;
+    using GraphPointer = std::shared_ptr<Graph>;
 
     class Graph {
     public:
@@ -153,16 +153,19 @@ namespace core {
                 Name name;
                 NamedPinTypes ins;
                 NamedPinTypes outs;
+                bool isNodeGraph = false;
             };
 
             Name name;
-            NamedPinTypeSet in_pins;
-            NamedPinTypeSet out_pins;
+            const NamedPinTypeSet in_pins;
+            const NamedPinTypeSet out_pins;
+            const bool isNodeGraph = false;
 
             NodeType(const Init& init) :
                 name(init.name),
                 in_pins({ init.ins }),
-                out_pins({init.outs }) {}
+                out_pins({init.outs }),
+                isNodeGraph(init.isNodeGraph) {}
 
             Hash hash() const
             {
@@ -207,6 +210,17 @@ namespace core {
                 return PinType();
             }
 
+            NamedPinType namedPinType(Hash hash) const {
+                auto i = pin(hash);
+                if (i.first != NULL_ID)
+                {
+                    if (i.second == PinAccess::in)
+                        return in_pins.pins[i.first];
+                    else
+                        return out_pins.pins[i.first];
+                }
+                return NamedPinType();
+            }
         };
 
         using IDs = std::vector<ID>;
@@ -224,6 +238,7 @@ namespace core {
 
             Name    name() const { return node->_type->pinName(named_type_hash); }
             PinType pinType() const { return node->_type->pinType(named_type_hash); }
+            NamedPinType namedPinType() const { return node->_type->namedPinType(named_type_hash); }
         };
 
         using Pins = std::vector<Pin>;
@@ -246,7 +261,8 @@ namespace core {
             friend Graph;
             Graph* _graph;
         public:
-          //  const ID operator[] (Name& name) const { return (*const_cast<Node*>(this))[name]; }
+            NodeTypePointer nodeType() const { return _type; }
+            bool isNodeGraph() const { return _type->isNodeGraph; }
 
             PinID in_pin_id(Name& name) const {
                 auto i = _type->in_pins[name];
@@ -277,7 +293,8 @@ namespace core {
             PinIDs outs;
             NodeID uuid = NULL_ID;
 
-            void log();
+            virtual void log(int32_t graph_depth = 0);
+
 
         };
         using NodePointer = std::shared_ptr<Node>;
@@ -288,6 +305,9 @@ namespace core {
 
 
         /// Graph methods to build the graph!
+
+        // inner setup function
+        void setupNode(Node*, const NodeTypePointer& nodeType);
 
         // Create a node
         NodePointer createNode(const NodeTypePointer& nodeType);
@@ -303,19 +323,23 @@ namespace core {
 
         class NodeGraph : public Node
         {
-            Graph _subgraph;
+            friend class Graph;
+            GraphPointer _subgraph;
         public:
-
+        
+            void log(int32_t graph_depth = 0) override;
         };
 
         using NodeGraphPointer = std::shared_ptr<NodeGraph>;
 
-        NodeGraphPointer createNodeGraph(const Graph& subgraph);
+        NodeTypePointer makeNodeGraphType() const;
+        NodeGraphPointer createNodeGraph(const GraphPointer& subgraph);
 
         static void testGraph();
 
-        void log() const;
+        void log(int32_t graph_depth = 0) const;
 
+        Name _name;
 
         Nodes _nodes;
         Pins _pins;
@@ -335,6 +359,6 @@ namespace core {
         void evalTraverseOrder() const;
         void evalInOutPins() const;
 
-        void traverse(std::function<void (Node*, int32_t)> visitor) const;
+        void traverse(std::function<void (Node*, int32_t, int32_t)> visitor, int32_t graph_depth = 0) const;
     };
 }

@@ -33,7 +33,7 @@
 using namespace core;
 
 
-void Graph::Node::log()
+void Graph::Node::log(int32_t graph_depth)
 {
     std::clog << "Node #" << uuid << std::endl;
     std::clog << "    <" << _type->name << ">" << std::endl;
@@ -62,20 +62,19 @@ void Graph::Node::log()
 
     }
 }
-
-Graph::NodePointer Graph::createNode(const NodeTypePointer& nodeType) {
-    auto n = std::make_shared<Node>();
+void Graph::setupNode(Node* n, const NodeTypePointer& nodeType)
+{
     n->_graph = this;
 
     for (auto& i : nodeType->in_pins.pins)
     {
-        Pin p = { n.get(), i.hash(), (Index) _pins.size(), {}};
+        Pin p = { n, i.hash(), (Index)_pins.size(), {} };
         _pins.emplace_back(p);
         n->ins.push_back(p.uuid);
     }
     for (auto& i : nodeType->out_pins.pins)
     {
-        Pin p = { n.get(), i.hash(), (Index) _pins.size(), {} };
+        Pin p = { n, i.hash(), (Index)_pins.size(), {} };
         _pins.emplace_back(p);
         n->outs.push_back(p.uuid);
     }
@@ -83,6 +82,13 @@ Graph::NodePointer Graph::createNode(const NodeTypePointer& nodeType) {
     n->_type = nodeType;
 
     n->uuid = _nodes.size();
+
+}
+
+Graph::NodePointer Graph::createNode(const NodeTypePointer& nodeType) {
+    auto n = std::make_shared<Node>();
+
+    setupNode(n.get(), nodeType);
 
     _nodes.emplace_back(n);
 
@@ -248,37 +254,77 @@ void Graph::evalTraverseOrder() const
     std::reverse(_traverseOrder.begin(), _traverseOrder.end());
 }
 
-void Graph::traverse(std::function<void(Node*, int32_t)> visitor) const
+void Graph::traverse(std::function<void(Node*, int32_t, int32_t)> visitor, int32_t graph_depth) const
 {
     evalTraverseOrder();
 
     int32_t i = 0;
     for (auto ni : _traverseOrder)
     {
-        visitor(_nodes[ni].get(), i);
+        if (_nodes[ni]->isNodeGraph())
+        {
+            ++graph_depth;
+            traverse(visitor, graph_depth);
+            --graph_depth;
+        }
+        else
+            visitor(_nodes[ni].get(), i, graph_depth);
+
         ++i;
     }
 }
 
-void Graph::log() const
+void Graph::log(int32_t graph_depth) const
 {
-    traverse([](Node* n, int32_t i) {
-            std::clog << "#" << i << std::endl;
+    traverse([](Node* n, int32_t i, int32_t l) {
+            std::clog << "#" << i << " " << l << std::endl;
 
-            n->log();
+            n->log(l);
         });
     std::clog << "Num node passes " << _nodeWavesCount << std::endl;
     std::clog << "In node count " << _inNodesCount << std::endl;
     std::clog << "Out node count " << _outNodesCount << std::endl;
 }
 
-Graph::NodeGraphPointer Graph::createNodeGraph(const Graph& subgraph)
+void Graph::NodeGraph::log(int32_t graph_depth)\
+{
+    _subgraph->log(graph_depth);
+}
+
+Graph::NodeTypePointer Graph::makeNodeGraphType() const
+{
+    evalInOutPins();
+
+    NodeType::Init init{ _name };
+    for (auto i : _inPins)
+    {
+        init.ins.emplace_back(_pins[i].namedPinType());
+    }
+    for (auto i : _outPins)
+    {
+        init.outs.emplace_back(_pins[i].namedPinType());
+    }
+
+    NodeTypePointer nodeType = std::make_shared<NodeType>(init);
+
+    return nodeType;
+}
+
+Graph::NodeGraphPointer Graph::createNodeGraph(const GraphPointer& subgraph)
 {
     // Make the node type out of the subgraph
 
+    auto nodeType = subgraph->makeNodeGraphType();
+
     // duplicate the subgraph
+    auto n = std::make_shared<NodeGraph>();
+    n->_subgraph = subgraph;
 
+    setupNode(n.get(), nodeType);
 
+    _nodes.emplace_back(n);
+
+    return n;
 }
 
 void Graph::testGraph()
@@ -295,30 +341,31 @@ void Graph::testGraph()
         {ADD_OUT(o0, Scalar), ADD_OUT(o1, Scalar) }
         });
     
-    Graph g;
-    auto n0 = g.createNode(nt);
-    
-    auto n1 = g.createNode(nt);
+    auto g = std::make_shared<Graph>();
 
-    auto n2 = g.createNode(nt);
+    auto n0 = g->createNode(nt);
     
-    auto n3 = g.createNode(nt);
+    auto n1 = g->createNode(nt);
 
-    auto n4 = g.createNode(nt2);
+    auto n2 = g->createNode(nt);
     
-    g.connect(n0, "bbb", n1, "aaa");
-    g.connect(n2, "bbb", n0, "aaa");
+    auto n3 = g->createNode(nt);
+
+    auto n4 = g->createNode(nt2);
+    
+    g->connect(n0, "bbb", n1, "aaa");
+    g->connect(n2, "bbb", n0, "aaa");
   
-    g.connect(n4, "o0", n2, "aaa");
-    g.connect(n4, "o1", n3, "aaa");
+    g->connect(n4, "o0", n2, "aaa");
+    g->connect(n4, "o1", n3, "aaa");
     
-    g.log();
+    g->log();
 
-    Graph g2;
+    auto g2 = std::make_shared<Graph>();
 
-    auto nodeA = g2.createNodeGraph(g);
+    auto nodeA = g2->createNodeGraph(g);
 
-
+    g2->log();
 }
 
 
