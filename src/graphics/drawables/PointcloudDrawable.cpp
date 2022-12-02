@@ -121,7 +121,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState(),
-                    true, // enable depth
+                    {true}, // enable depth
                     { graphics::BlendFunction(true,
                         graphics::BlendArg::SRC_ALPHA, graphics::BlendOp::ADD, graphics::BlendArg::INV_SRC_ALPHA,
                         graphics::BlendArg::ONE, graphics::BlendOp::ADD, graphics::BlendArg::ZERO) }

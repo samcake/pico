@@ -32,52 +32,34 @@
 
 using namespace core;
 
-
-void Graph::Node::log(int32_t graph_depth)
+Graph::VarID Graph::allocateVar(Hash h, DataType dt)
 {
-    std::clog << "Node #" << uuid << std::endl;
-    std::clog << "    <" << _type->name << ">" << std::endl;
-    for (auto i : ins)
-    {
-        auto p = _graph->pin(i);
-        std::clog << "    >--" << p->name() << std::endl;
-        for (auto ei : p->edges)
-        {
-            auto e = _graph->_edges[ei];
-            auto s = _graph->pin(e.from);
-            std::clog << "      +--< n#" << s->node->uuid << "." << s->name() << std::endl;
-        }
-
-    }
-    for (auto o : outs)
-    {
-        auto p = _graph->pin(o);
-        std::clog << "    -->" << p->name() << std::endl;
-        for (auto ei : p->edges)
-        {
-            auto e = _graph->_edges[ei];
-            auto d = _graph->pin(e.to);
-            std::clog << "       +--> n#" << d->node->uuid << "." << d->name() << std::endl;
-        }
-
-    }
+    Var v = { (Index)_vars.size(), h, dt };
+    _vars.emplace_back(v);
+    return v.uuid;
 }
+
 void Graph::setupNode(Node* n, const NodeTypePointer& nodeType)
 {
     n->_graph = this;
 
     for (auto& i : nodeType->in_pins.pins)
     {
-        Pin p = { n, i.hash(), (Index)_pins.size(), {} };
+        Pin p = { n, i.hash(), (Index)_pins.size(), {}, 0 };
+        p.var = allocateVar(p.hash(), i.type.dataType);
+
         _pins.emplace_back(p);
         n->ins.push_back(p.uuid);
     }
     for (auto& i : nodeType->out_pins.pins)
     {
         Pin p = { n, i.hash(), (Index)_pins.size(), {} };
+        p.var = allocateVar(p.hash(), i.type.dataType);
+      
         _pins.emplace_back(p);
         n->outs.push_back(p.uuid);
     }
+
 
     n->_type = nodeType;
 
@@ -115,7 +97,6 @@ Graph::ID Graph::connect(Node& nFrom, Name& pFrom, Node& nTo, Name& pTo)
 
         // Remove edge arriving to dest pin from the previous pin.
         auto& op = _pins[e.from];
-        // op.removeEdgeId(e.uuid);
         for (auto it = op.edges.begin(); it != op.edges.end(); ++it)
         {
             if (*it == e.uuid)
@@ -128,6 +109,10 @@ Graph::ID Graph::connect(Node& nFrom, Name& pFrom, Node& nTo, Name& pTo)
         // now simply update the from pin and the reuse the allocated edge
         p_from->edges.emplace_back(e.uuid);
         _edges[e.uuid].from = p_from->uuid;
+
+        // Update the var id on p_to, same as p_from
+        auto formerVar = p_to->swapVar(p_from->var);
+
         return e.uuid;
     }
     
@@ -139,6 +124,10 @@ Graph::ID Graph::connect(Node& nFrom, Name& pFrom, Node& nTo, Name& pTo)
 
     p_to->edges.emplace_back(e.uuid);
     p_from->edges.emplace_back(e.uuid);
+
+    // Update the var id on p_to, same as p_from
+    auto formerVar = p_to->swapVar(p_from->var);
+
     return e.uuid;
 }
 
@@ -263,9 +252,10 @@ void Graph::traverse(std::function<void(Node*, int32_t, int32_t)> visitor, int32
     {
         if (_nodes[ni]->isNodeGraph())
         {
-            ++graph_depth;
-            traverse(visitor, graph_depth);
-            --graph_depth;
+            visitor(_nodes[ni].get(), i, graph_depth);
+         /*   ++graph_depth;
+            static_cast<Graph::NodeGraph*> (_nodes[ni].get())->_subgraph->traverse(visitor, graph_depth);
+            --graph_depth;*/
         }
         else
             visitor(_nodes[ni].get(), i, graph_depth);
@@ -274,21 +264,90 @@ void Graph::traverse(std::function<void(Node*, int32_t, int32_t)> visitor, int32
     }
 }
 
-void Graph::log(int32_t graph_depth) const
+void Graph::Node::log(std::ostream& log, int32_t max_graph_depth, int32_t graph_depth) const
 {
-    traverse([](Node* n, int32_t i, int32_t l) {
-            std::clog << "#" << i << " " << l << std::endl;
+    std::string tabh( 4 * graph_depth, ' ' );
+    log << tabh << "  ** Node <" << _type->name << "> #" << uuid << std::endl;
 
-            n->log(l);
-        });
-    std::clog << "Num node passes " << _nodeWavesCount << std::endl;
-    std::clog << "In node count " << _inNodesCount << std::endl;
-    std::clog << "Out node count " << _outNodesCount << std::endl;
+    std::string tabi = tabh + "   ";
+
+    for (auto i : ins)
+    {
+        auto p = _graph->pin(i);
+        auto v = _graph->var(p->var);
+        log << tabi << "-> " << p->name() << "    " << " v" << std::dec << v->uuid << " h=" << std::hex << v->hash << std::endl;
+        for (auto ei : p->edges)
+        {
+            auto e = _graph->_edges[ei];
+            auto s = _graph->pin(e.from);
+            log << tabi << "    +-- n#" << s->node->uuid << "." << s->name() << std::endl;
+        }
+
+    }
+
+    std::string tabo = tabh + "      ************ ";
+
+    for (auto o : outs)
+    {
+        auto p = _graph->pin(o);
+        auto v = _graph->var(p->var);
+        log << tabo << ">- " << p->name() << "    " << " v" << std::dec << v->uuid << " h=" << std::hex << v->hash << std::endl;
+        for (auto ei : p->edges)
+        {
+            auto e = _graph->_edges[ei];
+            auto d = _graph->pin(e.to);
+            log << tabo << "     +--> n#" << d->node->uuid << "." << d->name() << std::endl;
+        }
+
+    }
+    log << tabh << "  **" << std::endl;
+
 }
 
-void Graph::NodeGraph::log(int32_t graph_depth)\
+void Graph::log(std::ostream& log, int32_t max_graph_depth, int32_t graph_depth) const
 {
-    _subgraph->log(graph_depth);
+    std::string tab(4 * graph_depth, ' ');
+    log << tab << "**** Graph " << _name << std::endl;
+
+    traverse([tab, &log, max_graph_depth, graph_depth](Node* n, int32_t i, int32_t l) {
+            n->log(log, max_graph_depth, l + graph_depth);
+        });
+
+    traverse([&, tab](Node* n, int32_t i, int32_t l) {
+        
+        log << tab << "  n" << n->uuid << "<" << n->_type->name << "> \t (";
+        for (auto i : n->ins)
+        {
+            auto p = n->_graph->pin(i);
+            auto v = n->_graph->var(p->var);
+            log << " v" << v->uuid << ", ";
+        }
+
+        log << ") -> [";
+        for (auto i : n->outs)
+        {
+            auto p = n->_graph->pin(i);
+            auto v = n->_graph->var(p->var);
+            log << " v" << v->uuid << ", ";
+        }
+        log << "]" << std::endl;
+    });
+
+    log << tab << "  Num node passes " << _nodeWavesCount << std::endl;
+    log << tab << "  In node count " << _inNodesCount << std::endl;
+    log << tab << "  Out node count " << _outNodesCount << std::endl;
+    log << tab << "****" << std::endl;
+}
+
+void Graph::NodeGraph::log(std::ostream& log, int32_t max_graph_depth, int32_t graph_depth) const
+{
+    std::string tab(4 * graph_depth, ' ');
+    log << tab << " *** NodeGraph " << std::endl; 
+    Node::log(log, graph_depth);
+    if ((graph_depth + 1) < max_graph_depth)
+        _subgraph->log(log, graph_depth + 1, max_graph_depth);
+
+    log << tab << " ***" << std::endl;
 }
 
 Graph::NodeTypePointer Graph::makeNodeGraphType() const
@@ -304,7 +363,7 @@ Graph::NodeTypePointer Graph::makeNodeGraphType() const
     {
         init.outs.emplace_back(_pins[i].namedPinType());
     }
-
+    init.isNodeGraph = true;
     NodeTypePointer nodeType = std::make_shared<NodeType>(init);
 
     return nodeType;
@@ -341,31 +400,35 @@ void Graph::testGraph()
         {ADD_OUT(o0, Scalar), ADD_OUT(o1, Scalar) }
         });
     
-    auto g = std::make_shared<Graph>();
+    auto gA = std::make_shared<Graph>();
 
-    auto n0 = g->createNode(nt);
+    auto n0 = gA->createNode(nt);
     
-    auto n1 = g->createNode(nt);
+    auto n1 = gA->createNode(nt);
 
-    auto n2 = g->createNode(nt);
+    auto n2 = gA->createNode(nt);
     
-    auto n3 = g->createNode(nt);
+    auto n3 = gA->createNode(nt);
 
-    auto n4 = g->createNode(nt2);
+    auto n4 = gA->createNode(nt2);
     
-    g->connect(n0, "bbb", n1, "aaa");
-    g->connect(n2, "bbb", n0, "aaa");
+    gA->connect(n0, "bbb", n1, "aaa");
+    gA->connect(n2, "bbb", n0, "aaa");
   
-    g->connect(n4, "o0", n2, "aaa");
-    g->connect(n4, "o1", n3, "aaa");
+    gA->connect(n4, "o0", n2, "aaa");
+    gA->connect(n4, "o1", n3, "aaa");
     
-    g->log();
+    gA->log(std::clog);
 
-    auto g2 = std::make_shared<Graph>();
+    auto gB = std::make_shared<Graph>(Graph::Init{ "graphB" });
 
-    auto nodeA = g2->createNodeGraph(g);
+    auto nA = gB->createNodeGraph(gA);
 
-    g2->log();
+    auto n5 = gB->createNode(nt);
+
+   // gB->connect(n5, "bbb", nA, "bbb");
+
+    gB->log(std::clog, 1);
 }
 
 

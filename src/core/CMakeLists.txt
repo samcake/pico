@@ -28,7 +28,7 @@ add_library (core
 
 target_include_directories(core PUBLIC ".." PRIVATE "." )
 
-target_compile_features(core PRIVATE cxx_std_17)
+target_compile_features(core PRIVATE cxx_std_20)
 
 source_group(core\\stl REGULAR_EXPRESSION stl/*)
 source_group(core\\math REGULAR_EXPRESSION math/*)

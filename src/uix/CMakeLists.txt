@@ -29,7 +29,7 @@ target_link_libraries(uix
 add_dependencies(uix graphics core)
 
 target_include_directories(uix PUBLIC "..")
-target_compile_features(uix PRIVATE cxx_std_17)
+target_compile_features(uix PRIVATE cxx_std_20)
 
 source_group(uix\\imgui\\backends REGULAR_EXPRESSION imgui/backends/*)
 source_group(uix\\imgui REGULAR_EXPRESSION imgui/*)

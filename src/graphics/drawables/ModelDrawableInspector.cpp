@@ -233,7 +233,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withCullBack(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _pipeline_draw_mesh = device->createGraphicsPipelineState(draw_pipelineInit);
@@ -245,7 +245,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     RasterizerState(),//.withAntialiasedLine().withConservativeRasterizer(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _pipeline_draw_edges = device->createGraphicsPipelineState(draw_edges_pipelineInit);
@@ -266,7 +266,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _pipeline_draw_connectivity = device->createGraphicsPipelineState(draw_connectivity_pipelineInit);
@@ -287,7 +287,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withCullBack(),//.withAntialiasedLine().withConservativeRasterizer(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _pipeline_draw_kernelSamples = device->createGraphicsPipelineState(draw_kernelSamples_pipelineInit);
@@ -308,7 +308,7 @@ namespace graphics
             StreamLayout(),
             graphics::PrimitiveTopology::TRIANGLE_STRIP,
             RasterizerState(),
-            false,
+            {false},
             BlendState()
         }; 
         _pipeline_draw_uvspace_inspect = device->createGraphicsPipelineState(uvspace_pipelineInit);
@@ -329,7 +329,7 @@ namespace graphics
             StreamLayout(),
             graphics::PrimitiveTopology::POINT,
             RasterizerState(),
-            true, // enable depth
+            {true}, // enable depth
             BlendState()
         };
         _pipeline_draw_uvmesh_point = device->createGraphicsPipelineState(pipeline_draw_uvmesh_point);
@@ -349,7 +349,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withConservativeRasterizer().withMultisample(),
-                    false,
+                    {false},
                     BlendState(),
                     _uvmeshMapFormat // same format as the uvmesh_map
         };

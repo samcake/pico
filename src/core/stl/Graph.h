@@ -53,8 +53,15 @@ namespace core {
         using NodeID = Index;
         using PinID = Index;
         using EdgeID = Index;
+        using VarID = Index;
         const static ID NULL_ID = -1;
 
+
+        struct Init
+        {
+            Name name = "noname";
+        };
+        Graph(const Init& init = Init()) : _name(init.name) {}
 
 
         // Describing the Pin Type / Schema
@@ -71,6 +78,16 @@ namespace core {
 
 
         };
+
+        struct Var {
+            VarID       uuid;
+            Hash        hash;
+            DataType    dataType = Scalar;
+        };
+        using Vars = std::vector<Var>;
+
+        VarID allocateVar(Hash, DataType);
+
 
         enum PinAccess : int8_t
         {
@@ -227,18 +244,37 @@ namespace core {
         using NodeIDs = std::vector<NodeID>;
         using PinIDs = std::vector<PinID>;
         using EdgeIDs = std::vector<EdgeID>;
+        using VarIDs = std::vector<VarID>;
 
         class Node;
         struct Pin {
             Node*   node = nullptr;
             Hash    named_type_hash = 0;
-            PinID   uuid = 0;
-
+            PinID   uuid = NULL_ID;
+        
             EdgeIDs  edges;
+
+            VarID   var = NULL_ID;
 
             Name    name() const { return node->_type->pinName(named_type_hash); }
             PinType pinType() const { return node->_type->pinType(named_type_hash); }
             NamedPinType namedPinType() const { return node->_type->namedPinType(named_type_hash); }
+        
+            Hash hash() const
+            {
+                auto v = named_type_hash;
+                v += node->uuid;
+                v += uuid;
+                return std::hash<Hash>{}(v);
+            }
+
+            VarID swapVar(VarID newVar) {
+                auto v = var;
+                var = newVar;
+                return var;
+
+                 
+            }
         };
 
         using Pins = std::vector<Pin>;
@@ -293,7 +329,7 @@ namespace core {
             PinIDs outs;
             NodeID uuid = NULL_ID;
 
-            virtual void log(int32_t graph_depth = 0);
+            virtual void log(std::ostream& log, int32_t max_graph_depth = 2, int32_t graph_depth = 0) const;
 
 
         };
@@ -320,6 +356,7 @@ namespace core {
         
         Pin* pin(PinID uuid) { return (uuid == NULL_ID ? nullptr : _pins.data() + uuid); }
 
+        Var* var(VarID uuid) { return (uuid == NULL_ID ? nullptr : _vars.data() + uuid); }
 
         class NodeGraph : public Node
         {
@@ -327,7 +364,7 @@ namespace core {
             GraphPointer _subgraph;
         public:
         
-            void log(int32_t graph_depth = 0) override;
+            void log(std::ostream& log, int32_t max_graph_depth = 2, int32_t graph_depth = 0) const override;
         };
 
         using NodeGraphPointer = std::shared_ptr<NodeGraph>;
@@ -337,13 +374,14 @@ namespace core {
 
         static void testGraph();
 
-        void log(int32_t graph_depth = 0) const;
+        void log(std::ostream& log, int32_t max_graph_depth = 2, int32_t graph_depth = 0) const;
 
         Name _name;
 
         Nodes _nodes;
         Pins _pins;
         Edges _edges;
+        Vars _vars;
 
         mutable IDs _inPins;
         mutable IDs _outPins;

@@ -29,6 +29,7 @@
 #include <sstream>
 
 #include <vector>
+#include <string>
 
 using namespace graphics;
 
@@ -148,13 +149,14 @@ bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
 
     std::vector<LPWSTR> arguments;
     //-E for the entry point (eg. PSMain)
-    arguments.push_back(L"-E");
+    arguments.push_back((LPWSTR)std::wstring(L"-E").c_str());
+
     auto wentry = core::to_wstring(shader->getShaderDesc().entryPoint);
 
     arguments.push_back((LPWSTR)wentry.c_str());
 
     //-T for the target profile (eg. ps_6_2)
-    arguments.push_back(L"-T");
+    arguments.push_back((LPWSTR)std::wstring(L"-T").c_str());
 
     std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
 
@@ -162,12 +164,12 @@ bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
     arguments.push_back((LPWSTR)wtarget.c_str());
 
     //Strip reflection data and pdbs (see later)
-    arguments.push_back(L"-Qstrip_debug");
-    arguments.push_back(L"-Qstrip_reflect");
+    arguments.push_back((LPWSTR)std::wstring(L"-Qstrip_debug").c_str());
+    arguments.push_back((LPWSTR)std::wstring(L"-Qstrip_reflect").c_str());
 
-    arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-    arguments.push_back(DXC_ARG_DEBUG); //-Zi
-    arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_WARNINGS_ARE_ERRORS).c_str()); //-WX
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_DEBUG).c_str()); //-Zi
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_PACK_MATRIX_ROW_MAJOR).c_str()); //-Zp
     /*
         for (const std::wstring& define : defines)
         {
@@ -345,13 +347,13 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
 
     std::vector<LPWSTR> arguments;
     //-E for the entry point (eg. PSMain)
-    arguments.push_back(L"-E");
+    arguments.push_back((LPWSTR) std::wstring(L"-E").c_str());
     auto wentry = core::to_wstring(shader->getShaderDesc().entryPoint);
 
     arguments.push_back((LPWSTR) wentry.c_str());
 
     //-T for the target profile (eg. ps_6_2)
-    arguments.push_back(L"-T");
+    arguments.push_back((LPWSTR)std::wstring(L"-T").c_str());
 
     std::string target(D3D12ShaderBackend::ShaderTypes[(int)shader->getShaderDesc().type]);
 
@@ -359,12 +361,12 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
     arguments.push_back((LPWSTR) wtarget.c_str());
 
     //Strip reflection data and pdbs (see later)
-    arguments.push_back(L"-Qstrip_debug");
-    arguments.push_back(L"-Qstrip_reflect");
+    arguments.push_back((LPWSTR)std::wstring(L"-Qstrip_debug").c_str());
+    arguments.push_back((LPWSTR)std::wstring(L"-Qstrip_reflect").c_str());
 
-    arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-    arguments.push_back(DXC_ARG_DEBUG); //-Zi
-    arguments.push_back(DXC_ARG_PACK_MATRIX_ROW_MAJOR); //-Zp
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_WARNINGS_ARE_ERRORS).c_str()); //-WX
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_DEBUG).c_str()); //-Zi
+    arguments.push_back((LPWSTR)std::wstring(DXC_ARG_PACK_MATRIX_ROW_MAJOR).c_str()); //-Zp
 /*
     for (const std::wstring& define : defines)
     {

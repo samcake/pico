@@ -134,7 +134,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     RasterizerState(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _nodePipeline = device->createGraphicsPipelineState(pipelineInit_node);
@@ -145,7 +145,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::LINE,
                     RasterizerState(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _itemPipeline = device->createGraphicsPipelineState(pipelineInit_item);

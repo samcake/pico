@@ -53,7 +53,7 @@ namespace graphics {
         Item() {} // null item
 
         Item(const Item& src) = default;
-        Item& Item::operator= (const Item&) = default;
+        Item& operator= (const Item&) = default;
 
         bool isValid() const { return (_self.get() != nullptr); }
         ItemID id() const { return  _self->id(); }
