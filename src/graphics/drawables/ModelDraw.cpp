@@ -597,12 +597,13 @@ namespace graphics
                 pixels.emplace_back(std::move(i._pixels));
             }
             
-            TextureInit albedoTexInit;
-            albedoTexInit.width = maxWidth;
-            albedoTexInit.height = maxHeight;
-            albedoTexInit.numSlices = numImages;
-            albedoTexInit.initData = std::move(pixels);
-            auto albedoresourceTexture = device->createTexture(albedoTexInit);
+            TextureInit texInit;
+            texInit.width = maxWidth;
+            texInit.height = maxHeight;
+            texInit.numSlices = numImages;
+            texInit.initData = std::move(pixels);
+            texInit.format = graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
+            auto albedoresourceTexture = device->createTexture(texInit);
 
             modelDraw->_albedoTexture = albedoresourceTexture;
         }

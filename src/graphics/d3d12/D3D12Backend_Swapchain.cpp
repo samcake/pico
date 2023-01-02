@@ -63,7 +63,7 @@ bool CheckTearingSupport()
 
 ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     ComPtr<ID3D12CommandQueue> commandQueue,
-    uint32_t width, uint32_t height, uint32_t bufferCount)
+    uint32_t width, uint32_t height, DXGI_FORMAT format, uint32_t bufferCount)
 {
     ComPtr<IDXGISwapChain4> dxgiSwapChain4;
     ComPtr<IDXGIFactory4> dxgiFactory4;
@@ -77,9 +77,14 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = width;
     swapChainDesc.Height = height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-   // swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;
-   // swapChainDesc.Format = DXGI_FORMAT_R10G10B10A2_UNORM;
+    swapChainDesc.Format = format;
+    // If the format required is SRGB, the resource has to be created with the NON SRGB enum
+    if (format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB)
+        swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    if (format == DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM)
+        swapChainDesc.Format = DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM;
+    
+ 
     swapChainDesc.Stereo = FALSE;
     swapChainDesc.SampleDesc = { 1, 0 };
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -221,7 +226,7 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     auto sw = new D3D12SwapchainBackend();
 
     sw->_init = init;
-    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::CHAIN_NUM_FRAMES);
+    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::Format[(uint32_t)init.colorBufferFormat], D3D12Backend::CHAIN_NUM_FRAMES);
     sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
     CreateSwapchainRenderTargets(_device, sw);

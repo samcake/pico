@@ -1,4 +1,4 @@
-// LinearAlgebraCore.h 
+// math.h 
 //
 // Sam Gateau - November 2022
 // 
