@@ -89,6 +89,7 @@ namespace graphics {
         R10G10B10A2_TYPELESS,
         R10G10B10A2_UNORM,
         R10G10B10A2_UINT,
+        R10G10B10_XR_BIAS_A2_UNORM,
         R11G11B10_FLOAT,
         R8G8B8A8_TYPELESS,
         R8G8B8A8_UNORM,
@@ -294,6 +295,9 @@ namespace graphics {
 
         COUNT,
     };
+
+    extern PixelFormat defaultColorBufferFormat();
+
 }
 
 #define createBuffer(init) _createBuffer(init, __FILE__)
