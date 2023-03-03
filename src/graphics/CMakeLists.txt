@@ -44,6 +44,7 @@ file(GLOB GRAPHICS_HEADERS
     "*.h"
     "gpu/*.h"
     "d3d12/*.h"
+    "vk/*.h"
     "render/*.h"
     "drawables/*.h"
 )
@@ -54,6 +55,7 @@ file(GLOB GRAPHICS_SOURCES
     "*.cpp"
     "gpu/*.cpp"
     "d3d12/*.cpp"
+    "vk/*.cpp"
     "render/*.cpp"
     "drawables/*.cpp"
 )
@@ -89,6 +91,7 @@ source_group(graphics\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR
 source_group(graphics\\render REGULAR_EXPRESSION render/*)
 source_group(graphics\\gpu REGULAR_EXPRESSION gpu/*)
 source_group(graphics\\d3d12 REGULAR_EXPRESSION d3d12/*)
+source_group(graphics\\vk REGULAR_EXPRESSION vk/*)
 source_group(graphics\\drawables REGULAR_EXPRESSION drawables/*)
 source_group(graphics REGULAR_EXPRESSION ./*)
 

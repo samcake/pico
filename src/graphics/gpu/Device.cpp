@@ -29,6 +29,7 @@
 #include "Swapchain.h"
 
 #include "../d3d12/D3D12Backend.h"
+#include "../vk/VKBackend.h"
 
 
 graphics::PixelFormat graphics::defaultColorBufferFormat() {
@@ -49,6 +50,8 @@ DevicePointer Device::createDevice(const DeviceInit& init) {
     DevicePointer device;
     if (init.backend.compare("D3D12") == 0 ) {
         device = std::make_shared<Device>(new D3D12Backend());
+    } else if (init.backend.compare("VK") == 0) {
+        device = std::make_shared<Device>(new VKBackend());
     }
 
     return device;
