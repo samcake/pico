@@ -51,6 +51,9 @@ void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapc
     } else if (_callback) {
         _callback(args);
     } else {
+
+        _device->acquireSwapchain(swapchain);
+
         auto currentIndex = swapchain->currentIndex();
 
         _batch->begin(currentIndex);
@@ -67,6 +70,10 @@ void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapc
         core::vec4 clearColor(colorRGBfromHSV(core::vec3(time, 0.5f, 1.f)), 1.f);
 
         _batch->clear(swapchain, currentIndex, clearColor);
+
+        _batch->beginPass(swapchain, currentIndex);
+
+        _batch->endPass();
 
         _batch->resourceBarrierTransition(
             graphics::ResourceBarrierFlag::NONE,

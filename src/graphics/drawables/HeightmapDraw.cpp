@@ -117,7 +117,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE_STRIP,
                     RasterizerState(),
-                    true, // enable depth
+                    DepthStencilState(true), // enable depth
                     BlendState()
         };
       //  pipelineInit.rasterizer.fillMode = graphics::FillMode::LINE;

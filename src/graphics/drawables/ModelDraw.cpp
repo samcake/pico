@@ -148,7 +148,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withCullBack(),
-                    true, // enable depth
+                    DepthStencilState(true), // enable depth
                     BlendState()
         };
         _pipeline = device->createGraphicsPipelineState(pipelineInit);

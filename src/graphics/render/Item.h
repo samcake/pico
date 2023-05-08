@@ -121,7 +121,7 @@ namespace graphics {
 
             Item() {} // null item
             Item(const Item& src) = default;
-            Item& Item::operator= (const Item&) = default;
+            Item& operator= (const Item&) = default;
 
             inline bool isValid() const {
                 if (_self.isValidHandle())
@@ -156,7 +156,7 @@ namespace graphics {
             Handle _self;
 
             friend ItemStore;
-            Item(Handle& h) : _self(h) {}
+            Item(const Handle& h) : _self(h) {}
         };
         inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
 

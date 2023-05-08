@@ -30,8 +30,16 @@
 #include <codecvt>
 #include <locale>
 
+#include "api.h"
+
 void core::Log::_log(const char* file, int line, const char* functionName, const char* message, int level) {
-    std::clog << /*file << " - " << line << " - " << */ functionName << " : " << message << std::endl;
+   // auto lineText = std::format("{} - {} - {} : {}\n", file, line, functionName, message);
+    auto lineText = std::format("{} - {} : {}\n", line, functionName, message);
+   // auto lineText = std::format("    {}\n", message);
+    std::clog << lineText;
+#ifdef _WIN32
+    OutputDebugStringA(lineText.c_str());
+#endif
 }
 
 void core::Log::_assert(bool test, const char* file, int line, const char* functionName, const char* message) {

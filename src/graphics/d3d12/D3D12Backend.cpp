@@ -418,6 +418,10 @@ void D3D12Backend::executeBatch(const BatchPointer& batch) {
 
 }
 
+void D3D12Backend::acquireSwapchain(const SwapchainPointer& swapchain) {
+
+}
+
 void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 

@@ -134,6 +134,7 @@ namespace graphics {
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
         DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) override;
 
+        void acquireSwapchain(const SwapchainPointer& swapchain) override;
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
 

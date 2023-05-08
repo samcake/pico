@@ -8,11 +8,36 @@
 #endif()
 
 
-file(GLOB GRAPHICS_SHADERS
-    "gpu/*.hlsl"
-    "render/*.hlsl"
-    "drawables/*.hlsl"
-)
+
+
+find_package(Vulkan REQUIRED)
+#find_package(glfw3 3.3 REQUIRED)
+#
+if (VULKAN_FOUND)
+   message(STATUS "Found Vulkan, Including and Linking now")
+  #  include_directories(${Vulkan_INCLUDE_DIRS})  
+    
+    file(GLOB_RECURSE GLSL_VALIDATOR 
+    "${Vulkan_INCLUDE_DIRS}/../bin/glslangValidator*"
+    )
+   # set(GLSL_VALIDATOR "${Vulkan_INCLUDE_DIRS}/../bin/glslangValidator.exe")
+
+#else()
+#    set(GLSL_VALIDATOR "/Users/sam/Dev/vulkansdk-macos-1.1.121.0/macOS/bin/glslangValidator")
+endif (VULKAN_FOUND)
+
+# Set a suitable platform define to compile volk with.
+if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+  set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_WIN32_KHR)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Linux)
+  set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_XLIB_KHR)
+elseif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+  set(VOLK_STATIC_DEFINES VK_USE_PLATFORM_MACOS_MVK)
+endif()
+
+# Include volk as part of the build tree to make the target known.
+# The two-argument version of add_subdirectory allows adding non-subdirs.
+add_subdirectory(../../ext/volk volk)
 
 # for each shaders, pre compile them and add the generated  .h and .cpp to the build
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
@@ -74,6 +99,7 @@ target_link_libraries(graphics
     ${GRAPHICS_LIBRARIES}
     ${GRAPHICS_API_LIBRARIES}
     core document
+    volk
 )
 
 add_dependencies(graphics core)
@@ -83,7 +109,7 @@ add_dependencies(graphics scribe)
 # in graphics library we want the include path to start in 'this' folder
 target_include_directories(graphics PUBLIC "." PRIVATE "." ${SHADER_OUTPUT_DIR} )
 
-target_compile_features(graphics PRIVATE cxx_std_17)
+target_compile_features(graphics PRIVATE cxx_std_20)
 
 # source_group(graphics\\shaders FILES ${GRAPHICS_SHADERS})
 source_group(graphics\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR}/*)

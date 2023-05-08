@@ -125,7 +125,7 @@ namespace graphics {
 
             Node() {} // null item
             Node(const Node& src) = default;
-            Node& Node::operator= (const Node&) = default;
+            Node& operator= (const Node&) = default;
 
             inline bool isValid() const {
                 if (_self.isValidHandle())
@@ -144,9 +144,12 @@ namespace graphics {
             Handle _self;
 
             friend NodeStore;
-            Node(Handle& h) : _self(h) {}
+            Node(const Handle& h) : _self(h) {}
         };
-        inline Node makeNode(NodeID id) { return { Handle{ this, id } }; }
+        inline Node makeNode(NodeID id) { 
+            Handle h{ this, id };
+            return Node(h);
+        }
 
         NodeID createNode(const Transform& local, NodeID parent);
         NodeIDs createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets);
@@ -158,8 +161,8 @@ namespace graphics {
         inline auto numValidNodes() const { return _indexTable.getNumValidElements(); }
         inline auto numAllocatedNodes() const { return _indexTable.getNumAllocatedElements(); }
 
-        inline Node getNode(NodeID id) const { return (isValid(id) ? Node(Handle{ const_cast<NodeStore*>(this), id }) : Node::null); }
-        inline Node getUnsafeNode(NodeID id) const { return Node(Handle{ const_cast<NodeStore*>(this), id }); } // We do not check that the nodeID is valid here, so could get a fake valid node
+        inline Node getNode(NodeID id) const { return (isValid(id) ? Node(Handle( const_cast<NodeStore*>(this), id )) : Node::null); }
+        inline Node getUnsafeNode(NodeID id) const { return Node(Handle( const_cast<NodeStore*>(this), id )); } // We do not check that the nodeID is valid here, so could get a fake valid node
 
         NodeIDs fetchValidNodes() const;
         NodeInfos fetchNodeInfos() const; // Collect all the NodeInfos in an array, there could be INVALID itemInfos

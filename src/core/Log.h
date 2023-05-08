@@ -26,10 +26,12 @@
 //
 #pragma once
 #include <string>
+#include <format>
 
 #include "dllmain.h"
 
-#define picoLog(message) ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__, message)
+#define picoLog( message ) ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__, message)
+#define picoLogf( ... ) ::core::Log::_log(__FILE__, __LINE__, __FUNCTION__, std::format(__VA_ARGS__))
 #define picoAssert(t) ::core::Log::_assert((t), __FILE__, __LINE__, __FUNCTION__, #t)
 
 namespace core {

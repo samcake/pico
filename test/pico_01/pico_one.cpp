@@ -70,7 +70,8 @@ int main(int argc, char *argv[])
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    graphics::DeviceInit deviceInit {};
+    //graphics::DeviceInit deviceInit{ "D3D12" };
+   graphics::DeviceInit deviceInit { "VK" };
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Next, a renderer built on this device

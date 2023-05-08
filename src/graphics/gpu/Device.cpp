@@ -33,8 +33,8 @@
 
 
 graphics::PixelFormat graphics::defaultColorBufferFormat() {
-    return  graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
-    //return  graphics::PixelFormat::R8G8B8A8_UNORM;
+    //return  graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
+    return  graphics::PixelFormat::R8G8B8A8_UNORM;
     
     //return  graphics::PixelFormat::R10G10B10_XR_BIAS_A2_UNORM; // doesn't work in some pipeline ?
     //return  graphics::PixelFormat::R10G10B10A2_UNORM;
@@ -138,6 +138,10 @@ BatchTimerPointer Device::createBatchTimer(const BatchTimerInit& init) {
 
 BatchPointer Device::createBatch(const BatchInit& init) {
     return _backend->createBatch(init);
+}
+
+void Device::acquireSwapchain(const SwapchainPointer& swapchain) {
+    _backend->acquireSwapchain(swapchain);
 }
 
 void Device::executeBatch(const BatchPointer& batch) {

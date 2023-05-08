@@ -75,6 +75,7 @@ namespace graphics {
 
         virtual void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) = 0;
 
+        virtual void acquireSwapchain(const SwapchainPointer& swapchain) = 0;
         virtual void executeBatch(const BatchPointer& batch) = 0;
         virtual void presentSwapchain(const SwapchainPointer& swapchain) = 0;
 
@@ -139,6 +140,7 @@ namespace graphics {
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects);
 
         // CommandQueue work
+        void acquireSwapchain(const SwapchainPointer& swapchain);
         void executeBatch(const BatchPointer& batch);
         void flush();
 

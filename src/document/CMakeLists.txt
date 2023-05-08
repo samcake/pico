@@ -24,7 +24,7 @@ add_dependencies(document core)
 
 target_include_directories(document PUBLIC ".." PRIVATE "." )
 
-target_compile_features(document PRIVATE cxx_std_17)
+target_compile_features(document PRIVATE cxx_std_20)
 
 source_group(document REGULAR_EXPRESSION ./*)
 

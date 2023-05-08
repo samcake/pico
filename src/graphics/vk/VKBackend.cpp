@@ -24,111 +24,180 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "D3D12Backend.h"
+#include "VKBackend.h"
 
 #include <chrono>
 
-#ifdef _WINDOWS
-//d3d12.lib dxgi.lib dxguid.lib D3DCompiler.lib Shlwapi.lib
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "D3DCompiler.lib")
-#pragma comment(lib, "dxCompiler.lib")
-#pragma comment(lib, "Shlwapi.lib")
-
-// The min/max macros conflict with like-named member functions.
-// Only use std::min and std::max defined in <algorithm>.
-#if defined(min)
-#undef min
-#endif
-
-#if defined(max)
-#undef max
-#endif
+#ifdef PICO_VULKAN
 
 using namespace graphics;
 
-
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog(("D3D12Backend FAILED !!!"));
-/**
-inline void ThrowIfFailed(HRESULT hr)
+void VKBackend::VkCheck(const char* file, int line, const char* functionName, VkResult result)
 {
-    if (FAILED(hr))
-    {
-        picoLog() << "This failed ?";
-        throw std::exception();
+    if (result != VK_SUCCESS) {
+        picoLog("VKBackend FAILED !!!");
+        switch (result)
+        {
+        case VK_ERROR_OUT_OF_HOST_MEMORY:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_OUT_OF_HOST_MEMORY");
+            break;
+        case VK_ERROR_OUT_OF_DEVICE_MEMORY:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_OUT_OF_DEVICE_MEMORY");
+            break;
+        case VK_ERROR_INITIALIZATION_FAILED:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_INITIALIZATION_FAILED");
+            break;
+        case VK_ERROR_LAYER_NOT_PRESENT:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_LAYER_NOT_PRESENT");
+            break;
+        case VK_ERROR_EXTENSION_NOT_PRESENT:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_EXTENSION_NOT_PRESENT");
+            break;
+        case VK_ERROR_INCOMPATIBLE_DRIVER:
+            ::core::Log::_log(file, line, functionName, "VK_ERROR_INCOMPATIBLE_DRIVER");
+            break;
+        }
     }
-}*/
+}
 
-const DXGI_FORMAT D3D12Backend::Format[] = {
-    DXGI_FORMAT_UNKNOWN,
-    DXGI_FORMAT_R32G32B32A32_TYPELESS,
-    DXGI_FORMAT_R32G32B32A32_FLOAT,
-    DXGI_FORMAT_R32G32B32A32_UINT,
-    DXGI_FORMAT_R32G32B32A32_SINT,
-    DXGI_FORMAT_R32G32B32_TYPELESS,
-    DXGI_FORMAT_R32G32B32_FLOAT,
-    DXGI_FORMAT_R32G32B32_UINT,
-    DXGI_FORMAT_R32G32B32_SINT,
-    DXGI_FORMAT_R16G16B16A16_TYPELESS,
-    DXGI_FORMAT_R16G16B16A16_FLOAT,
-    DXGI_FORMAT_R16G16B16A16_UNORM,
-    DXGI_FORMAT_R16G16B16A16_UINT,
-    DXGI_FORMAT_R16G16B16A16_SNORM,
-    DXGI_FORMAT_R16G16B16A16_SINT,
-    DXGI_FORMAT_R32G32_TYPELESS,
-    DXGI_FORMAT_R32G32_FLOAT,
-    DXGI_FORMAT_R32G32_UINT,
-    DXGI_FORMAT_R32G32_SINT,
-    DXGI_FORMAT_R32G8X24_TYPELESS,
-    DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
-    DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS,
-    DXGI_FORMAT_X32_TYPELESS_G8X24_UINT,
-    DXGI_FORMAT_R10G10B10A2_TYPELESS,
-    DXGI_FORMAT_R10G10B10A2_UNORM,
-    DXGI_FORMAT_R10G10B10A2_UINT,
-    DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
-    DXGI_FORMAT_R11G11B10_FLOAT,
-    DXGI_FORMAT_R8G8B8A8_TYPELESS,
-    DXGI_FORMAT_R8G8B8A8_UNORM,
-    DXGI_FORMAT_R8G8B8A8_UNORM_SRGB,
-    DXGI_FORMAT_R8G8B8A8_UINT,
-    DXGI_FORMAT_R8G8B8A8_SNORM,
-    DXGI_FORMAT_R8G8B8A8_SINT,
-    DXGI_FORMAT_R16G16_TYPELESS,
-    DXGI_FORMAT_R16G16_FLOAT,
-    DXGI_FORMAT_R16G16_UNORM,
-    DXGI_FORMAT_R16G16_UINT,
-    DXGI_FORMAT_R16G16_SNORM,
-    DXGI_FORMAT_R16G16_SINT,
-    DXGI_FORMAT_R32_TYPELESS,
-    DXGI_FORMAT_D32_FLOAT,
-    DXGI_FORMAT_R32_FLOAT,
-    DXGI_FORMAT_R32_UINT,
-    DXGI_FORMAT_R32_SINT,
-    DXGI_FORMAT_R24G8_TYPELESS,
-    DXGI_FORMAT_D24_UNORM_S8_UINT,
-    DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
-    DXGI_FORMAT_X24_TYPELESS_G8_UINT,
-    DXGI_FORMAT_R8G8_TYPELESS,
-    DXGI_FORMAT_R8G8_UNORM,
-    DXGI_FORMAT_R8G8_UINT,
-    DXGI_FORMAT_R8G8_SNORM,
-    DXGI_FORMAT_R8G8_SINT,
-    DXGI_FORMAT_R16_TYPELESS,
-    DXGI_FORMAT_R16_FLOAT,
-    DXGI_FORMAT_D16_UNORM,
-    DXGI_FORMAT_R16_UNORM,
-    DXGI_FORMAT_R16_UINT,
-    DXGI_FORMAT_R16_SNORM,
-    DXGI_FORMAT_R16_SINT,
-    DXGI_FORMAT_R8_TYPELESS,
-    DXGI_FORMAT_R8_UNORM,
-    DXGI_FORMAT_R8_UINT,
-    DXGI_FORMAT_R8_SNORM,
-    DXGI_FORMAT_R8_SINT,
+const VkFormat VKBackend::Format[] = {
+    VK_FORMAT_UNDEFINED,
+    VK_FORMAT_R32G32B32A32_UINT, // Typeless
+    VK_FORMAT_R32G32B32A32_SFLOAT,
+    VK_FORMAT_R32G32B32A32_UINT,
+    VK_FORMAT_R32G32B32A32_SINT,
+    VK_FORMAT_R32G32B32_UINT, //VK_FORMAT_R32G32B32_TYPELESS,
+    VK_FORMAT_R32G32B32_SFLOAT,
+    VK_FORMAT_R32G32B32_UINT,
+    VK_FORMAT_R32G32B32_SINT,
+    VK_FORMAT_R16G16B16A16_UINT, //VK_FORMAT_R16G16B16A16_TYPELESS,
+    VK_FORMAT_R16G16B16A16_SFLOAT,
+    VK_FORMAT_R16G16B16A16_UNORM,
+    VK_FORMAT_R16G16B16A16_UINT,
+    VK_FORMAT_R16G16B16A16_SNORM,
+    VK_FORMAT_R16G16B16A16_SINT,
+    VK_FORMAT_R32G32_UINT, //VK_FORMAT_R32G32_TYPELESS,
+    VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_R32G32_UINT,
+    VK_FORMAT_R32G32_SINT,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R32G8X24_TYPELESS,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_D32_FLOAT_S8X24_UINT,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_X32_TYPELESS_G8X24_UINT,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R10G10B10A2_TYPELESS,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R10G10B10A2_UNORM,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R10G10B10A2_UINT,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R11G11B10_FLOAT,
+    VK_FORMAT_R8G8B8A8_UNORM, //VK_FORMAT_R8G8B8A8_TYPELESS,
+    VK_FORMAT_R8G8B8A8_UNORM,
+    VK_FORMAT_R8G8B8A8_SRGB, //VK_FORMAT_R8G8B8A8_UNORM_SRGB,
+    VK_FORMAT_R8G8B8A8_UINT,
+    VK_FORMAT_R8G8B8A8_SNORM,
+    VK_FORMAT_R8G8B8A8_SINT,
+    VK_FORMAT_R16G16_UINT, //VK_FORMAT_R16G16_TYPELESS,
+    VK_FORMAT_R16G16_SFLOAT,
+    VK_FORMAT_R16G16_UNORM,
+    VK_FORMAT_R16G16_UINT,
+    VK_FORMAT_R16G16_SNORM,
+    VK_FORMAT_R16G16_SINT,
+    VK_FORMAT_R32_UINT, //VK_FORMAT_R32_TYPELESS,
+    VK_FORMAT_D32_SFLOAT,
+    VK_FORMAT_R32_SFLOAT,
+    VK_FORMAT_R32_UINT,
+    VK_FORMAT_R32_SINT,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_R24G8_TYPELESS,
+    VK_FORMAT_D24_UNORM_S8_UINT,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_R24_UNORM_X8_TYPELESS,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_X24_TYPELESS_G8_UINT,
+    VK_FORMAT_R8G8_UINT, //VK_FORMAT_R8G8_TYPELESS,
+    VK_FORMAT_R8G8_UNORM,
+    VK_FORMAT_R8G8_UINT,
+    VK_FORMAT_R8G8_SNORM,
+    VK_FORMAT_R8G8_SINT,
+    VK_FORMAT_R16_UINT, //VK_FORMAT_R16_TYPELESS,
+    VK_FORMAT_R16_UINT, //VK_FORMAT_R16_FLOAT,
+    VK_FORMAT_D16_UNORM,
+    VK_FORMAT_R16_UNORM,
+    VK_FORMAT_R16_UINT,
+    VK_FORMAT_R16_SNORM,
+    VK_FORMAT_R16_SINT,
+    VK_FORMAT_R8_UINT, //VK_FORMAT_R8_TYPELESS,
+    VK_FORMAT_R8_UNORM,
+    VK_FORMAT_R8_UINT,
+    VK_FORMAT_R8_SNORM,
+    VK_FORMAT_R8_SINT,
 };
 
+const VkFormat VKBackend::FormatBGRA[] = {
+    VK_FORMAT_UNDEFINED,
+    VK_FORMAT_R32G32B32A32_UINT, // Typeless
+    VK_FORMAT_R32G32B32A32_SFLOAT,
+    VK_FORMAT_R32G32B32A32_UINT,
+    VK_FORMAT_R32G32B32A32_SINT,
+    VK_FORMAT_R32G32B32_UINT, //VK_FORMAT_R32G32B32_TYPELESS,
+    VK_FORMAT_R32G32B32_SFLOAT,
+    VK_FORMAT_R32G32B32_UINT,
+    VK_FORMAT_R32G32B32_SINT,
+    VK_FORMAT_R16G16B16A16_UINT, //VK_FORMAT_R16G16B16A16_TYPELESS,
+    VK_FORMAT_R16G16B16A16_SFLOAT,
+    VK_FORMAT_R16G16B16A16_UNORM,
+    VK_FORMAT_R16G16B16A16_UINT,
+    VK_FORMAT_R16G16B16A16_SNORM,
+    VK_FORMAT_R16G16B16A16_SINT,
+    VK_FORMAT_R32G32_UINT, //VK_FORMAT_R32G32_TYPELESS,
+    VK_FORMAT_R32G32_SFLOAT,
+    VK_FORMAT_R32G32_UINT,
+    VK_FORMAT_R32G32_SINT,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R32G8X24_TYPELESS,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_D32_FLOAT_S8X24_UINT,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R32_FLOAT_X8X24_TYPELESS,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_X32_TYPELESS_G8X24_UINT,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R10G10B10A2_TYPELESS,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R10G10B10A2_UNORM,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R10G10B10A2_UINT,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R10G10B10_XR_BIAS_A2_UNORM,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R11G11B10_FLOAT,
+    VK_FORMAT_B8G8R8A8_UNORM, //VK_FORMAT_R8G8B8A8_TYPELESS,
+    VK_FORMAT_B8G8R8A8_UNORM,
+    VK_FORMAT_B8G8R8A8_SRGB, //VK_FORMAT_R8G8B8A8_UNORM_SRGB,
+    VK_FORMAT_B8G8R8A8_UINT,
+    VK_FORMAT_B8G8R8A8_SNORM,
+    VK_FORMAT_R8G8B8A8_SINT,
+    VK_FORMAT_R16G16_UINT, //VK_FORMAT_R16G16_TYPELESS,
+    VK_FORMAT_R16G16_SFLOAT,
+    VK_FORMAT_R16G16_UNORM,
+    VK_FORMAT_R16G16_UINT,
+    VK_FORMAT_R16G16_SNORM,
+    VK_FORMAT_R16G16_SINT,
+    VK_FORMAT_R32_UINT, //VK_FORMAT_R32_TYPELESS,
+    VK_FORMAT_D32_SFLOAT,
+    VK_FORMAT_R32_SFLOAT,
+    VK_FORMAT_R32_UINT,
+    VK_FORMAT_R32_SINT,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_R24G8_TYPELESS,
+    VK_FORMAT_D24_UNORM_S8_UINT,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_R24_UNORM_X8_TYPELESS,
+    VK_FORMAT_D24_UNORM_S8_UINT, //VK_FORMAT_X24_TYPELESS_G8_UINT,
+    VK_FORMAT_R8G8_UINT, //VK_FORMAT_R8G8_TYPELESS,
+    VK_FORMAT_R8G8_UNORM,
+    VK_FORMAT_R8G8_UINT,
+    VK_FORMAT_R8G8_SNORM,
+    VK_FORMAT_R8G8_SINT,
+    VK_FORMAT_R16_UINT, //VK_FORMAT_R16_TYPELESS,
+    VK_FORMAT_R16_UINT, //VK_FORMAT_R16_FLOAT,
+    VK_FORMAT_D16_UNORM,
+    VK_FORMAT_R16_UNORM,
+    VK_FORMAT_R16_UINT,
+    VK_FORMAT_R16_SNORM,
+    VK_FORMAT_R16_SINT,
+    VK_FORMAT_R8_UINT, //VK_FORMAT_R8_TYPELESS,
+    VK_FORMAT_R8_UNORM,
+    VK_FORMAT_R8_UINT,
+    VK_FORMAT_R8_SNORM,
+    VK_FORMAT_R8_SINT,
+};
+/*
 const D3D12_RESOURCE_STATES D3D12BatchBackend::ResourceStates[] = {
     D3D12_RESOURCE_STATE_COMMON,
     D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
@@ -176,130 +245,235 @@ const D3D12_PRIMITIVE_TOPOLOGY D3D12BatchBackend::PrimitiveTopologies[] = {
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
     D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP,
 };
+*/
 
-
-ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
-{
-    ComPtr<IDXGIFactory4> dxgiFactory;
-    UINT createFactoryFlags = 0;
-#if defined(_DEBUG)
-    createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
-#endif
-
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
-
-    ComPtr<IDXGIAdapter1> dxgiAdapter1;
-    ComPtr<IDXGIAdapter4> dxgiAdapter4;
-
-    if (useWarp)
-    {
-        ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter1)));
-        ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
-    }
-    else
-    {
-        SIZE_T maxDedicatedVideoMemory = 0;
-        for (UINT i = 0; dxgiFactory->EnumAdapters1(i, &dxgiAdapter1) != DXGI_ERROR_NOT_FOUND; ++i)
-        {
-            DXGI_ADAPTER_DESC1 dxgiAdapterDesc1;
-            dxgiAdapter1->GetDesc1(&dxgiAdapterDesc1);
-
-            // Check to see if the adapter can create a D3D12 device without actually 
-            // creating it. The adapter with the largest dedicated video memory
-            // is favored.
-            if ((dxgiAdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
-                SUCCEEDED(D3D12CreateDevice(dxgiAdapter1.Get(),
-                    D3D_FEATURE_LEVEL_12_1, __uuidof(ID3D12Device5), nullptr)) &&
-                dxgiAdapterDesc1.DedicatedVideoMemory > maxDedicatedVideoMemory)
-            {
-                maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
-                ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
-            }
+VkInstance createInstance() {
+    uint32_t instance_layer_count;
+    VK_CHECK(vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr));
+    picoLogf("\n{} layers found!", instance_layer_count);
+    if (instance_layer_count > 0) {
+        std::unique_ptr<VkLayerProperties[]> instance_layers(new VkLayerProperties[instance_layer_count]);
+        VK_CHECK(vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers.get()));
+        for (int i = 0; i < instance_layer_count; ++i) {
+            picoLog(instance_layers[i].layerName);
         }
     }
 
-    return dxgiAdapter4;
-}
-
-void EnableDebugLayer()
-{
-#if defined(_DEBUG)
-    // Always enable the debug layer before doing anything DX12 related
-    // so all possible errors generated while creating DX12 objects
-    // are caught by the debug layer.
-    ComPtr<ID3D12Debug> debugInterface;
-    ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
-    debugInterface->EnableDebugLayer();
-
+    std::vector<const char*> layers = {
+        "VK_LAYER_KHRONOS_validation",
+    };
+    std::vector<const char*> extensions = {
+        VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+        VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
-}
-
-ComPtr<ID3D12Device5> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
-{
-
-    EnableDebugLayer();
-
-    ComPtr<ID3D12Device5> d3d12Device;
-    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12Device)));
-    
-    // Enable debug messages in debug mode.
-#if defined(_DEBUG)
-    ComPtr<ID3D12InfoQueue> pInfoQueue;
-    if (SUCCEEDED(d3d12Device.As(&pInfoQueue)))
-    {
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_CORRUPTION, TRUE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_INFO, FALSE);
-        pInfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_MESSAGE, FALSE);
-        
-
-        // Suppress whole categories of messages
-        //D3D12_MESSAGE_CATEGORY Categories[] = {};
-
-        // Suppress messages based on their severity level
-        D3D12_MESSAGE_SEVERITY Severities[] = {
-            D3D12_MESSAGE_SEVERITY_INFO
-        };
-
-        // Suppress individual messages by their ID
-        D3D12_MESSAGE_ID DenyIds[] = {
-            D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,   // I'm really not sure how to avoid this message.
-            D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,                         // This warning occurs when using capture frame while graphics debugging.
-            D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,                       // This warning occurs when using capture frame while graphics debugging.
-        };
-
-        D3D12_INFO_QUEUE_FILTER NewFilter = {};
-        //NewFilter.DenyList.NumCategories = _countof(Categories);
-        //NewFilter.DenyList.pCategoryList = Categories;
-        NewFilter.DenyList.NumSeverities = _countof(Severities);
-        NewFilter.DenyList.pSeverityList = Severities;
-        NewFilter.DenyList.NumIDs = _countof(DenyIds);
-        NewFilter.DenyList.pIDList = DenyIds;
-
-        ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+#ifdef VK_USE_PLATFORM_MACOS_MVK
+        VK_MVK_MACOS_SURFACE_EXTENSION_NAME,
+#endif
+        VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+    };
+    uint32_t instance_extension_count;
+    vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, nullptr);
+    picoLogf("\n{} extensions found!", instance_extension_count);
+    if (instance_extension_count > 0) {
+        std::unique_ptr<VkExtensionProperties[]> instance_extensions(new VkExtensionProperties[instance_extension_count]);
+        VK_CHECK(vkEnumerateInstanceExtensionProperties(NULL, &instance_extension_count, instance_extensions.get()));
+        for (int i = 0; i < instance_extension_count; ++i) {
+            picoLog( instance_extensions[i].extensionName );
+        }
     }
-#endif
 
-    return d3d12Device;
+    VkApplicationInfo applicationInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+    applicationInfo.pApplicationName = "VIKI";
+    applicationInfo.applicationVersion = 0;
+    applicationInfo.pEngineName = "VIKI";
+    applicationInfo.engineVersion = 0;
+    applicationInfo.apiVersion = VK_API_VERSION_1_1;
+
+    VkInstanceCreateInfo info = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+    info.pApplicationInfo = &applicationInfo;
+    info.enabledLayerCount = layers.size();
+    info.ppEnabledLayerNames = layers.data();
+    info.enabledExtensionCount = extensions.size();
+    info.ppEnabledExtensionNames = extensions.data();
+
+    VkInstance instance = 0;
+    VK_CHECK(vkCreateInstance(&info, NULL, &instance));
+
+    return instance;
 }
 
 
-ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D12_COMMAND_LIST_TYPE type)
+VkBool32 debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
-    ComPtr<ID3D12CommandQueue> d3d12CommandQueue;
+    const char* type =
+        (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+        ? "ERROR"
+        : (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
+        ? "WARNING"
+        : "INFO";
 
-    D3D12_COMMAND_QUEUE_DESC desc = {};
-    desc.Type = type;
-    desc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
-    desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    desc.NodeMask = 0;
+    picoLog(std::format("{}: {}", type, pMessage));
 
-    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
-
-    return d3d12CommandQueue;
+    return VK_FALSE;
 }
 
+
+VkDebugReportCallbackEXT registerDebugCallback(VkInstance instance)
+{
+    VkDebugReportCallbackCreateInfoEXT createInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT };
+    createInfo.flags = VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
+    createInfo.pfnCallback = debugReportCallback;
+
+    VkDebugReportCallbackEXT callback = 0;
+    VK_CHECK(vkCreateDebugReportCallbackEXT(instance, &createInfo, 0, &callback));
+
+    return callback;
+}
+
+uint32_t getGraphicsFamilyIndex(VkPhysicalDevice physicalDevice)
+{
+    uint32_t queueCount = 0;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, 0);
+
+    std::vector<VkQueueFamilyProperties> queues(queueCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueCount, queues.data());
+
+    for (uint32_t i = 0; i < queueCount; ++i)
+        if (queues[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+            return i;
+
+    return VK_QUEUE_FAMILY_IGNORED;
+}
+
+bool supportsPresentation(VkPhysicalDevice physicalDevice, uint32_t familyIndex)
+{
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+    return vkGetPhysicalDeviceWin32PresentationSupportKHR(physicalDevice, familyIndex);
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+    return true;
+    //return vkGetPhysicalMacDevicePresentationSupport(physicalDevice, familyIndex);
+#else
+    return true;
+#endif
+}
+
+VkPhysicalDevice pickPhysicalDevice(VkPhysicalDevice* physicalDevices, uint32_t physicalDeviceCount)
+{
+    VkPhysicalDevice discrete = 0;
+    VkPhysicalDevice fallback = 0;
+
+    for (uint32_t i = 0; i < physicalDeviceCount; ++i)
+    {
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(physicalDevices[i], &props);
+
+        printf("GPU%d: %s\n", i, props.deviceName);
+
+        uint32_t familyIndex = getGraphicsFamilyIndex(physicalDevices[i]);
+        if (familyIndex == VK_QUEUE_FAMILY_IGNORED)
+            continue;
+
+        if (!supportsPresentation(physicalDevices[i], familyIndex))
+            continue;
+
+        if (!discrete && props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+        {
+            discrete = physicalDevices[i];
+        }
+
+        if (!fallback)
+        {
+            fallback = physicalDevices[i];
+        }
+    }
+
+    VkPhysicalDevice result = discrete ? discrete : fallback;
+
+    if (result)
+    {
+        VkPhysicalDeviceProperties props;
+        vkGetPhysicalDeviceProperties(result, &props);
+
+        picoLogf("Selected GPU {}", props.deviceName);
+    } else
+    {
+        picoLog("ERROR: No GPUs found");
+    }
+
+    return result;
+}
+
+
+VkDevice createDevice(VkInstance instance, VkPhysicalDevice physicalDevice, uint32_t* familyIndex)
+{
+    *familyIndex = 0; // SHORTCUT: this needs to be computed from queue properties // TODO: this produces a validation error
+
+    float queuePriorities[] = { 1.0f };
+
+    VkDeviceQueueCreateInfo queueInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+    queueInfo.queueFamilyIndex = *familyIndex;
+    queueInfo.queueCount = 1;
+    queueInfo.pQueuePriorities = queuePriorities;
+
+    const char* extensions[] =
+    {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
+    VkPhysicalDeviceFeatures features = {};
+    features.vertexPipelineStoresAndAtomics = true; // TODO: we aren't using this yet? is this a bug in glslang or in validation layers or do I just not understand the spec?
+
+    VkDeviceCreateInfo createInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+    createInfo.queueCreateInfoCount = 1;
+    createInfo.pQueueCreateInfos = &queueInfo;
+
+    createInfo.ppEnabledExtensionNames = extensions;
+    createInfo.enabledExtensionCount = sizeof(extensions) / sizeof(extensions[0]);
+    createInfo.pEnabledFeatures = &features;
+
+    VkDevice device = 0;
+    VK_CHECK(vkCreateDevice(physicalDevice, &createInfo, 0, &device));
+
+    return device;
+}
+
+
+VkSemaphore createSemaphore(VkDevice device)
+{
+    VkSemaphoreCreateInfo createInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+    VkSemaphore semaphore = 0;
+    VK_CHECK(vkCreateSemaphore(device, &createInfo, 0, &semaphore));
+
+    return semaphore;
+}
+VkFence createFence(VkDevice device)
+{
+    VkFenceCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    createInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VkFence fence = 0;
+    VK_CHECK(vkCreateFence(device, &createInfo, 0, &fence));
+
+    return fence;
+}
+
+VkCommandPool createCommandPool(VkDevice device, uint32_t familyIndex)
+{
+    VkCommandPoolCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    createInfo.queueFamilyIndex = familyIndex;
+    
+    VkCommandPool commandPool = 0;
+    VK_CHECK(vkCreateCommandPool(device, &createInfo, 0, &commandPool));
+
+    return commandPool;
+}
+
+/*
 
 
 
@@ -347,41 +521,51 @@ void Flush(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fence,
     uint64_t fenceValueForSignal = Signal(commandQueue, fence, fenceValue);
     WaitForFenceValue(fence, fenceValueForSignal, fenceEvent);
 }
+*/
 
-D3D12Backend::D3D12Backend() {
-    ComPtr<IDXGIAdapter4> dxgiAdapter4 = GetAdapter(false);
 
-    _device = CreateDevice(dxgiAdapter4);
-
-    // Check if the D3D12 device actually supports ray tracing.
-    D3D12_FEATURE_DATA_D3D12_OPTIONS5 caps = {};
-    auto hr = _device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &caps, sizeof(caps));
-    
-    if (FAILED(hr) || caps.RaytracingTier < D3D12_RAYTRACING_TIER_1_1)
+VKBackend::VKBackend() {
+    VkResult result = volkInitialize();
+    if (result != VK_SUCCESS)
         return;
 
-    // Load functions
+    _instance = createInstance();
+    volkLoadInstance(_instance);
+
+    VkDebugReportCallbackEXT debugCallback = registerDebugCallback(_instance);
+
+    VkPhysicalDevice physicalDevices[16];
+    uint32_t physicalDeviceCount = sizeof(physicalDevices) / sizeof(physicalDevices[0]);
+    VK_CHECK(vkEnumeratePhysicalDevices(_instance, &physicalDeviceCount, physicalDevices));
+
+    _physicalDevice = pickPhysicalDevice(physicalDevices, physicalDeviceCount);
+    picoAssert(_physicalDevice);
+
+    _familyIndex = getGraphicsFamilyIndex(_physicalDevice);
+    picoAssert(_familyIndex != VK_QUEUE_FAMILY_IGNORED);
+
+    _device = createDevice(_instance, _physicalDevice, &_familyIndex);
+    picoAssert(_device);
+
+    vkGetDeviceQueue(_device, _familyIndex, 0, &_queue);
+    picoAssert(_queue);
+
+    for (int i = 0; i < VKBackend::CHAIN_NUM_FRAMES; ++i)
     {
-        HMODULE module = ::GetModuleHandle(TEXT("d3d12.dll"));
-        fnD3D12CreateRootSignatureDeserializer
-            = (PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(module,
-                "D3D12SerializeVersionedRootSignature");
+        _acquireSemaphores[i] = createSemaphore(_device);
+        picoAssert(_acquireSemaphores[i]);
 
-        fnD3D12SerializeVersionedRootSignature
-            = (PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE)GetProcAddress(module,
-                "D3D12SerializeVersionedRootSignature");
+        _releaseSemaphores[i] = createSemaphore(_device);
+        picoAssert(_releaseSemaphores[i]);
 
-        fnD3D12CreateVersionedRootSignatureDeserializer
-            = (PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER)GetProcAddress(module,
-                "D3D12CreateVersionedRootSignatureDeserializer");
+        _inFlightFences[i] = createFence(_device);
+        picoAssert(_inFlightFences[i]);
     }
 
-    if ((fnD3D12CreateRootSignatureDeserializer == NULL) ||
-        (fnD3D12SerializeVersionedRootSignature == NULL) ||
-        (fnD3D12CreateVersionedRootSignatureDeserializer == NULL))
-    {
-   //     target_feature_level = D3D_FEATURE_LEVEL_12_0;
-    }
+    _commandPool = createCommandPool(_device, _familyIndex);
+    picoAssert(_commandPool);
+
+   /*
 
     _commandQueue = CreateCommandQueue(_device, D3D12_COMMAND_LIST_TYPE_DIRECT);
 
@@ -401,27 +585,66 @@ D3D12Backend::D3D12Backend() {
 
     // Allocate a default empty pipeline layout
     _emptyRootDescriptorLayout = this->createRootDescriptorLayout( {} );
-}
+    */
+    }
 
-D3D12Backend::~D3D12Backend() {
-
-}
-
-void D3D12Backend::executeBatch(const BatchPointer& batch) {
-    auto bat = static_cast<D3D12BatchBackend*>(batch.get());
-
-
-    ID3D12CommandList* const commandLists[] = {
-        bat->_commandList.Get()
-    };
-    _commandQueue->ExecuteCommandLists(_countof(commandLists), commandLists);
+VKBackend::~VKBackend() {
 
 }
 
-void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
-    auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
-    // UINT syncInterval = g_VSync ? 1 : 0;
+void VKBackend::acquireSwapchain(const SwapchainPointer& swapchain) {
+    auto sw = static_cast<VKSwapchainBackend*>(swapchain.get());
+
+    auto currentFrame = swapchain->currentIndex();
+
+    // Wait for the in flight work to be done before steing to the next frame
+    VK_CHECK(vkWaitForFences(_device, 1, &_inFlightFences[currentFrame], VK_TRUE, UINT64_MAX));
+    VK_CHECK(vkResetFences(_device, 1, &_inFlightFences[currentFrame]));
+
+    uint32_t imageIndex = 0;
+    VK_CHECK(vkAcquireNextImageKHR(_device, sw->_swapchain, UINT64_MAX,
+        _acquireSemaphores[currentFrame], VK_NULL_HANDLE,
+        &imageIndex));
+
+    if (imageIndex != currentFrame) {
+        picoLog(std::format("Error: CurrentFrame {} : ImageIndex {}", currentFrame, imageIndex));
+    }
+
+}
+
+
+void VKBackend::executeBatch(const BatchPointer& batch) {
+    auto bat = static_cast<VKBatchBackend*>(batch.get());
+
+    auto currentFrame = bat->_currentBackBufferIndex;
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkSemaphore waitSemaphores[] = { _acquireSemaphores[currentFrame] };
+    VkPipelineStageFlags waitStages[] =
+    { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = waitSemaphores;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &bat->_commandBuffers[currentFrame];
+
+    VkSemaphore signalSemaphores[] = { _releaseSemaphores[currentFrame] };
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphores;
+
+    VK_CHECK(vkQueueSubmit(_queue, 1, &submitInfo, _inFlightFences[currentFrame]));
+}
+
+void VKBackend::presentSwapchain(const SwapchainPointer& swapchain) {
+    auto sw = static_cast<VKSwapchainBackend*>(swapchain.get());
+
+    uint32_t currentFrame = swapchain->currentIndex();
+
+
+/*    // UINT syncInterval = g_VSync ? 1 : 0;
     UINT syncInterval = 1;
     // UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
     UINT presentFlags = 0;
@@ -432,19 +655,44 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
     WaitForFenceValue(_fence, _frameFenceValues[sw->_currentIndex], _fenceEvent);
+*/
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+
+    VkSemaphore waitSemaphores[] = { _releaseSemaphores[currentFrame] };
+    presentInfo.pWaitSemaphores = waitSemaphores;
+
+    VkSwapchainKHR swapChains[] = { sw->_swapchain };
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &currentFrame;
+    
+    presentInfo.pResults = nullptr;
+
+    VK_CHECK(vkQueuePresentKHR(_queue, &presentInfo));
+
+
+
+    // moving on to the next frame!
+    swapchain->_currentIndex = (currentFrame + 1) % VKBackend::CHAIN_NUM_FRAMES;
+
 }
 
-void D3D12Backend::flush() {
-    Flush(_commandQueue, _fence, _fenceValue, _fenceEvent);
+void VKBackend::flush() {
+  //  Flush(_commandQueue, _fence, _fenceValue, _fenceEvent);
 }
 
-
-void D3D12Backend::garbageCollect(const ComPtr<ID3D12DeviceChild>& child) {
+/*
+void VKBackend::garbageCollect(const ComPtr<ID3D12DeviceChild>& child) {
     _garbageObjects.push_back(child);
 }
 
-void D3D12Backend::flushGarbage() {
+void VKBackend::flushGarbage() {
 
 }
+*/
+
 
 #endif

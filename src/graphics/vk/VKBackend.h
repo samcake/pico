@@ -1,4 +1,4 @@
-// D3D12Backend.h 
+// VKBackend.h 
 //
 // Sam Gateau - January 2020
 // 
@@ -39,64 +39,82 @@
 #include <core/stl/IndexTable.h>
 
 
-#define VULKAN
-#ifdef VULKAN
+#define PICO_VULKAN
+#ifdef PICO_VULKAN
 
 
-// VK specific headers.
-#include <vulkan.h>
+/* Set platform defines at build time for volk to pick up. */
+/*#if defined(_WIN32)
+#   define VK_USE_PLATFORM_WIN32_KHR
+#elif defined(__linux__) || defined(__unix__)
+#   define VK_USE_PLATFORM_XLIB_KHR
+#elif defined(__APPLE__)
+#   define VK_USE_PLATFORM_MACOS_MVK
+#else
+#   error "Platform not supported by this example."
+#endif
+
+#define VOLK_IMPLEMENTATION
+*/
+#include "volk.h"
+
+#define VK_CHECK(result) graphics::VKBackend::VkCheck(__FILE__, __LINE__, __FUNCTION__, result);
 
 namespace graphics {
-    class D3D12DescriptorHeapBackend;
-
-    class D3D12DescriptorHeapBackend : public DescriptorHeap {
+   
+    class VKDescriptorHeapBackend : public DescriptorHeap {
     public:
-        D3D12DescriptorHeapBackend();
-        virtual ~D3D12DescriptorHeapBackend();
+        VKDescriptorHeapBackend();
+        virtual ~VKDescriptorHeapBackend();
 
         int32_t allocateDescriptors(int32_t numDescriptors) override;
         int32_t allocateSamplers(int32_t numSamplers) override;
 
-        core::IndexTable _descriptor_table;
-        core::IndexTable _sampler_table;
+        //core::IndexTable _descriptor_table;
+        //core::IndexTable _sampler_table;
 
-        UINT _descriptor_increment_size;
-        UINT _sampler_increment_size;
+        //UINT _descriptor_increment_size;
+        //UINT _sampler_increment_size;
 
-        ComPtr < ID3D12DescriptorHeap> _cbvsrvuav_heap;
-        ComPtr < ID3D12DescriptorHeap> _sampler_heap;
+        //ComPtr < IVKDescriptorHeap> _cbvsrvuav_heap;
+        //ComPtr < IVKDescriptorHeap> _sampler_heap;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t offset) const;
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle(uint32_t offset) const;
+        //VK_GPU_DESCRIPTOR_HANDLE gpuHandle(uint32_t offset) const;
+        //VK_CPU_DESCRIPTOR_HANDLE cpuHandle(uint32_t offset) const;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE gpuSamplerHandle(uint32_t offset) const;
-        D3D12_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle(uint32_t offset) const;
+        //VK_GPU_DESCRIPTOR_HANDLE gpuSamplerHandle(uint32_t offset) const;
+        //VK_CPU_DESCRIPTOR_HANDLE cpuSamplerHandle(uint32_t offset) const;
     };
 
-    class D3D12Backend : public DeviceBackend {
+    class VKBackend : public DeviceBackend {
     public:
-        D3D12Backend();
-        virtual ~D3D12Backend();
+        VKBackend();
+        virtual ~VKBackend();
 
-        static const uint8_t CHAIN_NUM_FRAMES = 3;
+        static const uint8_t CHAIN_NUM_FRAMES = 2;
 
-        void* nativeDevice() override { return _device.Get(); }
+        void* nativeDevice() override { return _device; }
 
-        // DirectX 12 Objects
-        ComPtr<ID3D12Device5> _device;
-        ComPtr<ID3D12CommandQueue> _commandQueue;
+        // Vulkan Objects
+        VkInstance _instance = 0;
+        VkPhysicalDevice _physicalDevice = 0;
+        uint32_t _familyIndex = 0;
+        VkDevice _device = 0;
+        VkQueue _queue = 0;
+        VkCommandPool _commandPool = 0;
+
         double _commandQueueTimestampFrequency = 1.0;
 
-        // Functions points for functions that need to be loaded
-        PFN_D3D12_CREATE_ROOT_SIGNATURE_DESERIALIZER           fnD3D12CreateRootSignatureDeserializer = nullptr;
-        PFN_D3D12_SERIALIZE_VERSIONED_ROOT_SIGNATURE           fnD3D12SerializeVersionedRootSignature = nullptr;
-        PFN_D3D12_CREATE_VERSIONED_ROOT_SIGNATURE_DESERIALIZER fnD3D12CreateVersionedRootSignatureDeserializer = nullptr;
 
         // Synchronization objects
-        ComPtr<ID3D12Fence> _fence;
-        uint64_t _fenceValue = 0;
-        uint64_t _frameFenceValues[D3D12Backend::CHAIN_NUM_FRAMES] = {};
-        HANDLE _fenceEvent;
+        VkSemaphore _acquireSemaphores[VKBackend::CHAIN_NUM_FRAMES] = {};
+        VkSemaphore _releaseSemaphores[VKBackend::CHAIN_NUM_FRAMES] = {};
+        VkFence     _inFlightFences[VKBackend::CHAIN_NUM_FRAMES] = {};
+
+      //  ComPtr<IVKFence> _fence;
+        //uint64_t _fenceValue = 0;
+        //uint64_t _frameFenceValues[VKBackend::CHAIN_NUM_FRAMES] = {};
+        //HANDLE _fenceEvent;
 
         SwapchainPointer createSwapchain(const SwapchainInit& init) override;
         void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
@@ -130,6 +148,7 @@ namespace graphics {
         void updateDescriptorSet(DescriptorSetPointer& descriptorSet, DescriptorObjects& objects) override;
         DescriptorHeapPointer createDescriptorHeap(const DescriptorHeapInit& init) override;
 
+        void acquireSwapchain(const SwapchainPointer& swapchain) override;
         void executeBatch(const BatchPointer& batch) override;
         void presentSwapchain(const SwapchainPointer& swapchain) override;
 
@@ -150,55 +169,70 @@ namespace graphics {
 
         // When we modify d3d12 objects already in use, we need to garbage collect
         // them to be destroyed at a later time
-        void garbageCollect(const ComPtr<ID3D12DeviceChild>& child);
-        void flushGarbage();
-        std::list< ComPtr<ID3D12DeviceChild> > _garbageObjects;
+      //  void garbageCollect(const ComPtr<IVKDeviceChild>& child);
+        //void flushGarbage();
+      //  std::list< ComPtr<IVKDeviceChild> > _garbageObjects;
 
         // Enum translation tables
-        static const DXGI_FORMAT Format[uint32_t(PixelFormat::COUNT)];
-
+        static const VkFormat Format[uint32_t(PixelFormat::COUNT)];
+        static const VkFormat FormatBGRA[uint32_t(PixelFormat::COUNT)];
+  
+        static void VkCheck(const char* file, int line, const char* functionName, VkResult result);
     };
 
-    class D3D12SwapchainBackend : public Swapchain {
+    class VKSwapchainBackend : public Swapchain {
     public:
-        friend class D3D12Backend;
-        D3D12SwapchainBackend();
-        virtual ~D3D12SwapchainBackend();
+        friend class VKBackend;
+        VKSwapchainBackend();
+        virtual ~VKSwapchainBackend();
 
-        ComPtr<IDXGISwapChain4> _swapchain;
-        ComPtr<ID3D12Resource> _backBuffers[D3D12Backend::CHAIN_NUM_FRAMES];
-        ComPtr<ID3D12DescriptorHeap> _rtvDescriptorHeap;
-        UINT _rtvDescriptorSize;
+        VkSurfaceKHR _surface = 0;
+        VkRenderPass _renderPass = 0;
+        VkSwapchainKHR _swapchain = 0;
+        VkFormat _swapchainFormat;
 
-        ComPtr<ID3D12Resource> _depthBuffer;
-        ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
-        UINT _dsvDescriptorSize { 0 };
+        std::vector<VkImage> _images;
+        std::vector<VkImageView> _imageViews;
+        std::vector<VkFramebuffer> _framebuffers;
+
+        uint32_t _imageCount = 0;
+
+     //   ComPtr<IVKResource> _backBuffers[VKBackend::CHAIN_NUM_FRAMES];
+       // ComPtr<IVKDescriptorHeap> _rtvDescriptorHeap;
+      //  UINT _rtvDescriptorSize;
+
+     //   ComPtr<IVKResource> _depthBuffer;
+       // ComPtr<IVKDescriptorHeap> _dsvDescriptorHeap;
+       // UINT _dsvDescriptorSize { 0 };
     };
 
-    class D3D12FramebufferBackend : public Framebuffer {
+    class VKFramebufferBackend : public Framebuffer {
     public:
-        friend class D3D12Backend;
-        D3D12FramebufferBackend();
-        virtual ~D3D12FramebufferBackend();
+        friend class VKBackend;
+        VKFramebufferBackend();
+        virtual ~VKFramebufferBackend();
+
+        VkFramebuffer _framebuffer = 0;
+        VkRenderPass _renderPass = 0;
 
         // Gather color buffer rtvs in one heap
         UINT _numRenderTargets = 0;
-        ComPtr<ID3D12DescriptorHeap> _rtvDescriptorHeap;
+      //  ComPtr<IVKDescriptorHeap> _rtvDescriptorHeap;
         UINT _rtvDescriptorSize = 0;
-        D3D12_CPU_DESCRIPTOR_HANDLE _rtvs;
+      //  VK_CPU_DESCRIPTOR_HANDLE _rtvs;
 
-        ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
+      //  ComPtr<IVKDescriptorHeap> _dsvDescriptorHeap;
         UINT _dsvDescriptorSize = 0;
-        D3D12_CPU_DESCRIPTOR_HANDLE _dsv;
+      //  VK_CPU_DESCRIPTOR_HANDLE _dsv;
     };
 
-    class D3D12PipelineStateBackend;
-    class D3D12DescriptorSetBackend;
-    class D3D12BatchBackend : public Batch {
+    class VKPipelineStateBackend;
+    class VKDescriptorSetBackend;
+    class VKBatchBackend : public Batch {
     public:
-        friend class D3D12Backend;
-        D3D12BatchBackend();
-        virtual ~D3D12BatchBackend();
+        friend class VKBackend;
+        VKBatchBackend();
+        virtual ~VKBatchBackend();
 
         void begin(uint8_t currentIndex, const BatchTimerPointer& timer) override;
         void end() override;
@@ -252,8 +286,10 @@ namespace graphics {
 
         void dispatchRays(const DispatchRaysArgs& args) override;
 
-        ComPtr<ID3D12GraphicsCommandList4> _commandList;
-        ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
+    //    ComPtr<IVKGraphicsCommandList4> _commandList;
+    //    ComPtr<IVKCommandAllocator> _commandAllocators[VKBackend::CHAIN_NUM_FRAMES];
+
+        VkCommandBuffer _commandBuffers[VKBackend::CHAIN_NUM_FRAMES];
 
         DescriptorHeapPointer _descriptorHeap;
 
@@ -264,111 +300,111 @@ namespace graphics {
         UINT _currentComputeRootLayout_setRootIndex = 0;
         UINT _currentComputeRootLayout_samplerRootIndex = 0;
 
-        D3D12PipelineStateBackend* _currentGraphicsPipeline = nullptr;
+        VKPipelineStateBackend* _currentGraphicsPipeline = nullptr;
 
-        D3D12DescriptorSetBackend* _currentGraphicsDescriptorSets[4] = { nullptr, nullptr, nullptr, nullptr };
+        VKDescriptorSetBackend* _currentGraphicsDescriptorSets[4] = { nullptr, nullptr, nullptr, nullptr };
 
         BatchTimerPointer _timer;
 
-        static const D3D12_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
-        static const D3D12_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
+    //    static const VK_RESOURCE_STATES ResourceStates[uint32_t(ResourceState::COUNT)];
+   //     static const VK_RESOURCE_BARRIER_FLAGS  ResourceBarrieFlags[uint32_t(ResourceBarrierFlag::COUNT)];
 
-        static const D3D12_PRIMITIVE_TOPOLOGY_TYPE  PrimitiveTopologyTypes[uint32_t(PrimitiveTopology::COUNT)];
-        static const D3D12_PRIMITIVE_TOPOLOGY  PrimitiveTopologies[uint32_t(PrimitiveTopology::COUNT)];
+    //    static const VK_PRIMITIVE_TOPOLOGY_TYPE  PrimitiveTopologyTypes[uint32_t(PrimitiveTopology::COUNT)];
+    //    static const VK_PRIMITIVE_TOPOLOGY  PrimitiveTopologies[uint32_t(PrimitiveTopology::COUNT)];
 
     };
 
-    class D3D12BufferBackend : public Buffer {
+    class VKBufferBackend : public Buffer {
     public:
-        friend class D3D12Backend;
-        D3D12BufferBackend();
-        virtual ~D3D12BufferBackend();
+        friend class VKBackend;
+        VKBufferBackend();
+        virtual ~VKBufferBackend();
 
-        ComPtr<ID3D12Resource> _resource;
-        ComPtr<ID3D12Resource> _cpuDataResource;
+    //    ComPtr<IVKResource> _resource;
+    //    ComPtr<IVKResource> _cpuDataResource;
 
 
-        D3D12_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
-        D3D12_VERTEX_BUFFER_VIEW _vertexBufferView;
-        D3D12_INDEX_BUFFER_VIEW _indexBufferView;
-        D3D12_SHADER_RESOURCE_VIEW_DESC _resourceBufferView;
-        D3D12_UNORDERED_ACCESS_VIEW_DESC _rwResourceBufferView;
+     //   VK_CONSTANT_BUFFER_VIEW_DESC _uniformBufferView;
+      //  VK_VERTEX_BUFFER_VIEW _vertexBufferView;
+     //   VK_INDEX_BUFFER_VIEW _indexBufferView;
+     //   VK_SHADER_RESOURCE_VIEW_DESC _resourceBufferView;
+     //   VK_UNORDERED_ACCESS_VIEW_DESC _rwResourceBufferView;
     };
 
-    class D3D12TextureBackend : public Texture {
+    class VKTextureBackend : public Texture {
     public:
-        friend class D3D12Backend;
-        D3D12TextureBackend();
-        virtual ~D3D12TextureBackend();
+        friend class VKBackend;
+        VKTextureBackend();
+        virtual ~VKTextureBackend();
 
-        ComPtr<ID3D12Resource> _resource;
+    //    ComPtr<IVKResource> _resource;
 
-        D3D12_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
-        D3D12_UNORDERED_ACCESS_VIEW_DESC   _unorderedAccessViewDesc;
+    //    VK_SHADER_RESOURCE_VIEW_DESC   _shaderResourceViewDesc;
+    //    VK_UNORDERED_ACCESS_VIEW_DESC   _unorderedAccessViewDesc;
     };
 
-    class D3D12GeometryBackend : public Geometry {
+    class VKGeometryBackend : public Geometry {
     public:
-        friend class D3D12Backend;
-        D3D12GeometryBackend();
-        virtual ~D3D12GeometryBackend();
+        friend class VKBackend;
+        VKGeometryBackend();
+        virtual ~VKGeometryBackend();
 
         // Acceleration structure
-        ComPtr<ID3D12Resource> _bottomLevelAccelerationStructure;
-        ComPtr<ID3D12Resource> _topLevelAccelerationStructure;
+    //    ComPtr<IVKResource> _bottomLevelAccelerationStructure;
+    //    ComPtr<IVKResource> _topLevelAccelerationStructure;
     };
 
-    class D3D12ShaderBackend : public Shader {
+    class VKShaderBackend : public Shader {
     public:
-        friend class D3D12Backend;
-        D3D12ShaderBackend();
-        virtual ~D3D12ShaderBackend();
+        friend class VKBackend;
+        VKShaderBackend();
+        virtual ~VKShaderBackend();
 
        // ComPtr<ID3DBlob> _shaderBlob;
-        ComPtr<IDxcBlob> _shaderBlob;
+     //   ComPtr<IDxcBlob> _shaderBlob;
     //    ComPtr<IDxcBlob> _shaderLibBlob;
 
         static const std::string ShaderTypes[uint32_t(ShaderType::COUNT)];
     };
 
-    class D3D12SamplerBackend : public Sampler {
+    class VKSamplerBackend : public Sampler {
     public:
-        friend class D3D12Backend;
-        D3D12SamplerBackend();
-        virtual ~D3D12SamplerBackend();
+        friend class VKBackend;
+        VKSamplerBackend();
+        virtual ~VKSamplerBackend();
 
-        D3D12_SAMPLER_DESC _samplerDesc;
+     //   VK_SAMPLER_DESC _samplerDesc;
     };
 
-    class D3D12PipelineStateBackend : public PipelineState {
+    class VKPipelineStateBackend : public PipelineState {
     public:
-        friend class D3D12Backend;
-        D3D12PipelineStateBackend();
-        virtual ~D3D12PipelineStateBackend();
+        friend class VKBackend;
+        VKPipelineStateBackend();
+        virtual ~VKPipelineStateBackend();
 
-        ComPtr<ID3D12RootSignature> _rootSignature;
-        ComPtr<ID3D12PipelineState> _pipelineState;
+    //    ComPtr<IVKRootSignature> _rootSignature;
+//        ComPtr<IVKPipelineState> _pipelineState;
 
-        ComPtr<ID3D12StateObject> _stateObject; // raytracing
-        ComPtr<ID3D12RootSignature> _localRootSignature; // raytracing
+  //      ComPtr<IVKStateObject> _stateObject; // raytracing
+    //    ComPtr<IVKRootSignature> _localRootSignature; // raytracing
 
-        D3D12_PRIMITIVE_TOPOLOGY _primitive_topology;
+      //  VK_PRIMITIVE_TOPOLOGY _primitive_topology;
 
-        static void fill_rasterizer_desc(const RasterizerState& src, D3D12_RASTERIZER_DESC& dst);
-        static void fill_depth_stencil_desc(const DepthStencilState& src, D3D12_DEPTH_STENCIL_DESC& dst);
-        static void fill_blend_desc(const BlendState& src, D3D12_BLEND_DESC& dst);
+    //    static void fill_rasterizer_desc(const RasterizerState& src, VK_RASTERIZER_DESC& dst);
+     //   static void fill_depth_stencil_desc(const DepthStencilState& src, VK_DEPTH_STENCIL_DESC& dst);
+     //   static void fill_blend_desc(const BlendState& src, VK_BLEND_DESC& dst);
     };
 
 
-    class D3D12RootDescriptorLayoutBackend : public RootDescriptorLayout {
+    class VKRootDescriptorLayoutBackend : public RootDescriptorLayout {
     public:
-        friend class D3D12Backend;
-        D3D12RootDescriptorLayoutBackend();
-        virtual ~D3D12RootDescriptorLayoutBackend();
+        friend class VKBackend;
+        VKRootDescriptorLayoutBackend();
+        virtual ~VKRootDescriptorLayoutBackend();
 
-        ComPtr<ID3D12RootSignature> _rootSignature;
+     //   ComPtr<IVKRootSignature> _rootSignature;
       
-        std::vector< uint32_t > _dxPushParamIndices;
+     //   std::vector< uint32_t > _dxPushParamIndices;
         
         int32_t _cbvsrvuav_rootIndex = -1;
         std::vector< uint32_t > _dxSetParamIndices;
@@ -381,11 +417,11 @@ namespace graphics {
         uint32_t _sampler_count = 0;
     };
 
-    class D3D12DescriptorSetBackend : public DescriptorSet {
+    class VKDescriptorSetBackend : public DescriptorSet {
     public:
-        friend class D3D12Backend;
-        D3D12DescriptorSetBackend();
-        virtual ~D3D12DescriptorSetBackend();
+        friend class VKBackend;
+        VKDescriptorSetBackend();
+        virtual ~VKDescriptorSetBackend();
 
         int32_t _cbvsrvuav_rootIndex = -1;
         int32_t _sampler_rootIndex = -1;
@@ -393,35 +429,44 @@ namespace graphics {
         uint32_t _cbvsrvuav_count = 0;
         uint32_t _sampler_count = 0;
 
-        D3D12_GPU_DESCRIPTOR_HANDLE _cbvsrvuav_GPUHandle;
-        D3D12_GPU_DESCRIPTOR_HANDLE _sampler_GPUHandle;
+//        VK_GPU_DESCRIPTOR_HANDLE _cbvsrvuav_GPUHandle;
+  //      VK_GPU_DESCRIPTOR_HANDLE _sampler_GPUHandle;
     };
 
-    class D3D12ShaderTableBackend : public ShaderTable {
+    class VKShaderTableBackend : public ShaderTable {
     public:
-        friend class D3D12Backend;
-        D3D12ShaderTableBackend();
-        virtual ~D3D12ShaderTableBackend();
+        friend class VKBackend;
+        VKShaderTableBackend();
+        virtual ~VKShaderTableBackend();
 
-        ComPtr<ID3D12Resource> _shaderTable;
+   //     ComPtr<IVKResource> _shaderTable;
     };
 
-    class D3D12BatchTimerBackend : public BatchTimer {
+    class VKBatchTimerBackend : public BatchTimer {
     public:
-        friend class D3D12Backend;
-        D3D12BatchTimerBackend();
-        virtual ~D3D12BatchTimerBackend();
+        friend class VKBackend;
+        VKBatchTimerBackend();
+        virtual ~VKBatchTimerBackend();
 
-        void begin(ID3D12GraphicsCommandList* _commandList, INT index);
-        void end(ID3D12GraphicsCommandList* _commandList, INT index);
+     //   void begin(IVKGraphicsCommandList* _commandList, INT index);
+    //    void end(IVKGraphicsCommandList* _commandList, INT index);
 
-        ComPtr<ID3D12QueryHeap> _queryHeap;
-        ComPtr<ID3D12Resource> _queryResult;
-        ComPtr<ID3D12Resource> _queryResultMapped;
+     //   ComPtr<IVKQueryHeap> _queryHeap;
+     //   ComPtr<IVKResource> _queryResult;
+    //    ComPtr<IVKResource> _queryResultMapped;
         void* _queryResultCPUMappedAddress = nullptr;
 
         double _commandQueueTimestampFrequency = 1.0;
     };
+
+    class VK
+    {
+    public:
+        static VkRenderPass createRenderPass(VkDevice device, VkFormat format);
+        static VkFramebuffer createFramebuffer(VkDevice device, VkRenderPass renderPass, VkImageView imageView, uint32_t width, uint32_t height);
+        static VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);
+
+    };
 }
 
-#endif _WINDOWS
+#endif PICO_VULKAN

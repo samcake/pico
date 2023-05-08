@@ -394,7 +394,8 @@ CameraPointer CameraStore::createCamera() {
 
     auto alloc = _indexTable.allocate();
 
-    _cameraStructBuffer.allocate_element(alloc.index, &CameraData());
+    CameraData c;
+    _cameraStructBuffer.allocate_element(alloc.index, &c);
 
     CameraPointer camera(new Camera({ &_cameraStructBuffer, alloc.index }));
 
