@@ -121,6 +121,12 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
     _currentGraphicsRootLayout_samplerRootIndex = 0;
     _currentComputeRootLayout_setRootIndex = 0;
     _currentComputeRootLayout_samplerRootIndex = 0;
+
+    _currentGraphicsPipeline = nullptr;
+    _currentGraphicsDescriptorSets[0] = nullptr;
+    _currentGraphicsDescriptorSets[1] = nullptr;
+    _currentGraphicsDescriptorSets[2] = nullptr;
+    _currentGraphicsDescriptorSets[3] = nullptr;
 }
 
 void D3D12BatchBackend::endPass() {
