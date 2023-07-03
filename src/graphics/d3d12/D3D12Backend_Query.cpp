@@ -165,7 +165,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
         D3D12_HEAP_FLAG_NONE,
         &desc,
-        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_COMMON, //D3D12_RESOURCE_STATE_COPY_SOURCE,
         nullptr,
         IID_PPV_ARGS(&timer->_queryResult)
     ));

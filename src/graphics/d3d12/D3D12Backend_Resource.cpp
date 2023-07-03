@@ -88,6 +88,7 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
     D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_COPY_DEST;
     if (init.usage & ResourceUsage::VERTEX_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        res_states = D3D12_RESOURCE_STATE_COMMON;
     }
 
     if (init.usage & ResourceUsage::INDEX_BUFFER) {
@@ -96,6 +97,7 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
 
     if (init.usage & ResourceUsage::UNIFORM_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+        res_states = D3D12_RESOURCE_STATE_COMMON;
     }
 
     if (init.usage & ResourceUsage::RW_RESOURCE_BUFFER) {
@@ -105,6 +107,8 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
     if (init.usage & ResourceUsage::RESOURCE_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
         res_states |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        res_states = D3D12_RESOURCE_STATE_COMMON;
+
     }
 
     if (init.usage & ResourceUsage::GENERIC_READ_BUFFER) {
