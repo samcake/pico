@@ -113,6 +113,7 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
 
     if (init.usage & ResourceUsage::GENERIC_READ_BUFFER) {
         res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
+        res_states = D3D12_RESOURCE_STATE_COMMON;
     }
 
     // cpu double or not ? this affect the host visible flag
@@ -121,6 +122,7 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
         // D3D12_HEAP_TYPE_UPLOAD requires D3D12_RESOURCE_STATE_GENERIC_READ
         heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
         res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
+        res_states = D3D12_RESOURCE_STATE_COMMON;
     }
 
 
@@ -471,7 +473,7 @@ GeometryPointer D3D12Backend::createGeometry(const GeometryInit& init) {
         desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
         desc.Width = std::max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
-        HRESULT hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, NULL, __uuidof(scratchBuffer), (void**)&(scratchBuffer));
+        HRESULT hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, NULL, __uuidof(scratchBuffer), (void**)&(scratchBuffer));
 
         desc.Width = bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes;
         hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(blasBuffer), (void**)&(blasBuffer));

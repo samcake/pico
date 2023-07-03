@@ -72,7 +72,8 @@ void D3D12BatchTimerBackend::begin(ID3D12GraphicsCommandList* _commandList, INT 
     barrier.Transition.Subresource = 0;
     _commandList->ResourceBarrier(1, &barrier);
 
-    _commandList->ResolveQueryData(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, prevFrameIndex * 2, 2, destBuffer, prevFrameIndex * 2 * 8);
+    if (index != 0)
+        _commandList->ResolveQueryData(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, prevFrameIndex * 2, 2, destBuffer, prevFrameIndex * 2 * 8);
 
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
