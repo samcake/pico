@@ -121,6 +121,12 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
     _currentGraphicsRootLayout_samplerRootIndex = 0;
     _currentComputeRootLayout_setRootIndex = 0;
     _currentComputeRootLayout_samplerRootIndex = 0;
+
+    _currentGraphicsPipeline = nullptr;
+    _currentGraphicsDescriptorSets[0] = nullptr;
+    _currentGraphicsDescriptorSets[1] = nullptr;
+    _currentGraphicsDescriptorSets[2] = nullptr;
+    _currentGraphicsDescriptorSets[3] = nullptr;
 }
 
 void D3D12BatchBackend::endPass() {
@@ -230,7 +236,7 @@ void D3D12BatchBackend::resourceBarrierRW(
     _commandList->ResourceBarrier(1, &barrier);
 }
 
-void D3D12BatchBackend::setViewport(const core::vec4 & viewport) {
+void D3D12BatchBackend::_setViewport(const core::vec4 & viewport) {
     D3D12_VIEWPORT dxViewport;
     dxViewport.TopLeftX = viewport.x;
     dxViewport.TopLeftY = viewport.y;
@@ -242,7 +248,7 @@ void D3D12BatchBackend::setViewport(const core::vec4 & viewport) {
     _commandList->RSSetViewports(1, &dxViewport);
 }
 
-void D3D12BatchBackend::setScissor(const core::vec4 & scissor) {
+void D3D12BatchBackend::_setScissor(const core::vec4 & scissor) {
     D3D12_RECT dxRect;
     dxRect.left = (LONG) scissor.x;
     dxRect.top = (LONG) scissor.y;
@@ -286,6 +292,11 @@ void D3D12BatchBackend::bindRootDescriptorLayout(PipelineType type, const RootDe
         _currentGraphicsRootLayout_setRootIndex = rdl->_cbvsrvuav_rootIndex;
         _currentGraphicsRootLayout_samplerRootIndex = rdl->_sampler_rootIndex;
         _commandList->SetGraphicsRootSignature(dxRS.Get());
+
+        _currentGraphicsDescriptorSets[0] =
+            _currentGraphicsDescriptorSets[1] =
+            _currentGraphicsDescriptorSets[2] =
+            _currentGraphicsDescriptorSets[3] = nullptr;
     } break;
     case PipelineType::COMPUTE: {
         _currentComputeRootLayout_setRootIndex = rdl->_cbvsrvuav_rootIndex;
@@ -301,6 +312,7 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     if (dpso->getType() == PipelineType::RAYTRACING) {
         _commandList->SetPipelineState1(dpso->_stateObject.Get());
     } else {
+        if (dpso == _currentGraphicsPipeline) return; // check the cache, if the same pso then skip!
 
         auto dxPso = dpso->_pipelineState;
         _commandList->SetPipelineState(dxPso.Get());
@@ -312,6 +324,8 @@ void D3D12BatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
         }
         else if (dpso->getType() == PipelineType::COMPUTE) {
         }
+
+        _currentGraphicsPipeline = dpso;
     }
 }
 
@@ -321,9 +335,12 @@ void D3D12BatchBackend::bindDescriptorSet(PipelineType type, const DescriptorSet
     switch (type) {
     case PipelineType::GRAPHICS: {
         if (dxds->_cbvsrvuav_rootIndex >= 0) {
+            if (_currentGraphicsDescriptorSets[descriptorSet->_init._bindSetSlot] == dxds)
+                return;
             _commandList->SetGraphicsRootDescriptorTable(
                 _currentGraphicsRootLayout_setRootIndex + descriptorSet->_init._bindSetSlot,
                 dxds->_cbvsrvuav_GPUHandle);
+            _currentGraphicsDescriptorSets[descriptorSet->_init._bindSetSlot] = dxds;
         }
         if (dxds->_sampler_rootIndex >= 0) {
             _commandList->SetGraphicsRootDescriptorTable(

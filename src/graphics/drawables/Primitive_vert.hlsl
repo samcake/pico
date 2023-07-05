@@ -38,6 +38,9 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     float3 color = float3(1.0, 1.0, 1.0);
 
     Transform _model = node_getWorldTransform(_nodeID);
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    
     Box _box;
     _box._center = float3(0.0, 0.0, 0.0);
     _box._size = float3(sx, sy,sz);

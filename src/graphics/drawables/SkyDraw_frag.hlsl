@@ -22,7 +22,8 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
     float3 dir = normalize(IN.wdir);
 
     float3 color = sky_fetchEnvironmentMap(dir, sky_map, uSampler0[0], uSampler0[1]);
-
+    Transform _view = cam_view();
+    float4 _viewport = cam_viewport();
     
     if (_drawControl.x == 1)
     { // Scopes
@@ -36,7 +37,7 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
                 color = sky_map.SampleLevel(uSampler0[0], v_uv1, 0).xyz;
             else
             {
-                color = 0.2 * sky_evalIrradianceSH(sky_dirFromTexcoord(v_uv1));
+                color = sky_evalIrradianceSH(sky_dirFromTexcoord(v_uv1));
             }
         }
         else if (all(abs(v_uv2 - 0.5) < 0.5))
@@ -58,12 +59,15 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
             {
                 float3 dome_dir = float3(v_uv3.x, v_uv3.y, sqrt(1 - r));
                 dome_dir = worldFromEyeSpaceDir(_view, dome_dir);
-                color = 0.2 * sky_evalIrradianceSH(dome_dir);
+                color = sky_evalIrradianceSH(dome_dir);
             }
         }
     }
     
-    // return float4(HDR(color), 1.0);
+    // Check that the rendering is linear by showing a known OLIVE sRGB color converted to linear
+    //if (IN.coords.x > 0.5)
+    //    color = color_sRGBToLinear(float3(0.5, 0.5, 0));
+
     return float4((color), 1.0);
 
 }

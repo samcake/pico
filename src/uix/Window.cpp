@@ -128,7 +128,7 @@ public:
         std::cout << "destroying that window" << std::endl;
     }
 
-    void innerHandleResize(bool over = true) {
+    void innerHandleResize(bool done = true) {
         RECT wr;
         RECT cr;
         GetWindowRect(_sysWindow, &wr);
@@ -140,14 +140,24 @@ public:
         auto cw = cr.right - cr.left;
         auto ch = cr.bottom - cr.top;
 
-        _didResize = true;
+        // Keep recording if the width or the height have changed
+        _didResize |= (cw != _width);
+        _didResize |= (ch != _height);
+        _didResize |= (ww != _chromedWidth);
+        _didResize |= (wh != _chromedHeight);
+
         _width = cw;
         _height = ch;
         _chromedWidth = ww;
         _chromedHeight = wh;
 
-        ResizeEvent e{ _width, _height, over };
+
+        ResizeEvent e{ _width, _height, done };
         _ownerWindow->onResize({ e });
+
+        // if done resize, then stop the resize flag
+        if (done)
+            _didResize = false;
     }
 
     LRESULT eventCallback(UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -161,18 +171,17 @@ public:
         // case WM_DESTROY:
 
         // Pass on events to standard handler
-        case WM_ENTERSIZEMOVE:
+        case WM_ENTERSIZEMOVE: {
+            innerHandleResize(false);
+            return 0;
+        } break;
         case WM_SIZE: {
             ResizeEvent e { LOWORD(lparam), HIWORD(lparam) };
-            _didResize = true;
-            innerHandleResize(false);
-           return 0;
+            innerHandleResize(wparam != 0); // if wparam is not 0 then the resize is done, no more events
+            return 0;
         } break;
         case WM_EXITSIZEMOVE: {
-            if (_didResize) {
-                innerHandleResize(true);
-            }
-            _didResize = false;
+            innerHandleResize(true);
             return 0;
         } break;
         case WM_PAINT: {

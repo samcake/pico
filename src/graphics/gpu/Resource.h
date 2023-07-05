@@ -87,7 +87,7 @@ namespace graphics {
 
         void* _cpuMappedAddress = nullptr;
 
-        // true if the texture needs to be uploaded through a Batch::uploadBuffer call
+        // true if the buffer needs to be uploaded through a Batch::uploadBuffer call
         // don't forget the transitions calls!
         // this needs to be checked and done explicitely before being able to fetch from that buffer in shaders 
         bool needUpload() const { return _needUpload; }
@@ -151,11 +151,11 @@ namespace graphics {
 
     struct VISUALIZATION_API GeometryInit {
         BufferElementView vertexBuffer;
-        int32_t vertexCount = 0;
+        uint32_t vertexCount = 0;
         PixelFormat vertexFormat = PixelFormat::R32G32B32_FLOAT;
 
         BufferElementView indexBuffer;
-        int32_t indexCount = 0;
+        uint32_t indexCount = 0;
     };
 
     class VISUALIZATION_API Geometry {

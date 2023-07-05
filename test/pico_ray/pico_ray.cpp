@@ -39,13 +39,13 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
-#include <graphics/drawables/SkyDrawable.h>
-#include <graphics/drawables/GizmoDrawable.h>
-#include <graphics/drawables/PrimitiveDrawable.h>
-#include <graphics/drawables/DashboardDrawable.h>
+#include <graphics/drawables/SkyDraw.h>
+#include <graphics/drawables/GizmoDraw.h>
+#include <graphics/drawables/PrimitiveDraw.h>
+#include <graphics/drawables/DashboardDraw.h>
 
-#include <graphics/drawables/ModelDrawable.h>
-#include <graphics/drawables/PostSceneDrawable.h>
+#include <graphics/drawables/ModelDraw.h>
+#include <graphics/drawables/PostSceneDraw.h>
 
 #include <uix/Window.h>
 #include <uix/Imgui.h>
@@ -57,15 +57,15 @@
 
 struct AppState {
 
-    graphics::ModelDrawableFactoryPointer _modelDrawableFactory;
-    graphics::ModelDrawableUniformsPointer _modelDrawableParams;
+    graphics::ModelDrawFactoryPointer _modelDrawFactory;
+    graphics::ModelDrawUniformsPointer _modelDrawParams;
 
-    graphics::PostSceneDrawableFactoryPointer _postSceneDrawableFactory;
-    graphics::PostSceneDrawableUniformsPointer _postSceneDrawableParams;
+    graphics::PostSceneDrawFactoryPointer _postSceneDrawFactory;
+    graphics::PostSceneDrawUniformsPointer _postSceneDrawParams;
 
     graphics::ScenePointer scene;
     struct {
-        graphics::Node rootNode;
+        graphics::NodeID rootNodeID;
         graphics::ItemID modelItemID;
     } models;
 
@@ -83,32 +83,29 @@ AppState state;
 
 
 
-graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::Node& root) {
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::NodeID nodeRoot) {
 
-    if (!state._postSceneDrawableFactory) {
-        state._postSceneDrawableFactory = std::make_shared<graphics::PostSceneDrawableFactory>();
-        state._postSceneDrawableFactory->allocateGPUShared(gpuDevice);
-        state._postSceneDrawableParams = state._postSceneDrawableFactory->getUniformsPtr();
+    if (!state._postSceneDrawFactory) {
+        state._postSceneDrawFactory = std::make_shared<graphics::PostSceneDrawFactory>(gpuDevice);
+        state._postSceneDrawParams = state._postSceneDrawFactory->getUniformsPtr();
     }
 
-    if (!state._modelDrawableFactory) {
-        state._modelDrawableFactory = std::make_shared<graphics::ModelDrawableFactory>();
-        state._modelDrawableFactory->allocateGPUShared(gpuDevice);
-        state._modelDrawableParams = state._modelDrawableFactory->getUniformsPtr();
+    if (!state._modelDrawFactory) {
+        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>(gpuDevice);
+        state._modelDrawParams = state._modelDrawFactory->getUniformsPtr();
     }
 
-    auto modelDrawablePtr = state._modelDrawableFactory->createModel(gpuDevice, lmodel);
-    state._modelDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawablePtr); 
+    auto modelDrawPtr = state._modelDrawFactory->createModel(gpuDevice, lmodel);
 
     graphics::ItemIDs modelItemIDs;
 
-    modelItemIDs = state._modelDrawableFactory->createModelParts(root.id(), scene, *modelDrawablePtr);
+    modelItemIDs = state._modelDrawFactory->createModelParts(nodeRoot, scene, *modelDrawPtr);
 
     // let's offset the root to not overlap on previous model
     if (modelItemIDs.size()) {
-        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).getNodeID();
+        auto modelRootNodeId = scene->getItem(modelItemIDs[0]).nodeID();
 
-        auto modelBound = modelDrawablePtr->getBound();
+        auto modelBound = modelDrawPtr->getBound();
         auto minCorner = modelBound.minPos();
         auto maxCorner = modelBound.maxPos();
         auto boundCenter = modelBound.center;
@@ -120,7 +117,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
 
         modelPos = modelPos - boundCenter;
 
-        scene->_nodes.editTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+        scene->_nodes.editNodeTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
             core::translation(rts, modelPos);
             return true;
             });
@@ -128,10 +125,8 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
         state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
     }
 
-    auto postProcessDrawablePtr = state._postSceneDrawableFactory->createDrawable(gpuDevice, modelDrawablePtr->_geometry);
-    state._postSceneDrawableFactory->allocateDrawcallObject(gpuDevice, scene, *postProcessDrawablePtr);
-    auto ppDrawable = scene->createDrawable(*postProcessDrawablePtr);
-    auto pcitem = scene->createItem(root, ppDrawable);
+    auto ppDraw = scene->createDraw(state._postSceneDrawFactory->createDraw(gpuDevice, modelDrawPtr->_geometry));
+    auto pcitem = scene->createItem(nodeRoot, ppDraw.id());
 
 
     return modelItemIDs;
@@ -200,66 +195,35 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    state.scene = std::make_shared<graphics::Scene>();
-    state.scene->_items.resizeBuffers(gpuDevice, 250000);
-    state.scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    state.scene->_drawables.resizeBuffers(gpuDevice, 250000);
+    state.scene = std::make_shared<graphics::Scene>(graphics::SceneInit{ gpuDevice });
 
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = state.scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
-    // A sky drawable factory
-    auto skyDrawableFactory = std::make_shared<graphics::SkyDrawableFactory>();
-    skyDrawableFactory->allocateGPUShared(gpuDevice);
-    state.scene->_sky = skyDrawableFactory->getUniforms()._sky; // Assign the sky to the scene here ....
+    // The view managing the rendering of the scene
+    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ state.scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback, camera->id()});
 
-    // The view managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(state.scene, camera, gpuDevice,
-        uix::Imgui::standardPostSceneRenderCallback);
+    auto skyDrawFactory = state.scene->_skyFactory;
 
-    // a sky drawable to draw the sky
-    auto skyDrawable = state.scene->createDrawable(*skyDrawableFactory->createDrawable(gpuDevice));
-    skyDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, skyDrawable.as<graphics::SkyDrawable>());
-    auto skyitem = state.scene->createItem(graphics::Node::null, skyDrawable);
+    // a sky draw to draw the sky
+    auto skyDraw = state.scene->createDraw(skyDrawFactory->createDraw(gpuDevice));
+    auto skyitem = state.scene->createItem(graphics::Node::null, skyDraw);
     skyitem.setVisible(true);
 
-    // A gizmo drawable factory
-    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
-    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
+    // Create gizmos to draw the node transform and item tree
+    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(state.scene, gpuDevice);
 
-    // a gizmo drawable to draw the transforms
-    auto gzdrawable_node = state.scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(state.scene->_nodes._nodes_buffer->numElements());
-    auto gzitem_node = state.scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
-
-
-    auto gzdrawable_item = state.scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(state.scene->_items._items_buffer->numElements());
-    auto gzitem_item = state.scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
-
-
-    // A dashboard factory and drawable to represent some debug data
-    auto dashboardDrawableFactory = std::make_shared<graphics::DashboardDrawableFactory>();
-    dashboardDrawableFactory->allocateGPUShared(gpuDevice);
-
-    // a dashboard
-    auto dashboard_drawable = state.scene->createDrawable(*dashboardDrawableFactory->createDrawable(gpuDevice));
-    dashboardDrawableFactory->allocateDrawcallObject(gpuDevice, state.scene, dashboard_drawable.as<graphics::DashboardDrawable>());
-
-    auto dashboard_item = state.scene->createItem(graphics::Node::null, dashboard_drawable);
+    // Dashboard
+    auto dashboard_item = graphics::DashboardDraw_createSceneWidgets(state.scene, gpuDevice);
 
     // Some nodes to layout the scene and animate objects
-    state.models.rootNode = state.scene->createNode(core::mat4x3(), -1);
+    state.models.rootNodeID = state.scene->createNode(core::mat4x3(), -1).id();
 
-    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNode);
+    auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
     if (modelItemIDs.size()) {
          state.models.modelItemID = modelItemIDs[0];
     }
@@ -321,8 +285,8 @@ int main(int argc, char *argv[])
 
 
         if (ImGui::Begin("Eye")) {
-            if (state._modelDrawableParams) {
-                auto& params = *state._modelDrawableParams.get();
+            if (state._modelDrawParams) {
+                auto& params = *state._modelDrawParams.get();
 
                 static const char* displayedNames[] = {
                     "albedo", "normal", "surface normal", "normal map", "rao map", "grey"
@@ -356,11 +320,7 @@ int main(int argc, char *argv[])
         ImGui::End();
         */
 
-        state.scene->_items.syncBuffer();
-        state.scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
-
-        state.scene->_sky->updateGPUData();
 
         // Render!
         viewport->present(swapchain);
@@ -375,7 +335,7 @@ int main(int argc, char *argv[])
 
         camControl->onResize(e);
 
-        if (e.over) {
+        if (e.done) {
             camControl->onResize(e);
         }
     };
@@ -386,10 +346,10 @@ int main(int argc, char *argv[])
         }
 
         if (e.state && e.key == uix::KEY_N) {
-            gzitem_node.setVisible(!gzitem_node.isVisible());
+            gznode_tree.setVisible(!gznode_tree.isVisible());
         }
         if (e.state && e.key == uix::KEY_B) {
-            gzitem_item.setVisible(!gzitem_item.isVisible());
+            gzitem_tree.setVisible(!gzitem_tree.isVisible());
         }
 
         if (e.state && e.key == uix::KEY_DELETE) {
@@ -432,7 +392,7 @@ int main(int argc, char *argv[])
 
             document::ModelPointer lmodel = document::model::Model::createFromGLTF(e.fileUrls[0]);
             if (lmodel) {
-                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNode);
+                auto modelItemIDs = generateModel(lmodel, gpuDevice, state.scene, state.models.rootNodeID);
             }
         }
         return;

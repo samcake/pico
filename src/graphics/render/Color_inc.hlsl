@@ -23,4 +23,23 @@ float3 color_rgbFromDir(float3 dir) {
     return color_rgbFromHSV(float3(h, sqrt(s), sqrt(v)));
 }
 
+// Converts a color from linear light gamma to sRGB gamma
+float3 color_sRGBFromLinear(float3 linearRGB) {
+    float3 cutoff = step(linearRGB, 0.0031308);
+    float3 higher = (1.055) * pow(linearRGB, 1.0 / 2.4) - (0.055);
+    float3 lower = linearRGB.rgb * (12.92);
+
+    return lerp(higher, lower, cutoff);
+}
+
+// Converts a color from sRGB gamma to linear light gamma
+float3 color_sRGBToLinear(float3 sRGB) {
+    float3 cutoff = step(sRGB, 0.04045);
+    float3 higher = pow((sRGB + 0.055) / (1.055), (2.4));
+    float3 lower = sRGB / (12.92);
+
+    return lerp(higher, lower, cutoff);
+}
+
+
 #endif

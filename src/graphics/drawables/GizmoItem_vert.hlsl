@@ -1,7 +1,7 @@
 #include "SceneTransform_inc.hlsl"
 
 cbuffer UniformBlock1 : register(b1) {
-    int _nodeID;
+    int _indexOffset;
     int _flags;
     int _spareA;
     int _spareB;
@@ -41,7 +41,7 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
 
     ItemInfo _item = item_getInfo(itemid);
     Transform _model = node_getWorldTransform(_item.nodeID);
-    Box _box = drawable_getLocalBox(_item.drawableID);
+    Box _box = drawable_getLocalBox(_item.drawID);
 
     if ((_flags & SHOW_LOCAL_BOUND) && lid < (box_num_edges)) {
         //lid -= 0;
@@ -59,8 +59,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
         color = float3(float(lid < 4), float(lid >= 4 && lid < 8), float(lid >= 8));
     }
 
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float3 eyePosition = eyeFromWorldSpace(cam_view(), position);
+    float4 clipPos = clipFromEyeSpace(cam_projection(), eyePosition);
 
     OUT.Position = clipPos;
     OUT.Color = float4(color, 1.0f);

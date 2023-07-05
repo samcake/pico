@@ -42,7 +42,7 @@ public:
 
     static void create();
     static void destroy();
-    static void setup(const WindowPointer& win, const graphics::DevicePointer& gpudevice);
+    static void setup(const WindowPointer& win, const graphics::DevicePointer& gpudevice, graphics::PixelFormat colorTargetFormat = graphics::defaultColorBufferFormat());
 
     static void newFrame();
     static void draw(const graphics::BatchPointer& batch);

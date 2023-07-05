@@ -26,7 +26,7 @@
 //
 #pragma once
 
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "../gpu/gpu.h"
 
 namespace graphics {
@@ -49,12 +49,17 @@ namespace graphics {
 
     class Viewport;
     using ViewportPointer = std::shared_ptr<Viewport>;
+    struct ViewportInit;
 
     class Mesh;
     using MeshPointer = std::shared_ptr<Mesh>;
 
     class Sky;
     using SkyPointer = std::shared_ptr<Sky>;
+    using Sky_sp = SkyPointer;
+
+    class SkyDrawFactory;
+    using SkyDrawFactory_sp = std::shared_ptr<SkyDrawFactory>;
 
 }
 

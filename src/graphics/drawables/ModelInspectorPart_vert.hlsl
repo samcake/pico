@@ -77,7 +77,7 @@ int uvmesh_triangle(float4 uvmesh_texel) {
 
 float4 uvSpaceClipPos(float2 uv) {
     float2 eyeUV = uv - float2(_uvCenterX, _uvCenterY);
-    return orthoClipFromEyeSpace(_projection.aspectRatio(),  2.0f * _uvScale
+    return orthoClipFromEyeSpace(cam_projection().aspectRatio(), 2.0f * _uvScale
     , 0.0f, 2.0f, float3( eyeUV, 1.0f));
 }
 
@@ -98,7 +98,7 @@ VertexShaderOutput main_uvspace(uint vidx : SV_VertexID) {
     VertexShaderOutput OUT;
 
     OUT.Position = uvSpaceClipPos(texcoord);
-    OUT.EyePos = OUT.Position;
+    OUT.EyePos = OUT.Position.xyz;
 
     OUT.Normal = float3(0.0, 0.0, 1.0);
     OUT.Texcoord = texcoord;
@@ -111,6 +111,9 @@ VertexShaderOutput transformAndPackOut(float3 position, float3 normal, float2 te
     VertexShaderOutput OUT;
     // Transform
     Transform _model = node_getWorldTransform(_nodeID);
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
@@ -141,6 +144,10 @@ VertexShaderOutput transformAndPackOutSprite(int sid, float spriteSize, float3 p
     VertexShaderOutput OUT;
     // Transform
     Transform _model = node_getWorldTransform(_nodeID);
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    float4 _viewport = cam_viewport();
+    
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
@@ -155,6 +162,7 @@ VertexShaderOutput transformAndPackOutSprite(int sid, float spriteSize, float3 p
     OUT.Texcoord = texcoord;
     OUT.TriPos = trianglePos;
 
+    
     // Apply scaling to the sprite coord and offset pointcloud pos
     float2 sprite = float2(((sid == 1) ? 3.0 : -1.0), ((sid == 2) ? 3.0 : -1.0));
     const float2 invRes = float2(1.0 / _viewport.z, 1.0 / _viewport.w);
@@ -183,6 +191,10 @@ VertexShaderOutput transformAndPackOutSplat(int sid, float splatSize, float3 tan
 
     // Transform
     Transform _model = node_getWorldTransform(_nodeID);
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
+    float4 _viewport = cam_viewport();
+    
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);

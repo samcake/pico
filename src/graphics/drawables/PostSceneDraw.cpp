@@ -1,4 +1,4 @@
-// PostSceneDrawable.cpp
+// PostSceneDraw.cpp
 //
 // Sam Gateau - October 2021
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "PostSceneDrawable.h"
+#include "PostSceneDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -47,11 +47,11 @@
 namespace graphics
 {
 
-    PostSceneDrawableFactory::PostSceneDrawableFactory() :
-        _sharedUniforms(std::make_shared<PostSceneDrawableUniforms>()) {
-
+    PostSceneDrawFactory::PostSceneDrawFactory(const graphics::DevicePointer& device) :
+        _sharedUniforms(std::make_shared<PostSceneDrawUniforms>()) {
+        allocateGPUShared(device);
     }
-    PostSceneDrawableFactory::~PostSceneDrawableFactory() {
+    PostSceneDrawFactory::~PostSceneDrawFactory() {
 
     }
 
@@ -77,7 +77,7 @@ namespace graphics
         LViewport stencil;
     };
 
-    void PostSceneDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void PostSceneDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit globalRootLayoutInit{
@@ -129,19 +129,19 @@ namespace graphics
         _primitivePipeline = device->createRaytracingPipelineState(pipelineInit);
     }
 
-    graphics::PostSceneDrawable* PostSceneDrawableFactory::createDrawable(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry) {
-        auto primitiveDrawable = new PostSceneDrawable();
-        primitiveDrawable->_uniforms = _sharedUniforms;
-        primitiveDrawable->_geometry = geometry;
+    graphics::PostSceneDraw PostSceneDrawFactory::createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry) {
+        PostSceneDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+        primitiveDraw._geometry = geometry;
 
+        allocateDrawcallObject(device, primitiveDraw);
 
-        return primitiveDrawable;
+        return primitiveDraw;
     }
 
-   void PostSceneDrawableFactory::allocateDrawcallObject(
+   void PostSceneDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::PostSceneDrawable& prim)
+        graphics::PostSceneDraw& prim)
     {
 
 
@@ -175,7 +175,7 @@ namespace graphics
         auto shaderTable = prim._shaderTable;
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline, shaderTable](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [prim_, pipeline, shaderTable](const NodeID node, RenderArgs& args) {
 
             graphics::Batch::DispatchRaysArgs rayArgs = {};
             rayArgs.shaderTable = shaderTable;
@@ -197,7 +197,6 @@ namespace graphics
             args.batch->bindPipeline(pipeline);
             args.batch->dispatchRays(rayArgs);
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

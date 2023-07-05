@@ -1,4 +1,4 @@
-// PostSceneDrawable.h 
+// PostSceneDraw.h 
 //
 // Sam Gateau - October 2021
 // 
@@ -27,64 +27,60 @@
 #pragma once
 
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 #include <gpu/Query.h>
 
 namespace graphics {
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
     class Buffer;
     using BufferPointer = std::shared_ptr<Buffer>;
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class PostSceneDrawable;
+    class PostSceneDraw;
 
-    struct VISUALIZATION_API PostSceneDrawableUniforms {
+    struct VISUALIZATION_API PostSceneDrawUniforms {
         int numNodes{ 0 };
     };
-    using PostSceneDrawableUniformsPointer = std::shared_ptr<PostSceneDrawableUniforms>;
+    using PostSceneDrawUniformsPointer = std::shared_ptr<PostSceneDrawUniforms>;
 
-    class VISUALIZATION_API PostSceneDrawableFactory {
+    class VISUALIZATION_API PostSceneDrawFactory {
     public:
-        PostSceneDrawableFactory();
-        ~PostSceneDrawableFactory();
+        PostSceneDrawFactory(const graphics::DevicePointer& device);
+        ~PostSceneDrawFactory();
+
+        // Create PostSceneDraw
+        graphics::PostSceneDraw createDraw(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry);
+
+
+        // Read / write shared uniforms
+        const PostSceneDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        PostSceneDrawUniforms& editUniforms() { return (*_sharedUniforms); }
+        PostSceneDrawUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
+
+    protected:
+        PostSceneDrawUniformsPointer _sharedUniforms;
+        graphics::PipelineStatePointer _primitivePipeline;
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create PostSceneDrawable
-        graphics::PostSceneDrawable* createDrawable(const graphics::DevicePointer& device, const graphics::GeometryPointer& geometry);
-
-        // Create Drawcall object drawing the PostSceneDrawable in the rendering context
+        // Create Drawcall object drawing the PostSceneDraw in the rendering context
         void allocateDrawcallObject(
             const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::PostSceneDrawable& primitive);
-
-        // Read / write shared uniforms
-        const PostSceneDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        PostSceneDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
-        PostSceneDrawableUniformsPointer getUniformsPtr() const { return _sharedUniforms; }
-
-    protected:
-        PostSceneDrawableUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _primitivePipeline;
+            graphics::PostSceneDraw& primitive);
     };
-    using PostSceneDrawableFactoryPointer = std::shared_ptr< PostSceneDrawableFactory>;
+    using PostSceneDrawFactoryPointer = std::shared_ptr< PostSceneDrawFactory>;
 
 
-    class VISUALIZATION_API PostSceneDrawable {
+    struct VISUALIZATION_API PostSceneDraw {
     public:
-
-        void swapUniforms(const PostSceneDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const PostSceneDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        const PostSceneDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };
         core::aabox3 getBound() const { return core::aabox3(); }
@@ -93,9 +89,9 @@ namespace graphics {
         graphics::TexturePointer getOutput() const { return _output; }
 
     protected:
-        friend class PostSceneDrawableFactory;
+        friend class PostSceneDrawFactory;
 
-        PostSceneDrawableUniformsPointer _uniforms;
+        PostSceneDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
       
         graphics::TexturePointer _output;

@@ -65,7 +65,7 @@ void Imgui::destroy() {
     ImGui::DestroyContext();
 }
 
-void Imgui::setup(const WindowPointer& win, const graphics::DevicePointer& gpudevice) {
+void Imgui::setup(const WindowPointer& win, const graphics::DevicePointer& gpudevice, graphics::PixelFormat colorTargetFormat) {
 
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(win->nativeWindow());
@@ -79,7 +79,8 @@ void Imgui::setup(const WindowPointer& win, const graphics::DevicePointer& gpude
     }
 
     ImGui_ImplDX12_Init(d3d12Device, graphics::D3D12Backend::CHAIN_NUM_FRAMES,
-        DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
+        graphics::D3D12Backend::Format[(uint32_t) colorTargetFormat ],
+        g_pd3dSrvDescHeap,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 }

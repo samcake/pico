@@ -1,4 +1,4 @@
-// DashboardDrawable.h 
+// DashboardDraw.h 
 //
 // Sam Gateau - October 2021
 // 
@@ -27,73 +27,69 @@
 #pragma once
 
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 #include <gpu/Query.h>
 
 namespace graphics {
     class Device;
     using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
     class Buffer;
     using BufferPointer = std::shared_ptr<Buffer>;
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class DashboardDrawable;
+    class DashboardDraw;
 
-    struct VISUALIZATION_API DashboardDrawableUniforms {
+    struct VISUALIZATION_API DashboardDrawUniforms {
         int numNodes{ 0 };
     };
-    using DashboardDrawableUniformsPointer = std::shared_ptr<DashboardDrawableUniforms>;
+    using DashboardDrawUniformsPointer = std::shared_ptr<DashboardDrawUniforms>;
 
-    class VISUALIZATION_API DashboardDrawableFactory {
+    class VISUALIZATION_API DashboardDrawFactory {
     public:
-        DashboardDrawableFactory();
-        ~DashboardDrawableFactory();
+        DashboardDrawFactory(const graphics::DevicePointer& device);
+        ~DashboardDrawFactory();
+
+        // Create DashboardDraw
+        graphics::DashboardDraw createDraw(const graphics::DevicePointer& device);
+
+        // Read / write shared uniforms
+        const DashboardDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        DashboardDrawUniforms& editUniforms() { return (*_sharedUniforms); }
+
+    protected:
+        DashboardDrawUniformsPointer _sharedUniforms;
+        graphics::PipelineStatePointer _primitivePipeline;
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create DashboardDrawable
-        graphics::DashboardDrawable* createDrawable(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the DashboardDrawable in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::DashboardDrawable& primitive);
-
-        // Read / write shared uniforms
-        const DashboardDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        DashboardDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
-
-    protected:
-        DashboardDrawableUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _primitivePipeline;
+        // Create Drawcall object drawing the DashboardDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::DashboardDraw& primitive);
     };
-    using DashboardDrawableFactoryPointer = std::shared_ptr< DashboardDrawableFactory>;
+
+    using DashboardDrawFactoryPointer = std::shared_ptr<DashboardDrawFactory>;
 
 
-    class VISUALIZATION_API DashboardDrawable {
+    struct VISUALIZATION_API DashboardDraw {
     public:
-
-        void swapUniforms(const DashboardDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const DashboardDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        const DashboardDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class DashboardDrawableFactory;
+        friend class DashboardDrawFactory;
 
-        DashboardDrawableUniformsPointer _uniforms;
+        DashboardDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };
+
+    Item DashboardDraw_createSceneWidgets(const ScenePointer& scene, const DevicePointer& gpuDevice);
 
 } // !namespace graphics

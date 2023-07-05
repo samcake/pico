@@ -25,7 +25,7 @@
 // SOFTWARE.
 //
 #pragma once
-#include <stdint.h>
+#include "math.h"
 
 namespace core 
 {

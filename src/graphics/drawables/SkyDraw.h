@@ -1,4 +1,4 @@
-// SkyDrawable.h 
+// SkyDraw.h 
 //
 // Sam Gateau - October 2021
 // 
@@ -27,79 +27,67 @@
 #pragma once
 
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "dllmain.h"
 
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 #include <render/Sky.h>
 #include <gpu/Query.h>
 
 namespace graphics {
-    class Device;
-    using DevicePointer = std::shared_ptr<Device>;
-    class Camera;
-    using CameraPointer = std::shared_ptr<Camera>;
-    class Buffer;
-    using BufferPointer = std::shared_ptr<Buffer>;
-    class PipelineState;
-    using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class SkyDrawable;
+    class SkyDraw;
 
-
-
-    struct VISUALIZATION_API SkyDrawableUniforms {
+    struct VISUALIZATION_API SkyDrawUniforms {
         SkyPointer _sky;
     };
 
-    using SkyDrawableUniformsPointer = std::shared_ptr<SkyDrawableUniforms>;
+    using SkyDrawUniformsPointer = std::shared_ptr<SkyDrawUniforms>;
 
-    class VISUALIZATION_API SkyDrawableFactory {
+    class VISUALIZATION_API SkyDrawFactory {
     public:
-        SkyDrawableFactory();
-        ~SkyDrawableFactory();
+        SkyDrawFactory(const graphics::DevicePointer& device);
+        ~SkyDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
-        // Create SkyDrawable
-        graphics::SkyDrawable* createDrawable(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the SkyDrawable in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::SkyDrawable& primitive);
+        // Create SkyDraw
+        graphics::SkyDraw createDraw(const graphics::DevicePointer& device);
 
         // Read / write shared uniforms
-        const SkyDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        SkyDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
+        const SkyDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        SkyDrawUniforms& editUniforms() { return (*_sharedUniforms); }
 
     protected:
-        SkyDrawableUniformsPointer _sharedUniforms;
+        SkyDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _skyPipeline;
 
         graphics::PipelineStatePointer _skymapPipeline;
         graphics::PipelineStatePointer _diffuseSkymapPipeline[2];
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the SkyDraw in the rendering context
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            graphics::SkyDraw& primitive);
+
     };
-    using SkyDrawableFactoryPointer = std::shared_ptr< SkyDrawableFactory>;
+    using SkyDrawFactoryPointer = std::shared_ptr< SkyDrawFactory>;
 
 
-    class VISUALIZATION_API SkyDrawable {
+    struct VISUALIZATION_API SkyDraw {
     public:
-
-        void swapUniforms(const SkyDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const SkyDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        const SkyDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         core::vec3 _size{ 1.0f };
         core::aabox3 getBound() const { return core::aabox3(); }
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class SkyDrawableFactory;
+        friend class SkyDrawFactory;
 
-        SkyDrawableUniformsPointer _uniforms;
+        SkyDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
     };
 

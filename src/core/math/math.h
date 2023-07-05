@@ -1,6 +1,6 @@
-// Swapchain.h 
+// math.h 
 //
-// Sam Gateau - January 2020
+// Sam Gateau - November 2022
 // 
 // MIT License
 //
@@ -25,46 +25,28 @@
 // SOFTWARE.
 //
 #pragma once
+#include <stdint.h>
+#include <cmath>
+//#define PICO_SIMD
+#ifdef PICO_SIMD
+#include <immintrin.h>
+#endif
 
-#include <core/math/Math3D.h>
-#include <core/api.h>
+namespace core {
+    template <typename T>
+    inline void swap(T& a, T& b) { T t = a; a = b; b = t; }
 
-#include "gpu.h"
+    inline constexpr double pi() { return 3.14159265358979323846; }
+    inline constexpr double two_pi() { return pi() * 2.0; }
+    inline constexpr double half_pi() { return pi() * 0.5; }
+    inline constexpr double inv_pi() { return 1.0 / pi(); }
+    inline constexpr double inv_two_pi() { return 1.0 / two_pi(); }
+    inline constexpr double rad2deg() { return 180.0 * inv_pi(); }
+    inline constexpr double deg2rad() { return pi() / 180.0; }
 
-namespace graphics {
+    inline float rad_to_deg(float r) { return r * rad2deg(); }
+    inline float deg_to_rad(float d) { return d * deg2rad(); }
 
-    struct VISUALIZATION_API SwapchainInit {
-#ifdef _WINDOWS
-        HWND hWnd;
-#endif  
+    static const float FLOAT_EPSILON{ 0.0001f };
 
-        uint32_t width;
-        uint32_t height;
-
-        // No depth buffer by default
-        bool     depthBuffer{ false };
-
-        PixelFormat colorBufferFormat{ defaultColorBufferFormat() };
-    };
-
-    class VISUALIZATION_API Swapchain {
-    protected:
-        // Swapchain is created from the device
-        friend class Device;
-        Swapchain();
-
-    public:
-        ~Swapchain();
-
-        SwapchainInit _init;
-        uint8_t _currentIndex;
-
-        uint8_t currentIndex() const;
-
-        uint32_t width() const { return _init.width; }
-        uint32_t height() const { return _init.height; }
-        PixelFormat colorBufferFormat() const { return _init.colorBufferFormat; }
-
-        core::vec4 viewportRect() const { return core::vec4( 0, 0, width(), height());}
-    };
 }

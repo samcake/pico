@@ -28,6 +28,7 @@
 
 #include "render.h"
 #include <functional>
+#include "Camera.h"
 
 namespace graphics {
 
@@ -38,6 +39,7 @@ namespace graphics {
         CameraPointer camera;
         BatchTimerPointer timer;
         DescriptorSetPointer viewPassDescriptorSet;
+        ScenePointer scene;
     };
 
     using RenderCallback = std::function<void(RenderArgs& renderArgs)>;

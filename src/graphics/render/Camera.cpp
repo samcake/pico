@@ -32,109 +32,95 @@
 
 using namespace graphics;
 
-Camera::Camera() {
-
+Camera::Camera(CameraStructBuffer::Handle handle) :
+    _camData(handle)
+{
 }
 
 Camera::~Camera() {
 
 }
 
-#define useLocks 1
-#ifdef useLocks 
-#define WriteLock() const std::lock_guard<std::mutex> cpulock(_camData._access); _camData._version++;
-#define ReadLock() const std::lock_guard<std::mutex> cpulock(_camData._access);
-
-#define WriteGPULock() const std::lock_guard<std::mutex> gpulock(_gpuData._access); _gpuData._version++;
-#define ReadGPULock() const std::lock_guard<std::mutex> gpulock(_gpuData._access);
-#else
-#define WriteLock()  _camData._version++;
-#define ReadLock() 
-
-#define WriteGPULock() _gpuData._version++;
-#define ReadGPULock()
-#endif
-
 void Camera::setView(const core::View& view) {
-    WriteLock();
-    _camData._data._view = view;
+    auto [d, l] = _camData.write();
+    d->_view = view;
 }
 
 core::View Camera::getView() const {
-    ReadLock();
-    return _camData._data._view;
+    auto [d, l] = _camData.read();
+    return d->_view;
 }
 
 void Camera::setEye(const core::vec3& pos) {
-    WriteLock();
-    _camData._data._view.setEye(pos);
+    auto [d, l] = _camData.write();
+    d->_view.setEye(pos);
 }
 core::vec3 Camera::getEye() const {
-    ReadLock();
-    return _camData._data._view.eye();
+    auto [d, l] = _camData.read();
+   return d->_view.eye();
 
 }
 
 void Camera::setOrientationFromRightUp(const core::vec3& right, const core::vec3& up) {
-    WriteLock();
-    _camData._data._view.setOrientationFromRightUp(right, up);
+    auto [d, l] = _camData.write();
+    d->_view.setOrientationFromRightUp(right, up);
 
 }
 void Camera::setOrientationFromFrontUp(const core::vec3& front, const core::vec3& up) {
-    WriteLock();
-    _camData._data._view.setOrientationFromFrontUp(front, up);
+    auto [d, l] = _camData.write();
+    d->_view.setOrientationFromFrontUp(front, up);
 
 }
 
 core::vec3 Camera::getRight() const {
-    ReadLock();
-    return _camData._data._view.right();
+    auto [d, l] = _camData.read();
+   return d->_view.right();
 }
 core::vec3 Camera::getUp() const {
-    ReadLock();
-    return _camData._data._view.up();
+    auto [d, l] = _camData.read();
+   return d->_view.up();
 }
 core::vec3 Camera::getBack() const {
-    ReadLock();
-    return _camData._data._view.back();
+    auto [d, l] = _camData.read();
+   return d->_view.back();
 }
 
 core::vec3 Camera::getLeft() const {
-    ReadLock();
-    return -_camData._data._view.right();
+    auto [d, l] = _camData.read();
+    return -d->_view.right();
 }
 core::vec3 Camera::getDown() const {
-    ReadLock();
-    return -_camData._data._view.up();
+    auto [d, l] = _camData.read();
+    return -d->_view.up();
 }
 core::vec3 Camera::getFront() const {
-    ReadLock();
-    return -_camData._data._view.back();
+    auto [d, l] = _camData.read();
+    return -d->_view.back();
 }
 
 
 void Camera::setProjection(const core::Projection& proj) {
-    WriteLock();
-    _camData._data._projection = proj;
+    auto [d, l] = _camData.write();
+    d->_projection = proj;
 }
 core::Projection Camera::getProjection() const {
-    ReadLock();
-    return _camData._data._projection;
+    auto [d, l] = _camData.read();
+   return d->_projection;
 }
 
 void Camera::setFocal(float focal) {
-    WriteLock();
-    _camData._data._projection.setFocal(focal);
+    auto [d, l] = _camData.write();
+    d->_projection.setFocal(focal);
 
 }
 float Camera::getFocal() const {
-    ReadLock();
-    return _camData._data._projection.focal();
+    auto [d, l] = _camData.read();
+   return d->_projection.focal();
 }
 
 float Camera::getFov(bool vertical) const {
-    ReadLock();
-    auto fovHalftan = _camData._data._projection.fovHalfTan(vertical);
+    auto [d, l] = _camData.read();
+    auto fovHalftan = d->_projection.fovHalfTan(vertical);
     auto fov = 2.0f * atanf(fovHalftan);
     return fov;
 }
@@ -144,97 +130,97 @@ float Camera::getFovDeg(bool vertical) const {
 }
 
 void Camera::setProjectionHeight(float projHeight) {
-    WriteLock();
-    _camData._data._projection.setHeight(projHeight);
+    auto [d, l] = _camData.write();
+    d->_projection.setHeight(projHeight);
 }
 
 float Camera::getProjectionHeight() const {
-    ReadLock();
-    return _camData._data._projection._height;
+    auto [d, l] = _camData.read();
+   return d->_projection._height;
 }
 
 float Camera::getProjectionWidth() const {
-    ReadLock();
-    return _camData._data._projection.width();
+    auto [d, l] = _camData.read();
+   return d->_projection.width();
 }
 
 void Camera::setAspectRatio(float aspectRatio) {
-    WriteLock();
-    _camData._data._projection.setAspectRatio(aspectRatio);
+    auto [d, l] = _camData.write();
+    d->_projection.setAspectRatio(aspectRatio);
 
 }
 float Camera::getAspectRatio() const {
-    ReadLock();
-    return _camData._data._projection.aspectRatio();
+    auto [d, l] = _camData.read();
+   return d->_projection.aspectRatio();
 }
 bool Camera::isLandscape() const {
-    ReadLock();
-    return _camData._data._projection.isLandscape();
+    auto [d, l] = _camData.read();
+   return d->_projection.isLandscape();
 }
 
 void Camera::setFar(float pfar) {
-    WriteLock();
-    _camData._data._projection.setFar(pfar);
+    auto [d, l] = _camData.write();
+    d->_projection.setFar(pfar);
 
 }
 float Camera::getFar() const {
-    ReadLock();
-    return _camData._data._projection._persFar;
+    auto [d, l] = _camData.read();
+   return d->_projection._persFar;
 }
 
 void Camera::setOrtho(bool enable) {
-    WriteLock();
-    _camData._data._projection.setOrtho(enable);
+    auto [d, l] = _camData.write();
+    d->_projection.setOrtho(enable);
 }
 bool Camera::isOrtho() const {
-    ReadLock();
-    return _camData._data._projection.isOrtho();
+    auto [d, l] = _camData.read();
+   return d->_projection.isOrtho();
 }
 
 void Camera::setOrthoHeight(float height) {
-    WriteLock();
-    _camData._data._projection.setOrthoHeight(height);
+    auto [d, l] = _camData.write();
+    d->_projection.setOrthoHeight(height);
 
 }
 float Camera::getOrthoHeight() const {
-    ReadLock();
-    return _camData._data._projection.orthoHeight();
+    auto [d, l] = _camData.read();
+   return d->_projection.orthoHeight();
 }
 float Camera::getOrthoWidth() const {
-    ReadLock();
-    return _camData._data._projection.orthoWidth();
+    auto [d, l] = _camData.read();
+   return d->_projection.orthoWidth();
 }
 void Camera::setOrthoSide(float orthoSide, bool vertical) {
-    WriteLock();
-    _camData._data._projection.setOrthoSide(orthoSide, vertical);
+    auto [d, l] = _camData.write();
+    d->_projection.setOrthoSide(orthoSide, vertical);
 }
 
 void Camera::setOrthoNear(float pnear) {
-    WriteLock();
-    _camData._data._projection.setOrthoNear(pnear);
+    auto [d, l] = _camData.write();
+    d->_projection.setOrthoNear(pnear);
 }
 float Camera::getOrthoNear() const {
-    ReadLock();
-    return _camData._data._projection._orthoNear;
+    auto [d, l] = _camData.read();
+   return d->_projection._orthoNear;
 }
 
 void Camera::setOrthoFar(float pfar) {
-    WriteLock();
-    _camData._data._projection.setOrthoFar(pfar);
+    auto [d, l] = _camData.write();
+    d->_projection.setOrthoFar(pfar);
 }
 float Camera::getOrthoFar() const {
-    ReadLock();
-    return _camData._data._projection._orthoFar;
+    auto [d, l] = _camData.read();
+   return d->_projection._orthoFar;
 }
 
 void Camera::setViewport(const core::ViewportRect& viewport) {
-    WriteLock();
-    _camData._data._viewport = viewport;
+    auto [d, l] = _camData.write();
+    d->_viewport = viewport;
 }
 
 core::ViewportRect Camera::getViewport() const {
-    ReadLock();
-    return _camData._data._viewport;
+    auto [d, l] = _camData.read();
+   return d->_viewport;
 }
 
 void Camera::setViewport(float width, float height, bool adjustAspectRatio) {
@@ -242,82 +228,46 @@ void Camera::setViewport(float width, float height, bool adjustAspectRatio) {
 }
 
 void Camera::setViewport(float oriX, float oriY, float width, float height, bool adjustAspectRatio) {
-    WriteLock();
-    _camData._data._viewport.setRect(core::vec4(0.f, 0.f, width, height));
+    auto [d, l] = _camData.write();
+    d->_viewport.setRect(core::vec4(0.f, 0.f, width, height));
     if (adjustAspectRatio) {
-        _camData._data._projection.setAspectRatio(_camData._data._viewport.width() / _camData._data._viewport.height());
+        d->_projection.setAspectRatio(d->_viewport.width() / d->_viewport.height());
     }
 }
 
 core::vec4 Camera::getViewportRect() const {
-    ReadLock();
-    return _camData._data._viewport.rect();
+    auto [d, l] = _camData.read();
+   return d->_viewport.rect();
 }
 
 float Camera::getViewportWidth() const {
-    ReadLock();
-    return _camData._data._viewport.width();
+    auto [d, l] = _camData.read();
+   return d->_viewport.width();
 }
 float Camera::getViewportHeight() const {
-    ReadLock();
-    return _camData._data._viewport.height();
+    auto [d, l] = _camData.read();
+   return d->_viewport.height();
 }
 
 float Camera::getOrthoPixelSize() const {
-    ReadLock();
-    return _camData._data._projection.orthoHeight() / _camData._data._viewport.height();
+    auto [d, l] = _camData.read();
+   return d->_projection.orthoHeight() / d->_viewport.height();
 }
 float Camera::getPerspPixelSize(float depth) const {
-    ReadLock();
-    return _camData._data._projection.evalHeightAt(depth) / _camData._data._viewport.height();
-}
-
-void Camera::allocateGPUData(const DevicePointer& device) {
-    // CReate a gpu buffer to hold the camera
-    graphics::BufferInit uboInit;
-    uboInit.usage = ResourceUsage::UNIFORM_BUFFER;
-    uboInit.bufferSize = sizeof(CameraData);
-    uboInit.hostVisible = true;
-    _gpuData._buffer = device->createBuffer(uboInit);
-
-    // and then copy data there
-    ReadLock();
-    memcpy(_gpuData._buffer->_cpuMappedAddress, &_camData._data, sizeof(CameraData));
-
-    // sync the data version
-    _gpuData._version = _camData._version;
-}
-
-bool Camera::updateGPUData() {
-    // TODO make the version an atomic to be thread safe...
-    bool needCopy = (_gpuData._version != _camData._version);
-     // copy data from tcpu to gpu here if versions are different
-    if (needCopy) {
-        ReadLock();
-        WriteGPULock();
-        memcpy(_gpuData._buffer->_cpuMappedAddress, &_camData._data, sizeof(CameraData));
-
-        // sync the data version
-        _gpuData._version = _camData._version;
-    }
-    return needCopy;
-}
-
-BufferPointer Camera::getGPUBuffer() const {
-    ReadGPULock();
-    return _gpuData._buffer;
+    auto [d, l] = _camData.read();
+   return d->_projection.evalHeightAt(depth) / d->_viewport.height();
 }
 
 void Camera::pan(float deltaRight, float deltaUp) {
-    WriteLock();
-    auto& view = _camData._data._view;
+    auto [d, l] = _camData.write();
+    auto& view = d->_view;
     view.setEye( view.eye() + view.right() * deltaRight + view.up() * deltaUp );
 }
 
 void Camera::dolly(float deltaBack) {
-    WriteLock();
-    auto oriView = _camData._data._view;
-    auto& nextView = _camData._data._view;
+    auto [d, l] = _camData.write();
+    auto oriView = d->_view;
+    auto& nextView = d->_view;
 
     // PE is the vector from Pivot to Eye position
     auto boomVecWS = oriView.back() * (deltaBack);
@@ -329,9 +279,9 @@ void Camera::dolly(float deltaBack) {
 }
 
 void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
-    WriteLock();
-    auto oriView = _camData._data._view;
-    auto& nextView = _camData._data._view;
+    auto [d, l] = _camData.write();
+    auto oriView = d->_view;
+    auto& nextView = d->_view;
 
     // PE is the vector from Pivot to Eye position
     auto boomVecWS = oriView.back() * (-boomLength);
@@ -355,8 +305,8 @@ void Camera::orbit(float boomLength, float deltaRight, float deltaUp) {
 }
 
 void Camera::orbitHorizontal(float boomLength, float deltaRight, float deltaUp) {
-    WriteLock();
-    _camData._data._view.orbitHorizontal(boomLength, deltaRight, deltaUp);
+    auto [d, l] = _camData.write();
+    d->_view.orbitHorizontal(boomLength, deltaRight, deltaUp);
 }
 
 float Camera::boom(float boomLength, float delta) {
@@ -421,9 +371,9 @@ void Camera::lookFrom(const core::vec3& lookDirection) {
 }
 
 core::vec2 Camera::eyeSpaceFromImageSpace2D(float x, float y) const {
-    ReadLock();
-    const auto& vr = _camData._data._viewport._rect;
-    const auto& proj = _camData._data._projection;
+    auto [d, l] = _camData.read();
+    const auto& vr = d->_viewport._rect;
+    const auto& proj = d->_projection;
 
     auto m_nc = core::ViewportRect::normalizedSpaceFromImageSpace(vr, x, y);
     if (proj.isOrtho()) {
@@ -432,4 +382,33 @@ core::vec2 Camera::eyeSpaceFromImageSpace2D(float x, float y) const {
     else {
         return core::Projection::eyeFromClipSpace2D(proj._height, proj._aspectRatio, m_nc);
     }
+}
+
+
+
+void CameraStore::reserve(const DevicePointer& device, uint32_t capacity) {
+    _cameraStructBuffer.reserve(device, capacity);
+}
+
+CameraPointer CameraStore::createCamera() {
+
+    auto alloc = _indexTable.allocate();
+    CameraData camData;
+
+    _cameraStructBuffer.allocate_element(alloc.index, &camData);
+
+    CameraPointer camera(new Camera({ &_cameraStructBuffer, alloc.index }));
+
+    if (alloc.recycle) {
+        _cameras[alloc.index] = camera;
+    } else {
+        _cameras.push_back(camera);
+    }
+
+    return camera;
+}
+
+
+void CameraStore::syncGPUBuffer(const BatchPointer& batch) {
+    _cameraStructBuffer.sync_gpu_from_cpu(batch);
 }

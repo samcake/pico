@@ -27,7 +27,7 @@
 #pragma once
 
 #include <chrono>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Vec.h>
 #include <graphics/render/render.h>
 
 namespace uix {

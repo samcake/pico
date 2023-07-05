@@ -22,15 +22,15 @@ Transform node_getWorldTransform(int nodeID) {
 
 
 //
-// Drawable API
+// Draw API
 //
-struct DrawableBound {
+struct DrawBound {
     Box _box;
     float spareA;
     float spareB;
 };
 
-StructuredBuffer<DrawableBound>  drawable_bounds : register(t1);
+StructuredBuffer<DrawBound>  drawable_bounds : register(t1);
 
 Box drawable_getLocalBox(int drawableID) {
     return drawable_bounds[drawableID]._box; //getBox();
@@ -41,10 +41,10 @@ Box drawable_getLocalBox(int drawableID) {
 // Item API
 //
 struct ItemInfo {
-    uint  nodeID;
-    uint  drawableID;
-    float spareA;
-    float spareB;
+    uint nodeID;
+    uint drawID;
+    uint groupID;
+    uint flags;
 };
 
 StructuredBuffer<ItemInfo>  item_infos : register(t2);

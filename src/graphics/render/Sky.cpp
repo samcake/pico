@@ -110,7 +110,8 @@ void Sky::allocateGPUData(const DevicePointer& device) {
     _gpuData._version = _cpuData._version;
 
     graphics::TextureInit mapInit;
-    mapInit.format = graphics::PixelFormat::R11G11B10_FLOAT;
+  //  mapInit.format = graphics::PixelFormat::R11G11B10_FLOAT;
+    mapInit.format = graphics::PixelFormat::R16G16B16A16_FLOAT;
     mapInit.width = _cpuData._data._simDim.w;
     mapInit.height = mapInit.width;
     mapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;

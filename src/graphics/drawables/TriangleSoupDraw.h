@@ -1,4 +1,4 @@
-// TriangleSoupDrawable.h 
+// TriangleSoupDraw.h 
 //
 // Sam Gateau - June 2020
 // 
@@ -27,10 +27,10 @@
 #pragma once
 
 #include <memory>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 #include "dllmain.h"
 #include <render/Scene.h>
-#include <render/Drawable.h>
+#include <render/Draw.h>
 
 namespace document {
     class TriangleSoup;
@@ -46,50 +46,46 @@ namespace graphics {
     class PipelineState;
     using PipelineStatePointer = std::shared_ptr<PipelineState>;
 
-    class TriangleSoupDrawable;
-    using TriangleSoupDrawablePointer = std::shared_ptr<TriangleSoupDrawable>;
+    class TriangleSoupDraw;
+    using TriangleSoupDrawPointer = std::shared_ptr<TriangleSoupDraw>;
 
-    struct VISUALIZATION_API TriangleSoupDrawableUniforms {
+    struct VISUALIZATION_API TriangleSoupDrawUniforms {
         float triangleScale{ 0.05f };
     };
-    using TriangleSoupDrawableUniformsPointer = std::shared_ptr<TriangleSoupDrawableUniforms>;
+    using TriangleSoupDrawUniformsPointer = std::shared_ptr<TriangleSoupDrawUniforms>;
 
-    class VISUALIZATION_API TriangleSoupDrawableFactory {
+    class VISUALIZATION_API TriangleSoupDrawFactory {
     public:
-        TriangleSoupDrawableFactory();
-        ~TriangleSoupDrawableFactory();
+        TriangleSoupDrawFactory(const graphics::DevicePointer& device);
+        ~TriangleSoupDrawFactory();
+
+
+        // Create TriangleSoupDraw for a given TriangleSoup document, building the gpu resource
+        graphics::TriangleSoupDraw createTriangleSoupDraw(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
+
+
+        // Read / write shared uniforms
+        const TriangleSoupDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
+        TriangleSoupDrawUniforms& editUniforms() { return (*_sharedUniforms); }
+
+    protected:
+        TriangleSoupDrawUniformsPointer _sharedUniforms;
+        graphics::PipelineStatePointer _pipeline;
 
         // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
         void allocateGPUShared(const graphics::DevicePointer& device);
 
-        // Create TriangleSoupDrawable for a given TriangleSoup document, building the gpu vertex buffer
-        graphics::TriangleSoupDrawable* createTriangleSoupDrawable(const graphics::DevicePointer& device, const document::TriangleSoupPointer& pointcloud);
+        // Create Drawcall object drawing the TriangleSoupDraw in the rendering context
+        void allocateDrawcallObject(const graphics::DevicePointer& device, graphics::TriangleSoupDraw& pointcloudDraw);
 
-        // Create Drawcall object drawing the TriangleSoupDrawable in the rendering context
-        void allocateDrawcallObject(const graphics::DevicePointer& device, const graphics::ScenePointer& scene, graphics::TriangleSoupDrawable& pointcloudDrawable);
-
-        // Read / write shared uniforms
-        const TriangleSoupDrawableUniforms& getUniforms() const { return (*_sharedUniforms); }
-        TriangleSoupDrawableUniforms& editUniforms() { return (*_sharedUniforms); }
-
-    protected:
-        TriangleSoupDrawableUniformsPointer _sharedUniforms;
-        graphics::PipelineStatePointer _pipeline;
     };
-    using TriangleSoupDrawableFactoryPointer = std::shared_ptr< TriangleSoupDrawableFactory>;
+    using TriangleSoupDrawFactoryPointer = std::shared_ptr< TriangleSoupDrawFactory>;
 
 
-    /*
-    const pico::DrawcallObjectPointer& getDrawable(const TriangleSoupDrawable& x) {
-        return x.getDrawable();
-    }*/
-    class VISUALIZATION_API TriangleSoupDrawable {
+
+    struct VISUALIZATION_API TriangleSoupDraw {
     public:
-        TriangleSoupDrawable();
-        ~TriangleSoupDrawable();
-
-        void swapUniforms(const TriangleSoupDrawableUniformsPointer& uniforms) { _uniforms = uniforms; }
-        const TriangleSoupDrawableUniformsPointer& getUniforms() const { return _uniforms; }
+        const TriangleSoupDrawUniformsPointer& getUniforms() const { return _uniforms; }
 
         graphics::BufferPointer getVertexBuffer() const { return _vertexBuffer; }
         graphics::BufferPointer getIndexBuffer() const { return _indexBuffer; }
@@ -98,9 +94,9 @@ namespace graphics {
         DrawObjectCallback getDrawcall() const { return _drawcall; }
 
     protected:
-        friend class TriangleSoupDrawableFactory;
+        friend class TriangleSoupDrawFactory;
 
-        TriangleSoupDrawableUniformsPointer _uniforms;
+        TriangleSoupDrawUniformsPointer _uniforms;
         graphics::BufferPointer _vertexBuffer;
         graphics::BufferPointer _indexBuffer;
         core::Bounds _bounds;

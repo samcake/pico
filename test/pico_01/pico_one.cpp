@@ -62,9 +62,11 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    core::Graph::testGraph();
+   // core::Graph::testGraph();
 
-    if (false) {
+
+    bool showWindow = true;
+    if (showWindow) {
 
         /*  result = pico::api::create(pico_init);
           if (!result) {

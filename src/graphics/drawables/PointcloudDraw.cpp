@@ -1,4 +1,4 @@
-// PointCloud_Drawable.cpp
+// PointCloud_Draw.cpp
 //
 // Sam Gateau - March 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "PointCloudDrawable.h"
+#include "PointCloudDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -55,11 +55,11 @@
 //using namespace view3d;
 namespace graphics
 {
-    PointCloudDrawableFactory::PointCloudDrawableFactory() :
-        _sharedUniforms( std::make_shared<PointCloudDrawableUniforms>()) {
-
+    PointCloudDrawFactory::PointCloudDrawFactory(const graphics::DevicePointer& device) :
+        _sharedUniforms( std::make_shared<PointCloudDrawUniforms>()) {
+        allocateGPUShared(device);
     }
-    PointCloudDrawableFactory::~PointCloudDrawableFactory() {
+    PointCloudDrawFactory::~PointCloudDrawFactory() {
 
     }
 
@@ -72,7 +72,7 @@ namespace graphics
         float showPerspectiveDepthPlane{ 0.0f };
     };
 
-    void PointCloudDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void PointCloudDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         graphics::RootDescriptorLayoutInit descriptorLayoutInit{
             {
@@ -130,9 +130,9 @@ namespace graphics
 
     }
 
-    graphics::PointCloudDrawable* PointCloudDrawableFactory::createPointCloudDrawable(const graphics::DevicePointer& device, const document::PointCloudPointer& pointCloud) {
+    graphics::PointCloudDraw PointCloudDrawFactory::createPointCloudDraw(const graphics::DevicePointer& device, const document::PointCloudPointer& pointCloud) {
         if (!pointCloud) {
-            return nullptr;
+            return PointCloudDraw();
         }
 
         // Step 1, create a Mesh from the point cloud data
@@ -169,21 +169,22 @@ namespace graphics
         auto resourceBuffer = device->createBuffer(resourceBufferInit);
         memcpy(resourceBuffer->_cpuMappedAddress, mesh->_vertexStream._buffers[0]->_data.data(), resourceBufferInit.bufferSize);
 
-        auto pointCloudDrawable = new PointCloudDrawable();
-        pointCloudDrawable->_vertexBuffer = resourceBuffer;
-        pointCloudDrawable->_bounds = mesh->_bounds;
-        pointCloudDrawable->_transform = pointCloud->_transform;
+        PointCloudDraw pointCloudDraw;
+        pointCloudDraw._vertexBuffer = resourceBuffer;
+        pointCloudDraw._bounds = mesh->_bounds;
+        pointCloudDraw._transform = pointCloud->_transform;
     
-        // Create the point cloud drawable using the shared uniforms of the factory
-        pointCloudDrawable->_uniforms = _sharedUniforms;
+        // Create the point cloud draw using the shared uniforms of the factory
+        pointCloudDraw._uniforms = _sharedUniforms;
 
-        return pointCloudDrawable;
+        allocateDrawcallObject(device, pointCloudDraw);
+
+        return pointCloudDraw;
     }
 
-    void PointCloudDrawableFactory::allocateDrawcallObject(
+    void PointCloudDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::PointCloudDrawable& pointcloud)
+        graphics::PointCloudDraw& pointcloud)
     {
         graphics::DescriptorSetInit descriptorSetInit{
             _pipeline->getRootDescriptorLayout(),
@@ -198,34 +199,20 @@ namespace graphics
 
         auto numVertices = pointcloud.getVertexBuffer()->numElements();
 
-        auto ppointcloud = &pointcloud;
-        auto pipeline = this->_pipeline;
-
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [ppointcloud, descriptorSet, numVertices, pipeline](const NodeID node, RenderArgs& args) {
+        pointcloud._drawcall = [ppointcloud = pointcloud, descriptorSet, numVertices, pipeline = this->_pipeline](const NodeID node, RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
 
      //       args.batch->bindVertexBuffers(1, &vertexBuffer);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
-            auto uniforms = ppointcloud->getUniforms();
+            auto uniforms = ppointcloud.getUniforms();
             PCObjectData odata { { (int32_t) node }, uniforms->spriteSize, uniforms->perspectiveSprite, uniforms->perspectiveDepth, uniforms->showPerspectiveDepthPlane };
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PCObjectData), (const uint8_t*) &odata);
 
             args.batch->draw(3 * numVertices, 0);
         };
-        pointcloud._drawcall = drawCallback;
-    }
-
-
-    PointCloudDrawable::PointCloudDrawable() {
-
-    }
-    PointCloudDrawable::~PointCloudDrawable() {
-
     }
 
 } // !namespace graphics

@@ -31,7 +31,7 @@
 #include "Descriptor.h" 
 
 namespace graphics {
-
+    
     struct VISUALIZATION_API DeviceInit {
         std::string backend{ "D3D12" };
     };

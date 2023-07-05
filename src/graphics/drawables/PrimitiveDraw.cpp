@@ -1,4 +1,4 @@
-// PrimitiveDrawable.cpp
+// PrimitiveDraw.cpp
 //
 // Sam Gateau - June 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "PrimitiveDrawable.h"
+#include "PrimitiveDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -54,11 +54,12 @@
 namespace graphics
 {
 
-    PrimitiveDrawableFactory::PrimitiveDrawableFactory() :
-        _sharedUniforms(std::make_shared<PrimitiveDrawableUniforms>()) {
+    PrimitiveDrawFactory::PrimitiveDrawFactory(const DevicePointer& device) :
+        _sharedUniforms(std::make_shared<PrimitiveDrawUniforms>()) {
 
+        allocateGPUShared(device);
     }
-    PrimitiveDrawableFactory::~PrimitiveDrawableFactory() {
+    PrimitiveDrawFactory::~PrimitiveDrawFactory() {
 
     }
 
@@ -70,7 +71,7 @@ namespace graphics
         float stride{ 0 };
     };
 
-    void PrimitiveDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void PrimitiveDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{
@@ -114,34 +115,33 @@ namespace graphics
         _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::PrimitiveDrawable* PrimitiveDrawableFactory::createPrimitive(const graphics::DevicePointer& device) {
-        auto primitiveDrawable = new PrimitiveDrawable();
-        primitiveDrawable->_uniforms = _sharedUniforms;
-        return primitiveDrawable;
+    graphics::PrimitiveDraw PrimitiveDrawFactory::createPrimitive(const graphics::DevicePointer& device, const PrimititveDrawInit& init) {
+        PrimitiveDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+        primitiveDraw._size = init.size;
+
+        allocateDrawcallObject(device, primitiveDraw);
+
+        return primitiveDraw;
     }
 
-   void PrimitiveDrawableFactory::allocateDrawcallObject(
+   void PrimitiveDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::PrimitiveDrawable& prim)
+        graphics::PrimitiveDraw& prim)
     {
-        auto prim_ = &prim;
         auto pipeline = this->_primitivePipeline;
-
+      
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [_prim = prim, pipeline](const NodeID node, RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
-            args.batch->setViewport(args.camera->getViewportRect());
-            args.batch->setScissor(args.camera->getViewportRect());
-
             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
-            PrimitiveObjectData odata{ node, prim_->_size.x * 0.5f, prim_->_size.y * 0.5f, prim_->_size.z * 0.5f };
+    
+            PrimitiveObjectData odata{ node, _prim._size.x * 0.5f, _prim._size.y * 0.5f, _prim._size.z * 0.5f };
             args.batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(PrimitiveObjectData), (const uint8_t*)&odata);
 
             // A box is 6 faces * 2 trianglestrip * 4 verts + -1
             args.batch->draw(6 * 2 * 3, 0);
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

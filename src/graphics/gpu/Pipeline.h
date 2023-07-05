@@ -46,7 +46,7 @@ namespace graphics {
         DepthStencilState depthStencil;
         BlendState blend;
 
-        PixelFormat colorTargetFormat{ PixelFormat::R8G8B8A8_UNORM };
+        PixelFormat colorTargetFormat{ defaultColorBufferFormat() };
         PixelFormat depthStencilFormat{ PixelFormat::D32_FLOAT };
 
         std::string watch_name;

@@ -1,4 +1,4 @@
-// SkyDrawable.cpp
+// SkyDraw.cpp
 //
 // Sam Gateau - October 2021
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "SkyDrawable.h"
+#include "SkyDraw.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -37,7 +37,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -48,9 +48,9 @@
 #include "Sky_inc.h"
 #include "Color_inc.h"
 
-#include "SkyDrawable_vert.h"
-#include "SkyDrawable_frag.h"
-#include "SkyDrawable_comp.h"
+#include "SkyDraw_vert.h"
+#include "SkyDraw_frag.h"
+#include "SkyDraw_comp.h"
 
 using float2 = core::vec2;
 using float3 = core::vec3;
@@ -62,26 +62,27 @@ namespace graphics
 
 
 
-    SkyDrawableFactory::SkyDrawableFactory() :
-        _sharedUniforms(std::make_shared<SkyDrawableUniforms>()) {
+    SkyDrawFactory::SkyDrawFactory(const graphics::DevicePointer& device) :
+        _sharedUniforms(std::make_shared<SkyDrawUniforms>()) {
         _sharedUniforms->_sky = std::make_shared<Sky>();
 
+        allocateGPUShared(device);
     }
-    SkyDrawableFactory::~SkyDrawableFactory() {
+    SkyDrawFactory::~SkyDrawFactory() {
 
     }
 
     // Custom data uniforms
-    struct SkyDrawableData {
+    struct SkyDrawData {
         float3 sunDir;
         float spare;
     };
 
-    SkyDrawableData evalPushDataFromUnifors(const SkyDrawableUniforms& uniforms) {
+    SkyDrawData evalPushDataFromUnifors(const SkyDrawUniforms& uniforms) {
         return { uniforms._sky->getSunDir(), 0 };
     }
 
-    void SkyDrawableFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void SkyDrawFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         _sharedUniforms->_sky->allocateGPUData(device);
 
@@ -98,7 +99,7 @@ namespace graphics
         // Let's describe the pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit rootLayoutInit{
             {
-            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(SkyDrawableData) >> 2}
+            { graphics::DescriptorType::PUSH_UNIFORM, graphics::ShaderStage::VERTEX, 1, sizeof(SkyDrawData) >> 2}
             },
             {
                 // ViewPass descriptorSet Layout
@@ -116,10 +117,10 @@ namespace graphics
         // Shaders & Pipeline
         {
 
-            graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", SkyDrawable_vert::getSource, SkyDrawable_vert::getSourceFilename(), include };
+            graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", SkyDraw_vert::getSource, SkyDraw_vert::getSourceFilename(), include };
             graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-            graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main_draw", SkyDrawable_frag::getSource, SkyDrawable_frag::getSourceFilename(), include };
+            graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main_draw", SkyDraw_frag::getSource, SkyDraw_frag::getSourceFilename(), include };
             graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
 
             graphics::ProgramInit programInit{ vertexShader, pixelShader };
@@ -154,7 +155,7 @@ namespace graphics
 
 
         {
-               graphics::ShaderInit skymap_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeSkymap", SkyDrawable_comp::getSource, SkyDrawable_comp::getSourceFilename(), include };
+               graphics::ShaderInit skymap_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeSkymap", SkyDraw_comp::getSource, SkyDraw_comp::getSourceFilename(), include };
                graphics::ShaderPointer skymap_compShader = device->createShader(skymap_compShaderInit);
 
                // Let's describe the Compute pipeline Descriptors layout
@@ -186,7 +187,7 @@ namespace graphics
 
 
         {
-            graphics::ShaderInit diffuse_skymap_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeDiffuseSkymap_first", SkyDrawable_comp::getSource, SkyDrawable_comp::getSourceFilename(), include };
+            graphics::ShaderInit diffuse_skymap_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeDiffuseSkymap_first", SkyDraw_comp::getSource, SkyDraw_comp::getSourceFilename(), include };
             graphics::ShaderPointer diffuse_skymap_compShader = device->createShader(diffuse_skymap_compShaderInit);
 
             // Let's describe the Compute pipeline Descriptors layout
@@ -197,7 +198,7 @@ namespace graphics
 
             _diffuseSkymapPipeline[0] = device->createComputePipelineState(diffuse_skymap_pipelineInit);
 
-            graphics::ShaderInit diffuse_skymap_next_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeDiffuseSkymap_next", SkyDrawable_comp::getSource, SkyDrawable_comp::getSourceFilename(), include };
+            graphics::ShaderInit diffuse_skymap_next_compShaderInit{ graphics::ShaderType::COMPUTE, "main_makeDiffuseSkymap_next", SkyDraw_comp::getSource, SkyDraw_comp::getSourceFilename(), include };
             graphics::ShaderPointer diffuse_skymap_next_compShader = device->createShader(diffuse_skymap_next_compShaderInit);
 
             // Let's describe the Compute pipeline Descriptors layout
@@ -210,18 +211,20 @@ namespace graphics
 
     }
 
-    graphics::SkyDrawable* SkyDrawableFactory::createDrawable(const graphics::DevicePointer& device) {
-        auto primitiveDrawable = new SkyDrawable();
-        primitiveDrawable->_uniforms = _sharedUniforms;
-        return primitiveDrawable;
+    graphics::SkyDraw SkyDrawFactory::createDraw(const graphics::DevicePointer& device) {
+        SkyDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+
+        allocateDrawcallObject(device, primitiveDraw);
+
+        return primitiveDraw;
     }
 
-   void SkyDrawableFactory::allocateDrawcallObject(
+   void SkyDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
-        graphics::SkyDrawable& prim)
+        graphics::SkyDraw& prim)
     {
-        auto prim_ = &prim;
+        auto prim_ = prim;
         auto drawPipeline = this->_skyPipeline;
         auto skymapPipeline = this->_skymapPipeline;
         auto diffusePipelineFirst = this->_diffuseSkymapPipeline[0];
@@ -290,9 +293,9 @@ namespace graphics
         device->updateDescriptorSet(diffuse_descriptorSet, diffuse_descriptorObjects);
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [THREAD_GROUP_SIDE, prim_, drawPipeline, skymapPipeline, diffusePipelineFirst, diffusePipelineNext, draw_descriptorSet, skymap_descriptorSet, diffuse_descriptorSet, diffuse_skybuf](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [THREAD_GROUP_SIDE, prim_, drawPipeline, skymapPipeline, diffusePipelineFirst, diffusePipelineNext, draw_descriptorSet, skymap_descriptorSet, diffuse_descriptorSet, diffuse_skybuf](const NodeID node, RenderArgs& args) {
             auto& batch = args.batch;
-            auto uniforms = prim_->getUniforms();
+            auto uniforms = prim_.getUniforms();
             if (uniforms->_sky->needSkymapUpdate()) {
 
                 batch->resourceBarrierTransition(graphics::ResourceBarrierFlag::NONE, graphics::ResourceState::VERTEX_AND_CONSTANT_BUFFER, graphics::ResourceState::COPY_DEST, uniforms->_sky->getGPUBuffer());
@@ -341,19 +344,16 @@ namespace graphics
             }
 
             batch->bindPipeline(drawPipeline);
-            batch->setViewport(args.camera->getViewportRect());
-            batch->setScissor(args.camera->getViewportRect());
 
             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
             batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, draw_descriptorSet);
 
             auto pushdata = evalPushDataFromUnifors((* (uniforms) ));
-            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(SkyDrawableData), (const uint8_t*)&pushdata);
+            batch->bindPushUniform(graphics::PipelineType::GRAPHICS, 0, sizeof(SkyDrawData), (const uint8_t*)&pushdata);
 
             // A quad is drawn with one triangle 3 verts
             batch->draw(3 * args.timer->getNumSamples(), 0);
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

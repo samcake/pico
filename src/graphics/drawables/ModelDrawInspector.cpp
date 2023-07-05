@@ -1,4 +1,4 @@
-// ModelDrawableInspector.cpp
+// ModelDrawInspector.cpp
 //
 // Sam Gateau - June 2020
 // 
@@ -24,7 +24,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 //
-#include "ModelDrawableInspector.h"
+#include "ModelDrawInspector.h"
 
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
@@ -38,7 +38,7 @@
 #include "render/Renderer.h"
 #include "render/Camera.h"
 #include "render/Scene.h"
-#include "render/Drawable.h"
+#include "render/Draw.h"
 #include "render/Viewport.h"
 #include "render/Mesh.h"
 
@@ -69,12 +69,11 @@
 namespace graphics
 {
 
-    ModelDrawableInspectorFactory::ModelDrawableInspectorFactory() :
-        _sharedUniforms(std::make_shared<ModelDrawableInspectorUniforms>()) {
-
+    ModelDrawInspectorFactory::ModelDrawInspectorFactory(const graphics::DevicePointer& device) :
+        _sharedUniforms(std::make_shared<ModelDrawInspectorUniforms>()) {
+        allocateGPUShared(device);
     }
-    ModelDrawableInspectorFactory::~ModelDrawableInspectorFactory() {
-
+    ModelDrawInspectorFactory::~ModelDrawInspectorFactory() {
     }
 
     // Custom data uniforms
@@ -101,7 +100,7 @@ namespace graphics
         int32_t _inspectedTexelY{ 0 };
     };
 
-    ModelObjectData makeModelObjectData(const ModelDrawableInspectorUniforms& params, int32_t node, uint32_t flags) {
+    ModelObjectData makeModelObjectData(const ModelDrawInspectorUniforms& params, int32_t node, uint32_t flags) {
         ModelObjectData odata{
             (uint32_t) node, (uint32_t)0,
             (uint32_t) params.numNodes, (uint32_t) params.numParts,
@@ -117,7 +116,7 @@ namespace graphics
     }
 
 
-    void ModelDrawableInspectorFactory::allocateGPUShared(const graphics::DevicePointer& device) {
+    void ModelDrawInspectorFactory::allocateGPUShared(const graphics::DevicePointer& device) {
 
         // Let's describe the draw pipeline Descriptors layout
         graphics::RootDescriptorLayoutInit draw_descriptorLayoutInit{
@@ -386,90 +385,90 @@ namespace graphics
 
 
 
-    graphics::ModelDrawableInspector* ModelDrawableInspectorFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDrawable* srcDrawable) {
+    graphics::ModelDrawInspector* ModelDrawInspectorFactory::createModel(const graphics::DevicePointer& device, const document::ModelPointer& model, const ModelDraw* srcDraw) {
 
-        auto modelDrawable = new graphics::ModelDrawableInspector();
+        auto modelDraw = new graphics::ModelDrawInspector();
 
-        modelDrawable->_inspectedModelDrawable = srcDrawable;
+        modelDraw->_inspectedModelDraw = srcDraw;
 
         // Define the local nodes used by the model with the original transforms and the parents
-        modelDrawable->_localNodeTransforms = srcDrawable->_localNodeTransforms;
-        modelDrawable->_localNodeParents = srcDrawable->_localNodeParents;
+        modelDraw->_localNodeTransforms = srcDraw->_localNodeTransforms;
+        modelDraw->_localNodeParents = srcDraw->_localNodeParents;
         // Define the items
-        modelDrawable->_localItems = srcDrawable->_localItems;
+        modelDraw->_localItems = srcDraw->_localItems;
         // Define the shapes
-        modelDrawable->_shapes = srcDrawable->_shapes;
+        modelDraw->_shapes = srcDraw->_shapes;
         // Define the cameras
-        modelDrawable->_localCameras = srcDrawable->_localCameras;
+        modelDraw->_localCameras = srcDraw->_localCameras;
 
 
-        modelDrawable->_uniforms = _sharedUniforms;
-        modelDrawable->_indexBuffer = srcDrawable->_indexBuffer;
-        modelDrawable->_vertexBuffer = srcDrawable->_vertexBuffer;
-        modelDrawable->_vertexAttribBuffer = srcDrawable->_vertexAttribBuffer;
-        modelDrawable->_partBuffer = srcDrawable->_partBuffer;
-        modelDrawable->_shapes = srcDrawable->_shapes;
+        modelDraw->_uniforms = _sharedUniforms;
+        modelDraw->_indexBuffer = srcDraw->_indexBuffer;
+        modelDraw->_vertexBuffer = srcDraw->_vertexBuffer;
+        modelDraw->_vertexAttribBuffer = srcDraw->_vertexAttribBuffer;
+        modelDraw->_partBuffer = srcDraw->_partBuffer;
+        modelDraw->_shapes = srcDraw->_shapes;
 
         // Also need a version of the parts and their bound on the cpu side
-        modelDrawable->_vertices = srcDrawable->_vertices;
-        modelDrawable->_vertex_attribs = srcDrawable->_vertex_attribs;
-        modelDrawable->_indices = srcDrawable->_indices;
-        modelDrawable->_parts = srcDrawable->_parts;
-        modelDrawable->_partAABBs = srcDrawable->_partAABBs;
+        modelDraw->_vertices = srcDraw->_vertices;
+        modelDraw->_vertex_attribs = srcDraw->_vertex_attribs;
+        modelDraw->_indices = srcDraw->_indices;
+        modelDraw->_parts = srcDraw->_parts;
+        modelDraw->_partAABBs = srcDraw->_partAABBs;
 
-        modelDrawable->_edgeBuffer = srcDrawable->_edgeBuffer;
-        modelDrawable->_faceBuffer = srcDrawable->_faceBuffer;
+        modelDraw->_edgeBuffer = srcDraw->_edgeBuffer;
+        modelDraw->_faceBuffer = srcDraw->_faceBuffer;
 
         // material buffer
-        modelDrawable->_materialBuffer = srcDrawable->_materialBuffer;
-        modelDrawable->_albedoTexture = srcDrawable->_albedoTexture;
+        modelDraw->_materialBuffer = srcDraw->_materialBuffer;
+        modelDraw->_albedoTexture = srcDraw->_albedoTexture;
         
         // Model local bound is the containing box for all the local items of the model
-        modelDrawable->_bound = srcDrawable->_bound;
+        modelDraw->_bound = srcDraw->_bound;
 
         // Making the "uvmesh map" which will be rt once with the mesh information and then used to fetch from
         TextureInit uvmeshMapInit;
-        uvmeshMapInit.width = modelDrawable->_albedoTexture->_init.width;
-        uvmeshMapInit.height = modelDrawable->_albedoTexture->_init.height;
+        uvmeshMapInit.width = modelDraw->_albedoTexture->_init.width;
+        uvmeshMapInit.height = modelDraw->_albedoTexture->_init.height;
         uvmeshMapInit.usage = ResourceUsage::RENDER_TARGET;
         uvmeshMapInit.format = _uvmeshMapFormat;
         auto uvmeshMap = device->createTexture(uvmeshMapInit);
-        modelDrawable->_texture_uvmesh = uvmeshMap;
+        modelDraw->_texture_uvmesh = uvmeshMap;
 
         // And the framebuffer to render into it
         FramebufferInit uvmeshFramebufferInit;
         uvmeshFramebufferInit.colorTargets.push_back(uvmeshMap);
         auto uvmeshFramebuffer = device->createFramebuffer(uvmeshFramebufferInit);
-        modelDrawable->_framebuffer_uvmesh = uvmeshFramebuffer;
+        modelDraw->_framebuffer_uvmesh = uvmeshFramebuffer;
 
         // Making one "compute map" which will be rw destination from the compute kernel and then used to fetch from
         TextureInit computeMapInit;
-        computeMapInit.width = modelDrawable->_albedoTexture->_init.width;
-        computeMapInit.height = modelDrawable->_albedoTexture->_init.height;
+        computeMapInit.width = modelDraw->_albedoTexture->_init.width;
+        computeMapInit.height = modelDraw->_albedoTexture->_init.height;
         computeMapInit.usage = ResourceUsage::RW_RESOURCE_TEXTURE;
         auto computeMap = device->createTexture(computeMapInit);
-        modelDrawable->_texture_compute = computeMap;
+        modelDraw->_texture_compute = computeMap;
 
         // fill the constant model dimensions in uniforms:
-        modelDrawable->getUniforms()->numNodes = modelDrawable->_localNodeTransforms.size();
-        modelDrawable->getUniforms()->numParts = modelDrawable->getPartBuffer()->numElements();
-        modelDrawable->getUniforms()->numNodes = modelDrawable->getMaterialBuffer()->numElements();
-        modelDrawable->getUniforms()->numEdges = modelDrawable->getEdgeBuffer()->numElements();
-        modelDrawable->getUniforms()->numTriangles = modelDrawable->getFaceBuffer()->numElements();
+        modelDraw->getUniforms()->numNodes = modelDraw->_localNodeTransforms.size();
+        modelDraw->getUniforms()->numParts = modelDraw->getPartBuffer()->numElements();
+        modelDraw->getUniforms()->numNodes = modelDraw->getMaterialBuffer()->numElements();
+        modelDraw->getUniforms()->numEdges = modelDraw->getEdgeBuffer()->numElements();
+        modelDraw->getUniforms()->numTriangles = modelDraw->getFaceBuffer()->numElements();
 
-        modelDrawable->getUniforms()->mapWidth = computeMapInit.width;
-        modelDrawable->getUniforms()->mapHeight = computeMapInit.height;
-        modelDrawable->getUniforms()->inspectedTexelX = computeMapInit.width >> 1;
-        modelDrawable->getUniforms()->inspectedTexelY = computeMapInit.height >> 1;
+        modelDraw->getUniforms()->mapWidth = computeMapInit.width;
+        modelDraw->getUniforms()->mapHeight = computeMapInit.height;
+        modelDraw->getUniforms()->inspectedTexelX = computeMapInit.width >> 1;
+        modelDraw->getUniforms()->inspectedTexelY = computeMapInit.height >> 1;
 
 
-        return modelDrawable;
+        return modelDraw;
     }
 
-    void ModelDrawableInspectorFactory::allocateDrawcallObject(
+    void ModelDrawInspectorFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
         const graphics::ScenePointer& scene,
-        graphics::ModelDrawableInspector& model)
+        graphics::ModelDrawInspector& model)
     {
         {
             // It s time to create a descriptorSet that matches the expected pipeline descriptor set
@@ -594,12 +593,12 @@ namespace graphics
         auto pipeline_compute_imageSpaceBlur = _pipeline_compute_imageSpaceBlur;
         auto pipeline_compute_meshSpaceBlur = _pipeline_compute_meshSpaceBlur;
 
-        // Pre pass drawable executed before drawing the model parts:
+        // Pre pass draw executed before drawing the model parts:
         // Generate the uvmesh map pass
         // dispatch compute pass(es)
         // draw uvspace background
         {
-            auto pre_pass = new ModelDrawableInspectorPart();
+            auto pre_pass = new ModelDrawInspectorPart();
             pre_pass->_bound = model._bound;
             graphics::DrawObjectCallback drawCallback = [pmodel, albedoTex, uvmeshFramebuffer, uvmeshMap, computeMap,
                 descriptorSet_uvmesh, pipeline_uvmesh_edge, pipeline_uvmesh_face,
@@ -618,8 +617,8 @@ namespace graphics
                             args.batch->clear(uvmeshFramebuffer, { 0, 0, 0, 0 });
 
                             core::vec4 viewport(0, 0, uvmeshFramebuffer->width(), uvmeshFramebuffer->height());
-                            args.batch->setViewport(viewport);
-                            args.batch->setScissor(viewport);
+                            args.batch->pushViewport(viewport);
+                            args.batch->pushScissor(viewport);
 
                             // Draw faces of the mesh in the edge map
                             args.batch->bindPipeline(pipeline_uvmesh_face);
@@ -628,7 +627,7 @@ namespace graphics
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_uvmesh);
                             
-                            ModelObjectData odata = makeModelObjectData(*params, node, ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT);
+                            ModelObjectData odata = makeModelObjectData(*params, node, ModelDrawInspectorUniforms::MAKE_UVMESH_MAP_BIT);
 
                             for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                 odata.partID = d;
@@ -642,8 +641,8 @@ namespace graphics
                             if (params->uvmeshEdgeLinesPass) {
                                 args.batch->bindPipeline(pipeline_uvmesh_edge);
                          
-                                odata.drawMode =    ModelDrawableInspectorUniforms::MAKE_UVMESH_MAP_BIT |
-                                                    ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
+                                odata.drawMode =    ModelDrawInspectorUniforms::MAKE_UVMESH_MAP_BIT |
+                                                    ModelDrawInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
 
                                 for (int d = 0; d < pmodel->_parts.size(); ++d) {
                                     odata.partID = d;
@@ -659,7 +658,8 @@ namespace graphics
 
 
                             params->makeUVMeshMap = false;
-
+                            args.batch->popViewport();
+                            args.batch->popScissor();
                         }
 
                         if (first) {
@@ -673,10 +673,10 @@ namespace graphics
                         if (params->makeComputedMap) {
                             const int NUM_COMPUTE_GROUP_THREADS = 4;
                             switch (params->filterKernelTechnique) {
-                                case ModelDrawableInspectorUniforms::FKT_IMAGE_SPACE:
+                                case ModelDrawInspectorUniforms::FKT_IMAGE_SPACE:
                                     args.batch->bindPipeline(pipeline_compute_imageSpaceBlur);
                                 break;
-                                case ModelDrawableInspectorUniforms::FKT_MESH_SPACE:
+                                case ModelDrawInspectorUniforms::FKT_MESH_SPACE:
                                     args.batch->bindPipeline(pipeline_compute_meshSpaceBlur);
                                 break;
                             }
@@ -696,8 +696,6 @@ namespace graphics
                         // in uv space mode, draw uvspace inspect quad
                         if (params->renderUVSpace) {
                             args.batch->bindPipeline(pipeline_draw_uvspace);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -711,8 +709,6 @@ namespace graphics
 
                         if (params->renderConnectivity && (params->inspectedTriangle > -1)) {
                             args.batch->bindPipeline(pipeline_draw_connectivity);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -730,8 +726,6 @@ namespace graphics
 
                         if (params->renderKernelSamples && (params->inspectedTexelX > -1) && (params->inspectedTexelY > -1)) {
                             args.batch->bindPipeline(pipeline_draw_kernelSamples);
-                            args.batch->setViewport(args.camera->getViewportRect());
-                            args.batch->setScissor(args.camera->getViewportRect());
 
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                             args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -747,7 +741,7 @@ namespace graphics
             };
 
             pre_pass->_drawcall = drawCallback;
-            model._pre_pass_ID = scene->createDrawable(*pre_pass).id();
+            model._pre_pass_ID = scene->createDraw(*pre_pass).id();
 
         }
 
@@ -761,20 +755,18 @@ namespace graphics
                     // this all works because the main texture is populated in the very first drawcall on the first call
 
                     args.batch->bindPipeline(pipeline_draw_mesh);
-                    args.batch->setViewport(args.camera->getViewportRect());
-                    args.batch->setScissor(args.camera->getViewportRect());
 
                     args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                     args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
                 };
                 model._drawcall = drawCallback;
-                model._drawableID = scene->createDrawable(model).id();
+                model._drawID = scene->createDraw(model).id();
             }
             {
-                // one drawable per part
-                DrawableIDs drawables;
+                // one draw per part
+                DrawIDs drawables;
                 for (int d = 0; d < model._partAABBs.size(); ++d) {
-                    auto part = new ModelDrawableInspectorPart();
+                    auto part = new ModelDrawInspectorPart();
                     part->_bound = model._partAABBs[d];
 
                     auto partNumIndices = model._parts[d].numIndices;
@@ -794,17 +786,17 @@ namespace graphics
 
                     part->_drawcall = drawCallback;
 
-                    auto partDrawable = scene->createDrawable(*part);
-                    drawables.emplace_back(partDrawable.id());
+                    auto partDraw = scene->createDraw(*part);
+                    drawables.emplace_back(partDraw.id());
                 }
 
-               model._partDrawables = drawables;
+               model._partDraws = drawables;
             }
         }
 
-        // one more drawable for POST pass to draw extra widgets,  edges or uvmesh points
+        // one more draw for POST pass to draw extra widgets,  edges or uvmesh points
         {
-            auto post_pass = new ModelDrawableInspectorPart();
+            auto post_pass = new ModelDrawInspectorPart();
             post_pass->_bound = model._bound;
             // And now a render callback where we describe the rendering sequence
             graphics::DrawObjectCallback drawCallback = [pmodel, uvmeshMap,
@@ -815,17 +807,15 @@ namespace graphics
 
                     if (params->renderWireframe || params->renderUVEdgeLines) {
                         args.batch->bindPipeline(pipeline_draw_edges);
-                        args.batch->setViewport(args.camera->getViewportRect());
-                        args.batch->setScissor(args.camera->getViewportRect());
 
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
 
                         auto flags = params->buildFlags();
-                        flags |= ModelDrawableInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
+                        flags |= ModelDrawInspectorUniforms::RENDER_UV_EDGE_LINES_BIT;
                         
                         if (params->renderWireframe) {
-                            flags |= ModelDrawableInspectorUniforms::RENDER_WIREFRAME_BIT;
+                            flags |= ModelDrawInspectorUniforms::RENDER_WIREFRAME_BIT;
                         }
                         ModelObjectData odata = makeModelObjectData(*params, node, flags);
 
@@ -841,8 +831,6 @@ namespace graphics
                     // draw the cloud point of samples from the uv mesh
                     if (params->renderUVMeshPoints) {
                         args.batch->bindPipeline(pipeline_draw_uvmesh_point);
-                        args.batch->setViewport(args.camera->getViewportRect());
-                        args.batch->setScissor(args.camera->getViewportRect());
 
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, args.viewPassDescriptorSet);
                         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet_draw);
@@ -856,16 +844,16 @@ namespace graphics
             };
 
             post_pass->_drawcall = drawCallback;
-            model._post_pass_ID = scene->createDrawable(*post_pass).id();
+            model._post_pass_ID = scene->createDraw(*post_pass).id();
         }
 
 
     }
 
-    graphics::ItemIDs ModelDrawableInspectorFactory::createModelParts(
+    graphics::ItemIDs ModelDrawInspectorFactory::createModelParts(
                     const graphics::NodeID root,
                     const graphics::ScenePointer& scene,
-                    graphics::ModelDrawableInspector& model) {
+                    graphics::ModelDrawInspector& model) {
    
         auto rootNode = scene->createNode(core::mat4x3(), root);
 
@@ -879,15 +867,15 @@ namespace graphics
         // Pre pass item 
         items.emplace_back(scene->createItem(rootNode.id(), model._pre_pass_ID).id());
 
-        // first item is the model drawable
-        items.emplace_back(scene->createItem(rootNode.id(), model._drawableID).id());
+        // first item is the model draw
+        items.emplace_back(scene->createItem(rootNode.id(), model._drawID).id());
 
         // one item per parts
         for (const auto& li : model._localItems) {
             if (li.shape != MODEL_INVALID_INDEX) {
                 const auto& s = model._shapes[li.shape];
                 for (uint32_t si = 0; si < s.numParts; ++si) {
-                    items.emplace_back(scene->createItem(modelNodes[li.node], model._partDrawables[si + s.partOffset]).id());
+                    items.emplace_back(scene->createItem(modelNodes[li.node], model._partDraws[si + s.partOffset]).id());
                 }
             }
             if (li.camera != MODEL_INVALID_INDEX) {
