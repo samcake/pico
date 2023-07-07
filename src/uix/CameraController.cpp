@@ -39,14 +39,14 @@ CameraController::CameraController(const graphics::CameraPointer& cam, bool orth
 
 }
 
-void CameraController::update(std::chrono::microseconds& duration) {
+void CameraController::update(const std::chrono::microseconds& duration) {
     // copy the control data and excute on this
     ControlData data = _controlData;
     updateCameraFromController(data, duration);
 }
 
 void CameraController::updateCameraFromController(CameraController::ControlData& control,
-    std::chrono::microseconds& duration) {
+    const std::chrono::microseconds& duration) {
 
     if (!_cam) return;
 
@@ -164,7 +164,7 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 }
                 else {
                     float orbitScale = 0.01f;
-                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                    _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
                 }
             }
         }
@@ -188,14 +188,14 @@ bool CameraController::onMouse(const MouseEvent& e) {
                 _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
             }
             else {
-                    float orbitScale = 0.01f;
-                    _cam->orbit(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+                float orbitScale = 0.01f;
+                _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
             }
         }
 
         if (_orbitOnMouseMoveEnabled && (e.state & uix::MOUSE_CONTROL)) {
             float orbitScale = 0.01f;
-            _cam->orbit2(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)-e.delta.y);
+            _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
         }
     }
     else if (e.state & uix::MOUSE_WHEEL) {

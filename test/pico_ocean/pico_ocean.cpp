@@ -41,14 +41,14 @@
 #include <graphics/render/Renderer.h>
 #include <graphics/render/Camera.h>
 #include <graphics/render/Mesh.h>
-#include <graphics/render/Drawable.h>
+#include <graphics/render/Draw.h>
 #include <graphics/render/Scene.h>
 #include <graphics/render/Viewport.h>
 
 
-#include <graphics/drawables/GizmoDrawable.h>
+#include <graphics/drawables/GizmoDraw.h>
 
-#include <graphics/drawables/PrimitiveDrawable.h>
+#include <graphics/drawables/PrimitiveDraw.h>
 
 #include "ocean.h"
 
@@ -86,20 +86,17 @@ int main(int argc, char *argv[])
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
     // Second a Scene
-    auto scene = std::make_shared<graphics::Scene>();
-    scene->_items.resizeBuffers(gpuDevice, 250000);
-    scene->_nodes.resizeBuffers(gpuDevice, 250000);
-    scene->_drawables.resizeBuffers(gpuDevice, 250000);
+    auto scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice});
   
     // A Camera to look at the scene
-    auto camera = std::make_shared<graphics::Camera>();
+    auto camera = scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
     camera->setOrientationFromRightUp({ 1.f, 0.f, 0.0f }, { 0.f, 1.f, 0.f });
     camera->setProjectionHeight(0.1f);
     camera->setFocal(0.1f);
 
     // The viewport managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(scene, camera, gpuDevice);
+    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
@@ -107,27 +104,10 @@ int main(int argc, char *argv[])
     auto ocean_resolution = 512;
     generateSpectra(ocean_resolution, 1.0f, 1024, 1.0f, gpuDevice, scene, camera, node0);
 
-    // A gizmo drawable factory
-    auto gizmoDrawableFactory = std::make_shared<graphics::GizmoDrawableFactory>();
-    gizmoDrawableFactory->allocateGPUShared(gpuDevice);
+    // Create gizmos to draw the node transform and item tree
+    auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);
 
-    // a gizmo drawable to draw the transforms
-    auto gzdrawable_node = scene->createDrawable(*gizmoDrawableFactory->createNodeGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_node.as<graphics::NodeGizmo>());
-    gzdrawable_node.as<graphics::NodeGizmo>().nodes.resize(ocean_resolution * ocean_resolution);
-    auto gzitem_node = scene->createItem(graphics::Node::null, gzdrawable_node);
-    gzitem_node.setVisible(false);
-
-
-    auto gzdrawable_item = scene->createDrawable(*gizmoDrawableFactory->createItemGizmo(gpuDevice));
-    gizmoDrawableFactory->allocateDrawcallObject(gpuDevice, scene, gzdrawable_item.as<graphics::ItemGizmo>());
-    gzdrawable_item.as<graphics::ItemGizmo>().items.resize(100);
-    auto gzitem_item = scene->createItem(graphics::Node::null, gzdrawable_item);
-    gzitem_item.setVisible(false);
-
-    scene->_nodes.updateTransforms();
-
-
+    // scene Bounds
     scene->updateBounds();
     core::vec4 sceneSphere = scene->getBounds().toSphere();
     
@@ -175,8 +155,6 @@ int main(int argc, char *argv[])
             updateHeights(t);
         }
 
-        scene->_items.syncBuffer();
-        scene->_nodes.updateTransforms();
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!
@@ -186,7 +164,7 @@ int main(int argc, char *argv[])
     // On resize deal with it
     windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
         // only resize the swapchain when we re done with the resize
-        if (e.over) {
+        if (e.done) {
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
         }
 
@@ -199,10 +177,10 @@ int main(int argc, char *argv[])
         }
 
         if (e.state && e.key == uix::KEY_N) {
-            gzitem_node.setVisible(!gzitem_node.isVisible());
+            gznode_tree.setVisible(!gznode_tree.isVisible());
         }
         if (e.state && e.key == uix::KEY_B) {
-            gzitem_item.setVisible(!gzitem_item.isVisible());
+            gzitem_tree.setVisible(!gzitem_tree.isVisible());
         }
 
         bool zoomToScene = false;

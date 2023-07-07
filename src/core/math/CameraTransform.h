@@ -25,7 +25,7 @@
 // SOFTWARE.
 //
 #pragma once
-#include <core/math/LinearAlgebra.h>
+#include "Math3D.h"
 
 namespace core 
 {
@@ -33,39 +33,26 @@ namespace core
     struct View {
         core::mat4x3 _mat;
 
-        core::vec3 right() const {
-            return _mat._columns[0];
-        }
-        core::vec3 up() const {
-            return _mat._columns[1];
-        }
-        core::vec3 back() const {
-            return _mat._columns[2];
-        }
-        core::vec3 eye() const {
-            return _mat._columns[3];
+        inline core::vec3 right() const     { return _mat.x(); }
+        inline core::vec3 up() const        { return _mat.y(); }
+        inline core::vec3 back() const      { return _mat.z(); }
+        inline core::vec3 eye() const       { return _mat.w(); }
+        
+        inline void setEye(const core::vec3& eyePos) { _mat.w() = eyePos; }
+
+        inline void setOrientationFromRightUp(const core::vec3& right, const core::vec3& up) {
+            core::transform_set_orientation_from_right_up(_mat, right, up);
         }
 
-        void setOrientationFromRightUp(const core::vec3& right, const core::vec3& up) {
-            _mat._columns[0] = normalize(right); // make sure Right is normalized
-            _mat._columns[2] = normalize(cross(_mat._columns[0], normalize(up))); // compute Back as normalize(Right^Up)
-            _mat._columns[1] = normalize(cross(_mat._columns[2], _mat._columns[0])); // make sure Up is orthogonal to XZ and normalized
+        inline void setOrientationFromFrontUp(const core::vec3& front, const core::vec3& up) {
+            core::transform_set_orientation_from_front_up(_mat, front, up);
         }
 
-        void setOrientationFromFrontUp(const core::vec3& front, const core::vec3& up) {
-            _mat._columns[2] = -normalize(front); // make sure Front (-Back) is normalized
-            _mat._columns[0] = normalize(cross(normalize(up), _mat._columns[2])); // compute Right as normalize(Up^Back)
-            _mat._columns[1] = normalize(cross(_mat._columns[2], _mat._columns[0])); // make sure Up is orthogonal to XZ and normalized
+        inline void setOrientationFromBackAzimuthElevation(float azimuth, float elevation) {
+            // Azimuth elevation of the back direction aka Z axis
+            core::transform_set_orientation_from_Z_azimuth_elevation(_mat, azimuth, elevation);
         }
 
-        void setOrientationFromAzimuthElevation(float azimuth, float elevation) {
-            _mat._columns[2] = core::dir_from_azimuth_elevation(azimuth, elevation);
-            core::transform_evalOrthonormalBase(_mat._columns[2], _mat._columns[0], _mat._columns[1]);
-        }
-
-        void setEye(const core::vec3& eyePos) {
-            _mat._columns[3] = eyePos;
-        }
 
         
         static core::vec3 worldFromEyeSpaceDir(const core::vec3& right, const core::vec3& up, const core::vec3& eyeDir) {
@@ -84,6 +71,32 @@ namespace core
             );
         }
 
+
+        inline void orbitHorizontal(float boomLength, float deltaRight, float deltaUp) {
+            // Find the spherical coordinates of the back dir of _mat
+            auto azimuthElevation = spherical_transform_to_Z_azimuth_elevation(_mat);
+
+            // PE is the vector from Pivot to Eye position
+            auto boomVecWS = _mat.z() * (-boomLength);
+            auto pivotWS = _mat.w() + boomVecWS;
+
+            // the initial Frame Centered on Pivot using the Camera axes
+            // THen Eye expressed relative to that frame is:
+            auto eyeOS = vec3(0.0f, 0.0f, -boomLength);
+
+            // Rotate frame by delta right and delta up
+            float nextAzimuth = spherical_wrap_azimuth(azimuthElevation.x - deltaRight);
+            float nextElevation = spherical_clamp_elevation(azimuthElevation.y + deltaUp);
+            
+            setOrientationFromBackAzimuthElevation(nextAzimuth, nextElevation);
+
+            // Compute PE in world space form the new frame orientation
+            auto peWS = rotateFrom(_mat, eyeOS);
+
+            // translate by the pivot point to recover world space
+            _mat.w() = pivotWS - peWS;
+
+        }
     };
 
     struct Projection {
@@ -230,4 +243,5 @@ namespace core
         }
 
     };
+
 }

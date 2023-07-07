@@ -181,9 +181,9 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     float4 mapN = (mapNor *2.0 - 1.0);
     float3 surfNormal = normalize(IN.Normal);
-    float3 normal = computeNormal(surfNormal, mapN, IN.EyePos.xyz, IN.Texcoord.xy);
+    float3 normal = computeNormal(surfNormal, mapN.xyz, IN.EyePos.xyz, IN.Texcoord.xy);
 
-    normal = worldFromEyeSpaceDir(_view, normal);
+    normal = worldFromEyeSpaceDir(cam_view(), normal);
 
     float4 rmaoMap = float4(0.0, 0.0, 0.0, 0.0);
     if (m.textures.z != -1) {
@@ -192,7 +192,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
 
     float3 baseColor = float3(1.0, 1.0, 1.0);
     // with albedo from property or from texture
-    baseColor = m.color;
+    baseColor = m.color.xyz;
     if (m.textures.x != -1) {
         baseColor = material_textures.Sample(uSampler0[samplerIdx()], float3(IN.Texcoord.xy, m.textures.x)).xyz;
     }
@@ -201,7 +201,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     case 0: break;
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
-    case 3: baseColor = mapNor; break;
+    case 3: baseColor = mapNor.xyz; break;
     }
 
     const float3 globalD = normalize(float3(0.0f, 1.0f, 0.0f));

@@ -59,8 +59,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
         position.z -= 0.1;   
     }
     
-    position.y -= 0.95; // Move the dashboard at the bottom of the viewport
-
+    Projection _projection = cam_projection();
+    
     float3 eyePosition = position;
     float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
 

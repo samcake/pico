@@ -5,13 +5,27 @@
 #ifndef SHADING_INC
 #define SHADING_INC
 
-static const float M_PI = acos(-1);
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
+float3 shading_fresnel(float3 f0, float VdotH) {
+    return f0 + (1.0 - f0) * pow((1.0 - abs(VdotH)), 5.0);
+}
+
+float3 shading_diffuseBrdf(float3 color) {
+    return color / M_PI;
+}
+
+
 
 // The following equation models the Fresnel reflectance term of the spec equation (aka F())
 // Implementation of fresnel from [4], Equation 15
 float3 F_Schlick(float3 f0, float3 f90, float VdotH) {
     return f0 + (f90 - f0) * pow(clamp(1.0 - VdotH, 0.0, 1.0), 5.0);
 }
+
 
 // Smith Joint GGX
 // Note: Vis = G / (4 * NdotL * NdotV)

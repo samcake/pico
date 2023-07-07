@@ -40,11 +40,11 @@ namespace document {
     };
 
     struct ImageDesc {
-        uint32_t width;
-        uint32_t height;
-        uint8_t components;
-        ImageMimeType mimeType;
-        uint64_t pixels_size;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint8_t components = 0;
+        ImageMimeType mimeType = ImageMimeType::JPEG;
+        uint64_t pixels_size = 0;
     };
 
     class Image {

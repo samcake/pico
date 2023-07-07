@@ -72,7 +72,8 @@ void D3D12BatchTimerBackend::begin(ID3D12GraphicsCommandList* _commandList, INT 
     barrier.Transition.Subresource = 0;
     _commandList->ResourceBarrier(1, &barrier);
 
-    _commandList->ResolveQueryData(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, prevFrameIndex * 2, 2, destBuffer, prevFrameIndex * 2 * 8);
+    if (index != 0)
+        _commandList->ResolveQueryData(_queryHeap.Get(), D3D12_QUERY_TYPE_TIMESTAMP, prevFrameIndex * 2, 2, destBuffer, prevFrameIndex * 2 * 8);
 
     barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
     barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
@@ -134,7 +135,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     bi.structStride =  8 * 2;
     bi.numElements = init.numSamples;
   //  bi.raw = true;
-    timer->_buffer = createBuffer(bi, "batch_timer_buffer");
+    timer->_buffer = _createBuffer(bi, "batch_timer_buffer");
 
  //   auto d3d12bb = static_cast<D3D12BufferBackend*>(timer->_buffer.get());
  //   timer->_queryResult = (d3d12bb->_resource);
@@ -165,7 +166,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
         D3D12_HEAP_FLAG_NONE,
         &desc,
-        D3D12_RESOURCE_STATE_COPY_SOURCE,
+        D3D12_RESOURCE_STATE_COMMON, //D3D12_RESOURCE_STATE_COPY_SOURCE,
         nullptr,
         IID_PPV_ARGS(&timer->_queryResult)
     ));

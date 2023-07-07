@@ -27,7 +27,7 @@
 #pragma once
 
 #include <chrono>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Vec.h>
 #include <graphics/render/render.h>
 
 namespace uix {
@@ -62,9 +62,9 @@ namespace uix {
 
         ControlData _controlData;
 
-        void updateCameraFromController(ControlData& control, std::chrono::microseconds& duration);
+        void updateCameraFromController(ControlData& control, const std::chrono::microseconds& duration);
 
-        void update(std::chrono::microseconds& duration);
+        void update(const std::chrono::microseconds& duration);
 
         bool onKeyboard(const KeyboardEvent& e);
         bool onMouse(const MouseEvent& e);

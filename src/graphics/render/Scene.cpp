@@ -27,176 +27,195 @@
 #include "Scene.h"
 
 #include "Sky.h"
-
+#include "drawables/SkyDraw.h"
 
 namespace graphics {
 
-Scene::Scene() {
-    _sky = std::make_shared<Sky>();
-}
+    Scene::Scene(const SceneInit& init) {
 
-Scene::~Scene() {
-    deleteAll();
-}
+        _items.reserve(this, init.device, init.items_capacity);
+        _nodes.reserve(init.device, init.nodes_capacity);
+        _drawables.reserve(init.device, init.drawables_capacity);
+        _cameras.reserve(init.device, init.cameras_capacity);
 
 
-Item Scene::createItem(Node node, Drawable drawable, UserID userID) {
-    return createItem(node.id(), drawable.id(), userID);
-}
+        // A sky draw factory
+        // Assign the sky to the scene here ....
+        // TODO: NO!
+        _skyFactory = std::make_shared<graphics::SkyDrawFactory>(init.device);
+        _sky = _skyFactory->getUniforms()._sky;
 
-Item Scene::createItem(NodeID node, DrawableID drawable, UserID userID) {
+   
+    }
 
-    Item newItem = _items.createItem(this, node, drawable);
+    Scene::~Scene() {
+        deleteAll();
+    }
+
+
+    Item Scene::createItem(Node node, Draw draw, UserID userID) {
+        return createItem(node.id(), draw.id(), userID);
+    }
+
+    Item Scene::createItem(NodeID node, DrawID draw, UserID userID) {
+
+        auto newItem = _items.createItem(node, draw);
     
-    _nodes.reference(node);
-    _drawables.reference(drawable);
+        _nodes.reference(node);
+        _drawables.reference(draw);
 
-    if (userID != INVALID_ITEM_ID) {
-        _idToIndices[userID] = newItem.id();
+        if (userID != INVALID_ITEM_ID) {
+            _userIDToItemIDs[userID] = newItem;
+        }
+
+        return _items.makeItem(newItem);
     }
 
-    return newItem;
-}
+    Item Scene::createSubItem(ItemID group, NodeID node, DrawID draw, UserID userID) {
+        auto newItem = _items.createItem(node, draw, group);
 
-Item Scene::createSubItem(ItemID group, NodeID node, DrawableID drawable, UserID userID) {
-    Item newItem = _items.createItem(this, node, drawable, group);
+        _nodes.reference(node);
+        _drawables.reference(draw);
 
-    _nodes.reference(node);
-    _drawables.reference(drawable);
+        if (userID != INVALID_ITEM_ID) {
+            _userIDToItemIDs[userID] = newItem;
+        }
 
-    if (userID != INVALID_ITEM_ID) {
-        _idToIndices[userID] = newItem.id();
+        return _items.makeItem(newItem);
+
     }
 
-    return newItem;
-}
-
-Item Scene::createSubItem(ItemID group, Node node, Drawable drawable, UserID userID) {
-    return createSubItem(group, node.id(), drawable.id(), userID);
-}
-
-Item Scene::getItem(ItemID id) const {
-    return _items.getItem(id);
-}
-
-const Items& Scene::getItems() const {
-    return _items.getItems();
-}
-
-void Scene::deleteAll() {
-    _idToIndices.clear();
-    _items.freeAll();
-}
-
-// delete all user objects
-void Scene::deleteAllItems() {
-    auto indexIt = _idToIndices.begin();
-    while (_idToIndices.size() && indexIt != _idToIndices.end())
-        deleteItem(indexIt->first);
-}
-
-
-void Scene::deleteItem(ItemID id) {
-    if (!_nodes._tree._indexTable.isValid(id))
-        return;
-
-    // If item is a group item then also delete group items;
-    auto group = _items.getItemGroup(id);
-    for (auto subItem : group) {
-        deleteItem(subItem);
+    Item Scene::createSubItem(ItemID group, Node node, Draw draw, UserID userID) {
+        return createSubItem(group, node.id(), draw.id(), userID);
     }
 
-    auto item = _items.getItem(id);
-    auto nodeID = item.getNodeID();
-    auto drawableID = item.getDrawableID();
-
-    if (_nodes.release(nodeID) <= 0) {
-        _nodes.deleteNode(nodeID);
-    }
-    if (_drawables.release(drawableID) <= 0) {
-        _drawables.free(drawableID);
+    void Scene::deleteAll() {
+        _userIDToItemIDs.clear();
+        _items.freeAll();
+        // TODO : this is doing nothing really ?
     }
 
-    _items.free(id);
+    void Scene::deleteItem(ItemID id) {
+        auto itemInfo = _items.getItemInfo(id);
+        if (!itemInfo.isValid())
+            return;
 
-}
+        // If item is a group item then also delete group items;
+        auto group = _items.fetchItemGroup(id);
+        for (auto subItem : group) {
+            deleteItem(subItem);
+        }
 
-void Scene::deleteItemFromID(UserID id) {
-    auto indexIt = _idToIndices.find(id);
-    if (indexIt != _idToIndices.end()) {
-         auto removedItemIdx = indexIt->second;
-         _idToIndices.erase(indexIt); // frmove from id to idx table
-    
-        _items.free(removedItemIdx);
+        auto nodeID = itemInfo._nodeID;
+        auto DrawID = itemInfo._drawID;
+
+        if (_nodes.release(nodeID) <= 0) {
+            _nodes.free(nodeID);
+        }
+        if (_drawables.release(DrawID) <= 0) {
+            _drawables.free(DrawID);
+        }
+
+        _items.free(id);
+
     }
-}
 
+    // Access item from a UserID
 
-Item Scene::getItemFromID(UserID id) const {
-    auto indexIt = _idToIndices.find(id);
-    if (indexIt != _idToIndices.end()) {
-         return getItems()[indexIt->second];
-    }
-    return Item::null;
-}
-
-Item Scene::getValidItemAt(uint32_t startIndex) const {
-    return _items.getValidItemAt(startIndex);
-}
-
-// Nodes
-Node Scene::getNode(NodeID nodeId) const {
-    return Node(&_nodes, nodeId);
-}
-
-Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-    return Node(&_nodes, _nodes.createNode(rts, parent));
-}
-
-NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
-    return _nodes.createNodeBranch(rootParent, rts, parentOffsets);
-}
-
-
-void Scene::deleteNode(NodeID nodeId) {
-    _nodes.deleteNode(nodeId);
-}
-
-void Scene::attachNode(NodeID child, NodeID parent) {
-    _nodes.attachNode(child, parent);
-}
-
-void Scene::detachNode(NodeID child) {
-    _nodes.detachNode(child);
-}
-
-// Drawables
-Drawable Scene::getDrawable(DrawableID drawableId) const {
-    return _drawables.getDrawable(drawableId);
-}
-
-
-void Scene::updateBounds() {
-
-    core::aabox3 b;
-    const auto& itemInfos = _items._itemInfos;
-    const auto& transforms = _nodes._tree._worldTransforms;
-    const auto& bounds = _drawables._bounds;
-    int i = 0;
-    for (const auto& info : itemInfos) {
-        if (info._nodeID != INVALID_NODE_ID && info._drawableID != INVALID_DRAWABLE_ID) {
-            auto ibw = core::aabox_transformFrom(transforms[info._nodeID], bounds[info._drawableID]._local_box);
-            if (i == 0) {
-                b = ibw;
-            } else {
-                b = core::aabox3::fromBound(b, ibw);
-            } 
-            i++;
+    // delete all items with a user id
+    void Scene::deleteAllItemsWithUserID() {
+        auto indexIt = _userIDToItemIDs.begin();
+        while (_userIDToItemIDs.size() && indexIt != _userIDToItemIDs.end()) {
+            deleteItem(indexIt->second);
+            indexIt = _userIDToItemIDs.begin();
         }
     }
-    _bounds._midPos = b.center;
-    _bounds._minPos = b.minPos();
-    _bounds._maxPos = b.maxPos();
-}
+
+    // delete item with a user id
+    void Scene::deleteItemFromUserID(UserID id) {
+        auto indexIt = _userIDToItemIDs.find(id);
+        if (indexIt != _userIDToItemIDs.end()) {
+            auto removedItemId = indexIt->second;
+            _userIDToItemIDs.erase(indexIt); // frmove from id to idx table
+
+            _items.free(removedItemId);
+        }
+    }
+
+    // get item with a user id
+    Item Scene::getItemFromUserID(UserID id) const {
+        auto indexIt = _userIDToItemIDs.find(id);
+        if (indexIt != _userIDToItemIDs.end()) {
+            return _items.getUnsafeItem(indexIt->second);
+        }
+        return Item::null;
+    }
+
+    // Nodes
+
+    Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
+        return _nodes.makeNode(_nodes.createNode(rts, parent));
+    }
+
+    NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
+        return _nodes.createNodeBranch(rootParent, rts, parentOffsets);
+    }
+
+
+    void Scene::deleteNode(NodeID nodeId) {
+        _nodes.free(nodeId);
+    }
+
+    void Scene::attachNode(NodeID child, NodeID parent) {
+        _nodes.attachNode(child, parent);
+    }
+
+    void Scene::detachNode(NodeID child) {
+        _nodes.detachNode(child);
+    }
+
+    // Draws
+ /*   Draw Scene::getDraw(DrawID DrawID) const {
+        return _drawables.getDraw(DrawID);
+    }*/
+
+
+    void Scene::updateBounds() {
+        auto itemInfos = _items.fetchItemInfos();
+        auto nodeTransforms = _nodes.fetchNodeTransforms();
+        auto drawInfos = _drawables.fetchDrawInfos();
+
+        core::aabox3 b;
+        int i = 0;
+        for (const auto& info : itemInfos) {
+            if (info._nodeID != INVALID_NODE_ID && info._drawID != INVALID_DRAW_ID) {
+                auto ibw = core::aabox_transformFrom(nodeTransforms[info._nodeID].world, drawInfos[info._drawID]._local_box);
+                if (i == 0) {
+                    b = ibw;
+                } else {
+                    b = core::aabox3::fromBound(b, ibw);
+                } 
+                i++;
+            }
+        }
+        _bounds._midPos = b.center;
+        _bounds._minPos = b.minPos();
+        _bounds._maxPos = b.maxPos();
+    }
+
+    CameraPointer Scene::getCamera(CameraID camId) const {
+        return _cameras.getCamera(camId);
+    }
+
+
+    void syncSceneResourcesForFrame(const ScenePointer& scene, const BatchPointer& batch) {
+        scene->_items.syncGPUBuffer(batch);
+        scene->_nodes.syncGPUBuffer(batch);
+        scene->_drawables.syncGPUBuffer(batch);
+        scene->_cameras.syncGPUBuffer(batch);
+
+        scene->_sky->updateGPUData(); // arggg
+
+    }
 
 }

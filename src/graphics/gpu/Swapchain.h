@@ -26,6 +26,7 @@
 //
 #pragma once
 
+#include <core/math/Math3D.h>
 #include <core/api.h>
 
 #include "gpu.h"
@@ -43,7 +44,7 @@ namespace graphics {
         // No depth buffer by default
         bool     depthBuffer{ false };
 
-        PixelFormat colorBufferFormat{ PixelFormat::R8G8B8A8_UNORM };
+        PixelFormat colorBufferFormat{ defaultColorBufferFormat() };
     };
 
     class VISUALIZATION_API Swapchain {
@@ -64,5 +65,6 @@ namespace graphics {
         uint32_t height() const { return _init.height; }
         PixelFormat colorBufferFormat() const { return _init.colorBufferFormat; }
 
+        core::vec4 viewportRect() const { return core::vec4( 0, 0, width(), height());}
     };
 }

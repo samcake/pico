@@ -54,8 +54,8 @@ VertexShaderOutput main(uint ivid : SV_VertexID)
     }
 
     position = worldFromObjectSpace(_model, position);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float3 eyePosition = eyeFromWorldSpace(cam_view(), position);
+    float4 clipPos = clipFromEyeSpace(cam_projection(), eyePosition);
 
     OUT.Position = clipPos;
     OUT.Color = float4(color, 1.0f);

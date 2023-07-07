@@ -29,7 +29,7 @@
 #include <functional>
 #include <vector>
 
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Vec.h>
 #include <core/api.h>
 
 #include "dllmain.h"
@@ -172,9 +172,9 @@ enum MouseState : uint8_t {
 };
 
 struct ResizeEvent {
-    uint32_t width;  // width and ehight of the resize of the CLIENT area
+    uint32_t width;  // width and height of the resize of the CLIENT area
     uint32_t height;
-    bool over{ false };
+    bool done{ false };
 };
 struct PaintEvent {
 };
@@ -208,6 +208,7 @@ public:
 };
 
 class WindowHandlerDelegate : public uix::WindowHandler {
+    bool _missedPrevEvent = true;
 public:
     std::function<void(const uix::ResizeEvent&)> _onResizeDelegate;
     std::function<void(const uix::PaintEvent&)> _onPaintDelegate;
@@ -219,7 +220,12 @@ public:
     }
 
     void onResize(const uix::ResizeEvent& e) override {
-        if (_onResizeDelegate) _onResizeDelegate(e);
+        if (_onResizeDelegate) {
+            _onResizeDelegate({ e.width, e.height, e.done || _missedPrevEvent });
+            _missedPrevEvent = false;
+        }
+        else
+            _missedPrevEvent = true;
     }
     void onPaint(const uix::PaintEvent& e) override {
         if (_onPaintDelegate) _onPaintDelegate(e);

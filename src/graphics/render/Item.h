@@ -28,12 +28,11 @@
 
 #include <vector>
 #include <unordered_map>
-#include <iostream>
-#include <core/math/LinearAlgebra.h>
+#include <core/math/Math3D.h>
 
 #include "render/Transform.h"
 
-#include "render/Drawable.h"
+#include "render/Draw.h"
 
 #include "render/Renderer.h"
 
@@ -42,121 +41,182 @@ namespace graphics {
     using ItemID = core::IndexTable::Index;
     using ItemIDs = core::IndexTable::Indices;
     static const ItemID INVALID_ITEM_ID = core::IndexTable::INVALID_INDEX;
+    using IDToIndices = std::unordered_map<ItemID, uint32_t>;
 
 
-    class ItemStore;
 
-    class VISUALIZATION_API Item {
+    class VISUALIZATION_API ItemStore {
     public:
-        static Item null;
+        // Right after allocation, MUST call the reserve function to assign the Scene and allocate the memory chuncks
+        void reserve(const Scene* scene, const DevicePointer& device, uint32_t  capacity);
 
-        Item() {} // null item
-
-        Item(const Item& src) = default;
-        Item& Item::operator= (const Item&) = default;
-
-        bool isValid() const { return (_self.get() != nullptr); }
-        ItemID id() const { return  _self->id(); }
-
-        void setVisible(bool visible) { _self->setVisible(visible); }
-        bool isVisible() const { return _self->isVisible(); }
-        bool toggleVisible() { return _self->toggleVisible(); }
-
-        NodeID getNodeID() const { return _self->getNodeID(); }
-
-        DrawableID getDrawableID() const { return _self->getDrawableID(); }
-
-        ItemID getGroupID() const { return _self->getGroupID(); }
-
-        core::aabox3 fetchWorldBound() const { return _self->fetchWorldBound(); }
-
-    private:
-        struct Concept {
-            const Scene* _scene{ nullptr };
-            const ItemStore* _store{ nullptr };
-            const ItemID _id{ INVALID_ITEM_ID };
-    
-            Concept(const Scene* scene, const ItemStore* store, ItemID index) :
-                _scene(scene),
-                _store(store),
-                _id(index) {}
-
-            ItemID id() const { return  _id; }
-
-            void setVisible(bool visible);
-            bool isVisible() const;
-            bool toggleVisible();
-            void setNode(Node node);
-            NodeID getNodeID() const;
-            void setDrawable(Drawable drawable);
-            DrawableID getDrawableID() const;
-            ItemID getGroupID() const;
-
-            core::aabox3 fetchWorldBound() const;
+        // Guts of an item, ItemInfo and ItemFlags
+        enum ItemFlags : uint32_t {
+            IS_INVALID = 0xFFFFFFFF, // force the flags to all 1 is a special value meaning the info is invalid
+            IS_VISIBLE = 0x00000001,
+            IS_CAMERA = 0x00000002,
         };
-
-        std::shared_ptr<Concept> _self;
-
-        friend class ItemStore;
-        Item(Concept* self) : _self(self) { }
-    };
-
-    using Items = std::vector<Item>;
-    using ItemIDMap = std::unordered_map<ItemID, Items>;
-
-    class ItemStore {
-        ItemID newID();
-        Item allocate(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
-    public:
 
         struct ItemInfo {
             NodeID _nodeID{ INVALID_NODE_ID };
-            DrawableID _drawableID{ INVALID_DRAWABLE_ID };
+            DrawID _drawID{ INVALID_DRAW_ID };
             ItemID _groupID{ INVALID_ITEM_ID };
-            uint32_t _isVisible{ true };
+            uint32_t _flags{ IS_INVALID }; // by default the Info is invalid!
 
-            inline bool toggleVisible() { _isVisible = !_isVisible; return _isVisible; }
+            inline void setVisible(bool visible) { if (isVisible() != visible) toggleVisible(); }
+            inline bool isVisible() const { return ((_flags & IS_VISIBLE) != 0); }
+            inline bool toggleVisible() { _flags ^= IS_VISIBLE; return isVisible(); }
+
+            inline void setCamera(bool camera) { if (isCamera() != camera) toggleCamera(); }
+            inline bool isCamera() const { return ((_flags & IS_CAMERA) != 0); }
+            inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
+
+            inline bool hasNode() const { return _nodeID != INVALID_NODE_ID; }
+            inline bool isDraw() const { return _drawID != INVALID_DRAW_ID; }
+            inline bool isGrouped() const { return _groupID != INVALID_ITEM_ID; }
+
+            inline bool isValid() const { return _flags != 0xFFFFFFFF; }
+        };
+        using ItemStructBuffer = StructuredBuffer<ItemInfo>;
+        using ItemInfos = ItemStructBuffer::Array;
+
+    private:
+        ItemID allocate(NodeID node, DrawID draw, ItemID owner = INVALID_ITEM_ID);
+
+        core::IndexTable _indexTable;
+        mutable ItemStructBuffer _itemInfos;
+
+        mutable ItemIDs _touchedElements;
+
+        const Scene* _scene = nullptr;
+
+        using ReadLock = std::pair< const ItemInfo*, std::lock_guard<std::mutex>>;
+        using WriteLock = std::pair< ItemInfo*, std::lock_guard<std::mutex>>;
+
+        inline ReadLock read(ItemID id) const {
+            return  _itemInfos.read(id);
+        }
+        inline WriteLock write(ItemID id) const {
+            _touchedElements.emplace_back(id); // take not of the write for this element
+            return  _itemInfos.write(id);
+        }
+
+        struct Handle {
+            ItemStore* _store = nullptr;
+            ItemID     _id = INVALID_ITEM_ID;
+
+            inline bool isValidHandle() const {
+                return (_store != nullptr) && (_id != INVALID_ITEM_ID);
+            }
         };
 
-        Item createItem(const Scene* scene, Node node, Drawable drawable, ItemID owner = INVALID_ITEM_ID);
-        Item createItem(const Scene* scene, NodeID node, DrawableID drawable, ItemID owner = INVALID_ITEM_ID);
-        void free(ItemID index);
+    public:
+
+        // Item struct is  just an interface on a particular ItemInfo stored in the Item Store at ItemID.
+        // Item can be copied by value
+        struct Item {
+        public:
+            static Item null;
+
+            Item() {} // null item
+            Item(const Item& src) = default;
+            Item& operator= (const Item&) = default;
+
+            inline bool isValid() const {
+                if (_self.isValidHandle())
+                    return store()->isValid(id());
+                return false;
+            }
+            inline ItemID   id() const { return  _self._id; }
+            inline const ItemStore* store() const { return _self._store; }
+            inline ItemStore* store() { return _self._store; }
+
+            inline ItemInfo info() const { return store()->getItemInfo(id()); }
+        
+            inline void setVisible(bool visible) { store()->setVisible(id(), visible); }
+            inline bool isVisible() const { return store()->isVisible(id()); }
+            inline bool toggleVisible() { return store()->toggleVisible(id()); }
+
+            inline void setCamera(bool camera) { store()->setCamera(id(), camera); }
+            inline bool isCamera() const { return store()->isCamera(id()); }
+            inline bool toggleCamera() { return store()->toggleCamera(id()); }
+
+            inline NodeID nodeID() const { return store()->getNodeID(id()); }
+            inline DrawID DrawID() const { return store()->getDrawID(id()); }
+            inline ItemID groupID() const { return store()->getGroupID(id()); }
+
+
+
+            inline core::aabox3 fetchWorldBound() const { return store()->fetchWorldBound(id()); }
+
+            inline ItemIDs fetchItemGroup(ItemID owner) const { return store()->fetchItemGroup(id()); }
+
+        private:
+            Handle _self;
+
+            friend ItemStore;
+            Item(const Handle& h) : _self(h) {}
+        };
+        inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
+
+        ItemID createItem(NodeID node, DrawID draw, ItemID group = INVALID_ITEM_ID);
+        void free(ItemID id);
         void freeAll();
 
-        Item getItem(ItemID index) const { return _items[index]; }
-        Item getValidItemAt(ItemID index) const;
+        inline auto numValidItems() const { return _indexTable.getNumValidElements(); }
+        inline auto numAllocatedItems() const { return _indexTable.getNumAllocatedElements(); }
 
-        const Items& getItems() const { return _items; };
-        const ItemInfo& getInfo(ItemID index) const { return _itemInfos[index]; }
+        inline Item getItem(ItemID id) const { return (isValid(id) ? Item(Handle{ const_cast<ItemStore*>(this), id }) : Item::null); }
+        inline Item getUnsafeItem(ItemID id) const { return Item(Handle{ const_cast<ItemStore*>(this), id }); } // We do not check that the itemID is valid here, so could get a fake valid item
+        Item getValidItemAt(ItemID id) const;
 
-        ItemIDs getItemGroup(ItemID owner) const;
-    protected:
-        friend class Item;
-        friend class Scene;
-        core::IndexTable _indexTable;
-        Items _items;
-        mutable std::vector<ItemInfo> _itemInfos;
-        
-        ItemInfo& editInfo(ItemID index) const { _touchedElements.push_back(index);  return _itemInfos[index]; }
+        ItemIDs fetchValidItems() const;
+        ItemInfos fetchItemInfos() const; // Collect all the ItemInfos in an array, there could be INVALID itemInfos
 
-        uint32_t  _num_buffers_elements{ 0 };
-        mutable std::vector<ItemID> _touchedElements;
+        // Item interface replicated
+        inline bool isValid(ItemID id) const { return getItemInfo(id).isValid(); }
+  
+        inline ItemInfo getItemInfo(ItemID id) const {
+            auto [i, l] = read(id);
+            return *i;
+        }
+
+        inline void setVisible(ItemID id, bool visible) {
+            auto [i, l] = write(id);
+            i->setVisible(visible);
+        }
+        inline bool isVisible(ItemID id) const { return getItemInfo(id).isVisible(); }
+        inline bool toggleVisible(ItemID id) {
+            auto [i, l] = write(id);
+            return i->toggleVisible();
+        }
+
+        inline void setCamera(ItemID id, bool isCamera) {
+            auto [i, l] = write(id);
+            i->setCamera(isCamera);
+        }
+        inline bool isCamera(ItemID id) const { return getItemInfo(id).isCamera(); }
+        inline bool toggleCamera(ItemID id) {
+            auto [i, l] = write(id);
+            return i->toggleCamera();
+        }
+
+        inline NodeID getNodeID(ItemID id) const { return getItemInfo(id)._nodeID; }
+        inline DrawID getDrawID(ItemID id) const { return getItemInfo(id)._drawID; }
+        inline ItemID getGroupID(ItemID id) const { return getItemInfo(id)._groupID; }
+
+        core::aabox3 fetchWorldBound(ItemID id) const;
+
+        ItemIDs fetchItemGroup(ItemID ownerID) const;
+
     public:
-        BufferPointer _items_buffer;
-        void resizeBuffers(const DevicePointer& device, uint32_t  numElements);
-        void syncBuffer();
+        // gpu api
+        inline BufferPointer getGPUBuffer() const { return _itemInfos.gpu_buffer(); }
+        void syncGPUBuffer(const BatchPointer& batch);
     };
 
-    inline void Item::Concept::setVisible(bool visible) { _store->editInfo(_id)._isVisible = visible; }
-    inline bool Item::Concept::isVisible() const { return _store->getInfo(_id)._isVisible; }
-    inline bool Item::Concept::toggleVisible() { return _store->editInfo(_id).toggleVisible(); }
-    inline void Item::Concept::setNode(Node node) { _store->editInfo(_id)._nodeID = node.id(); }
-    inline NodeID Item::Concept::getNodeID() const { return _store->getInfo(_id)._nodeID; }
-    inline void Item::Concept::setDrawable(Drawable drawable) { _store->editInfo(_id)._drawableID = drawable.id(); }
-    inline DrawableID Item::Concept::getDrawableID() const { return _store->getInfo(_id)._drawableID; }
-    inline ItemID Item::Concept::getGroupID() const { return _store->getInfo(_id)._groupID; }
-
-
-    using IDToIndices = std::unordered_map<ItemID, uint32_t>;
-
+    using Item = ItemStore::Item;
+    using ItemFlags = ItemStore::ItemFlags;
+    using ItemInfo = ItemStore::ItemInfo;
+    using ItemInfos = ItemStore::ItemInfos;
 }

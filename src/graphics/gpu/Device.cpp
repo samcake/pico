@@ -30,6 +30,18 @@
 
 #include "../d3d12/D3D12Backend.h"
 
+
+graphics::PixelFormat graphics::defaultColorBufferFormat() {
+    return  graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
+    //return  graphics::PixelFormat::R8G8B8A8_UNORM;
+    
+    //return  graphics::PixelFormat::R10G10B10_XR_BIAS_A2_UNORM; // doesn't work in some pipeline ?
+    //return  graphics::PixelFormat::R10G10B10A2_UNORM;
+
+    //return  graphics::PixelFormat::R16G16B16A16_FLOAT;
+}
+
+
 using namespace graphics;
 
 

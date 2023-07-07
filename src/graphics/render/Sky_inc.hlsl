@@ -8,6 +8,10 @@
 #ifndef SKY_INC
 #define SKY_INC
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 struct Atmosphere {
     float4 er_ar_hr_hm;
     float4 betaR; // { 5.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
@@ -50,7 +54,6 @@ int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float
 }
 
 float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
-    const float M_PI = acos(-1);
     float earthRadius = atmos.earthRadius();
     float atmosphereRadius = atmos.atmosphereRadius();          
     float Hr = atmos.Hr();   
@@ -297,10 +300,10 @@ float3 sky_evalIrradianceSH(float3 dir) {
             + c3 * _irradianceSH.L20.xyz * d.z * d.z
             + c4 * _irradianceSH.L00.xyz
             - c5 * _irradianceSH.L20.xyz
-            + 2 * c1 * (_irradianceSH.L2_2.xyz * d.x * d.y
+            + 2.0 * c1 * (_irradianceSH.L2_2.xyz * d.x * d.y
                         + _irradianceSH.L21.xyz * d.x * d.z
                         + _irradianceSH.L2_1.xyz * d.y * d.z)
-            + 2 * c2 * (_irradianceSH.L11.xyz * d.x
+            + 2.0 * c2 * (_irradianceSH.L11.xyz * d.x
                         + _irradianceSH.L1_1.xyz * d.y
                         + _irradianceSH.L10.xyz * d.z);
 

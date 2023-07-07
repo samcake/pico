@@ -62,9 +62,6 @@ void Batch::resourceBarrierRW(
 void Batch::resourceBarrierRW(
     ResourceBarrierFlag flag, const TexturePointer& texture, uint32_t subresource) {}
 
-void Batch::setViewport(const core::vec4& viewport) {}
-void Batch::setScissor(const core::vec4& scissor) {}
-
 void Batch::bindFramebuffer(const FramebufferPointer& framebuffer) {}
 
 void Batch::bindRootDescriptorLayout(PipelineType type, const RootDescriptorLayoutPointer& rootLayout) {}

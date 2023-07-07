@@ -57,7 +57,8 @@ VertexShaderOutput main(uint vidx : SV_VertexID) {
     position += _triangleScale * (barycenter - position);
 
     Transform _model = node_getWorldTransform(_instance.x);
-
+    Transform _view = cam_view();
+    Projection _projection = cam_projection();
 
     position = worldFromObjectSpace(_model, position);
     float3 eyePosition = eyeFromWorldSpace(_view, position);
