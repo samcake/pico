@@ -88,10 +88,10 @@ std::tuple<NodeArray, ItemArray> parseNodes(const json& gltf_nodes) {
                     T.z = t[2];
                 }
                 if (r.is_array() ) {
-                    R.a = r[3];
-                    R.b.xy = r[2];
-                    R.b.xz = r[1];
-                    R.b.yz = r[0];
+                    R.a = r[3];    // w
+                    R.b.xy = r[2]; // z
+                    R.b.xz = r[1]; // y
+                    R.b.yz = r[0]; // x
                 }
                 if (s.is_array()) {
                     S.x = s[0];
@@ -575,6 +575,10 @@ std::tuple<ImageArray, ImageReferenceArray> parseImages(const json& gltf_images,
             if (imageReference._data.size()) {
                 //imageReference._mimeType;
                 image.loadFromMemory(ImageMimeType::JPEG, imageReference._data);
+            }
+            else {
+                //couldn't really find the image
+                picoLog(std::format("Failed to load image {}", imageReference._name));
             }
 
             imageReferences.emplace_back(imageReference);
