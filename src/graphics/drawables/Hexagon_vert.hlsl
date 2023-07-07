@@ -115,8 +115,8 @@ VertexShaderOutput main_hex_ico(uint ivid : SV_VertexID)
 
     position = normalize(position);
     float3 color = float3(1.0, 1.0, 1.0);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float3 eyePosition = eyeFromWorldSpace(cam_view(), position);
+    float4 clipPos = clipFromEyeSpace(cam_projection(), eyePosition);
 
     OUT.Position = clipPos;
     OUT.Coords = coords;
@@ -155,8 +155,8 @@ VertexShaderOutput main_hex(uint ivid : SV_VertexID)
 
 
     float3 color = float3(1.0, 1.0, 1.0);
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float3 eyePosition = eyeFromWorldSpace(cam_view(), position);
+    float4 clipPos = clipFromEyeSpace(cam_projection(), eyePosition);
 
     OUT.Position = clipPos;
     OUT.Coords = coords;
@@ -192,10 +192,10 @@ FUllScreenViewportOutput main_fsv(uint ivid : SV_VertexID)
     position.y = 0;
 
 
-    float4 coords = float4(position.xz, _view.col_w().xz);
+    float4 coords = float4(position.xz, cam_view().col_w().xz);
 
-    float3 eyePosition = eyeFromWorldSpace(_view, position);
-    float4 clipPos = clipFromEyeSpace(_projection, eyePosition);
+    float3 eyePosition = eyeFromWorldSpace(cam_view(), position);
+    float4 clipPos = clipFromEyeSpace(cam_projection(), eyePosition);
 
     OUT.Position = clipPos;
     OUT.Coords = coords;

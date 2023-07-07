@@ -56,9 +56,9 @@
 namespace graphics
 {
 
-    HexagonDrawFactory::HexagonDrawFactory() :
+    HexagonDrawFactory::HexagonDrawFactory(const graphics::DevicePointer& device) :
         _sharedUniforms(std::make_shared<HexagonDrawUniforms>()) {
-
+        allocateGPUShared(device);
     }
     HexagonDrawFactory::~HexagonDrawFactory() {
 
@@ -120,15 +120,17 @@ namespace graphics
         _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-    graphics::HexagonDraw* HexagonDrawFactory::createDrawable(const graphics::DevicePointer& device) {
-        auto primitiveDrawable = new HexagonDraw();
-        primitiveDrawable->_uniforms = _sharedUniforms;
-        return primitiveDrawable;
+    graphics::HexagonDraw HexagonDrawFactory::createDraw(const graphics::DevicePointer& device) {
+        HexagonDraw primitiveDraw;
+        primitiveDraw._uniforms = _sharedUniforms;
+
+        allocateDrawcallObject(device, primitiveDraw);
+
+        return primitiveDraw;
     }
 
    void HexagonDrawFactory::allocateDrawcallObject(
         const graphics::DevicePointer& device,
-        const graphics::ScenePointer& scene,
         graphics::HexagonDraw& prim)
     {
         auto prim_ = &prim;
@@ -156,7 +158,7 @@ namespace graphics
 
 
         // And now a render callback where we describe the rendering sequence
-        graphics::DrawObjectCallback drawCallback = [prim_, pipeline](const NodeID node, RenderArgs& args) {
+        prim._drawcall = [prim_, pipeline](const NodeID node, RenderArgs& args) {
             args.batch->bindPipeline(pipeline);
             args.batch->setViewport(args.camera->getViewportRect());
             args.batch->setScissor(args.camera->getViewportRect());
@@ -173,7 +175,6 @@ namespace graphics
            args.batch->draw(3, 0);
 
         };
-        prim._drawcall = drawCallback;
     }
 
 } // !namespace graphics

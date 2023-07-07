@@ -242,14 +242,11 @@ int main(int argc, char *argv[])
 
 
     // A hexagon factory and drawable to represent some debug data
-    auto hexagonDrawFactory = std::make_shared<graphics::HexagonDrawFactory>();
-    hexagonDrawFactory->allocateGPUShared(gpuDevice);
+    auto hexagonDrawFactory = std::make_shared<graphics::HexagonDrawFactory>(gpuDevice);
 
     // a hexagon
-    auto hexagon_draw = state.scene->createDraw(*hexagonDrawFactory->createDrawable(gpuDevice));
-    hexagonDrawFactory->allocateDrawcallObject(gpuDevice, state.scene, hexagon_draw.as<graphics::HexagonDraw>());
-
-    auto hexagon_item = state.scene->createItem(graphics::Node::null, hexagon_draw);
+    auto hexagonDraw = state.scene->createDraw(hexagonDrawFactory->createDraw(gpuDevice));
+    auto hexagonItem = state.scene->createItem(graphics::Node::null, hexagonDraw);
 
     // Some nodes to layout the scene and animate objects
     state.models.rootNodeID = state.scene->createNode(core::mat4x3(), -1).id();

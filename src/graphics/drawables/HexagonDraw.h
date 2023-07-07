@@ -53,20 +53,11 @@ namespace graphics {
 
     class VISUALIZATION_API HexagonDrawFactory {
     public:
-        HexagonDrawFactory();
+        HexagonDrawFactory(const graphics::DevicePointer& device);
         ~HexagonDrawFactory();
 
-        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
-        void allocateGPUShared(const graphics::DevicePointer& device);
-
         // Create HexagonDraw
-        graphics::HexagonDraw* createDrawable(const graphics::DevicePointer& device);
-
-        // Create Drawcall object drawing the HexagonDraw in the rendering context
-        void allocateDrawcallObject(
-            const graphics::DevicePointer& device,
-            const graphics::ScenePointer& scene,
-            graphics::HexagonDraw& primitive);
+        graphics::HexagonDraw createDraw(const graphics::DevicePointer& device);
 
         // Read / write shared uniforms
         const HexagonDrawUniforms& getUniforms() const { return (*_sharedUniforms); }
@@ -75,6 +66,14 @@ namespace graphics {
     protected:
         HexagonDrawUniformsPointer _sharedUniforms;
         graphics::PipelineStatePointer _primitivePipeline;
+
+        // Cache the shaders and pipeline to share them accross multiple instances of drawcalls
+        void allocateGPUShared(const graphics::DevicePointer& device);
+
+        // Create Drawcall object drawing the HexagonDraw in the rendering context
+        void allocateDrawcallObject(
+            const graphics::DevicePointer& device,
+            graphics::HexagonDraw& primitive);
     };
     using HexagonDrawFactoryPointer = std::shared_ptr< HexagonDrawFactory>;
 
