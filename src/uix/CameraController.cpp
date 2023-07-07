@@ -39,14 +39,14 @@ CameraController::CameraController(const graphics::CameraPointer& cam, bool orth
 
 }
 
-void CameraController::update(std::chrono::microseconds& duration) {
+void CameraController::update(const std::chrono::microseconds& duration) {
     // copy the control data and excute on this
     ControlData data = _controlData;
     updateCameraFromController(data, duration);
 }
 
 void CameraController::updateCameraFromController(CameraController::ControlData& control,
-    std::chrono::microseconds& duration) {
+    const std::chrono::microseconds& duration) {
 
     if (!_cam) return;
 

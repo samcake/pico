@@ -50,7 +50,6 @@ namespace graphics {
         // Right after allocation, MUST call the reserve function to assign the Scene and allocate the memory chuncks
         void reserve(const Scene* scene, const DevicePointer& device, uint32_t  capacity);
 
-
         // Guts of an item, ItemInfo and ItemFlags
         enum ItemFlags : uint32_t {
             IS_INVALID = 0xFFFFFFFF, // force the flags to all 1 is a special value meaning the info is invalid
@@ -121,7 +120,7 @@ namespace graphics {
 
             Item() {} // null item
             Item(const Item& src) = default;
-            Item& Item::operator= (const Item&) = default;
+            Item& operator= (const Item&) = default;
 
             inline bool isValid() const {
                 if (_self.isValidHandle())
@@ -156,7 +155,7 @@ namespace graphics {
             Handle _self;
 
             friend ItemStore;
-            Item(Handle& h) : _self(h) {}
+            Item(const Handle& h) : _self(h) {}
         };
         inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
 

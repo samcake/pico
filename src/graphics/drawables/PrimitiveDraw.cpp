@@ -109,7 +109,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState(),
-                    true, // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _primitivePipeline = device->createGraphicsPipelineState(pipelineInit);

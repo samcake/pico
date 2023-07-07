@@ -393,8 +393,9 @@ void CameraStore::reserve(const DevicePointer& device, uint32_t capacity) {
 CameraPointer CameraStore::createCamera() {
 
     auto alloc = _indexTable.allocate();
+    CameraData camData;
 
-    _cameraStructBuffer.allocate_element(alloc.index, &CameraData());
+    _cameraStructBuffer.allocate_element(alloc.index, &camData);
 
     CameraPointer camera(new Camera({ &_cameraStructBuffer, alloc.index }));
 

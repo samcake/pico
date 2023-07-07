@@ -125,7 +125,7 @@ namespace graphics {
 
             Node() {} // null item
             Node(const Node& src) = default;
-            Node& Node::operator= (const Node&) = default;
+            Node& operator= (const Node&) = default;
 
             inline bool isValid() const {
                 if (_self.isValidHandle())
@@ -144,9 +144,9 @@ namespace graphics {
             Handle _self;
 
             friend NodeStore;
-            Node(Handle& h) : _self(h) {}
+            Node(const Handle& h) : _self(h) {}
         };
-        inline Node makeNode(NodeID id) { return { Handle{ this, id } }; }
+        inline Node makeNode(NodeID id) { return { Handle{ this, id }}; }
 
         NodeID createNode(const Transform& local, NodeID parent);
         NodeIDs createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets);
