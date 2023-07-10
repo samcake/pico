@@ -143,7 +143,8 @@ int main(int argc, char *argv[])
     // Renderer creation
 
     // First a device, aka the gpu api used by pico
-    graphics::DeviceInit deviceInit {};
+  //  graphics::DeviceInit deviceInit{};
+    graphics::DeviceInit deviceInit { "VK" };
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
 

@@ -50,7 +50,6 @@ namespace graphics {
         // Right after allocation, MUST call the reserve function to assign the Scene and allocate the memory chuncks
         void reserve(const Scene* scene, const DevicePointer& device, uint32_t  capacity);
 
-
         // Guts of an item, ItemInfo and ItemFlags
         enum ItemFlags : uint32_t {
             IS_INVALID = 0xFFFFFFFF, // force the flags to all 1 is a special value meaning the info is invalid

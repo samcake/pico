@@ -132,7 +132,7 @@ namespace graphics
                         StreamLayout(),
                         graphics::PrimitiveTopology::TRIANGLE,
                         RasterizerState(),
-                        DepthStencilState(true), // enable depth
+                        {true}, // enable depth
                         BlendState()
             };
             _skyPipeline = device->createGraphicsPipelineState(pipelineInit);

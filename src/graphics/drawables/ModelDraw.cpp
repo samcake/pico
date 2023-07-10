@@ -148,7 +148,7 @@ namespace graphics
                     StreamLayout(),
                     graphics::PrimitiveTopology::TRIANGLE,
                     RasterizerState().withCullBack(),
-                    DepthStencilState(true), // enable depth
+                    {true}, // enable depth
                     BlendState()
         };
         _pipeline = device->createGraphicsPipelineState(pipelineInit);
@@ -597,15 +597,17 @@ namespace graphics
                 pixels.emplace_back(std::move(i._pixels));
             }
             
-            TextureInit texInit;
-            texInit.width = maxWidth;
-            texInit.height = maxHeight;
-            texInit.numSlices = numImages;
-            texInit.initData = std::move(pixels);
-            texInit.format = graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
-            auto albedoresourceTexture = device->createTexture(texInit);
+            if (maxWidth > 0 && maxHeight > 0 && numImages > 0) {
+                TextureInit texInit;
+                texInit.width = maxWidth;
+                texInit.height = maxHeight;
+                texInit.numSlices = numImages;
+                texInit.initData = std::move(pixels);
+                texInit.format = graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
+                auto albedoresourceTexture = device->createTexture(texInit);
 
-            modelDraw->_albedoTexture = albedoresourceTexture;
+                modelDraw->_albedoTexture = albedoresourceTexture;
+            }
         }
         
         // Model local bound is the containing box for all the local items of the model

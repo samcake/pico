@@ -37,6 +37,8 @@
 #include <uix/Window.h>
 
 
+#include <core/stl/Graph.h>
+
 //--------------------------------------------------------------------------------------
 // pico 1: Clear a swapchain
 // introducing:
@@ -60,71 +62,77 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-  /*  result = pico::api::create(pico_init);
-    if (!result) {
-        std::clog << "Pico api failed to create on second attempt, yes?" << std::endl;
-    }*/
+    // core::Graph::testGraph();
 
-    // Content creation
+    bool showWindow = true;
+    if (showWindow) {
 
-    // Renderer creation
+        /*  result = pico::api::create(pico_init);
+          if (!result) {
+              std::clog << "Pico api failed to create on second attempt, yes?" << std::endl;
+          }*/
 
-    // First a device, aka the gpu api used by pico
-    //graphics::DeviceInit deviceInit{ "D3D12" };
-   graphics::DeviceInit deviceInit { "VK" };
-    auto gpuDevice = graphics::Device::createDevice(deviceInit);
+          // Content creation
 
-    // Next, a renderer built on this device
-    // the default renderer without any further configuration will do
-    //  a clear color of the swapchain passed in the render call
-    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, nullptr);
+          // Renderer creation
 
-    // Presentation creation
+          // First a device, aka the gpu api used by pico
+  //      graphics::DeviceInit deviceInit{};
+        graphics::DeviceInit deviceInit{ "VK" };
+        auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
-    // We need a window where to present, let s use the pico::Window for convenience
-    // This could be any window, we just need the os handle to create the swapchain next.
-    auto windowHandler = new uix::WindowHandlerDelegate();
-    uix::WindowInit windowInit { windowHandler };
-    auto window = uix::Window::createWindow(windowInit);
+        // Next, a renderer built on this device
+        // the default renderer without any further configuration will do
+        //  a clear color of the swapchain passed in the render call
+        auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, nullptr);
 
-    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height() };
-    auto swapchain = gpuDevice->createSwapchain(swapchainInit);
+        // Presentation creation
+
+        // We need a window where to present, let s use the pico::Window for convenience
+        // This could be any window, we just need the os handle to create the swapchain next.
+        auto windowHandler = new uix::WindowHandlerDelegate();
+        uix::WindowInit windowInit{ windowHandler };
+        auto window = uix::Window::createWindow(windowInit);
+
+        graphics::SwapchainInit swapchainInit{ (HWND)window->nativeWindow(), window->width(), window->height() };
+        auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
 
-    //Now that we have created all the elements, 
-    // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
-        // Measuring framerate
-        static uint64_t frameCounter = 0;
-        static double elapsedSeconds = 0.0;
-        static std::chrono::high_resolution_clock clock;
-        static auto t0 = clock.now();
+        //Now that we have created all the elements, 
+        // We configure the windowHandler onPaint delegate of the window to do real rendering!
+        windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
+            // Measuring framerate
+            static uint64_t frameCounter = 0;
+            static double elapsedSeconds = 0.0;
+            static std::chrono::high_resolution_clock clock;
+            static auto t0 = clock.now();
 
-        frameCounter++;
-        auto t1 = clock.now();
-        auto deltaTime = t1 - t0;
-        t0 = t1;
+            frameCounter++;
+            auto t1 = clock.now();
+            auto deltaTime = t1 - t0;
+            t0 = t1;
 
-        elapsedSeconds += deltaTime.count() * 1e-9;
-        if (elapsedSeconds > 1.0) {
-            char buffer[500];
-            auto fps = frameCounter / elapsedSeconds;
-            sprintf_s(buffer, 500, "FPS: %f\n", fps);
-            OutputDebugString(buffer);
-            frameCounter = 0;
-            elapsedSeconds = 0.0;
+            elapsedSeconds += deltaTime.count() * 1e-9;
+            if (elapsedSeconds > 1.0) {
+                char buffer[500];
+                auto fps = frameCounter / elapsedSeconds;
+                sprintf_s(buffer, 500, "FPS: %f\n", fps);
+                OutputDebugString(buffer);
+                frameCounter = 0;
+                elapsedSeconds = 0.0;
+            }
+
+            // Render!
+            // By default just clear the swapchain
+            renderer->render(nullptr, swapchain);
+            });
+
+        // Render Loop 
+        bool keepOnGoing = true;
+        while (keepOnGoing) {
+            keepOnGoing = window->messagePump();
+
         }
-
-        // Render!
-        // By default just clear the swapchain
-        renderer->render(nullptr, swapchain);
-    });
-
-    // Render Loop 
-    bool keepOnGoing = true;
-    while (keepOnGoing) {
-        keepOnGoing = window->messagePump();
-
     }
 
     core::api::destroy();

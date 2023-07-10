@@ -40,7 +40,7 @@ namespace core
         float* data() { return _columns[0].data(); }
         const float* data() const { return _columns[0].data(); }
 
-        inline mat4x3() {}
+        mat4x3() {}
         inline mat4x3(const vec3& c0, const vec3& c1, const vec3& c2, const vec3& c3) {
             _columns[0] = (c0);
             _columns[1] = (c1);
@@ -87,14 +87,14 @@ namespace core
         return mat;
     }
     inline mat4x3 rotation(const rotor3& r) {
-        mat4x3 m; 
+        mat4x3 m;
         return rotation(m, r);
     }
     inline mat4x3& translation_rotation(mat4x3& mat, const vec3& t, const rotor3& r) {
         return translation(rotation(mat, r), t);
     }
     inline mat4x3 translation_rotation(const vec3& t, const rotor3& r) {
-        mat4x3 m; 
+        mat4x3 m;
         return translation_rotation(m, t, r);
     }
     inline mat4x3& rotate(mat4x3& mat, const rotor3& r) {
