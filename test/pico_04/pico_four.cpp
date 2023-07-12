@@ -59,6 +59,7 @@
 
 #include <graphics/drawables/DashboardDraw.h>
 
+#include <graphics/drawables/ModelDraw.h>
 
 #include <uix/Window.h>
 #include <uix/CameraController.h>
@@ -74,6 +75,137 @@
 // draw::PointcloudDraw
 // uix::CameraController
 //--------------------------------------------------------------------------------------
+
+
+struct AppState {
+
+    graphics::ModelDrawFactoryPointer _modelDrawFactory;
+    graphics::ModelDrawUniformsPointer _modelDrawParams;
+
+
+    graphics::ScenePointer scene;
+    struct {
+        graphics::NodeID rootNodeID;
+        graphics::ItemID modelItemID;
+    } models;
+
+    struct {
+        graphics::CameraID _current = graphics::INVALID_CAMERA_ID;
+    } cams;
+
+
+    core::vec3 _modelInsertOffset;
+
+    struct {
+        graphics::Item tree_node;
+        graphics::Item tree_item;
+        graphics::Item dashboard;
+
+        bool sky_ui{ true };
+    } tools;
+
+};
+
+AppState state;
+
+
+graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DevicePointer& gpuDevice, graphics::ScenePointer& scene, graphics::NodeID nodeRoot) {
+
+    if (!state._modelDrawFactory) {
+        state._modelDrawFactory = std::make_shared<graphics::ModelDrawFactory>(gpuDevice);
+        state._modelDrawParams = state._modelDrawFactory->getUniformsPtr();
+    }
+
+    graphics::ItemIDs modelItemIDs;
+    if (lmodel) {
+        auto modelDrawPtr = state._modelDrawFactory->createModel(gpuDevice, lmodel);
+        state._modelDrawFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawPtr);
+
+
+        modelItemIDs = state._modelDrawFactory->createModelParts(nodeRoot, scene, *modelDrawPtr);
+
+        // let's offset the root to not overlap on previous model
+        if (modelItemIDs.size()) {
+            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).nodeID();
+
+            auto modelBound = modelDrawPtr->getBound();
+            auto minCorner = modelBound.minPos();
+            auto maxCorner = modelBound.maxPos();
+            auto boundCenter = modelBound.center;
+
+            auto modelOffset = modelBound.half_size * core::vec3(1.0, 0.0, 1.0) * (1.0 + 0.1);
+            auto modelPos = state._modelInsertOffset + modelOffset;
+            modelPos.y += modelBound.half_size.y;
+
+
+            modelPos = modelPos - boundCenter;
+
+            scene->_nodes.editNodeTransform(modelRootNodeId, [modelPos](core::mat4x3& rts) -> bool {
+                core::translation(rts, modelPos);
+                return true;
+                });
+
+            state._modelInsertOffset = state._modelInsertOffset + modelOffset * 2.0;
+        }
+    }
+    else {
+        picoLog("Model document is empty");
+    }
+
+    return modelItemIDs;
+}
+
+
+document::ModelPointer loadModel() {
+    document::ModelPointer lmodel;
+    //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
+    //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
+   //    std::string modelFile("../asset/gltf/Sponza.gltf");
+   // std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
+    // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
+      std::string modelFile("../asset/gltf/buggy.gltf");
+    //   std::string modelFile("../asset/gltf/VC.gltf");
+    //  std::string modelFile("../asset/gltf/Duck/duck.gltf");
+   //  std::string modelFile("../asset/gltf/OrientationTest.gltf");
+   // std::string modelFile("../asset/gltf/Boombox/BoomBoxWithAxes.gltf");
+   // std::string modelFile("../asset/gltf/BoxVertexColors.gltf");
+ //   std::string modelFile("../asset/gltf/Box.gltf");
+  //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
+  //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet - Copy.gltf");
+    // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
+
+    //  std::string modelFile("../asset/gltf/Rusted Metal Barrel_teufceuda_Metal/Rusted Metal Barrel_LOD2__teufceuda.gltf");
+    //  std::string modelFile("../asset/gltf/Castle Parapet Wall_sbxuw_3D Asset/Castle Parapet Wall_LOD0__sbxuw.gltf");
+    // std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD0__ujcxeblva.gltf");
+
+   // std::string modelFile("C:\\Megascans/Pico/Banana_vfendgyiw/Banana_LOD0__vfendgyiw.gltf");
+   // std::string modelFile("C:\\Megascans/Pico/Nordic Beach Rock_uknoehp/Nordic Beach Rock_LOD0__uknoehp.gltf");
+  //  std::string modelFile("C:\\Megascans/Pico/Sponza-intel/Main/NewSponza_Main_Blender_glTF.gltf");
+
+    // std::string modelFile("C:\\Megascans/Pico/Test-fbx_f48bbc8f-9166-9bc4-fbfb-688a71b1baa7/Test-fbx_LOD0__f48bbc8f-9166-9bc4-fbfb-688a71b1baa7.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Wooden Chair_uknjbb2bw/Wooden Chair_LOD0__uknjbb2bw.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Japanese Statue_ve1haetqx/Japanese Statue_LOD0__ve1haetqx.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uiohdaofa/Fire Hydrant_LOD0__uiohdaofa.gltf");
+    // std::string modelFile("C:\\Megascans/Pico/Fire Hydrant_uh4ocfafa/Fire Hydrant_LOD0__uh4ocfafa.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
+    //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
+
+    // 
+
+
+
+
+    //   std::string modelFile("../asset/gltf/Half Avocado_ujcxeblva_3D Asset/Half Avocado_LOD6__ujcxeblva.gltf");
+
+
+
+    lmodel = document::model::Model::createFromGLTF(modelFile);
+    if (!lmodel) {
+        picoLog("Model <" + modelFile + "> document failed to load");
+    }
+    return lmodel;
+}
+
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -113,7 +245,8 @@ int main(int argc, char *argv[])
 
     // Second a Scene
     auto scene = std::make_shared<graphics::Scene>(graphics::SceneInit{gpuDevice, 1000100, 1000100, 1000, 10});
-  
+    state.scene = scene;
+
     // A Camera to look at the scene
     auto camera = scene->createCamera();
     camera->setViewport(1280.0f, 720.0f, true); // setting the viewport size, and yes adjust the aspect ratio
@@ -125,17 +258,6 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
 
-    // A point cloud draw factory
-    auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>(gpuDevice);
-
-    // a draw from the pointcloud
-    auto pcdrawable = scene->createDraw(pointCloudDrawFactory->createPointCloudDraw(gpuDevice, pointCloud));
-
-    // A triangel soup draw factory
-    auto triangleSoupDrawFactory = std::make_shared<graphics::TriangleSoupDrawFactory>(gpuDevice);
-
-    // a draw from the trianglesoup
-    auto tsdrawable = scene->createDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
 
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode(core::mat4x3(), -1);
@@ -158,21 +280,46 @@ int main(int argc, char *argv[])
     //            +---- enode            
     //
 
-    // Some items unique instaces of the draw and the specified nodes
-    auto pcitem = scene->createItem(node0, pcdrawable);
+    // A point cloud draw factory
+    auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>(gpuDevice);
+    bool showPointCLoudAndTriangleSoup = false;
+    if (showPointCLoudAndTriangleSoup) {
 
-    auto tsitem = scene->createItem(enode, tsdrawable);
+        // a draw from the pointcloud
+        auto pcdrawable = scene->createDraw(pointCloudDrawFactory->createPointCloudDraw(gpuDevice, pointCloud));
 
-    auto pcitem2 = scene->createItem(cnode, pcdrawable);
+        // A triangel soup draw factory
+        auto triangleSoupDrawFactory = std::make_shared<graphics::TriangleSoupDrawFactory>(gpuDevice);
 
-    auto tsitem2 = scene->createItem(dnode, tsdrawable);
+        // a draw from the trianglesoup
+        auto tsdrawable = scene->createDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
 
+        // Some items unique instaces of the draw and the specified nodes
+        auto pcitem = scene->createItem(node0, pcdrawable);
+
+        auto tsitem = scene->createItem(enode, tsdrawable);
+
+        auto pcitem2 = scene->createItem(cnode, pcdrawable);
+
+        auto tsitem2 = scene->createItem(dnode, tsdrawable);
+    }
+
+    bool showModel = true;
+    if (showModel)
+    {
+        state.models.rootNodeID = node0.id();
+        auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
+        if (modelItemIDs.size()) {
+            state.models.modelItemID = modelItemIDs[0];
+        }
+
+    }
     
     // A Primitive draw factory
     auto primitiveDrawFactory = std::make_unique<graphics::PrimitiveDrawFactory>(gpuDevice);
 
     // a Primitive draw
-    int numPrimitiveDraws = 100;
+    int numPrimitiveDraws = 10;
     graphics::Draws primitiveDraws(numPrimitiveDraws);
     for (int i = 0; i < numPrimitiveDraws; ++i) {
         float t = sin(core::pi()*float(i) / float(numPrimitiveDraws));
@@ -184,7 +331,7 @@ int main(int argc, char *argv[])
     // And many primitive items using the on of the primitive_draws
     std::vector<graphics::NodeID> prim_nodes;
     {
-        int width = 200;
+        int width = 0;
         float space = 4.0f;
         float pos_offset = width / 2 * space;
         for (int i = 0; i < width * width; ++i) {

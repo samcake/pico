@@ -67,6 +67,9 @@ namespace core {
 
         // angle+axis, or rather angle+plane
         static rotor3 make_from_bvplane_angle(const bivec3& bvPlane, float angleRadian);
+        static rotor3 make_from_quaternion(float x, float y, float z, float w) {
+            return rotor3(w, -z, -y, -x);
+        }
 
         // rotate a vector by the rotor
         vec3 rotate(const vec3& v) const;
