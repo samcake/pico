@@ -26,6 +26,7 @@
 //
 #include "ModelDraw.h"
 
+#include "core/stl/Hash.h"
 #include "gpu/Device.h"
 #include "gpu/Batch.h"
 #include "gpu/Shader.h"
@@ -59,6 +60,7 @@
 
 #include "ModelPart_vert.h"
 #include "ModelPart_frag.h"
+
 
 //using namespace view3d;
 namespace graphics
@@ -154,12 +156,11 @@ namespace graphics
         _pipeline = device->createGraphicsPipelineState(pipelineInit);
     }
 
-
-    size_t hash(ModelVertex& v) {
-            return      *reinterpret_cast<uint64_t*>((uint64_t*)&v.px)
-                    | *reinterpret_cast<uint64_t*>((uint64_t*)&v.pz);
+    size_t hashV(ModelVertex& v) {
+            core::hash<float, float, float, int> hasher;
+            return hasher(v.px, v.py, v.pz, v.n);
     }
-    size_t hash(ModelVertexAttrib& a) {
+    size_t hashA(ModelVertexAttrib& a) {
             return  *reinterpret_cast<uint64_t*>((uint64_t*)&a);
     }
 
@@ -289,8 +290,8 @@ namespace graphics
                 partAttribs.emplace_back(a);
 
                 //hash a key on vector pos and normal
-                size_t kv = hash(v);
-                size_t ka = hash(a);
+                size_t kv = hashV(v);
+                size_t ka = hashA(a);
 
                 auto v_bucket = indexedVertexMap.find(kv);
                 if (v_bucket == indexedVertexMap.end()) {

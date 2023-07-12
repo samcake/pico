@@ -88,10 +88,11 @@ std::tuple<NodeArray, ItemArray> parseNodes(const json& gltf_nodes) {
                     T.z = t[2];
                 }
                 if (r.is_array() ) {
-                    R.a = r[3];    // w
-                    R.b.xy = r[2]; // z
-                    R.b.xz = r[1]; // y
-                    R.b.yz = r[0]; // x
+                    R = rotor3::make_from_quaternion(r[0], r[1], r[2], r[3]);
+                   // R.a = r[3];    // w
+                   // R.b.xy = r[2]; // z
+                   // R.b.xz = r[1]; // y
+                   // R.b.yz = r[0]; // x
                 }
                 if (s.is_array()) {
                     S.x = s[0];

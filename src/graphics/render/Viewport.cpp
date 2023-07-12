@@ -145,19 +145,19 @@ void Viewport::renderScene(RenderArgs& args) {
 
     auto itemInfos = _scene->_items.fetchItemInfos();
 
-    for (int i = 1; i < itemInfos.size(); i++) {
+    for (int i = 0; i < itemInfos.size(); i++) {
         const auto& info = itemInfos[i];
         if (info.isValid() && info.isVisible() && info.isDraw()) {
         //    auto drawcall = _scene->_drawables.getDrawcall(info._drawID);
             _scene->_drawables.getDrawcall(info._drawID)(info._nodeID, args);
         }
     }
-
+/*
     if (itemInfos.size() > 0) {
         const auto& info = itemInfos[0];
         if (info.isValid() && info.isVisible() && info.isDraw()) {
    //         auto drawcall = _scene->_drawables.getDrawcall(info._drawID);
             _scene->_drawables.getDrawcall(info._drawID)(info._nodeID, args);
         }
-    }
+    }*/
 }
