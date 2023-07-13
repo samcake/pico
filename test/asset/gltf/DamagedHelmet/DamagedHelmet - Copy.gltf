@@ -157,8 +157,8 @@
     ],
     "nodes" : [
         {
-            "mesh" : 0,
-            "name" : "node_damagedHelmet_-6514",
+            "mesh": 0,
+            "name": "node_damagedHelmet_-6514",
             "rotation" : [
                 0.7071068286895752,
                 0.0,

@@ -144,12 +144,12 @@ document::ModelPointer loadModel() {
     //  std::string modelFile("../asset/gltf/toycar/toycar.gltf");
     //   std::string modelFile("../asset/gltf/AntiqueCamera.gltf");
     //   std::string modelFile("../asset/gltf/Sponza.gltf");
-      std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
+    //  std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
     // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
     //  std::string modelFile("../asset/gltf/buggy.gltf");
     //   std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/Duck/duck.gltf");
-    // std::string modelFile("../asset/gltf/OrientationTest.gltf");
+     std::string modelFile("../asset/gltf/OrientationTest.gltf");
     //std::string modelFile("../asset/gltf/Boombox/BoomBoxWithAxes.gltf");
     // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
     // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
