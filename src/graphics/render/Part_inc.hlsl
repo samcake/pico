@@ -12,7 +12,7 @@ struct Part {
     uint material;
     uint numEdges;
     uint edgeOffset;
-    uint spareC;
+    uint skinOffset;
 };
 
 #endif

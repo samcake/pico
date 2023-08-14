@@ -52,41 +52,18 @@ namespace graphics {
         deleteAll();
     }
 
+    Item Scene::createItem(const ItemInit& init, UserID userID) {
+        auto newItem = _items.createItem(init);
 
-    Item Scene::createItem(Node node, Draw draw, UserID userID) {
-        return createItem(node.id(), draw.id(), userID);
-    }
-
-    Item Scene::createItem(NodeID node, DrawID draw, UserID userID) {
-
-        auto newItem = _items.createItem(node, draw);
-    
-        _nodes.reference(node);
-        _drawables.reference(draw);
+        _nodes.reference(init.node);
+        _drawables.reference(init.draw);
+        _anims.reference(init.anim);
 
         if (userID != INVALID_ITEM_ID) {
             _userIDToItemIDs[userID] = newItem;
         }
 
         return _items.makeItem(newItem);
-    }
-
-    Item Scene::createSubItem(ItemID group, NodeID node, DrawID draw, UserID userID) {
-        auto newItem = _items.createItem(node, draw, group);
-
-        _nodes.reference(node);
-        _drawables.reference(draw);
-
-        if (userID != INVALID_ITEM_ID) {
-            _userIDToItemIDs[userID] = newItem;
-        }
-
-        return _items.makeItem(newItem);
-
-    }
-
-    Item Scene::createSubItem(ItemID group, Node node, Draw draw, UserID userID) {
-        return createSubItem(group, node.id(), draw.id(), userID);
     }
 
     void Scene::deleteAll() {
@@ -153,12 +130,12 @@ namespace graphics {
 
     // Nodes
 
-    Node Scene::createNode(const core::mat4x3& rts, NodeID parent) {
-        return _nodes.makeNode(_nodes.createNode(rts, parent));
+    Node Scene::createNode(const NodeInit& init) {
+        return _nodes.makeNode(_nodes.createNode(init));
     }
 
-    NodeIDs Scene::createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentOffsets) {
-        return _nodes.createNodeBranch(rootParent, rts, parentOffsets);
+    NodeIDs Scene::createNodeBranch(const NodeBranchInit& init) {
+        return _nodes.createNodeBranch(init);
     }
 
 

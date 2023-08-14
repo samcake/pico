@@ -152,21 +152,21 @@ bool CameraController::onMouse(const MouseEvent& e) {
 
     if (e.state & uix::MOUSE_MOVE) {
         if (e.state & uix::MOUSE_LBUTTON) {
-            if ((e.state & uix::MOUSE_SHIFT)) {
-                if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {
-                    float panScale = _controlData._boomLength * 0.001f;
-                    if (_cam->isOrtho()) {
-                        panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
-                    }
-                    else {
-                    }
-                    _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
+
+            if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {
+                float panScale = _controlData._boomLength * 0.001f;
+                if (_cam->isOrtho()) {
+                    panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
                 }
                 else {
-                    float orbitScale = 0.01f;
-                    _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
                 }
+                _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
             }
+            else if (e.state & uix::MOUSE_SHIFT) {
+                float orbitScale = 0.01f;
+                _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
+            }
+
         }
         if (e.state & uix::MOUSE_MBUTTON) {
             float panScale = _controlData._boomLength * 0.001f;
@@ -193,9 +193,22 @@ bool CameraController::onMouse(const MouseEvent& e) {
             }
         }
 
-        if (_orbitOnMouseMoveEnabled && (e.state & uix::MOUSE_CONTROL)) {
-            float orbitScale = 0.01f;
-            _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
+        if (_orbitOnMouseMoveEnabled) {
+
+            if ((e.state & uix::MOUSE_CONTROL) || (_cam->isOrtho() && _orthoNorthUp)) {
+                float panScale = _controlData._boomLength * 0.001f;
+                if (_cam->isOrtho()) {
+                    panScale = _cam->getOrthoHeight() / _cam->getViewportHeight();
+                }
+                else {
+                }
+                _cam->pan(-e.delta.x * panScale, e.delta.y * panScale);
+            }
+            else if (e.state & uix::MOUSE_SHIFT) {
+                float orbitScale = 0.01f;
+                _cam->orbitHorizontal(_controlData._boomLength, orbitScale * (float)e.delta.x, orbitScale * (float)e.delta.y);
+            }
+
         }
 
     }

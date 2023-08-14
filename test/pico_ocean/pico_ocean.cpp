@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
     // Some nodes to layout the scene and animate objects
-    auto node0 = scene->createNode(core::mat4x3(), -1);
+    auto node0 = scene->createNode({});
 
     auto ocean_resolution = 512;
     generateSpectra(ocean_resolution, 1.0f, 1024, 1.0f, gpuDevice, scene, camera, node0);

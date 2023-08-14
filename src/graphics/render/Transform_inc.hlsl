@@ -51,7 +51,59 @@ struct Transform {
     float3 col_y() { return float3(_right_upX.w, _upYZ_backXY.xy); }
     float3 col_z() { return float3(_upYZ_backXY.zw, _backZ_ori.x); }
     float3 col_w() { return _backZ_ori.yzw; }
+
+    float4 r0() { return _right_upX; }
+    float4 r1() { return _upYZ_backXY; }
+    float4 r2() { return _backZ_ori; }
+
+    float4x4 toMat44() { return float4x4(float4(col_x(), 0), float4(col_y(), 0), float4(col_z(), 0), float4(col_w(), 1.0)); }
+    float4x4 toInverseMat44() { return float4x4( float4(row_x(), 0), float4(row_y(), 0), float4(row_z(), 0), float4(col_w(), 1.0)); }
+    
+    void identity() {
+        _right_upX   = float4(1, 0, 0, 0);
+        _upYZ_backXY = float4(1, 0, 0, 0);
+        _backZ_ori   = float4(1, 0, 0, 0);
+    }
+
+    void from4Columns(float3 c0, float3 c1, float3 c2, float3 c3) {
+        _right_upX = float4(c0, c1.x);
+        _upYZ_backXY = float4(c1.yz, c2.xy);
+        _backZ_ori = float4(c2.z, c3);
+    }
+    void from3Vec4(float4 r0, float4 r1, float4 r2) {
+        _right_upX = r0;
+        _upYZ_backXY = r1;
+        _backZ_ori = r2;
+    }
+
 };
+
+Transform add(Transform a, Transform b) {
+    Transform r;
+    r.from3Vec4(a.r0() + b.r0(), a.r1() + b.r1(), a.r2() + b.r2());
+    return r;
+}
+
+Transform transform_makeFrom3Vec4(float4 r0, float4 r1, float4 r2) {
+    Transform t;
+    t.from3Vec4(r0, r1, r2);
+    return t;
+}
+
+Transform transform_inverse(Transform m) {
+    Transform t;
+    t.from4Columns(m.row_x(), m.row_y(), m.row_z(), -m.col_w());
+    return t;
+}
+
+Transform scale(Transform m, float s) {
+    Transform t;
+    t.from3Vec4(m._right_upX * s, m._upYZ_backXY * s, m._backZ_ori * s);
+    return t;
+}
+Transform scale(float s, Transform m) {
+    return scale(m, s);
+}
 
 float3 rotateFrom(const Transform mat, const float3 d) {
     return float3(dot(mat.row_x(), d), dot(mat.row_y(), d), dot(mat.row_z(), d));
@@ -67,6 +119,36 @@ float3 transformFrom(const Transform mat, const float3 p) {
     return rotateFrom(mat, p) + mat.col_w();
 }
 
+Transform mul(Transform a, Transform b) {
+    float3 a_row_0 = a.row_x();
+    float3 a_row_1 = a.row_y();
+    float3 a_row_2 = a.row_z();
+
+    float3 b_col_x = b.col_x();
+    float3 c_col_x = float3(
+                        dot(a_row_0, b_col_x),
+                        dot(a_row_1, b_col_x),
+                        dot(a_row_2, b_col_x) );
+    float3 b_col_y = b.col_y();
+    float3 c_col_y = float3(
+                        dot(a_row_0, b_col_y),
+                        dot(a_row_1, b_col_y),
+                        dot(a_row_2, b_col_y) );
+    float3 b_col_z = b.col_z();
+    float3 c_col_z = float3(
+                        dot(a_row_0, b_col_z),
+                        dot(a_row_1, b_col_z),
+                        dot(a_row_2, b_col_z) );
+    float3 b_col_w = b.col_w();
+    float3 a_col_w = a.col_w();
+    float3 c_col_w = float3(
+                        dot(a_row_0, b_col_w) + a_col_w.x,
+                        dot(a_row_1, b_col_w) + a_col_w.y,
+                        dot(a_row_2, b_col_w) + a_col_w.z );
+    Transform c;
+    c.from4Columns(c_col_x, c_col_y, c_col_z, c_col_w);
+    return c;
+}
 
 //
 // Model / World / Eye Space transforms from Model and View
@@ -106,11 +188,6 @@ float3 worldFromObjectSpaceDir(Transform model, float3 objDir) {
 float3 objectFromWorldSpaceDir(Transform model, float3 worldDir) {
     return rotateTo(model, worldDir);
 }
-
-
-
-
-
 
 
 

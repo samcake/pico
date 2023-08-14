@@ -49,6 +49,7 @@
 
 #include "Mesh_inc.h"
 #include "Part_inc.h"
+#include "Skin_inc.h"
 #include "Material_inc.h"
 #include "SceneModel_inc.h"
 
@@ -200,6 +201,7 @@ namespace graphics
 
             Mesh_inc::getMapEntry(),
             Part_inc::getMapEntry(),
+            Skin_inc::getMapEntry(),
             Material_inc::getMapEntry(),
             SceneModel_inc::getMapEntry(),
 
@@ -855,27 +857,33 @@ namespace graphics
                     const graphics::ScenePointer& scene,
                     graphics::ModelDrawInspector& model) {
    
-        auto rootNode = scene->createNode(core::mat4x3(), root);
-
+        auto rootNode = scene->createNode({
+            .parent = root, 
+            .localTransform = core::mat4x3(), 
+            .name = model._name });
 
         // Allocating the new instances of scene::nodes, one per local node
-        auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
+        auto modelNodes = scene->createNodeBranch({
+            .rootParent = rootNode.id(),
+            .parentOffsets = model._localNodeParents,
+            .localTransforms =  model._localNodeTransforms,
+            .names = model._localNodeNames });
 
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
 
         // Pre pass item 
-        items.emplace_back(scene->createItem(rootNode.id(), model._pre_pass_ID).id());
+        items.emplace_back(scene->createItem({ .node= rootNode.id(), .draw= model._pre_pass_ID }).id());
 
         // first item is the model draw
-        items.emplace_back(scene->createItem(rootNode.id(), model._drawID).id());
+        items.emplace_back(scene->createItem({ .node= rootNode.id(), .draw= model._drawID }).id());
 
         // one item per parts
         for (const auto& li : model._localItems) {
             if (li.shape != MODEL_INVALID_INDEX) {
                 const auto& s = model._shapes[li.shape];
                 for (uint32_t si = 0; si < s.numParts; ++si) {
-                    items.emplace_back(scene->createItem(modelNodes[li.node], model._partDraws[si + s.partOffset]).id());
+                    items.emplace_back(scene->createItem({ .node= modelNodes[li.node], .draw= model._partDraws[si + s.partOffset] }).id());
                 }
             }
             if (li.camera != MODEL_INVALID_INDEX) {
@@ -884,7 +892,7 @@ namespace graphics
         }
 
         // One more item for post
-        items.emplace_back(scene->createItem(rootNode.id(), model._post_pass_ID).id());
+        items.emplace_back(scene->createItem({ .node= rootNode.id(), .draw= model._post_pass_ID }).id());
 
         return items; 
     }

@@ -94,7 +94,7 @@ void generateTerrain(uint32_t map_res, float map_spacing, graphics::DevicePointe
         }));
 
     // In an item
-    scene->createItem(root, heightmap_draw);
+    scene->createItem({ .node= root.id(), .draw = heightmap_draw.id()});
 }
 
 //--------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
     // Some nodes to layout the scene and animate objects
-    auto node0 = scene->createNode(core::mat4x3(), -1);
+    auto node0 = scene->createNode({});
 
     // Create gizmos to draw the node transform and item tree
     auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);

@@ -134,6 +134,8 @@ namespace model {
         Index _normals{ INVALID_INDEX };
         Index _tangents{ INVALID_INDEX };
         Index _texcoords{ INVALID_INDEX };
+        Index _joints{ INVALID_INDEX };
+        Index _weights{ INVALID_INDEX };
 
         Index _indices{ INVALID_INDEX };
         Index _material{ INVALID_INDEX };
@@ -175,6 +177,7 @@ namespace model {
     public:
         Index _node{ INVALID_INDEX };
         Index _mesh{ INVALID_INDEX };
+        Index _skin{ INVALID_INDEX };
         Index _camera{ INVALID_INDEX };
     };
     using ItemArray = std::vector<Item>;
@@ -220,11 +223,66 @@ namespace model {
     };
     using TextureArray = std::vector<Texture>;
 
- 
+    class AnimationChannelTarget {
+    public:
+        Index _node = -1;
+
+        enum Path : uint8_t {
+            TRANSLATION = 0,
+            ROTATION,
+            SCALE,
+            WEIGHTS,
+            NONE
+        };
+        Path _path = TRANSLATION;
+    };
+
+    class AnimationChannel {
+    public:
+        Index _sampler = -1;
+        AnimationChannelTarget _target;
+
+    };
+    using AnimationChannelArray = std::vector<AnimationChannel>;
+
+    class AnimationSampler {
+    public:
+        Index _input = -1;
+        Index _output = -1;
+        enum Interpolation : uint8_t {
+            LINEAR = 0,
+            STEP,
+            CUBICSPLINE,
+            NONE
+        };
+        Interpolation _interpolation = LINEAR;
+    };
+    using AnimationSamplerArray = std::vector<AnimationSampler>;
+
+    class Animation {
+    public:
+        std::string _name;
+        AnimationChannelArray _channels;
+        AnimationSamplerArray _samplers;
+    };
+    using AnimationArray = std::vector<Animation>;
+
+    class Skin {
+    public:
+        std::string _name;
+        Index _inverseBindMatrices{ INVALID_INDEX };
+        Index _skeleton{ INVALID_INDEX };
+        IndexArray _joints;
+        
+    };
+    using SkinArray = std::vector<Skin>;
+
     class DOCUMENT_API Model {
     public:
         static std::unique_ptr<Model> createFromGLTF(const std::string& filename);
 
+        // the name of this model
+        std::string _name;
 
         SceneArray _scenes;
         NodeArray _nodes;
@@ -248,7 +306,29 @@ namespace model {
         SamplerArray _samplers;
         TextureArray _textures;
 
+        AnimationArray _animations;
+        SkinArray _skins;
+
     };
+
+    template <typename T>
+    T FetchBuffer(int elementIndex, const Accessor& accessor, const BufferView& bufferView, const Buffer& buffer) {
+        T val;
+        if (elementIndex >= 0 && elementIndex < accessor._elementCount) {
+            auto byteStride = (bufferView._byteStride ? bufferView._byteStride : document::model::componentTypeSize(accessor._componentType) * document::model::elementTypeComponentCount(accessor._elementType));
+            const uint8_t* data = buffer._bytes.data() + bufferView._byteOffset + accessor._byteOffset + byteStride * elementIndex;
+            return *(const T*)data;
+        }
+        return val;
+    }
+
+    template <typename T>
+    T FetchBuffer(int elementIndex, int accessorId, const Model& model) {
+        const auto& accessor = model._accessors[accessorId];
+        const auto& bufferView = model._bufferViews[accessor._bufferView];
+        const auto& buffer = model._buffers[bufferView._buffer];
+        return FetchBuffer<T>(elementIndex, accessor, bufferView, buffer);
+    }
 }
     using Model = model::Model;
     using ModelPointer = std::shared_ptr<Model>;

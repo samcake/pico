@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
     auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(state._scene, gpuDevice);
 
     // Some nodes to layout the scene and animate objects
-    state._modelRootNodeID = scene->createNode(core::mat4x3(), -1).id();
+    state._modelRootNodeID = scene->createNode({ .parent = graphics::INVALID_NODE_ID, .localTransform = core::mat4x3(), .name = "root" }).id();
 
     auto modelItemIDs = generateModel(gpuDevice, scene, camera, state._modelRootNodeID, true);
     if (modelItemIDs.size()) {
