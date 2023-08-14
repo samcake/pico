@@ -39,6 +39,11 @@ namespace core {
 
         bivec3() {}
         bivec3(float _xy, float _xz, float _yz) : xy(_xy), xz(_xz), yz(_yz) {}
+
+        bivec3 operator+(const bivec3& a) const { return bivec3(xy +a.xy, xz + a.xz, yz + a.yz); }
+        bivec3 operator-(const bivec3& a) const { return bivec3(xy - a.xy, xz - a.xz, yz - a.yz); }
+        bivec3 operator-() const { return bivec3(-xy, -xz, -yz); }
+
     };
 
     // Wedge product result in a bivec
@@ -51,6 +56,13 @@ namespace core {
         return ret;
     }
 
+    inline bivec3 scale(const bivec3& a, float s) {
+        return bivec3(a.xy * s, a.xz * s, a.yz * s);
+    }
+
+    inline bivec3 mix(const bivec3& a, const bivec3& b, float t) {
+        return bivec3(mix(a.xy, b.xy, t), mix(a.xz, b.xz, t), mix(a.yz, b.yz, t));
+    }
 
     struct rotor3 {
         // scalar part
@@ -60,6 +72,8 @@ namespace core {
         rotor3() {}
         rotor3(float a, float b01, float b02, float b12);
         rotor3(float a, const bivec3& bv);
+        rotor3& operator=(const rotor3& r) { a = r.a; b = r.b; return *this; }
+        rotor3& operator=(const vec4& r) { a = r.x; b.xy = r.y; b.xz = r.z; b.yz = r.w; return *this; }
 
         // construct the rotor that rotates one vector to another
         static rotor3 make_from_to_dirs(const vec3& from, const vec3& to);
@@ -67,6 +81,8 @@ namespace core {
 
         // angle+axis, or rather angle+plane
         static rotor3 make_from_bvplane_angle(const bivec3& bvPlane, float angleRadian);
+        static rotor3 make_from_quaternion(const vec4& quat) { return rotor3(quat.w, -quat.z, quat.y, -quat.x); }
+
         static rotor3 make_from_quaternion(float x, float y, float z, float w) {
             return rotor3(w, -z, y, -x);
         }
@@ -79,6 +95,11 @@ namespace core {
         rotor3 operator*=(const rotor3& r);
         rotor3 rotate(const rotor3& r) const;
 
+        rotor3 operator+(const rotor3& r) const { return rotor3(a + r.a, b + r.b); }
+        rotor3 operator-(const rotor3& r) const { return rotor3(a - r.a, b - r.b); }
+        rotor3 operator-() const { return rotor3(-a, -b); }
+
+
         // length utility
         rotor3 reverse() const; // equivalent to conjugate
         float lengthsqrd() const;
@@ -89,6 +110,9 @@ namespace core {
         vec3 rotate_X() const;
         vec3 rotate_Y() const;
         vec3 rotate_Z() const;
+
+       // vec4 to_vec4() const { return *((vec4*) this); }
+        static rotor3 make_from_vec4(const vec4& vec) { return {vec.x, vec.y, vec.z, vec.w}; }
     };
 
     // default ctor
@@ -214,5 +238,42 @@ namespace core {
     // geometric product (for reference), produces twice the angle, negative direction
     inline rotor3 geo(const vec3& a, const vec3& b) {
         return rotor3(dot(a, b), wedge(a, b));
+    }
+
+    inline rotor3 scale(const rotor3& a, float s) {
+        return rotor3(a.a * s, scale(a.b, s));
+    }
+
+    inline rotor3 mix(const rotor3& a, const rotor3& b, float t) {
+        return rotor3(mix(a.a, b.a, t), mix(a.b, b.b, t));
+    }
+
+    inline rotor3 slerp(const rotor3& r0, const rotor3& r1, float t) {
+        rotor3 z = r1;
+
+        float cosTheta = r0.a * r1.a + (r0.b.xy * r1.b.xy + r0.b.xz * r1.b.xz + r0.b.yz * r1.b.yz);
+
+        // If cosTheta < 0, the interpolation will take the long way around the sphere.
+        // To fix this, one quat must be negated.
+        if (cosTheta < 0) {
+            z = -r1;
+            cosTheta = -cosTheta;
+        }
+
+        // Perform a linear interpolation when cosTheta is close to 1 to avoid side effect of sin(angle) becoming a zero denominator
+        if (cosTheta < 1.f) {
+            // Essential Mathematics, page 467
+            float angle = acos(cosTheta);
+            float sinAngleInv = 1.0 / sin(angle);
+            float factor0 = sin((1.f - t) * angle) * sinAngleInv;
+            float factor1 = sin(t * angle) * sinAngleInv;
+            rotor3 rA = scale(r0, factor0);
+            rotor3 rB = scale(z, factor1);
+            return rA + rB;
+        }
+        else {
+            // Linear interpolation
+            return mix(r0, r1, t);
+        }
     }
 }

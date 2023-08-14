@@ -38,28 +38,33 @@ namespace graphics {
     void NodeStore::reserve(const DevicePointer& device, uint32_t capacity) {
         _nodeInfos.reserve(device, capacity);
         _nodeTransforms.reserve(device, capacity);
+        _nodeNames.reserve(capacity);
     }
 
 
-    NodeID NodeStore::createNode(const Transform& localTransform, NodeID parent) {
+    NodeID NodeStore::createNode(const NodeInit& init) {
         auto [new_id, recycle] = _indexTable.allocate();
+        _nodeNames.resize(_indexTable.getNumAllocatedElements());
 
         NodeInfo info;
         info.refCount = 0; // Turn the node valid
         _nodeInfos.allocate_element(new_id, &info);
         _touchedInfos.push_back(new_id);
 
-        NodeTransform transform = { localTransform, localTransform };
+        NodeTransform transform = { init.localTransform, init.localTransform };
         _nodeTransforms.allocate_element(new_id, &transform);
         _touchedTransforms.push_back(new_id);
 
-        attachNode(new_id, parent);
+        _nodeNames[new_id] = init.name;
+
+        attachNode(new_id, init.parent);
 
         return new_id;
     }
 
-    NodeIDs NodeStore::createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets) {
-        auto [new_node_ids, numRecycled] = _indexTable.allocate(localTransforms.size());
+    NodeIDs NodeStore::createNodeBranch(const NodeBranchInit& init) {
+        auto [new_node_ids, numRecycled] = _indexTable.allocate(init.localTransforms.size());
+        _nodeNames.resize(_indexTable.getNumAllocatedElements());
 
         // first pass 
         uint32_t i = 0;
@@ -69,9 +74,11 @@ namespace graphics {
             _nodeInfos.allocate_element(new_id, &info);
             _touchedInfos.push_back(new_id);
 
-            NodeTransform transform = { localTransforms[i], localTransforms[i] };
+            NodeTransform transform = { init.localTransforms[i], init.localTransforms[i] };
             _nodeTransforms.allocate_element(new_id, &transform);
             _touchedTransforms.push_back(new_id);
+
+            _nodeNames[new_id] = init.names[i];
 
             ++i;
         }
@@ -79,8 +86,8 @@ namespace graphics {
         // 2nd pass needs to happen after 1st pass allocation
         i = 0;
         for (auto new_node_id : new_node_ids) {
-            auto o = parentsOffsets[i];
-            attachNode(new_node_id, (o == INVALID_NODE_ID ? rootParent : new_node_ids[o]));
+            auto o = init.parentOffsets[i];
+            attachNode(new_node_id, (o == INVALID_NODE_ID ? init.rootParent : new_node_ids[o]));
             i++;
         }
 
@@ -96,6 +103,8 @@ namespace graphics {
 
             _nodeTransforms.set_element(nodeId, nullptr);
             _touchedTransforms.push_back(nodeId);
+
+            _nodeNames[nodeId].clear();
         }
     }
 
@@ -296,4 +305,40 @@ namespace graphics {
         _nodeTransforms.sync_gpu_from_cpu(batch);
     }
 
+    void NodeStore::traverse(TraverseAccessor accessor) const {
+        // lock the node store transform array as a whole
+        // so we can use the unsafe data accessor in the search loop
+        auto [begin_node, l] = _nodeTransforms.read(0);
+        auto nodeCount = numAllocatedNodes();
+        uint32_t nodeId = 0;
+
+        while (nodeId < nodeCount) {
+            auto currentInfo = _nodeInfos.unsafe_data(nodeId);
+            traverseNode(*currentInfo, nodeId, 0, accessor);
+            nodeId = currentInfo->sybling;
+        }
+    }
+
+    void NodeStore::traverseNode(const NodeInfo& nodeInfo, NodeID nodeId, int32_t depth, TraverseAccessor accessor) const {
+        accessor({ .id= nodeId, .info= nodeInfo, .transform= *_nodeTransforms.unsafe_data(nodeId), .name = _nodeNames[nodeId], .depth = depth});
+
+        if (nodeInfo.num_children) {
+            depth++;
+            NodeIDs childrenIDs(nodeInfo.num_children, INVALID_NODE_ID);
+            std::vector<const NodeInfo*> childrenInfos(nodeInfo.num_children, nullptr);
+            uint32_t childNodeId = nodeInfo.children_head;
+            int32_t i = -1;
+            while (childNodeId != INVALID_NODE_ID) {
+                ++i;
+                auto childInfo = _nodeInfos.unsafe_data(childNodeId);
+                childrenInfos[i] = childInfo;
+                childrenIDs[i] = childNodeId;
+                childNodeId = childInfo->sybling;
+            }
+            while (i >= 0) {
+                traverseNode(*childrenInfos[i], childrenIDs[i], depth, accessor);
+                --i;
+            }
+        }
+    }
 }

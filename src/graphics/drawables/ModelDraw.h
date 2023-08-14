@@ -32,6 +32,7 @@
 #include <document/Model.h>
 #include <render/Scene.h>
 #include <render/Draw.h>
+#include <render/Animation.h>
 
 namespace graphics {
     class Device;
@@ -89,6 +90,7 @@ namespace graphics {
     struct ModelItem {
         uint32_t node{ MODEL_INVALID_INDEX };
         uint32_t shape{ MODEL_INVALID_INDEX };
+        uint32_t skin{ MODEL_INVALID_INDEX };
         uint32_t camera{ MODEL_INVALID_INDEX };
     };
 
@@ -105,7 +107,7 @@ namespace graphics {
         uint32_t material{ MODEL_INVALID_INDEX };
         uint32_t numEdges{ 0 };
         uint32_t edgeOffset{ MODEL_INVALID_INDEX };
-        uint32_t spareC;
+        uint32_t skinOffset{ MODEL_INVALID_INDEX };
     };
 
     struct ModelMaterial {
@@ -132,11 +134,28 @@ namespace graphics {
         float pz{ 0.f };
         uint32_t n{ 0 };
     };
-    using ModelVertexAttrib = core::vec4;
+
+    struct ModelVertexAttrib {
+        float u{ 0.f };
+        float v{ 0.f };
+        uint32_t sw{ 0 }; // skin weights
+        uint32_t sj{ 0 }; // skin joints
+    };
+
     using ModelIndex = uint32_t;
     
     using ModelEdge = core::ivec4; // 2 vertex indices and 2 adjacent triangle indices (in index buffer)
     using ModelFace = core::ivec4; // 3 edge indices of the face
+
+
+    struct ModelSkin {
+        uint32_t jointOffset{ 0 };
+        uint32_t numJoints{ 0 };
+    };
+    struct ModelSkinJointBinding {
+        core::mat4x3 invBindingPose;
+        core::ivec4  bone; // also contains the joint id in joint.x
+    };
 
     class VISUALIZATION_API ModelDraw {
     public:
@@ -169,6 +188,11 @@ namespace graphics {
         std::vector<ModelEdge> _edges;
         std::vector<ModelFace> _faces;
 
+        // SKinning binding info
+        std::vector<ModelSkin> _skins;
+        std::vector<ModelSkinJointBinding> _skinJointBindings;
+        graphics::BufferPointer getSkinBuffer() const { return _skinBuffer; }
+
         // Utility mesh connectivity information:
         // For each part, we create one draw
         DrawIDs _partDraws;
@@ -176,11 +200,15 @@ namespace graphics {
         // Self DrawID
         DrawID _drawID;
 
+        // Self AnimID
+        AnimID _animID;
+
         // Local nodes hierarchy in the model, used to create concrete instances of scene nodes when
         // instanciating a model in the scene 
         std::vector<core::mat4x3> _localNodeTransforms;
         std::vector<uint32_t> _localNodeParents;
         std::vector<uint32_t> _localRootNodes;
+        std::vector<std::string> _localNodeNames;
 
         // Local Items used to create the list of items in the scene when instanciating the model 
         std::vector<ModelItem> _localItems;
@@ -190,6 +218,12 @@ namespace graphics {
 
         // Ray tracing geometry
         graphics::GeometryPointer  _geometry;
+
+        // Animations
+        KeyPointer _animations;
+
+        // the name of this model
+        std::string _name;
 
     protected:
         friend class ModelDrawFactory;
@@ -206,12 +240,15 @@ namespace graphics {
         graphics::BufferPointer _materialBuffer;
         graphics::TexturePointer _albedoTexture;
 
+        graphics::BufferPointer _skinBuffer;
+
         graphics::DescriptorSetPointer  _descriptorSet;
 
         ModelDrawUniformsPointer _uniforms;
         DrawObjectCallback _drawcall;
         core::aabox3 _bound;
     };
+    using ModelDrawPointer = std::shared_ptr< ModelDraw>;
 
     
     struct VISUALIZATION_API ModelDrawPart {

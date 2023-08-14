@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
 
 
     // Next, a renderer built on this device
-    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback);
+    auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback, nullptr);
 
 
     // Presentation creation

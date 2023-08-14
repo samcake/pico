@@ -44,6 +44,11 @@ namespace graphics {
     static const NodeID INVALID_NODE_ID = core::IndexTable::INVALID_INDEX;
     static const NodeID ROOT_ID = 0;
 
+    using NodeName = std::string;
+    using NodeNames = std::vector<NodeName>;
+
+    using Transforms = std::vector<Transform>;
+
     class VISUALIZATION_API NodeStore {
     public:
         // Right after allocation, MUST call the reserve function allocate the memory chuncks
@@ -78,6 +83,7 @@ namespace graphics {
         core::IndexTable _indexTable;
         mutable NodeInfoStructBuffer _nodeInfos;
         mutable NodeTransformStructBuffer _nodeTransforms;
+        NodeNames _nodeNames;
 
         mutable NodeIDs _touchedInfos;
         mutable NodeIDs _touchedTransforms;
@@ -148,8 +154,21 @@ namespace graphics {
         };
         inline Node makeNode(NodeID id) { return { Handle{ this, id }}; }
 
-        NodeID createNode(const Transform& local, NodeID parent);
-        NodeIDs createNodeBranch(NodeID rootParent, const std::vector<Transform>& localTransforms, const NodeIDs& parentsOffsets);
+        struct NodeInit {
+            NodeID parent = INVALID_NODE_ID;
+            Transform localTransform;
+            NodeName name;
+        };
+        NodeID createNode(const NodeInit& init);
+
+        struct NodeBranchInit {
+            NodeID rootParent = INVALID_NODE_ID;
+            NodeIDs parentOffsets;
+            Transforms localTransforms;
+            NodeNames names;
+        };
+        NodeIDs createNodeBranch(const NodeBranchInit& init);
+
         void free(NodeID nodeId);
 
         int32_t reference(NodeID nodeId);
@@ -191,7 +210,23 @@ namespace graphics {
         NodeIDs updateTransforms();
         void updateChildrenTransforms(NodeID parent, NodeIDs& touched);
 
-    
+        inline NodeName getNodeName(NodeID id) const {
+            auto [i, l] = readInfo(id);
+            return _nodeNames[id];
+        }
+
+        // Traverse the scene graph depth first
+        struct NodeAccessor {
+            NodeID id = INVALID_NODE_ID;
+            const NodeInfo& info;
+            const NodeTransform& transform;
+            const NodeName& name;
+            int32_t depth = 0;
+        };
+        using TraverseAccessor = std::function<void(const NodeAccessor& node)>;
+        void traverse(TraverseAccessor accessor) const;
+        void traverseNode(const NodeInfo& nodeInfo, NodeID nodeId, int32_t depth, TraverseAccessor accessor) const;
+
     public:
         // gpu api
         inline BufferPointer getNodeInfoGPUBuffer() const { return _nodeInfos.gpu_buffer(); }
@@ -204,5 +239,6 @@ namespace graphics {
     using NodeInfos = NodeStore::NodeInfos;
     using NodeTransform = NodeStore::NodeTransform;
     using NodeTransforms = NodeStore::NodeTransforms;
+    using NodeAccessor = NodeStore::NodeAccessor;
 }
 

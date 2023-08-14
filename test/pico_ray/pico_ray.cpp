@@ -126,7 +126,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     }
 
     auto ppDraw = scene->createDraw(state._postSceneDrawFactory->createDraw(gpuDevice, modelDrawPtr->_geometry));
-    auto pcitem = scene->createItem(nodeRoot, ppDraw.id());
+    auto pcitem = scene->createItem({ .node= nodeRoot, .draw= ppDraw.id() });
 
 
     return modelItemIDs;
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
 
     // a sky draw to draw the sky
     auto skyDraw = state.scene->createDraw(skyDrawFactory->createDraw(gpuDevice));
-    auto skyitem = state.scene->createItem(graphics::Node::null, skyDraw);
+    auto skyitem = state.scene->createItem({ .draw= skyDraw.id()});
     skyitem.setVisible(true);
 
     // Create gizmos to draw the node transform and item tree
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
     auto dashboard_item = graphics::DashboardDraw_createSceneWidgets(state.scene, gpuDevice);
 
     // Some nodes to layout the scene and animate objects
-    state.models.rootNodeID = state.scene->createNode(core::mat4x3(), -1).id();
+    state.models.rootNodeID = state.scene->createNode({}).id();
 
     auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
     if (modelItemIDs.size()) {

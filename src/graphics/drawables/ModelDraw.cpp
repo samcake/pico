@@ -49,6 +49,7 @@
 
 #include "Mesh_inc.h"
 #include "Part_inc.h"
+#include "Skin_inc.h"
 #include "Material_inc.h"
 #include "SceneModel_inc.h"
 
@@ -104,6 +105,7 @@ namespace graphics
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 2, 1}, // Index
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 3, 1}, // Vertex
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 4, 1}, // Attrib
+                { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 5, 1}, // Skin
                 { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::PIXEL, 9, 1 },  // Material
                 { graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::PIXEL, 10, 1 },  // Material Textures
                 }
@@ -125,6 +127,7 @@ namespace graphics
 
             Mesh_inc::getMapEntry(),
             Part_inc::getMapEntry(),
+            Skin_inc::getMapEntry(),
             Material_inc::getMapEntry(),
             SceneModel_inc::getMapEntry(),
             
@@ -168,21 +171,29 @@ namespace graphics
 
         auto modelDraw = new graphics::ModelDraw();
 
+        modelDraw->_name = model->_name;
+
         if (model->_scenes.size())
             modelDraw->_localRootNodes = model->_scenes[0]._nodes;
 
         // Define the local nodes used by the model with the original transforms and the parents
         modelDraw->_localNodeTransforms.reserve(model->_nodes.size());
         modelDraw->_localNodeParents.reserve(model->_nodes.size());
+        modelDraw->_localNodeNames.reserve(model->_nodes.size());
         for (const auto& n : model->_nodes) {
             modelDraw->_localNodeTransforms.emplace_back(n._transform);
             modelDraw->_localNodeParents.emplace_back(n._parent);
+            modelDraw->_localNodeNames.emplace_back(n._name);
         }
 
         // Define the items
         modelDraw->_localItems.reserve(model->_items.size());
         for (const auto& si : model->_items) {
-            modelDraw->_localItems.emplace_back(ModelItem{si._node, si._mesh, si._camera });
+            modelDraw->_localItems.emplace_back(ModelItem{
+                .node = si._node,
+                .shape = si._mesh,
+                .skin = si._skin,
+                .camera = si._camera });
         }
 
         // Define the shapes
@@ -223,18 +234,26 @@ namespace graphics
 
         bool first = true;
         for (const auto& p : model->_primitives) {
-
-            const auto& indexAccess = model->_accessors[p._indices];
-            const auto& indexView = model->_bufferViews[indexAccess._bufferView];
-            const auto& indexBuffer = model->_buffers[indexView._buffer];
-            
             // Index accessor
             std::vector<ModelIndex> partIndices;
-            auto indexStride = (indexView._byteStride ? indexView._byteStride : document::model::componentTypeSize(indexAccess._componentType));
-            uint32_t indexMask = document::model::componentTypeInt32Mask(indexAccess._componentType);
-            for (uint32_t i = 0; i < indexAccess._elementCount; ++i) {
-                auto index = (*(uint32_t*)(indexBuffer._bytes.data() + indexView._byteOffset + indexAccess._byteOffset + indexStride * i)) & indexMask;
-                partIndices.emplace_back(index);
+            if (p._indices != document::model::INVALID_INDEX) {
+                const auto& indexAccess = model->_accessors[p._indices];
+                const auto& indexView = model->_bufferViews[indexAccess._bufferView];
+                const auto& indexBuffer = model->_buffers[indexView._buffer];
+
+                auto indexStride = (indexView._byteStride ? indexView._byteStride : document::model::componentTypeSize(indexAccess._componentType));
+                uint32_t indexMask = document::model::componentTypeInt32Mask(indexAccess._componentType);
+                for (uint32_t i = 0; i < indexAccess._elementCount; ++i) {
+                    auto index = (*(uint32_t*)(indexBuffer._bytes.data() + indexView._byteOffset + indexAccess._byteOffset + indexStride * i)) & indexMask;
+                    partIndices.emplace_back(index);
+                }
+            }
+            else {
+                auto indexCount = model->_accessors[p._positions]._elementCount;
+                partIndices.reserve(indexCount);
+                for (uint32_t i = 0; i < indexCount; ++i) {
+                   partIndices.emplace_back(i);
+                }
             }
 
             // Position accessor
@@ -274,6 +293,54 @@ namespace graphics
                 };
             }
 
+            // Skin weight and joint accessor
+            std::function<core::ivec2(uint32_t)> skinWeightJointGetter = [](uint32_t index) { return core::ivec2(); };
+            if ((p._weights != document::model::INVALID_INDEX) && (p._joints != document::model::INVALID_INDEX)) {
+                const auto& weightAccess = model->_accessors[p._weights];
+                const auto& weightView = model->_bufferViews[weightAccess._bufferView];
+                const auto& weightBuffer = model->_buffers[weightView._buffer];
+                auto weightComponentSize = document::model::componentTypeSize(weightAccess._componentType);
+                auto weightElementCount = document::model::elementTypeComponentCount(weightAccess._elementType);
+                auto weightStride = (weightView._byteStride ? weightView._byteStride : weightComponentSize * weightElementCount);
+
+                const auto& jointAccess = model->_accessors[p._joints];
+                const auto& jointView = model->_bufferViews[jointAccess._bufferView];
+                const auto& jointBuffer = model->_buffers[jointView._buffer];
+                auto jointComponentSize = document::model::componentTypeSize(jointAccess._componentType);
+                auto jointElementCount = document::model::elementTypeComponentCount(jointAccess._elementType);
+                auto jointStride = (jointView._byteStride ? jointView._byteStride : jointComponentSize * jointElementCount);
+                auto jointMask = document::model::componentTypeInt32Mask(jointAccess._componentType);
+
+                skinWeightJointGetter = [&](uint32_t index) {
+                    auto weight_m = (weightBuffer._bytes.data() + weightView._byteOffset + weightAccess._byteOffset + weightStride * index);
+                    core::vec4 vw;
+                    vw.x = *(float*)(weight_m + 0);
+                    vw.y = *(float*)(weight_m + 1 * weightComponentSize);
+                    vw.z = *(float*)(weight_m + 2 * weightComponentSize);
+                    vw.w = *(float*)(weight_m + 3 * weightComponentSize);
+
+                    auto joint_m = (jointBuffer._bytes.data() + jointView._byteOffset + jointAccess._byteOffset + jointStride * index);
+                    core::ivec4 vj;
+                    vj.x = jointMask & *((int32_t*)(joint_m + 0));
+                    vj.y = jointMask & *((int32_t*)(joint_m + 1 * jointComponentSize));
+                    vj.z = jointMask & *((int32_t*)(joint_m + 2 * jointComponentSize));
+                    vj.w = jointMask & *((int32_t*)(joint_m + 3 * jointComponentSize));
+
+                    float sumWeight = core::dot(vw, 1.0f);
+                    uint32_t viw = 0;
+                    uint32_t vij = 0;
+                    if (sumWeight > 0.0f) {
+                        for (int i = 0; i < 4; ++i) {
+                            uint32_t iw = (0xff & (uint32_t)(255 * vw[i]));
+                            uint32_t ij = (0xff & (uint32_t)(vj[i]));
+                            viw = viw | ((iw) << (i * 8));
+                            vij = vij | ((ij) << (i * 8));
+                        }
+                    }
+                    return core::ivec2(viw, vij);
+                };
+            }
+
             std::vector<ModelVertex> partVerts;
             std::vector<ModelVertexAttrib> partAttribs;
 
@@ -283,10 +350,12 @@ namespace graphics
                 auto vn = normalGetter(index);
                 auto vt = texcoordGetter(index);
 
+                auto swj = skinWeightJointGetter(index);
+
                 ModelVertex v{ vp.x, vp.y, vp.z, vn };
                 partVerts.emplace_back(v);
 
-                ModelVertexAttrib a{ vt.x, vt.y, 0, 0 };
+                ModelVertexAttrib a{ vt.x, vt.y, swj.x, swj.y };
                 partAttribs.emplace_back(a);
 
                 //hash a key on vector pos and normal
@@ -411,8 +480,16 @@ namespace graphics
                 }
             }
 
-            ModelPart part{ (uint32_t)partIndices.size(), (uint32_t)index_buffer.size(), 0, 0, p._material, (uint32_t)partEdges.size(), 0  };
-            parts.emplace_back(part);
+            ModelPart part{
+                .numIndices = (uint32_t)partIndices.size(),
+                .indexOffset = (uint32_t)index_buffer.size(),
+                .vertexOffset = 0,
+                .attribOffset =  0,
+                .material = p._material,
+                .numEdges = (uint32_t)partEdges.size(),
+                .edgeOffset = 0,
+                .skinOffset = MODEL_INVALID_INDEX };
+             parts.emplace_back(part);
             
             // Fill the index_buffer with the true indices
             for (auto i : partIndices) {
@@ -610,7 +687,52 @@ namespace graphics
                 modelDraw->_albedoTexture = albedoresourceTexture;
             }
         }
-        
+
+        // Skin buffer
+        {
+            for (const auto& s : model->_skins) {
+                ModelSkin skin = { .jointOffset = (uint32_t) modelDraw->_skinJointBindings.size(),
+                                    .numJoints = (uint32_t) s._joints.size() };
+                modelDraw->_skins.emplace_back(skin);
+
+                const auto& accessor = model->_accessors[s._inverseBindMatrices];
+                const auto& bufferView = model->_bufferViews[accessor._bufferView];
+                const auto& buffer = model->_buffers[bufferView._buffer];
+
+                struct JointMat {
+                    float m[16];
+                };
+                for (int i = 0; i < s._joints.size(); ++i) {
+                    int32_t jointNodeId = s._joints[i];
+                    JointMat m = document::model::FetchBuffer<JointMat>(i, accessor, bufferView, buffer);
+//                    core::mat4x4 inBindMat = document::model::FetchBuffer<core::mat4x4>(i, accessor, bufferView, buffer);
+                    ModelSkinJointBinding binding;
+                    for (int c = 0; c < 4; c++) {
+                        for (int r = 0; r < 3; r++) {
+                            binding.invBindingPose._columns[c][r] = m.m[c * 4 + r];
+                        }
+                    }
+                    binding.bone = { jointNodeId, (int32_t) s._skeleton, 0 , 0};
+
+                    modelDraw->_skinJointBindings.emplace_back(binding);
+                }
+            }
+            // skin buffer
+            BufferInit skinBufferInit;
+            int32_t skinJointElementPerStruct = 4;
+            skinBufferInit.usage = graphics::ResourceUsage::RESOURCE_BUFFER;
+            skinBufferInit.bufferSize = modelDraw->_skinJointBindings.size() * sizeof(ModelSkinJointBinding);
+            skinBufferInit.hostVisible = true; // TODO Change this to immutable and initialized value
+            skinBufferInit.firstElement = 0;
+            skinBufferInit.numElements = modelDraw->_skinJointBindings.size() * skinJointElementPerStruct;
+            skinBufferInit.structStride = sizeof(ModelSkinJointBinding) / skinJointElementPerStruct;
+
+            auto sbresourceBuffer = device->createBuffer(skinBufferInit);
+            memcpy(sbresourceBuffer->_cpuMappedAddress, modelDraw->_skinJointBindings.data(), skinBufferInit.bufferSize);
+
+            modelDraw->_skinBuffer = sbresourceBuffer;
+        }
+
         // Model local bound is the containing box for all the local items of the model
         core::aabox3 model_aabb;
         for (const auto& i : modelDraw->_localItems) {
@@ -633,6 +755,14 @@ namespace graphics
             }
         }
         modelDraw->_bound = model_aabb;
+
+
+        auto [clipData, clips] = Key::createClipsFromGLTF(*model);
+
+        
+        modelDraw->_animations = std::make_shared<graphics::Key> ();
+        modelDraw->_animations->_data = std::move(clipData);
+        modelDraw->_animations->_clips = std::move(clips);
 
         return modelDraw;
     }
@@ -664,6 +794,7 @@ namespace graphics
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getIndexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getVertexAttribBuffer() },
+            { graphics::DescriptorType::RESOURCE_BUFFER, model.getSkinBuffer() },
             { graphics::DescriptorType::RESOURCE_BUFFER, model.getMaterialBuffer() },
             { graphics::DescriptorType::RESOURCE_TEXTURE, model.getAlbedoTexture() },
             { sampler },
@@ -702,6 +833,11 @@ namespace graphics
        model._drawcall = drawCallback;
        model._drawID = scene->createDraw(model).id();
 
+       if (model._animations && model._animations->_clips.size()) {
+           KeyAnim anim = { model._animations };
+           model._animID = scene->createAnim(anim).id();
+       }
+
        auto uniforms = model.getUniforms();
 
        // one draw per part
@@ -731,24 +867,41 @@ namespace graphics
                     const graphics::NodeID root,
                     const graphics::ScenePointer& scene,
                     graphics::ModelDraw& model) {
-   
-        auto rootNode = scene->createNode(core::mat4x3(), root);
+ 
+       auto rootNode = scene->createNode({
+           .parent = root,
+           .localTransform = core::mat4x3(),
+           .name = model._name });
 
-        // Allocating the new instances of scene::nodes, one per local node
-        auto modelNodes = scene->createNodeBranch(rootNode.id(), model._localNodeTransforms, model._localNodeParents);
+       // Allocating the new instances of scene::nodes, one per local node
+       auto modelNodes = scene->createNodeBranch({
+           .rootParent = rootNode.id(),
+           .parentOffsets = model._localNodeParents,
+           .localTransforms = model._localNodeTransforms,
+           .names = model._localNodeNames });
 
         // Allocate the new scene::items combining the localItem's node with every shape parts
         graphics::ItemIDs items;
         
-        // first item is the model draw itself 
-        auto rootItemId = scene->createItem(rootNode.id(), model._drawID).id();
+        // first item is the model draw itself
+        Scene::ItemInit init = {};
+        init.node = rootNode.id();
+        init.draw = model._drawID;
+        init.anim = model._animID;
+        init.name = model._name;
+        auto rootItemId = scene->createItem(init).id();
         items.emplace_back(rootItemId);
 
         for (const auto& li : model._localItems) {
             if (li.shape != MODEL_INVALID_INDEX) {
                 const auto& s = model._shapes[li.shape];
                 for (uint32_t si = 0; si < s.numParts; ++si) {
-                    items.emplace_back(scene->createSubItem(rootItemId, modelNodes[li.node], model._partDraws[si + s.partOffset]).id());
+                    items.emplace_back(scene->createItem({
+                        .node= modelNodes[li.node],
+                        .draw= model._partDraws[si + s.partOffset], 
+                        .group = rootItemId,
+                        .name = model._localNodeNames[li.node],
+                        }).id());
                 }
             }
             if (li.camera != MODEL_INVALID_INDEX) {

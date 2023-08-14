@@ -112,16 +112,25 @@ std::tuple<NodeArray, ItemArray> parseNodes(const json& gltf_nodes) {
 
             // Create item(s) for mesh or camera or... refrenced by the node
             auto nodeId = (Index) nodes.size();
+            Index meshId = INVALID_INDEX;
+            Index skinId = INVALID_INDEX;
+            Index camId = INVALID_INDEX;
 
             const auto& m = check(n, "mesh");
             if (m.is_number()) {
-                items.emplace_back(Item{ nodeId,  m.get<Index>(), INVALID_INDEX });
+                meshId = m.get<Index>();
+                const auto& s = check(n, "skin");
+                if (s.is_number()) {
+                    skinId = s.get<Index>();
+                }
             }
 
             const auto& c = check(n, "camera");
             if (c.is_number()) {
-                items.emplace_back(Item{ nodeId, INVALID_INDEX,  c.get<Index>() });
+                camId = c.get<Index>();
             }
+
+            items.emplace_back(Item{ nodeId, meshId, skinId, camId});
 
             nodes.emplace_back(node);
         }
@@ -457,6 +466,15 @@ if (gltf_meshes.is_array()) {
                     if (tc0.is_number_integer()) {
                         prim._texcoords = tc0.get<uint32_t>();
                     }
+
+                    const auto& sj0 = check(a, "JOINTS_0");
+                    if (sj0.is_number_integer()) {
+                        prim._joints = sj0.get<uint32_t>();
+                    }
+                    const auto& sw0 = check(a, "WEIGHTS_0");
+                    if (sw0.is_number_integer()) {
+                        prim._weights = sw0.get<uint32_t>();
+                    }
                 }
 
                 const auto& ind = check(p, "indices");
@@ -775,6 +793,134 @@ CameraArray parseCameras(const json& gltf_cameras) {
     return cameras;
 }
 
+AnimationArray parseAnimations(const json& gltf_animations)
+{
+    AnimationArray animations;
+
+    if (gltf_animations.is_array()) {
+        for (const auto& a : gltf_animations) {
+            Animation anim;
+
+            const auto& name = check(a, "name");
+            if (name.is_string()) {
+                anim._name = name.get<std::string>();
+            }
+
+            const auto& channels = check(a, "channels");
+            if (channels.is_array()) {
+                for (const auto& c : channels) {
+                    AnimationChannel channel;       
+ 
+                    const auto& sampler = check(c, "sampler");
+                    if (sampler.is_number_integer()) {
+                        channel._sampler = sampler.get<Index>();
+                    }
+
+                    const auto& t = check(c, "target");
+                    if (t.is_object()) {
+                        const auto& node = check(t, "node");
+                        if (node.is_number_integer()) {
+                            channel._target._node = node.get<Index>();
+                        }
+                        const auto& path = check(t, "path");
+                        if (path.is_string()) {
+                            std::string paths = path.get<std::string>();
+                            if (0 == paths.compare("translation")) {
+                                channel._target._path = AnimationChannelTarget::TRANSLATION;
+                            }
+                            else if (0 == paths.compare("rotation")) {
+                                channel._target._path = AnimationChannelTarget::ROTATION;
+                            }
+                            else if (0 == paths.compare("scale")) {
+                                channel._target._path = AnimationChannelTarget::SCALE;
+                            }
+                            else if (0 == paths.compare("weights")) {
+                                channel._target._path = AnimationChannelTarget::WEIGHTS;
+                            }
+                            else {
+                                channel._target._path = AnimationChannelTarget::NONE;
+                            }
+                        }
+                    }
+
+                    anim._channels.emplace_back(channel);
+                }
+            }
+            const auto& samplers = check(a, "samplers");
+            if (samplers.is_array()) {
+                for (const auto& s : samplers) {
+                    AnimationSampler sampler;
+
+                    const auto& input = check(s, "input");
+                    if (input.is_number_integer()) {
+                        sampler._input = input.get<Index>();
+                    }
+                    const auto& output = check(s, "output");
+                    if (output.is_number_integer()) {
+                        sampler._output = output.get<Index>();
+                    }
+                    const auto& interpolation = check(s, "interpolation");
+                    if (interpolation.is_string()) {
+                        std::string interpol = interpolation.get<std::string>();
+                        if (0 == interpol.compare("LINEAR")) {
+                            sampler._interpolation = AnimationSampler::LINEAR;
+                        }
+                        else if (0 == interpol.compare("STEP")) {
+                            sampler._interpolation = AnimationSampler::STEP;
+                        }
+                        else if (0 == interpol.compare("CUBICSPLINE")) {
+                            sampler._interpolation = AnimationSampler::CUBICSPLINE;
+                        }
+                        else {
+                            sampler._interpolation = AnimationSampler::NONE;
+                        }
+                    }
+                    anim._samplers.emplace_back(sampler);
+                }
+            }
+            animations.emplace_back(anim);
+        }
+    }
+
+    return animations;
+}
+
+
+SkinArray parseSkins(const json& gltf_skins) {
+    SkinArray skins;
+
+    if (gltf_skins.is_array()) {
+        for (const auto& s : gltf_skins) {
+            Skin skin;
+
+            const auto& name = check(s, "name");
+            if (name.is_string()) {
+                skin._name = name.get<std::string>();
+            }
+
+            const auto& inverseBindMatrices = check(s, "inverseBindMatrices");
+            if (inverseBindMatrices.is_number_integer()) {
+                skin._inverseBindMatrices = inverseBindMatrices.get<Index>();
+            }
+
+            const auto& skeleton = check(s, "skeleton");
+            if (skeleton.is_number_integer()) {
+                skin._skeleton = skeleton.get<Index>();
+            }
+
+            const auto& joints = check(s, "joints");
+            if (joints.is_array()) {
+                for (const auto& j : joints) {
+                    skin._joints.emplace_back(j.get<uint32_t>());
+                }
+            }
+
+            skins.emplace_back(skin);
+        }
+    }
+
+    return skins;
+}
 
 SceneArray parseScenes(const json& gltf_scenes) {
     SceneArray scenes;
@@ -797,9 +943,10 @@ SceneArray parseScenes(const json& gltf_scenes) {
     return scenes;
 }
 
-std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root) {
+std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path& model_path_root, const std::string& name) {
     auto model = std::make_unique<Model>();
-    
+    model->_name = name;
+
     std::tie( model->_nodes, model->_items) = parseNodes(check(gltf, "nodes"));
     
     model->_buffers = parseBuffers(check(gltf, "buffers"), model_path_root);
@@ -812,6 +959,9 @@ std::unique_ptr<Model> parseModel(const json& gltf, const std::filesystem::path&
     std::tie( model->_images, model->_imageReferences) = parseImages(check(gltf, "images"), model_path_root);
     model->_samplers = parseSamplers(check(gltf, "samplers"));
     model->_textures = parseTextures(check(gltf, "textures"));
+
+    model->_animations = parseAnimations(check(gltf, "animations"));
+    model->_skins = parseSkins(check(gltf, "skins"));
 
     model->_cameras = parseCameras(check(gltf, "cameras"));
     model->_scenes = parseScenes(check(gltf, "scenes"));
@@ -840,7 +990,7 @@ std::unique_ptr<Model> Model::createFromGLTF(const std::string& filename) {
     try {
         gltf_data = core::json::parse(content);
         if (gltf_data.is_object()) {
-            return parseModel(gltf_data, model_path_root);
+            return parseModel(gltf_data, model_path_root, model_path.filename().string());
         }
         else {
             picoLog(("gltf_data file " + model_path.string() + " doesn't have root object"));

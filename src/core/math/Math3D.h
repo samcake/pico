@@ -32,7 +32,12 @@
 
 namespace core 
 {
- 
+    struct mat4x4 {
+        vec4 _columns[4]{ vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1) };
+        float* data() { return _columns[0].data(); }
+        const float* data() const { return _columns[0].data(); }
+    };
+
     // Matrix: 4 columns 3 rows 
     // Standard representation of an RTS transform
     struct mat4x3 {
@@ -47,7 +52,13 @@ namespace core
             _columns[2] = (c2);
             _columns[3] = (c3);
         }
-        
+        inline mat4x3(const mat4x4& m) {
+            _columns[0] = m._columns[0].xyz();
+            _columns[1] = m._columns[1].xyz();
+            _columns[2] = m._columns[2].xyz();
+            _columns[3] = m._columns[3].xyz();
+        }
+
         inline vec3& x() { return _columns[0]; }
         inline vec3& y() { return _columns[1]; }
         inline vec3& z() { return _columns[2]; }
@@ -66,6 +77,7 @@ namespace core
         inline vec3 row_y() const { return { _columns[0].y, _columns[1].y, _columns[2].y }; }
         inline vec3 row_z() const { return { _columns[0].z, _columns[1].z, _columns[2].z }; }
     };
+
 
 
 

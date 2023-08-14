@@ -87,6 +87,11 @@ struct AppState {
     struct {
         graphics::NodeID rootNodeID;
         graphics::ItemID modelItemID;
+
+        struct {
+            int32_t clip = 0;
+            graphics::ItemID animItem; 
+        } animation;
     } models;
 
     struct {
@@ -119,15 +124,17 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
     graphics::ItemIDs modelItemIDs;
     if (lmodel) {
         auto modelDrawPtr = state._modelDrawFactory->createModel(gpuDevice, lmodel);
-        state._modelDrawFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawPtr);
 
+        state._modelDrawFactory->allocateDrawcallObject(gpuDevice, scene, *modelDrawPtr);
 
         modelItemIDs = state._modelDrawFactory->createModelParts(nodeRoot, scene, *modelDrawPtr);
 
         // let's offset the root to not overlap on previous model
         if (modelItemIDs.size()) {
-            auto modelRootNodeId = scene->getItem(modelItemIDs[0]).nodeID();
-
+            state.models.animation.animItem = modelItemIDs[0];
+            auto rootItem = scene->getItem(modelItemIDs[0]);
+            auto modelRootNodeId = rootItem.nodeID();
+           
             auto modelBound = modelDrawPtr->getBound();
             auto minCorner = modelBound.minPos();
             auto maxCorner = modelBound.maxPos();
@@ -163,13 +170,20 @@ document::ModelPointer loadModel() {
    //    std::string modelFile("../asset/gltf/Sponza.gltf");
    // std::string modelFile("../asset/gltf/WaterBottle/WaterBottle.gltf");
     // std::string modelFile("../asset/gltf/Lantern/lantern.gltf");
-      std::string modelFile("../asset/gltf/buggy.gltf");
+    //  std::string modelFile("../asset/gltf/buggy.gltf");
     //   std::string modelFile("../asset/gltf/VC.gltf");
     //  std::string modelFile("../asset/gltf/Duck/duck.gltf");
    //  std::string modelFile("../asset/gltf/OrientationTest.gltf");
    // std::string modelFile("../asset/gltf/Boombox/BoomBoxWithAxes.gltf");
-   // std::string modelFile("../asset/gltf/BoxVertexColors.gltf");
- //   std::string modelFile("../asset/gltf/Box.gltf");
+   // std::string modelFile("../asset/gltf/Boxes/BoxVertexColors.gltf");
+  //  std::string modelFile("../asset/gltf/Boxes/BoxInterleaved.gltf");
+  //  std::string modelFile("../asset/gltf/Boxes/BoxAnimated.gltf");
+  //  std::string modelFile("../asset/gltf/BrainStem.gltf");
+   // std::string modelFile("../asset/gltf/RiggedSimple.gltf");
+    std::string modelFile("../asset/gltf/Fox/Fox.gltf");
+   
+  //  std::string modelFile("../asset/gltf/Cube/Cube.gltf");
+ //   std::string modelFile("../asset/gltf/Boxes/Box.gltf");
   //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
   //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet - Copy.gltf");
     // std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet-embedded.gltf");
@@ -206,6 +220,37 @@ document::ModelPointer loadModel() {
     return lmodel;
 }
 
+void logScene() {
+    state.scene->_nodes.traverse([&](const graphics::NodeAccessor& node) {
+        std::string pad(node.depth * 2, ' ');
+        picoOut("{}{}:{} r{} ", pad, node.id, node.name, (int16_t) node.info.refCount);
+    });
+    state.scene->_items.traverse([&](const graphics::ItemAccessor& item) {
+        std::string pad(item.depth * 2, ' ');
+
+        std::string tail;
+        if (item.info.hasNode()) {
+            tail += std::format("n{} ", item.info._nodeID);
+        }
+        if (item.info.isDraw()) {
+            tail += std::format("d{} ", item.info._drawID);
+        }
+        if (item.info.isAnim()) {
+            tail += std::format("a{} ", item.info._animID);
+        }
+        if (item.info.isGrouped()) {
+            tail += std::format("g{} ", item.info._groupID);
+        }
+        if (item.info.isCamera()) {
+            tail += std::string("cam ");
+        }
+        if (!item.info.isVisible()) {
+            tail += std::string("hidden ");
+        }
+
+        picoOut("{}{}:{} {} ", pad, item.id, item.name, tail);
+    });
+}
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
@@ -258,27 +303,45 @@ int main(int argc, char *argv[])
     auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
 
 
+    // First a model under the root node
+    bool showModel = true;
+    if (showModel)
+    {
+        state.models.rootNodeID = scene->createNode({}).id();
+        auto modelDocument = loadModel();
+        auto modelItemIDs = generateModel(modelDocument, gpuDevice, state.scene, state.models.rootNodeID);
+        if (modelItemIDs.size()) {
+            state.models.modelItemID = modelItemIDs[0];
+        }
+
+    }
+
 
     // Some nodes to layout the scene and animate objects
-    auto node0 = scene->createNode(core::mat4x3(), -1);
- 
-    auto rnode = scene->createNode(core::translation(core::vec3(4.0f, 0.0f, 0.0f)), node0.id());
+    graphics::Node node0;
+    // node0 = scene->createNode(core::mat4x3(), -1);
+    graphics::Node rnode;
+    graphics::Node bnode;
+    graphics::Node cnode;
+    graphics::Node dnode;
+    graphics::Node enode;
 
-    auto bnode = scene->createNode(core::translation(core::vec3(8.0f, 0.0f, 0.0f)), rnode.id());
+    if (node0.isValid()) {
+        rnode = scene->createNode({ .parent = node0.id(), .localTransform = core::translation(core::vec3(4.0f, 0.0f, 0.0f)), .name = "Rnode"});
 
-    auto cnode = scene->createNode(core::translation(core::vec3(0.0f, 5.0f, 0.0f)), bnode.id());
+        bnode = scene->createNode({ .parent = rnode.id(), .localTransform = core::translation(core::vec3(8.0f, 0.0f, 0.0f)), .name = "Bnode" });
+        cnode = scene->createNode({ .parent = bnode.id(), .localTransform = core::translation(core::vec3(0.0f, 5.0f, 0.0f)), .name = "Cnode" });
+        dnode = scene->createNode({ .parent = cnode.id(), .localTransform = core::translation(core::vec3(0.0f, 0.0f, 3.0f)), .name = "Dnode" });
+        enode = scene->createNode({ .parent = rnode.id(), .localTransform = core::translation(core::vec3(0.0f, 1.0f, 4.0f)), .name = "Enode" });
 
-    auto dnode = scene->createNode(core::translation(core::vec3(0.0f, 0.0f, 3.0f)), cnode.id());
-
-    auto enode = scene->createNode(core::translation(core::vec3(0.0f, 1.0f, 4.0f)), rnode.id());
-
-    //  node0
-    //    +---- rnode
-    //            +---- bnode
-    //            |       +---- cnode
-    //            |               +---- dnode
-    //            +---- enode            
-    //
+        //  node0
+        //    +---- rnode
+        //            +---- bnode
+        //            |       +---- cnode
+        //            |               +---- dnode
+        //            +---- enode            
+        //
+    }
 
     // A point cloud draw factory
     auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>(gpuDevice);
@@ -295,57 +358,13 @@ int main(int argc, char *argv[])
         auto tsdrawable = scene->createDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
 
         // Some items unique instaces of the draw and the specified nodes
-        auto pcitem = scene->createItem(node0, pcdrawable);
+        auto pcitem = scene->createItem({ .node= node0.id(), .draw= pcdrawable.id() });
 
-        auto tsitem = scene->createItem(enode, tsdrawable);
+        auto tsitem = scene->createItem({ .node = enode.id(), .draw = tsdrawable.id() });
 
-        auto pcitem2 = scene->createItem(cnode, pcdrawable);
+        auto pcitem2 = scene->createItem({ .node = cnode.id(), .draw = pcdrawable.id() });
 
-        auto tsitem2 = scene->createItem(dnode, tsdrawable);
-    }
-
-    bool showModel = true;
-    if (showModel)
-    {
-        state.models.rootNodeID = node0.id();
-        auto modelItemIDs = generateModel(loadModel(), gpuDevice, state.scene, state.models.rootNodeID);
-        if (modelItemIDs.size()) {
-            state.models.modelItemID = modelItemIDs[0];
-        }
-
-    }
-    
-    // A Primitive draw factory
-    auto primitiveDrawFactory = std::make_unique<graphics::PrimitiveDrawFactory>(gpuDevice);
-
-    // a Primitive draw
-    int numPrimitiveDraws = 10;
-    graphics::Draws primitiveDraws(numPrimitiveDraws);
-    for (int i = 0; i < numPrimitiveDraws; ++i) {
-        float t = sin(core::pi()*float(i) / float(numPrimitiveDraws));
-        core::vec3 size = { 1.0f + 2.0f * t, 2.0f + 3.0f * t, 0.7f + 2.0f * t };
-        primitiveDraws[i] = scene->createDraw(primitiveDrawFactory->createPrimitive(gpuDevice, { {size} }));
-
-    }
-
-    // And many primitive items using the on of the primitive_draws
-    std::vector<graphics::NodeID> prim_nodes;
-    {
-        int width = 0;
-        float space = 4.0f;
-        float pos_offset = width / 2 * space;
-        for (int i = 0; i < width * width; ++i) {
-            float t = acos(-1.0f) * i / float(width * width);
-            auto p_node = scene->createNode(
-                core::translation_rotation(
-                    core::vec3(-space * (i % width) + pos_offset, -1.0f, space * (i / width) - pos_offset),
-                    core::rotor3::make_from_x_to_dir(core::vec3(cos(t), 0, sin(t)))
-                ),
-                rnode.id());
-
-            auto p_item = scene->createItem(p_node, primitiveDraws[i % numPrimitiveDraws]);
-            prim_nodes.push_back(p_node.id());
-        }
+        auto tsitem2 = scene->createItem({ .node = dnode.id(), .draw = tsdrawable.id() });
     }
 
     //  node0
@@ -359,7 +378,40 @@ int main(int argc, char *argv[])
     //            +---- pnode 0  
     //            +---- pnode ...  
     //            +---- pnode (width * width - 1)  
+    // A Primitive draw factory
+    auto primitiveDrawFactory = std::make_unique<graphics::PrimitiveDrawFactory>(gpuDevice);
+    std::vector<graphics::NodeID> prim_nodes;
+    if (node0.isValid()) {
+        // a Primitive draw
+        int numPrimitiveDraws = 10;
+        graphics::Draws primitiveDraws(numPrimitiveDraws);
+        for (int i = 0; i < numPrimitiveDraws; ++i) {
+            float t = sin(core::pi()*float(i) / float(numPrimitiveDraws));
+            core::vec3 size = { 1.0f + 2.0f * t, 2.0f + 3.0f * t, 0.7f + 2.0f * t };
+            primitiveDraws[i] = scene->createDraw(primitiveDrawFactory->createPrimitive(gpuDevice, { {size} }));
 
+        }
+
+        // And many primitive items using the on of the primitive_draws
+        {
+            int width = 0;
+            float space = 4.0f;
+            float pos_offset = width / 2 * space;
+            for (int i = 0; i < width * width; ++i) {
+                float t = acos(-1.0f) * i / float(width * width);
+                auto p_node = scene->createNode({
+                    .parent = rnode.id(),
+                    .localTransform =  core::translation_rotation(
+                            core::vec3(-space * (i % width) + pos_offset, -1.0f, space * (i / width) - pos_offset),
+                            core::rotor3::make_from_x_to_dir(core::vec3(cos(t), 0, sin(t)))
+                        ),
+                    });
+
+                auto p_item = scene->createItem({ .node= p_node.id(), .draw= primitiveDraws[i % numPrimitiveDraws].id() });
+                prim_nodes.push_back(p_node.id());
+            }
+        }
+    }
 
     // Create gizmos to draw the node transform and item tree
     auto [gznode_tree, gzitem_tree] = graphics::GizmoDraw_createSceneGizmos(scene, gpuDevice);
@@ -370,6 +422,10 @@ int main(int argc, char *argv[])
     scene->updateBounds();
     core::vec4 sceneSphere = scene->getBounds().toSphere();
     
+
+    // Log out scene hierarchy
+    logScene();
+
     // Content creation
     float doAnimate = 0.0f;
 
@@ -421,36 +477,46 @@ int main(int argc, char *argv[])
                                     : (std::string(" fov:") + std::to_string((int)(camera->getFovDeg())) + std::string("deg")) );
             window->setTitle(title);
         }
+        auto nt = (currentSample._frameNum / 300.0f);
         auto t = acos(-1.0f) * (currentSample._frameNum / 300.0f);
 
         if (doAnimate) {
-            // Move something
-            scene->_nodes.editNodeTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
-                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(-t), 0.0f, sin(-t)));
-                core::rotation(rts, rotor);
-                return true;
-            });
-            scene->_nodes.editNodeTransform(bnode.id(), [t](core::mat4x3& rts) -> bool {
-                return true;
-            });
-            scene->_nodes.editNodeTransform(cnode.id(), [t](core::mat4x3& rts) -> bool {
-                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
-                core::rotation(rts, rotor);
-                return true;
-            });
-            scene->_nodes.editNodeTransform(dnode.id(), [t](core::mat4x3& rts) -> bool {
-                core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
-                core::rotation(rts, rotor);
-                return true;
-            });
-
-            for (auto prim_node : prim_nodes) {
-                scene->_nodes.editNodeTransform(prim_node, [t](core::mat4x3& rts) -> bool {
-                    core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3((float)cos(0.005 * t), 0.0f, (float)sin(0.005 * t)));
-                    core::rotate(rts, rotor);
+            if (rnode.isValid()) {
+                // Move something
+                scene->_nodes.editNodeTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
+                    core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(-t), 0.0f, sin(-t)));
+                    core::rotation(rts, rotor);
                     return true;
                 });
+                scene->_nodes.editNodeTransform(bnode.id(), [t](core::mat4x3& rts) -> bool {
+                    return true;
+                });
+                scene->_nodes.editNodeTransform(cnode.id(), [t](core::mat4x3& rts) -> bool {
+                    core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.2 * t), 0.0f, sin(0.2 * t)));
+                    core::rotation(rts, rotor);
+                    return true;
+                });
+                scene->_nodes.editNodeTransform(dnode.id(), [t](core::mat4x3& rts) -> bool {
+                    core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(0.5 * t), sin(0.5 * t), 0.0f));
+                    core::rotation(rts, rotor);
+                    return true;
+                });
+
+                for (auto prim_node : prim_nodes) {
+                    scene->_nodes.editNodeTransform(prim_node, [t](core::mat4x3& rts) -> bool {
+                        core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3((float)cos(0.005 * t), 0.0f, (float)sin(0.005 * t)));
+                        core::rotate(rts, rotor);
+                        return true;
+                    });
+                }
             }
+
+            // Animate scene!
+            if (state.models.animation.animItem != -1) {
+                auto anim = state.scene->_anims.getAnim(state.models.animation.animItem);
+                anim.as<graphics::KeyAnim>()._clip = state.models.animation.clip;
+            }
+            viewport->animate(nt * 4.0);
         }
 
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
@@ -516,6 +582,13 @@ int main(int argc, char *argv[])
         if (e.state && e.key == uix::KEY_M) {
             dashboard_item.toggleVisible();
         }
+
+        if (e.state && e.key == uix::KEY_T) {
+            state.models.animation.clip++;
+           // auto anim = state.scene->_anims.
+            state.models.animation.clip = state.models.animation.clip % 2;
+        }
+
         if (zoomToScene) {
             camControl->zoomTo(sceneSphere);
         }

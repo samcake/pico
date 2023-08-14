@@ -249,12 +249,12 @@ namespace graphics
 
        // a gizmo draw to draw the transforms
        auto node_tree_draw = scene->createDraw(gizmoDrawFactory->createNodeGizmo(gpuDevice));
-       auto node_tree = scene->createItem(Node::null, node_tree_draw);
+       auto node_tree = scene->createItem({ .node= INVALID_NODE_ID, .draw= node_tree_draw.id() });
        node_tree.setVisible(false);
 
 
        auto item_tree_draw = scene->createDraw(gizmoDrawFactory->createItemGizmo(gpuDevice, scene));
-       auto item_tree = scene->createItem(Node::null, item_tree_draw);
+       auto item_tree = scene->createItem({ .node = INVALID_NODE_ID, .draw= item_tree_draw.id() });
        item_tree.setVisible(false);
 
        return std::tuple<Item, Item>{node_tree, item_tree};

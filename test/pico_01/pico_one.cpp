@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         // Next, a renderer built on this device
         // the default renderer without any further configuration will do
         //  a clear color of the swapchain passed in the render call
-        auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, nullptr);
+        auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, nullptr, nullptr);
 
         // Presentation creation
 

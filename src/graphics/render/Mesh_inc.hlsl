@@ -12,6 +12,7 @@ StructuredBuffer<Vertex>  vertex_array : register(t3);
 typedef float4 VertexAttrib;
 StructuredBuffer<VertexAttrib>  vertex_attrib_array : register(t4);
 
+
 uint mesh_fetchVectorIndex(int vertNum, int indexOffset) {
     return indexOffset + vertNum;
 }
@@ -47,6 +48,29 @@ float3 mesh_fetchVertexNormal(uint vid, int vertexOffset) {
 float2 mesh_fetchVertexTexcoord(uint aid, int attribOffset) {
     return (attribOffset == -1 ? float2(0.5, 0.5) : vertex_attrib_array[attribOffset + aid].xy);
 }
+
+uint2 mesh_fetchVertexSkinParam(uint aid, int attribOffset) {
+    return (attribOffset == -1 ? uint2(0, 0) : asuint(vertex_attrib_array[attribOffset + aid].zw));
+}
+
+float4 unpackSkinParamFrom2U(uint2 sp, out int4 skinJoints) {
+    int weights = sp.x;
+    int joints = sp.y;
+
+    skinJoints = int4(
+        (int(joints & 0xFF)),
+        (int((joints >> 8) & 0xFF)),
+        (int((joints >> 16) & 0xFF)),
+        (int((joints >> 24) & 0xFF))
+        );
+
+    return float4(
+        float(int(weights & 0xFF)) / 255.0f,
+        float(int((weights >> 8) & 0xFF)) / 255.0f,
+        float(int((weights >> 16) & 0xFF)) / 255.0f,
+        float(float(int((weights >> 24) & 0xFF))) / 255.0f);
+}
+
 typedef float3x3 FacePositions;
 
 struct FaceVerts {

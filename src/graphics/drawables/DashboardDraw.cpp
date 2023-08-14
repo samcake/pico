@@ -153,7 +153,7 @@ namespace graphics
 
        // a dashboard
        auto dashboardDraw = scene->createDraw(dashboardDrawFactory->createDraw(gpuDevice));
-       auto dashboard = scene->createItem(graphics::Node::null, dashboardDraw);
+       auto dashboard = scene->createItem({ .node = INVALID_NODE_ID, .draw = dashboardDraw.id() });
        dashboard.setVisible(false);
 
        return dashboard;

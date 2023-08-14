@@ -56,8 +56,11 @@ namespace graphics {
 
         static const DescriptorSetLayout viewPassLayout;
 
+        void animate(float time);
+
     protected:
         void _renderCallback(RenderArgs& args);
+        void _animateCallback(AnimateArgs& args);
 
         void renderScene(RenderArgs& args);
 

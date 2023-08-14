@@ -120,6 +120,7 @@ namespace core {
         vec4(float _x, float _y, float _z, float _w) : x(_x), y(_y), z(_z), w(_w) {}
         vec4(const vec3& xyz, float _w) : x(xyz.x), y(xyz.y), z(xyz.z), w(_w) {}
         vec4& operator=(const vec4& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
+        vec4& operator=(const vec3& a) { x = a.x; y = a.y; z = a.z; w = 0; return *this; }
 
         vec4 operator+(const vec4& a) const { return vec4(x + a.x, y + a.y, z + a.z, w + a.w); }
         vec4 operator-(const vec4& a) const { return vec4(x - a.x, y - a.y, z - a.z, w - a.w); }
@@ -131,6 +132,8 @@ namespace core {
 
         vec3 xyz() const { return vec3(x, y, z); }
         vec2 xy() const { return vec2(x, y); }
+
+        vec3& as_xyz() { return *((vec3*) this); }
     };
 
     struct ucvec4 {
@@ -182,6 +185,8 @@ namespace core {
     }
 
     // Max Min
+    inline uint64_t min(uint64_t a, uint64_t b) { return (a < b ? a : b); }
+    inline uint64_t max(uint64_t a, uint64_t b) { return (a > b ? a : b); }
     inline uint32_t min(uint32_t a, uint32_t b) { return (a < b ? a : b); }
     inline uint32_t max(uint32_t a, uint32_t b) { return (a > b ? a : b); }
     inline float min(float a, float b) { return (a < b ? a : b); }

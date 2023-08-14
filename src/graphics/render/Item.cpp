@@ -41,20 +41,25 @@ namespace graphics {
     void ItemStore::reserve(const Scene* scene, const DevicePointer& device, uint32_t capacity) {
         _scene = scene;
         _itemInfos.reserve(device, capacity);
+        _itemNames.reserve(capacity);
     }
 
-    ItemID ItemStore::allocate(NodeID node, DrawID draw, ItemID group) {
+    ItemID ItemStore::allocate(const ItemInit& init) {
         auto [new_id, recycle] = _indexTable.allocate();
+        _itemNames.resize(_indexTable.getNumAllocatedElements());
 
-        ItemInfo info = { node, draw, group, IS_VISIBLE };
+        ItemInfo info = { init.node, (uint16_t) init.draw, (uint16_t) init.anim, init.group, IS_VISIBLE };
         _itemInfos.allocate_element(new_id, &info);
         _touchedElements.push_back(new_id);
+        
+        // also add the name in the name table:
+        _itemNames[new_id] = init.name;
 
         return new_id;
     }
 
-    ItemID ItemStore::createItem(NodeID node, DrawID draw, ItemID group) {
-        return allocate(node, draw, group);
+    ItemID ItemStore::createItem(const ItemInit& init) {
+        return allocate(init);
     }
 
     void ItemStore::free(ItemID index) {
@@ -62,6 +67,7 @@ namespace graphics {
             _indexTable.free(index);
             _itemInfos.set_element(index, nullptr);
             _touchedElements.push_back(index);
+            _itemNames[index].clear();
         }
     }
 
@@ -162,6 +168,33 @@ namespace graphics {
 
         // Start fresh
         _touchedElements.clear();
+    }
+
+
+    void ItemStore::traverse(TravereAccessor accessor) const {
+        // lock the node store transform array as a whole
+        // so we can use the unsafe data accessor in the function
+        auto [begin_item, l] = _itemInfos.read(0);
+        auto count = numAllocatedItems();
+        uint32_t itemId = 0;
+
+        while (itemId < count) {
+            auto currentInfo = _itemInfos.unsafe_data(itemId);
+            itemId = traverseItem(*currentInfo, itemId, 0, accessor);
+        }
+    }
+    ItemID ItemStore::traverseItem(const ItemInfo& itemInfo, ItemID itemId, int32_t depth, TravereAccessor accessor) const {
+        if (itemInfo.isGrouped()) {
+            depth++;
+            auto parentGroup = _itemInfos.unsafe_data(itemInfo._groupID);
+            while (parentGroup->isGrouped()) {
+                parentGroup = _itemInfos.unsafe_data(parentGroup->_groupID);
+                depth++;
+            }
+        }
+        accessor({ .id= itemId, .info= itemInfo, .name= _itemNames[itemId], .depth= depth });
+
+        return itemId + 1;
     }
 
 }

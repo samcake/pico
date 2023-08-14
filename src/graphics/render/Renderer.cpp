@@ -33,9 +33,10 @@
 
 using namespace graphics;
 
-Renderer::Renderer(const DevicePointer& device, RenderCallback callback) :
+Renderer::Renderer(const DevicePointer& device, RenderCallback renderCallback, AnimateCallback animCallback) :
     _device(device),
-    _callback(callback)
+    _renderCallback(renderCallback),
+    _animateCallback(animCallback)
 {
     _batch = _device->createBatch({});
 }
@@ -48,8 +49,8 @@ void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapc
     RenderArgs args = { _device, _batch, swapchain, camera, nullptr };
     if (callback) {
         callback(args);
-    } else if (_callback) {
-        _callback(args);
+    } else if (_renderCallback) {
+        _renderCallback(args);
     } else {
         auto currentIndex = swapchain->currentIndex();
 
@@ -82,3 +83,14 @@ void Renderer::render(const CameraPointer& camera, const SwapchainPointer& swapc
     }
 }
 
+void Renderer::animate(float time, AnimateCallback callback) {
+    AnimateArgs args = { time, _device, nullptr };
+    if (callback) {
+        callback(args);
+    }
+    else if (_animateCallback) {
+        _animateCallback(args);
+    }
+    else {
+    }
+}

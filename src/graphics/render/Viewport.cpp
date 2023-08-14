@@ -57,6 +57,9 @@ Viewport::Viewport(const ViewportInit& init) :
     _renderer = std::make_shared<Renderer>(_device,
          [this] (RenderArgs& args) {
              this->_renderCallback(args);
+          },
+         [this](AnimateArgs& args) {
+              this->_animateCallback(args);
           });
 
     DescriptorSetInit dsInit = {
@@ -84,6 +87,23 @@ core::FrameTimer::Sample Viewport::lastFrameTimerSample() const {
     return _frameTimer.lastSample();
 }
 
+
+void Viewport::animate(float time) {
+    _renderer->animate(time);
+}
+
+void Viewport::_animateCallback(AnimateArgs& args) {
+    args.scene = _scene;
+
+    auto itemInfos = _scene->_items.fetchItemInfos();
+    
+    for (int i = 0; i < itemInfos.size(); i++) {
+        const auto& info = itemInfos[i];
+        if (info.isValid() && info.isVisible() && info.isAnim()) {
+             _scene->_anims.animate(info._animID, info._nodeID, args);
+        }
+    }
+}
 
 void Viewport::present(const SwapchainPointer& swapchain) {
     _renderer->render(_scene->getCamera(_cameraID), swapchain);

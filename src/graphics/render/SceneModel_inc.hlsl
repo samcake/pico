@@ -6,6 +6,7 @@
 
 #include "Mesh_inc.hlsl"
 #include "Part_inc.hlsl"
+#include "Skin_inc.hlsl"
 #include "Material_inc.hlsl"
 
 StructuredBuffer<Material>  material_array : register(t9);

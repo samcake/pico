@@ -311,7 +311,7 @@ void generateSpectra(uint32_t map_res, float map_spacing, uint32_t mesh_res, flo
          mesh_res, mesh_res, mesh_spacing
        }));
 
-    scene->createItem(root, heightmap_draw);
+    scene->createItem({ .node= root.id(), .draw= heightmap_draw.id() });
 }
 
 void updateHeights(float t) {

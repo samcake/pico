@@ -33,6 +33,7 @@
 #include "render/Transform.h"
 
 #include "render/Draw.h"
+#include "render/Animation.h"
 
 #include "render/Renderer.h"
 
@@ -43,7 +44,8 @@ namespace graphics {
     static const ItemID INVALID_ITEM_ID = core::IndexTable::INVALID_INDEX;
     using IDToIndices = std::unordered_map<ItemID, uint32_t>;
 
-
+    using ItemName = std::string;
+    using ItemNames = std::vector<ItemName>;
 
     class VISUALIZATION_API ItemStore {
     public:
@@ -59,7 +61,10 @@ namespace graphics {
 
         struct ItemInfo {
             NodeID _nodeID{ INVALID_NODE_ID };
-            DrawID _drawID{ INVALID_DRAW_ID };
+           // DrawID _drawID{INVALID_DRAW_ID};
+           // AnimID _animID{ INVALID_ANIM_ID };
+            uint16_t _drawID{(uint16_t) - 1};
+            uint16_t _animID{ (uint16_t) -1 };
             ItemID _groupID{ INVALID_ITEM_ID };
             uint32_t _flags{ IS_INVALID }; // by default the Info is invalid!
 
@@ -72,21 +77,32 @@ namespace graphics {
             inline bool toggleCamera() { _flags ^= IS_CAMERA; return isCamera(); }
 
             inline bool hasNode() const { return _nodeID != INVALID_NODE_ID; }
-            inline bool isDraw() const { return _drawID != INVALID_DRAW_ID; }
+            inline bool isDraw() const { return _drawID != (uint16_t)-1; } //INVALID_DRAW_ID; }
+            inline bool isAnim() const { return _animID != (uint16_t)-1 ;} //INVALID_ANIM_ID; }
             inline bool isGrouped() const { return _groupID != INVALID_ITEM_ID; }
 
             inline bool isValid() const { return _flags != 0xFFFFFFFF; }
         };
         using ItemStructBuffer = StructuredBuffer<ItemInfo>;
         using ItemInfos = ItemStructBuffer::Array;
+        
+        struct ItemInit {
+            NodeID node = INVALID_NODE_ID;
+            DrawID draw = INVALID_DRAW_ID;
+            AnimID anim = INVALID_ANIM_ID;
+            ItemID group = INVALID_ITEM_ID;
+            std::string name;
+        };
+        ItemID createItem(const ItemInit& init);
 
     private:
-        ItemID allocate(NodeID node, DrawID draw, ItemID owner = INVALID_ITEM_ID);
+        ItemID allocate(const ItemInit& init);
 
         core::IndexTable _indexTable;
         mutable ItemStructBuffer _itemInfos;
-
         mutable ItemIDs _touchedElements;
+
+        ItemNames _itemNames;
 
         const Scene* _scene = nullptr;
 
@@ -142,7 +158,8 @@ namespace graphics {
             inline bool toggleCamera() { return store()->toggleCamera(id()); }
 
             inline NodeID nodeID() const { return store()->getNodeID(id()); }
-            inline DrawID DrawID() const { return store()->getDrawID(id()); }
+            inline DrawID drawID() const { return store()->getDrawID(id()); }
+            inline AnimID animID() const { return store()->getAnimID(id()); }
             inline ItemID groupID() const { return store()->getGroupID(id()); }
 
 
@@ -159,7 +176,6 @@ namespace graphics {
         };
         inline Item makeItem(ItemID id) { return { Handle{ this, id } }; }
 
-        ItemID createItem(NodeID node, DrawID draw, ItemID group = INVALID_ITEM_ID);
         void free(ItemID id);
         void freeAll();
 
@@ -179,6 +195,10 @@ namespace graphics {
         inline ItemInfo getItemInfo(ItemID id) const {
             auto [i, l] = read(id);
             return *i;
+        }
+        inline ItemName getItemName(ItemID id) const {
+            auto [i, l] = read(id);
+            return _itemNames[id];
         }
 
         inline void setVisible(ItemID id, bool visible) {
@@ -203,11 +223,22 @@ namespace graphics {
 
         inline NodeID getNodeID(ItemID id) const { return getItemInfo(id)._nodeID; }
         inline DrawID getDrawID(ItemID id) const { return getItemInfo(id)._drawID; }
+        inline AnimID getAnimID(ItemID id) const { return getItemInfo(id)._animID; }
         inline ItemID getGroupID(ItemID id) const { return getItemInfo(id)._groupID; }
 
         core::aabox3 fetchWorldBound(ItemID id) const;
 
         ItemIDs fetchItemGroup(ItemID ownerID) const;
+
+        struct ItemAccessor {
+            ItemID id = INVALID_ITEM_ID;
+            const ItemInfo& info;
+            const ItemName& name;
+            int32_t depth = 0;
+        };
+        using TravereAccessor = std::function<void(const ItemAccessor& item)>;
+        void traverse(TravereAccessor accessor) const;
+        ItemID traverseItem(const ItemInfo& itemInfo, ItemID itemId, int32_t depth, TravereAccessor accessor) const;
 
     public:
         // gpu api
@@ -219,4 +250,6 @@ namespace graphics {
     using ItemFlags = ItemStore::ItemFlags;
     using ItemInfo = ItemStore::ItemInfo;
     using ItemInfos = ItemStore::ItemInfos;
+    using ItemAccessor = ItemStore::ItemAccessor;
+
 }

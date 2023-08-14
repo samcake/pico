@@ -194,7 +194,7 @@ bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
                 "no source file" :
                 shader->getShaderDesc().url) :
             shader->getShaderDesc().watcher_file);
-        picoLog((target + " " + shader->getShaderDesc().entryPoint + "\n"
+        picoError((target + " " + shader->getShaderDesc().entryPoint + "\n"
             + "    " + file + "\n"
             + (char*)pErrors->GetBufferPointer()));
 
