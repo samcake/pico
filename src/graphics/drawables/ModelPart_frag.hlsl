@@ -91,11 +91,14 @@ struct PixelShaderInput{
     float3 EyePos : EPOS;
     float3 Normal   : NORMAL;
     float2 Texcoord : TEXCOORD;
+    float4 Color : COLOR;
 };
 
 float4 main(PixelShaderInput IN) : SV_Target{
     int matIdx = part_array[_partID].material;// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
+    
+    float4 vcolor = IN.Color;
 
     // Normal and Normal map
     float3 surfNormal = normalize(IN.Normal);
@@ -131,7 +134,8 @@ float4 main(PixelShaderInput IN) : SV_Target{
     //float3 baseColor = float3(0.7, 0.7, 0.7);
     float3 baseColor = 0.7;
     switch (DISPLAYED_COLOR(_drawMode)) {
-    case 0: baseColor = albedo; break;
+    case 0: baseColor = vcolor.xyz; break;
+    //case 0: baseColor = albedo; break;
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
     case 3: baseColor = mapNor; break;

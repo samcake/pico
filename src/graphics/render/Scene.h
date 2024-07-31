@@ -35,6 +35,7 @@
 #include "render/Draw.h"
 #include "render/Item.h"
 #include "render/Camera.h"
+#include "render/Animation.h"
 
 namespace graphics {
     using UserID  = uint32_t;  
@@ -47,6 +48,7 @@ namespace graphics {
         int32_t nodes_capacity = 100000;
         int32_t drawables_capacity = 1000;
         int32_t cameras_capacity = 10;
+        int32_t animations_capacity = 1000;
     };
 
     class VISUALIZATION_API Scene {
@@ -58,11 +60,14 @@ namespace graphics {
         // Items
         ItemStore _items;
         
-        Item createItem(Node node, Draw draw, UserID userID = INVALID_ITEM_ID);
+        using ItemInit = ItemStore::ItemInit;
+        Item createItem(const ItemInit& init, UserID userID = INVALID_ITEM_ID);
+
+/*        Item createItem(Node node, Draw draw, UserID userID = INVALID_ITEM_ID);
         Item createItem(NodeID node, DrawID draw, UserID userID = INVALID_ITEM_ID);
         Item createSubItem(ItemID group, NodeID node, DrawID draw, UserID userID = INVALID_ITEM_ID);
         Item createSubItem(ItemID group, Node node, Draw draw, UserID userID = INVALID_ITEM_ID);
-
+*/
         void deleteAll();
         void deleteItem(ItemID id);
         inline Item getItem(ItemID id) const { return _items.getItem(id); } // Item is either null or valid
@@ -79,8 +84,10 @@ namespace graphics {
         NodeStore _nodes;
         inline Node getNode(NodeID id) const { return _nodes.getNode(id); } // Node is either null or valid
 
-        Node createNode(const core::mat4x3& rts, NodeID parent);
-        NodeIDs createNodeBranch(NodeID rootParent, const std::vector<core::mat4x3>& rts, const NodeIDs& parentsOffsets);
+        using NodeInit = NodeStore::NodeInit;
+        Node createNode(const NodeInit& init);
+        using NodeBranchInit = NodeStore::NodeBranchInit;
+        NodeIDs createNodeBranch(const NodeBranchInit& init);
         void deleteNode(NodeID nodeId);
 
         void attachNode(NodeID child, NodeID parent);
@@ -106,6 +113,13 @@ namespace graphics {
         const core::Bounds& getBounds() const { return _bounds; }
 
         
+        // Animations
+        AnimStore _anims;
+        template <typename T>
+        Anim createAnim(T x) {
+            return _anims.createAnim(std::move(x));
+        }
+
         // TODO: Find a better way....
         SkyDrawFactory_sp _skyFactory;
         Sky_sp _sky;

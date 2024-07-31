@@ -44,16 +44,27 @@ namespace graphics {
 
     using RenderCallback = std::function<void(RenderArgs& renderArgs)>;
 
+    struct AnimateArgs {
+        float time = 0;
+        DevicePointer device;
+        ScenePointer scene;
+    };
+
+    using AnimateCallback = std::function<void(AnimateArgs& animateArgs)>;
+
+
     class VISUALIZATION_API Renderer {
     public:
-        Renderer(const DevicePointer& device, RenderCallback callback);
+        Renderer(const DevicePointer& device, RenderCallback renderCallback, AnimateCallback animateCallback);
         ~Renderer();
 
         void render(const CameraPointer& camera, const SwapchainPointer& swapchain, RenderCallback callback = nullptr);
+        void animate(float time, AnimateCallback animCallback = nullptr);
 
     protected:
         DevicePointer _device;
         BatchPointer _batch;
-        RenderCallback _callback;
+        RenderCallback _renderCallback;
+        AnimateCallback _animateCallback;
     };
 }
