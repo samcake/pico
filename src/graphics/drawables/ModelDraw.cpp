@@ -717,6 +717,12 @@ namespace graphics
                     modelDraw->_skinJointBindings.emplace_back(binding);
                 }
             }
+
+            // add a dummy joint binding to have a valid buffer even if not used
+            if (modelDraw->_skinJointBindings.empty())
+            {
+                modelDraw->_skinJointBindings.emplace_back(ModelSkinJointBinding());
+            }
             // skin buffer
             BufferInit skinBufferInit;
             int32_t skinJointElementPerStruct = 4;
