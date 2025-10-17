@@ -10,5 +10,7 @@ add_subdirectory( pico_model )
 add_subdirectory( pico_ocean )
 add_subdirectory( pico_terrain )
 
+add_subdirectory( pico_treemap )
+
 add_subdirectory( pico_interop-gdi )
 
