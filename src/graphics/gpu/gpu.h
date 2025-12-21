@@ -154,7 +154,8 @@ namespace graphics {
 
         RAYTRACING = 0x2000,
 
-        COUNT = 5,
+        INCLUDE = 0x8000,
+        COUNT = 6,
     };
 
     enum class PipelineType : uint8_t {

@@ -4,6 +4,7 @@ project(Scribe)
 
 file(GLOB TARGET_SRCS src/*)
 add_executable(scribe ${TARGET_SRCS})
+set_target_properties(scribe PROPERTIES CXX_STANDARD 20)
 if (WIN32)
     set_property(TARGET scribe APPEND_STRING PROPERTY LINK_FLAGS_DEBUG "/OPT:NOREF /OPT:NOICF")
 endif()

@@ -138,11 +138,11 @@ namespace graphics
 
             Sky_inc::getMapEntry(),
         };
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
-        graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+      //  graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", ModelPart_vert::getSource, ModelPart_vert::getSourceFilename(), include };
+        graphics::ShaderPointer vertexShader = device->createShader(ModelPart_vert::getShaderInit("main"));
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", ModelPart_frag::getSource, ModelPart_frag::getSourceFilename(), include };
-        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+       // graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", ModelPart_frag::getSource, ModelPart_frag::getSourceFilename(), include };
+        graphics::ShaderPointer pixelShader = device->createShader(ModelPart_frag::getShaderInit("main"));
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);

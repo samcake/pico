@@ -25,7 +25,7 @@ float4 main_draw(PixelShaderInput IN) : SV_Target
     Transform _view = cam_view();
     float4 _viewport = cam_viewport();
     
-    if (_drawControl.x == 1)
+    if (skyConstant._drawControl.x == 1)
     { // Scopes
         float aspectratio = _viewport.z / _viewport.w;
         float2 v_uv1 = (IN.coords.zw - float2(0.8, 0.0)) / (0.2 * float2(1.0, aspectratio));

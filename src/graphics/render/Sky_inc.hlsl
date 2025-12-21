@@ -147,9 +147,10 @@ struct SphericalHarmonics {
 };
 
 // Sky buffer
-cbuffer SkyConstant : register(b11) {
+struct SkyConstant 
+{
     Atmosphere _atmosphere;
-    float3 _sunDirection;       // the direction TO the light
+    float3 _sunDirection; // the direction TO the light
     float _sunIntensity;
     Transform _stage;
     int4 _simDims;
@@ -157,26 +158,32 @@ cbuffer SkyConstant : register(b11) {
     SphericalHarmonics _irradianceSH;
 };
 
+ConstantBuffer<SkyConstant> skyConstant : register(b11);
+
 
 float3 getSunDir() { 
-    return _sunDirection;
+    return skyConstant._sunDirection;
 }
 float getSunIntensity() {
-    return _sunIntensity;
+    return skyConstant._sunIntensity;
+}
+
+SphericalHarmonics getSkyIrradianceSH() {
+    return skyConstant._irradianceSH;
 }
 
 
 float3 SkyColor(const float3 dir) {
-    float3 stage_dir =rotateFrom(_stage, dir);
+    float3 stage_dir = rotateFrom(skyConstant._stage, dir);
 
-    float3 origin = float3(0, _atmosphere.earthRadius() + _stage.col_w().y, 0);
+    float3 origin = float3(0, skyConstant._atmosphere.earthRadius() + skyConstant._stage.col_w().y, 0);
     float t0, t1, tMax = -1.0;
 
-    int testEarth = raySphereIntersect(origin, stage_dir, _atmosphere.earthRadius(), t0, t1);
+    int testEarth = raySphereIntersect(origin, stage_dir, skyConstant._atmosphere.earthRadius(), t0, t1);
     if (testEarth && t0 > 0)
         tMax = max(0.f, t0);
 
-    return sky_computeIncidentLight(_simDims, _atmosphere, _sunDirection, origin, stage_dir, 0, tMax);
+    return sky_computeIncidentLight(skyConstant._simDims, skyConstant._atmosphere, skyConstant._sunDirection, origin, stage_dir, 0, tMax);
 }
 
 
@@ -295,17 +302,17 @@ float3 sky_evalIrradianceSH(float3 dir) {
     const float c3 = 0.743125;
     const float c4 = 0.886227;
     const float c5 = 0.247708;
-    
-    float3 col = c1 * _irradianceSH.L22.xyz * (d.x * d.x - d.y * d.y)
-            + c3 * _irradianceSH.L20.xyz * d.z * d.z
-            + c4 * _irradianceSH.L00.xyz
-            - c5 * _irradianceSH.L20.xyz
-            + 2.0 * c1 * (_irradianceSH.L2_2.xyz * d.x * d.y
-                        + _irradianceSH.L21.xyz * d.x * d.z
-                        + _irradianceSH.L2_1.xyz * d.y * d.z)
-            + 2.0 * c2 * (_irradianceSH.L11.xyz * d.x
-                        + _irradianceSH.L1_1.xyz * d.y
-                        + _irradianceSH.L10.xyz * d.z);
+
+    float3 col = c1 * getSkyIrradianceSH().L22.xyz * (d.x * d.x - d.y * d.y)
+            + c3 * getSkyIrradianceSH().L20.xyz * d.z * d.z
+            + c4 * getSkyIrradianceSH().L00.xyz
+            - c5 * getSkyIrradianceSH().L20.xyz
+            + 2.0 * c1 * (getSkyIrradianceSH().L2_2.xyz * d.x * d.y
+                        + getSkyIrradianceSH().L21.xyz * d.x * d.z
+                        + getSkyIrradianceSH().L2_1.xyz * d.y * d.z)
+            + 2.0 * c2 * (getSkyIrradianceSH().L11.xyz * d.x
+                        + getSkyIrradianceSH().L1_1.xyz * d.y
+                        + getSkyIrradianceSH().L10.xyz * d.z);
 
     return col;
 }

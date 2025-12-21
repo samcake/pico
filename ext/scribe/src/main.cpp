@@ -15,6 +15,7 @@
 #include <sstream>
 #include <ctime>
 #include <chrono>
+#include <format>
 
 using namespace std;
 
@@ -35,6 +36,7 @@ int main (int argc, char** argv) {
     bool showParseTree = false;
     bool makeCPlusPlus = false;
     bool parseShaderTypeFromFilename = false;
+    bool makeResourceDeclaration = false;
 
     auto config = std::make_shared<TextTemplate::Config>();
 
@@ -108,6 +110,7 @@ int main (int argc, char** argv) {
                     mode = READY;
                 } else if (inputs.back() == "-c++") {
                     makeCPlusPlus = true;
+                    makeResourceDeclaration = true;
                     mode = READY;
                 } else if (inputs.back() == "-T") {
                     mode = GRAB_SHADER_TYPE;
@@ -302,6 +305,8 @@ int main (int argc, char** argv) {
         return 1;
     };
 
+    std::stringstream destStringStreamBis(destStringStream.str());
+
 
     if (showParseTree) {
         int level = 1;
@@ -310,6 +315,359 @@ int main (int argc, char** argv) {
 
         cerr << srcFilename << " tree:" << std::endl;
         scribe->displayTree(cerr, level);
+    }
+
+    // after the source has been generated, do a new pass to identify shader resource
+    struct IncludeDesc {
+        std::string name;
+    };
+    std::vector<IncludeDesc> includeDescs;
+    struct StructDesc {
+        struct Attribute {
+            std::string type;
+            std::string member;
+        };
+        std::string name;
+        std::vector<Attribute> attributes;
+        std::string block;
+    };
+    std::vector<StructDesc> structDescs;
+    struct ResourceDesc {
+        std::string name;
+        std::string desc;
+        std::string registerslot;
+        std::string type;
+    };
+    std::vector<ResourceDesc> pushDescs;
+    std::vector<ResourceDesc> resourceDescs;
+    if (makeResourceDeclaration)
+    {
+       // destStringStream.seekg(0);
+
+        std::string lineToken;
+        std::string block;
+
+        enum class ParseMode {
+            none = 0,
+            block_begin = 1,
+            block_end = 2,
+        };
+        ParseMode parseMode = ParseMode::none;
+        enum class TokenMode {
+            none = 0,
+            pushbuffer = 1,
+            structdec = 2,
+        };
+        TokenMode tokenMode = TokenMode::none;
+        
+
+        int register_id = -1;
+        bool isInCommentBlock = false;
+        int32_t bracketBlockDepth = 0;
+        while (std::getline(destStringStreamBis, lineToken)) {
+
+            // check for comment block exit
+            size_t commentEnd_idx = lineToken.find("*/");
+            if (isInCommentBlock)
+            {
+                if (commentEnd_idx != std::string::npos)
+                {
+                    lineToken = lineToken.substr(commentEnd_idx);
+                    isInCommentBlock = false;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+
+            size_t commentBegin_idx = lineToken.find("/*");
+            if (commentBegin_idx != std::string::npos)
+            {
+                std::string before = lineToken.substr(0, commentBegin_idx);
+                commentEnd_idx = lineToken.find("*/");
+                if (commentEnd_idx != std::string::npos && commentEnd_idx > commentBegin_idx)
+                {
+                    std::string after = lineToken.substr(commentEnd_idx);
+                    lineToken = before + after;
+                }
+                else
+                {
+                    lineToken = before;
+                    isInCommentBlock = true;
+                }                
+            }
+
+            // if incomment remove the line, move on
+            if (isInCommentBlock)
+            {
+                continue;
+            }
+
+            // else commented line ?
+            size_t commentLine_idx = lineToken.find("//");
+            if (commentLine_idx != std::string::npos)
+            {
+                if (commentLine_idx > 0)
+                {
+                    lineToken = lineToken.substr(0, commentLine_idx);
+                }
+                else
+                {
+                    continue; //  just remove the line
+                }
+            }
+
+            // else...
+
+            size_t include_idx = lineToken.find("#include");
+            size_t struct_idx = lineToken.find("struct ");
+            size_t pushbuffer_idx = lineToken.find("cbuffer");
+            size_t uniformbuffer_idx = lineToken.find("ConstantBuffer<");
+            size_t rwstructuredbuffer_idx = lineToken.find("RWStructuredBuffer<");
+            size_t rwbuffer_idx = lineToken.find("RWBuffer<");
+            size_t structuredbuffer_idx = lineToken.find("StructuredBuffer<");
+            size_t buffer_idx = lineToken.find("Buffer<");
+            size_t samplerstate_idx = lineToken.find("SamplerState");
+            size_t texture_idx = lineToken.find("Texture");
+
+            size_t register_idx = lineToken.find(": register(");
+            size_t register_begin_idx = std::string::npos;
+            size_t register_end_idx = std::string::npos;
+            if (register_idx != std::string::npos)
+            {
+                register_begin_idx = register_idx + 11;
+                register_end_idx = lineToken.find(")", register_begin_idx);
+            }
+
+            size_t bracketOpen_idx = lineToken.find("{");
+            size_t bracketClose_idx = lineToken.find("}");
+
+            if (include_idx != std::string::npos)
+            {
+                size_t includeBegin_idx = lineToken.find("\"", 9);
+                size_t includeEnd_idx = includeBegin_idx;
+                if (includeBegin_idx == std::string::npos)
+                {
+                    includeBegin_idx = lineToken.find("<", 9) + 1;
+                    includeEnd_idx = lineToken.find(">", includeBegin_idx);
+                }
+                else
+                {
+                    includeBegin_idx += 1;
+                    includeEnd_idx = lineToken.find("\"", includeBegin_idx);
+                }
+                IncludeDesc id = {
+                    lineToken.substr(includeBegin_idx, includeEnd_idx - includeBegin_idx - 5) // remove ".hlsl"
+                };
+                 includeDescs.emplace_back(id);
+            }
+            else if (struct_idx != std::string::npos)
+            {
+                int32_t l = std::string::npos;
+                if (bracketOpen_idx != std::string::npos)
+                    l = bracketOpen_idx - struct_idx - 8;
+                StructDesc sd{
+                    .name = lineToken.substr(struct_idx + 7, l),
+                };
+                structDescs.emplace_back(sd);
+                tokenMode = TokenMode::structdec;
+                parseMode = ParseMode::block_begin;
+            }
+            else if (pushbuffer_idx != std::string::npos) {
+                pushbuffer_idx += 8; // begining of cbuffer name
+                ResourceDesc rd{
+                    .name = lineToken.substr(pushbuffer_idx, register_idx - 1 - pushbuffer_idx),
+                    .desc = "graphics::DescriptorType::PUSH_UNIFORM",
+                    .registerslot = lineToken.substr(register_begin_idx + 1, register_end_idx - register_begin_idx - 1) };
+                pushDescs.emplace_back(rd);
+
+                StructDesc sd{
+                    .name = rd.name,
+                };
+                structDescs.emplace_back(sd);
+                tokenMode = TokenMode::pushbuffer;
+                parseMode = ParseMode::block_begin;
+            }
+            else if (uniformbuffer_idx != std::string::npos) {
+                uniformbuffer_idx += 15; // begining of ConstantBuffer< type_name >
+                size_t closing_idx = lineToken.find("> ");
+                if (closing_idx == std::string::npos) {
+                    continue;
+                }
+                ResourceDesc rd{
+                    .name = lineToken.substr(closing_idx + 2, register_idx - 1 - closing_idx - 2),
+                    .desc = "graphics::DescriptorType::UNIFORM_BUFFER",
+                    .registerslot = lineToken.substr(register_begin_idx + 1, register_end_idx - register_begin_idx - 1),
+                    .type = lineToken.substr(uniformbuffer_idx, closing_idx - uniformbuffer_idx),
+                };
+                resourceDescs.emplace_back(rd);
+            }
+            else if ((rwstructuredbuffer_idx != std::string::npos) || (rwbuffer_idx != std::string::npos)) {
+                std::string resource = "{ graphics::DescriptorType::RW_RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 11, 1 }";
+  //              resources.emplace_back(resource);
+            }
+            else if ((structuredbuffer_idx != std::string::npos) || (buffer_idx != std::string::npos)) {
+                size_t closing_idx = lineToken.find("> ");
+                if (closing_idx == std::string::npos) {
+                    continue;
+                }
+                ResourceDesc rd{
+                    .name = lineToken.substr(closing_idx + 2, register_idx - 1 - closing_idx - 2),
+                    .desc = "graphics::DescriptorType::RESOURCE_BUFFER",
+                    .registerslot = lineToken.substr(register_begin_idx + 1, register_end_idx - register_begin_idx - 1) };
+                resourceDescs.emplace_back(rd);
+            }
+            else if (samplerstate_idx != std::string::npos) {
+                std::string resource = " { graphics::DescriptorType::SAMPLER, graphics::ShaderStage::COMPUTE, 0, 2}";
+            }
+            else if (texture_idx != std::string::npos) {
+                std::string resource = "{ graphics::DescriptorType::RESOURCE_TEXTURE, graphics::ShaderStage::VERTEX, 11, 1 }";
+            }
+
+            bool resource_parsed = false;
+            if (parseMode == ParseMode::block_begin)
+            {
+                if (bracketOpen_idx != std::string::npos)
+                {
+                    if (bracketClose_idx != std::string::npos)
+                    {
+                        bracketClose_idx -= bracketOpen_idx + 2;
+                        parseMode = ParseMode::none;
+                        resource_parsed = true;
+                    }
+                    else
+                    {
+                        parseMode = ParseMode::block_end;
+                    }
+                    block = lineToken.substr(bracketOpen_idx + 1, bracketClose_idx);
+                }
+            }
+            else if (parseMode == ParseMode::block_end) {
+                if (bracketOpen_idx != std::string::npos)
+                {
+                    bracketBlockDepth++;
+                    // if 
+                    if (bracketBlockDepth <= 1)
+                    {
+                        if (bracketClose_idx != std::string::npos) {
+                            auto ending = lineToken.substr(bracketClose_idx + 1, std::string::npos);
+                            lineToken = lineToken.substr(0, bracketOpen_idx) + ending;
+                            bracketBlockDepth--;
+                        }
+                        else                    
+                            lineToken = lineToken.substr(0, bracketOpen_idx);
+                    }
+                    else
+                        lineToken.clear();
+
+                }
+                else if (bracketClose_idx != std::string::npos)
+                {
+                    if (bracketBlockDepth > 0)
+                    {
+                        bracketBlockDepth--;
+                        lineToken = lineToken.substr(bracketClose_idx + 1, -1);
+                    }
+                    else
+                    {
+                        if (bracketClose_idx > 0)
+                            lineToken = lineToken.substr(0, bracketClose_idx);
+                        else
+                            lineToken.clear();
+                        
+                        parseMode = ParseMode::none;
+                        resource_parsed = true;
+                    }
+                }
+                
+
+                if (bracketBlockDepth == 0 && !lineToken.empty())
+                {
+                    block += lineToken + "\n";
+                }
+               
+            }
+
+            if (resource_parsed)
+            {
+                switch (tokenMode)
+                {
+                case TokenMode::pushbuffer:
+                case TokenMode::structdec:
+                {
+                    structDescs.back().block = block;
+                    std::stringstream blockStream(block);
+                    //blockStream >> std::ws;
+                    std::string blockLineToken;
+                    std::vector<std::string> lineTokens;
+                    bool endOfCodeLine = false;
+                    bool skipAsFunction = false;
+                    while(blockStream >> blockLineToken)
+                    {
+                        if (!endOfCodeLine) {
+                            size_t semicolumn_idx = blockLineToken.find(';');
+                            size_t bracket_idx = blockLineToken.find(')');
+                            if (semicolumn_idx != std::string::npos || bracket_idx != std::string::npos)
+                            {
+                                blockLineToken = blockLineToken.substr(0, semicolumn_idx);
+                                endOfCodeLine = true;
+                                if (bracket_idx != std::string::npos)
+                                    skipAsFunction = true;
+                            }
+                            lineTokens.emplace_back(blockLineToken);
+                        }
+
+                        if (blockStream.peek() == '\n')
+                        {
+                            blockStream.ignore();
+                            if (!skipAsFunction)
+                            {
+                                StructDesc::Attribute att{ lineTokens[0], lineTokens[1] };
+                                structDescs.back().attributes.emplace_back(att);
+
+                            }
+                            lineTokens.clear();
+                            endOfCodeLine = false;
+                            skipAsFunction = false;
+                        }
+                    }
+
+                    tokenMode = TokenMode::none;
+                    block.clear();
+                    register_id = -1;
+                } break;
+                
+                };
+            }
+        };
+
+        // Filter struct types from hlsl to cpp
+        std::vector<StructDesc::Attribute> hlslTocppAliases = {
+            { "int4",       "core::ivec4" },
+            { "int",        "int32_t" },
+            { "uint",        "uint32_t" },
+            { "float4",     "core::vec4" },
+            { "float3",     "core::vec3" },
+            { "float2",     "core::vec2" },
+            { "Transform",  "core::mat4x3" },
+            { "Box",  "Transform_inc::Box" },
+            { "Projection", "Projection_inc::Projection" },
+            { "FacePositions", "std::array<float, 9>" },
+            { "uint3", "core::uivec3" },
+            { "uint4", "core::uivec4" },
+        };
+        for (auto& sd : structDescs) {
+            for (auto& att : sd.attributes) {
+                for (const auto& alias : hlslTocppAliases) {
+                    if (att.type == alias.type) {
+                        att.type = alias.member;
+                        break;
+                    }
+                }
+
+            }
+        }
     }
 
     if (makefileDeps) {
@@ -346,6 +704,16 @@ int main (int argc, char** argv) {
         headerStringStream << "#ifndef " << targetName << "_h" << std::endl;
         headerStringStream << "#define " << targetName << "_h\n" << std::endl;
         headerStringStream << "#include <string>\n" << std::endl;
+        headerStringStream << "#include <array>\n" << std::endl;
+        headerStringStream << "#include <core/math/Math3D.h>\n" << std::endl;
+        headerStringStream << "#include <gpu/Shader.h>\n" << std::endl;
+        headerStringStream << "#include <gpu/Descriptor.h>\n" << std::endl;
+
+        headerStringStream << "/////////    Shader Includes  /////////////" << std::endl;
+        for (auto& id : includeDescs) {
+            headerStringStream << "#include \"" << id.name << ".h\"" << std::endl;
+        }
+        headerStringStream << std::endl;
 
         headerStringStream << "class " << targetName << " {" << std::endl;
         headerStringStream << "public:" << std::endl;
@@ -358,6 +726,98 @@ int main (int argc, char** argv) {
 
         headerStringStream << "\ttypedef const std::string& (*SourceGetter)();" << std::endl;
         headerStringStream << "\tstatic std::pair<std::string, SourceGetter> getMapEntry() { return { getFilename(), getSource }; }" << std::endl;
+
+        headerStringStream << "\n\t/////////    INCLUDE DESCS     /////////////" << std::endl;
+        // add self as an include if an include type
+        if (type == Type::INCLUDE) {
+            headerStringStream << "\tstatic graphics::ShaderIncludes getSelfInclude() { return { getMapEntry() }; }" << std::endl;
+        }
+
+        headerStringStream << "\tstatic const graphics::ShaderIncludes& getShaderIncludes() {" << std::endl;
+        headerStringStream << "\t\tstatic const graphics::ShaderIncludes lib = graphics::ShaderIncludes_concat(" << std::endl;
+        bool first = true;
+        for (auto& id : includeDescs) {
+            headerStringStream << "\t\t" << (first ? "    " : "   ,") << id.name << "::getShaderIncludes()" << std::endl;
+            first = false;
+        }
+        // add self as an include if an include type
+        if (type == Type::INCLUDE) {
+            headerStringStream << "\t\t" << (first ? "    " : "   ,") << "getSelfInclude()" << std::endl;
+        }
+        headerStringStream << "\t\t);" << std::endl;
+        headerStringStream << "\t\treturn lib;" << std::endl;
+        headerStringStream << "\t}" << std::endl;
+
+        headerStringStream << "\tstatic const NameGetters& getDependentResourceNames() {" << std::endl;
+        headerStringStream << "\t\tstatic const NameGetters resourceNames = {" << std::endl;
+        first = true;
+        for (auto& id : includeDescs) {
+            headerStringStream << "\t\t" << (first ? "    &" : "   ,&") << id.name << "::getResourceNames" << std::endl;
+            first = false;
+        }
+        headerStringStream << "\t\t};" << std::endl;
+        headerStringStream << "\t\treturn resourceNames;" << std::endl;
+        headerStringStream << "\t}" << std::endl;
+
+        headerStringStream << "\n\t/////////    STRUCT DESCS     /////////////" << std::endl;
+        for (auto& sd : structDescs) {
+            headerStringStream << "\tstruct " << sd.name << " {" << std::endl;
+            for (auto& attrib : sd.attributes) {
+                headerStringStream << "\t\t" << attrib.type << " " << attrib.member << ";" << std::endl;
+            }
+            headerStringStream << "\t};" << std::endl;
+        }
+
+        headerStringStream << "\t/////////    RESOURCE LAYOUT     /////////////" << std::endl;
+
+        headerStringStream << "\tstatic const graphics::DescriptorSetLayout& getPushLayout() {" << std::endl;
+        headerStringStream << "\t\tstatic const graphics::DescriptorSetLayout pushLayout = {" << std::endl;
+        first = true;
+        for (auto& rd : pushDescs) {
+            headerStringStream << "\t\t" << (first ? "    {" : "   ,{");
+            headerStringStream << rd.desc << ", graphics::ShaderStage::" << shaderTypeString[type] << ", " << rd.registerslot << ", sizeof(" << rd.name << ") >> 2 }" << std::endl;
+            first = false;
+        }
+        headerStringStream << "\t\t};" << std::endl;
+        headerStringStream << "\t\treturn pushLayout;" << std::endl;
+        headerStringStream << "\t}" << std::endl;
+
+        headerStringStream << "\tstatic const std::vector<std::string>& getResourceNames() {" << std::endl;
+        headerStringStream << "\t\tstatic const std::vector<std::string> bindingNames = {" << std::endl;
+        first = true;
+        for (auto& rd : resourceDescs) {
+            headerStringStream << "\t\t" << (first ? "    \"" : "   ,\"") << rd.name << '\"' << std::endl;
+            first = false;
+        }
+        headerStringStream << "\t\t};" << std::endl;
+        headerStringStream << "\t\treturn bindingNames;" << std::endl;
+        headerStringStream << "\t}" << std::endl;
+        
+        headerStringStream << "\tstatic const graphics::DescriptorSetLayout& getResourceLayout() {" << std::endl;
+        headerStringStream << "\t\tstatic const graphics::DescriptorSetLayout bindingLayouts = {" << std::endl;
+        first = true;
+        for (auto& rd : resourceDescs) {
+            headerStringStream << "\t\t" << (first ? "    {" : "   ,{");
+            headerStringStream << rd.desc << ", graphics::ShaderStage::" << shaderTypeString[type] << ", " << rd.registerslot << ", 1 }" << std::endl;
+            first = false;
+        }
+        headerStringStream << "\t\t};" << std::endl;
+        headerStringStream << "\t\treturn bindingLayouts;" << std::endl;
+        headerStringStream << "\t}" << std::endl;
+
+
+        if (type != Type::INCLUDE) {
+            headerStringStream << "\t/////////    SHADER INIT     /////////////" << std::endl;
+
+            headerStringStream << "\tstatic graphics::ShaderInit getShaderInit(const std::string& entry) {" << std::endl;
+            headerStringStream << "\t\tgraphics::ShaderInit shaderInit = {" << std::endl;
+            headerStringStream << "\t\t\tgraphics::ShaderType::" << shaderTypeString[type] << std::endl;
+            headerStringStream << "\t\t\t,entry, getSource, getSourceFilename()" << std::endl;
+            headerStringStream << "\t\t\t,graphics::ShaderIncludeLib(getShaderIncludes().begin(), getShaderIncludes().end())" << std::endl;
+            headerStringStream << "\t\t};" << std::endl;
+            headerStringStream << "\t\treturn shaderInit;" << std::endl;
+            headerStringStream << "\t}" << std::endl;
+        }
 
         headerStringStream << "private:" << std::endl;
         headerStringStream << "\tstatic const std::string _source;" << std::endl;

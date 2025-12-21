@@ -43,6 +43,9 @@ namespace core {
         vec2 operator-(const vec2& a) const { return vec2(x - a.x, y - a.y); }
         vec2 operator*(float s) const { return vec2(x * s, y * s); }
         vec2 operator-() const { return vec2(-x, -y); }
+
+        float operator[](int i) const { return data()[i]; }
+        float& operator[](int i) { return data()[i]; }
     };
 
     struct ivec2 {
@@ -109,6 +112,24 @@ namespace core {
         int32_t operator[](int i) const { return data()[i]; }
         int32_t& operator[](int i) { return data()[i]; }
     };
+    struct uivec3 {
+        uint32_t x, y, z;
+        uint32_t* data() { return &x; }
+        const uint32_t* data() const { return &x; }
+
+        uivec3() : x(0), y(0), z(0) {}
+        uivec3(uint32_t _x) : x(_x), y(_x), z(_x) {}
+        uivec3(uint32_t _x, uint32_t _y, uint32_t _z) : x(_x), y(_y), z(_z) {}
+        uivec3& operator=(const uivec3& a) { x = a.x; y = a.y; z = a.z; return *this; }
+
+        uivec3 operator+(const uivec3& a) const { return uivec3(x + a.x, y + a.y, z + a.z); }
+        uivec3 operator-(const uivec3& a) const { return uivec3(x - a.x, y - a.y, z - a.z); }
+        uivec3 operator*(uint32_t s) const { return uivec3(x * s, y * s, z * s); }
+        uivec3 operator-() const { return uivec3(-x, -y, -z); }
+
+        uint32_t operator[](int i) const { return data()[i]; }
+        uint32_t& operator[](int i) { return data()[i]; }
+    };
 
     struct vec4 {
         float x, y, z, w;
@@ -153,23 +174,44 @@ namespace core {
     };
 
     struct ivec4 {
-        int32_t x, y, z, w;
-        int32_t* data() { return &x; }
-        const int32_t* data() const { return &x; }
+        using V = ivec4;
+        using T = int32_t;
+        T x, y, z, w;
+        T* data() { return &x; }
+        const T* data() const { return &x; }
 
         ivec4() : x(0), y(0), z(0), w(0) {}
-        ivec4(int32_t _x) : x(_x), y(_x), z(_x), w(_x) {}
-        ivec4(int32_t _x, int32_t _y, int32_t _z, int32_t _w) : x(_x), y(_y), z(_z), w(_w) {}
-        ivec4& operator=(const ivec4& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
+        ivec4(T _x) : x(_x), y(_x), z(_x), w(_x) {}
+        ivec4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) {}
+        V& operator=(const V& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
 
-        ivec4 operator+(const ivec4& a) const { return ivec4(x + a.x, y + a.y, z + a.z, w + a.w); }
-        ivec4 operator-(const ivec4& a) const { return ivec4(x - a.x, y - a.y, z - a.z, w - a.w); }
-        ivec4 operator*(int32_t s) const { return ivec4(x * s, y * s, z * s, w * s); }
-        ivec4 operator-() const { return ivec4(-x, -y, -z, -w); }
+        V operator+(const V& a) const { return V(x + a.x, y + a.y, z + a.z, w + a.w); }
+        V operator-(const V& a) const { return V(x - a.x, y - a.y, z - a.z, w - a.w); }
+        V operator*(T s) const { return V(x * s, y * s, z * s, w * s); }
+        V operator-() const { return V(-x, -y, -z, -w); }
 
-        int32_t operator[](int i) const { return data()[i]; }
-        int32_t& operator[](int i) { return data()[i]; }
+        T operator[](int i) const { return data()[i]; }
+        T& operator[](int i) { return data()[i]; }
+    };
+    struct uivec4 {
+        using V = uivec4;
+        using T = uint32_t;
+        T x, y, z, w;
+        T* data() { return &x; }
+        const T* data() const { return &x; }
 
+        uivec4() : x(0), y(0), z(0), w(0) {}
+        uivec4(T _x) : x(_x), y(_x), z(_x), w(_x) {}
+        uivec4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) {}
+        V& operator=(const V& a) { x = a.x; y = a.y; z = a.z; w = a.w; return *this; }
+
+        V operator+(const V& a) const { return V(x + a.x, y + a.y, z + a.z, w + a.w); }
+        V operator-(const V& a) const { return V(x - a.x, y - a.y, z - a.z, w - a.w); }
+        V operator*(T s) const { return V(x * s, y * s, z * s, w * s); }
+        V operator-() const { return V(-x, -y, -z, -w); }
+
+        T operator[](int i) const { return data()[i]; }
+        T& operator[](int i) { return data()[i]; }
     };
 
     // Abs

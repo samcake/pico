@@ -109,7 +109,7 @@ void main_makeDiffuseSkymap_first(uint3 DTid : SV_DispatchThreadID, uint3 GTid :
 
     // Compute this pixel's contribution to SH 
     
-    float2 mapSize = float2(_simDims.z, _simDims.z);
+    float2 mapSize = float2(skyConstant._simDims.z, skyConstant._simDims.z);
     uint2 pixelCoord = uint2(DTid.x / uint(mapSize.x), DTid.x % uint(mapSize.x));
     float2 invMapSize = rcp(mapSize);
     float2 texcoord = (pixelCoord + 0.5) * invMapSize;

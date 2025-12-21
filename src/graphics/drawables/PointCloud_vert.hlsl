@@ -1,7 +1,7 @@
 #include "SceneTransform_inc.hlsl"
 
 
-cbuffer UniformBlock1 : register(b1) {
+cbuffer PushUniform0 : register(b1) {
     int4   _instance;
     float _spriteSize;
     float _perspectiveSpriteX;
@@ -90,7 +90,8 @@ VertexShaderOutput main(uint vidT : SV_VertexID)
 // Not used anymore
 //
 
-cbuffer UniformBlock1 : register(b1) {
+cbuffer PushUniform1 : register(b1)
+{
     Transform _model;
 };
 

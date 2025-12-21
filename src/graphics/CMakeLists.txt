@@ -79,7 +79,7 @@ add_dependencies(graphics document)
 add_dependencies(graphics scribe)
 
 # in graphics library we want the include path to start in 'this' folder
-target_include_directories(graphics PUBLIC "." PRIVATE "." ${SHADER_OUTPUT_DIR} )
+target_include_directories(graphics PUBLIC "." ${SHADER_OUTPUT_DIR} PRIVATE "."  )
 
 target_compile_features(graphics PRIVATE cxx_std_20)
 

@@ -94,11 +94,11 @@ namespace graphics
            SceneTransform_inc::getMapEntry(),
            Viewport_inc::getMapEntry(),
         };
-        graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename(), include };
-        graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+      //  graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Dashboard_vert::getSource, Dashboard_vert::getSourceFilename(), include };
+        graphics::ShaderPointer vertexShader = device->createShader(Dashboard_vert::getShaderInit("main"));
 
-        graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename(), include };
-        graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+     //   graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "main", Dashboard_frag::getSource, Dashboard_frag::getSourceFilename(), include };
+        graphics::ShaderPointer pixelShader = device->createShader(Dashboard_frag::getShaderInit("main"));
 
         graphics::ProgramInit programInit{ vertexShader, pixelShader };
         graphics::ShaderPointer programShader = device->createProgram(programInit);

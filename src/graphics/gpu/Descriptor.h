@@ -30,6 +30,9 @@
 
 #include <vector>
 
+using NameGetter =  const std::vector<std::string>& (*)();
+using NameGetters = std::vector<NameGetter>;
+
 namespace graphics {
 
     // A descriptor layout for an individual resource

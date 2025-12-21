@@ -37,6 +37,19 @@ namespace graphics {
 
     typedef const std::string& (*ShaderSourceGetter)();
     using ShaderIncludeLib = std::unordered_map<std::string, ShaderSourceGetter>;
+    using ShaderInclude = std::pair<std::string, ShaderSourceGetter>;
+    using ShaderIncludes = std::vector<ShaderInclude>;
+    
+    template <typename... Args>
+    ShaderIncludes ShaderIncludes_concat(const Args&... args)
+    {
+        ShaderIncludes r;
+       // r.reserve(vectors.size() + ...);
+        (..., r.insert(r.end(), args.begin(), args.end()));
+        //r.insert(r.end(), b.begin(), b.end());
+        return r;
+    }
+
     using ShaderCompiler = std::function<bool(Shader*, const std::string&)>;
     using ProgramLinker = std::function<bool (Shader*)>;
 
