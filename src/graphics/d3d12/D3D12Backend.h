@@ -49,8 +49,27 @@ using namespace Microsoft::WRL;
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
+#include <stdexcept>
 
 namespace graphics {
+
+    // Define D3D12_THROW_ON_ERROR to enable exception throwing on D3D12 errors
+    // Otherwise errors will only be logged
+    //#define D3D12_THROW_ON_ERROR
+
+    inline void D3D12Backend_Check(HRESULT hr, const char* file = __builtin_FILE(), int line = __builtin_LINE())
+    {
+        if (FAILED(hr))
+        {
+			std::string errorMessage = std::format("D3D12 API call failed with HRESULT: {} at {}:{}", hr, file, line);
+			core::Log::_output(errorMessage);
+
+   // #ifdef D3D12_THROW_ON_ERROR
+            throw std::runtime_error(errorMessage);
+//#endif
+        }
+    }
+
     class D3D12DescriptorHeapBackend;
 
     class D3D12DescriptorHeapBackend : public DescriptorHeap {

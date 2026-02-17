@@ -38,9 +38,6 @@ using namespace graphics;
 
 #define USE_DXC
 
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Shader FAILED !!!");
-
-
 const std::string D3D12ShaderBackend::ShaderTypes[] = {
     "nope",
 #ifdef USE_DXC

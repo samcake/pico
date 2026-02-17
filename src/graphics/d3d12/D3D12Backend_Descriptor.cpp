@@ -31,7 +31,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Descriptor FAILED !!!");
 
 D3D12RootDescriptorLayoutBackend::D3D12RootDescriptorLayoutBackend() {
 

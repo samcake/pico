@@ -31,7 +31,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Query FAILED !!!");
 
 D3D12BatchTimerBackend::D3D12BatchTimerBackend() {
 
@@ -123,7 +122,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     queryHeapDesc.Count = init.numSamples * 2;
 
     queryHeapDesc.Type = D3D12_QUERY_HEAP_TYPE_TIMESTAMP;
-    ThrowIfFailed(_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&timer->_queryHeap)));
+    D3D12Backend_Check(_device->CreateQueryHeap(&queryHeapDesc, IID_PPV_ARGS(&timer->_queryHeap)));
 
     int bufferSize = ((uint32_t)8 * 2 * init.numSamples);
     auto numBlocks =  bufferSize / 256 + (bufferSize % 256 > 0);
@@ -163,7 +162,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
     desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-    ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
+    D3D12Backend_Check(_device->CreateCommittedResource(&heapProp,
         D3D12_HEAP_FLAG_NONE,
         &desc,
         D3D12_RESOURCE_STATE_COMMON, //D3D12_RESOURCE_STATE_COPY_SOURCE,
@@ -173,7 +172,7 @@ BatchTimerPointer D3D12Backend::createBatchTimer(const BatchTimerInit& init) {
 
     // Same buffer but mapped
     heapProp.Type = D3D12_HEAP_TYPE_READBACK;
-    ThrowIfFailed(_device->CreateCommittedResource(&heapProp,
+    D3D12Backend_Check(_device->CreateCommittedResource(&heapProp,
         D3D12_HEAP_FLAG_NONE,
         &desc,
         D3D12_RESOURCE_STATE_COPY_DEST,

@@ -29,7 +29,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Pipeline FAILED !!!");
 
 
 D3D12PipelineStateBackend::D3D12PipelineStateBackend() {
@@ -109,7 +108,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             else {
                 psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
             }
-            ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+            D3D12Backend_Check(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
             pso->_primitive_topology = D3D12BatchBackend::PrimitiveTopologies[(int)init.primitiveTopology];
         }
@@ -154,7 +153,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         psoDesc.CS = { reinterpret_cast<UINT8*>(computeShaderBlob.Get()->GetBufferPointer()), computeShaderBlob.Get()->GetBufferSize() };
 
-        ThrowIfFailed(_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+        D3D12Backend_Check(_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
         // update these
         if (pso->_pipelineState) {
@@ -411,7 +410,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
      //   rtpsoDesc.NumSubobjects = 0;
      //   rtpsoDesc.pSubobjects = nullptr;
 
-        ThrowIfFailed(_device->CreateStateObject(&rtpsoDesc, IID_PPV_ARGS(&pipelineState)));
+        D3D12Backend_Check(_device->CreateStateObject(&rtpsoDesc, IID_PPV_ARGS(&pipelineState)));
 
 
         // Get the ray tracing pipeline state object's properties.

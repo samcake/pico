@@ -31,7 +31,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Batch FAILED !!!");
 
 
 
@@ -39,7 +38,7 @@ ComPtr<ID3D12CommandAllocator> CreateCommandAllocator(ComPtr<ID3D12Device2> devi
     D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12CommandAllocator> commandAllocator;
-    ThrowIfFailed(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
+    D3D12Backend_Check(device->CreateCommandAllocator(type, IID_PPV_ARGS(&commandAllocator)));
 
     return commandAllocator;
 }
@@ -48,9 +47,9 @@ ComPtr<ID3D12GraphicsCommandList4> CreateCommandList(ComPtr<ID3D12Device5> devic
     ComPtr<ID3D12CommandAllocator> commandAllocator, D3D12_COMMAND_LIST_TYPE type)
 {
     ComPtr<ID3D12GraphicsCommandList4> commandList;
-    ThrowIfFailed(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
+    D3D12Backend_Check(device->CreateCommandList(0, type, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)));
 
-    ThrowIfFailed(commandList->Close());
+    D3D12Backend_Check(commandList->Close());
 
     return commandList;
 }
@@ -100,7 +99,7 @@ void D3D12BatchBackend::end() {
         t->end(_commandList.Get(), _currentBackBufferIndex);
         _timer.reset();
     }
-    ThrowIfFailed(_commandList->Close());
+    D3D12Backend_Check(_commandList->Close());
 }
 
 void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t index) {
