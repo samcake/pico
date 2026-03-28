@@ -130,14 +130,14 @@ public:
 
 bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
     ComPtr<IDxcUtils> pUtils;
-    DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf()));
+    D3D12Backend_Check(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf())));
     auto* includer = new PicoDXCIncludeHandler(pUtils, shader);
 
     // ComPtr<IDxcIncludeHandler> includeHandler(includer);
     // pUtils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf());
 
     ComPtr<IDxcCompiler3> compiler;
-    HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    D3D12Backend_Check(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 
     ComPtr<IDxcBlobEncoding> pSource;
     //  auto wsource = core::to_wstring(source);
@@ -177,7 +177,7 @@ bool PicoDXCCompileShader(Shader* shader, const std::string& source) {
 
     ComPtr<IDxcResult> pCompileResult;
     //hr = compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf())));
-    hr = compiler->Compile(&sourceBuffer, (LPCWSTR*)arguments.data(), (uint32_t)arguments.size(), includer, IID_PPV_ARGS(pCompileResult.GetAddressOf()));
+    HRESULT hr = compiler->Compile(&sourceBuffer, (LPCWSTR*)arguments.data(), (uint32_t)arguments.size(), includer, IID_PPV_ARGS(pCompileResult.GetAddressOf()));
 
     //Error Handling
     ComPtr<IDxcBlobUtf8> pErrors;
@@ -325,13 +325,13 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
     }
 
     ComPtr<IDxcUtils> pUtils;
-    DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf()));
+    D3D12Backend_Check(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(pUtils.GetAddressOf())));
 
     ComPtr<IDxcIncludeHandler> includeHandler;
     pUtils->CreateDefaultIncludeHandler(includeHandler.ReleaseAndGetAddressOf());
 
     ComPtr<IDxcCompiler3> compiler;
-    HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
+    D3D12Backend_Check(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)));
 
     ComPtr<IDxcBlobEncoding> pSource;
   //  auto wsource = core::to_wstring(source);
@@ -374,7 +374,7 @@ bool D3D12Backend::compileShaderLib(Shader* shader, const std::string& source) {
 
     ComPtr<IDxcResult> pCompileResult;
     //hr = compiler->Compile(&sourceBuffer, arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf())));
-    hr = compiler->Compile(&sourceBuffer, (LPCWSTR*)arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf()));
+    HRESULT hr = compiler->Compile(&sourceBuffer, (LPCWSTR*)arguments.data(), (uint32_t)arguments.size(), nullptr, IID_PPV_ARGS(pCompileResult.GetAddressOf()));
 
     //Error Handling
     ComPtr<IDxcBlobUtf8> pErrors;

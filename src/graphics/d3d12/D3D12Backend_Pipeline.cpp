@@ -831,12 +831,12 @@ ShaderTablePointer D3D12Backend::createShaderTable(const ShaderTableInit& init) 
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
         // Create the GPU resource
-        HRESULT hr = _device->CreateCommittedResource(&heapDesc, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&shaderTableBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapDesc, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&shaderTableBuffer)));
     }
 
     // Map the buffer
     uint8_t* pData;
-    HRESULT hr = shaderTableBuffer->Map(0, nullptr, (void**)&pData);
+    D3D12Backend_Check(shaderTableBuffer->Map(0, nullptr, (void**)&pData));
 
 
     // Shader Record 0 - Ray Generation program and local root parameter data (descriptor table with constant buffer and IB/VB pointers)

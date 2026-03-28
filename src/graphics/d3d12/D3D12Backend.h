@@ -49,26 +49,14 @@ using namespace Microsoft::WRL;
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
-#include <stdexcept>
+// Unified D3D12 error checking macro for the entire backend.
+// Captures file, line, and function at the call site, like picoLog.
+#define D3D12Backend_Check(result) graphics::D3D12Backend_CheckHR((result), __FILE__, __LINE__, __FUNCTION__)
 
 namespace graphics {
 
-    // Define D3D12_THROW_ON_ERROR to enable exception throwing on D3D12 errors
-    // Otherwise errors will only be logged
-    //#define D3D12_THROW_ON_ERROR
-
-    inline void D3D12Backend_Check(HRESULT hr, const char* file = __builtin_FILE(), int line = __builtin_LINE())
-    {
-        if (FAILED(hr))
-        {
-			std::string errorMessage = std::format("D3D12 API call failed with HRESULT: {} at {}:{}", hr, file, line);
-			core::Log::_output(errorMessage);
-
-   // #ifdef D3D12_THROW_ON_ERROR
-            throw std::runtime_error(errorMessage);
-//#endif
-        }
-    }
+    // D3D12 error handler: logs the failing HRESULT and asserts in debug builds.
+    void D3D12Backend_CheckHR(HRESULT hr, const char* file, int line, const char* functionName);
 
     class D3D12DescriptorHeapBackend;
 

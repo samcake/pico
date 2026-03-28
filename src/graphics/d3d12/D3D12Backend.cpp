@@ -48,6 +48,14 @@
 
 using namespace graphics;
 
+void graphics::D3D12Backend_CheckHR(HRESULT hr, const char* file, int line, const char* functionName) {
+    if (FAILED(hr)) {
+        auto message = std::format("D3D12 FAILED [hr=0x{:08X}]", (unsigned int)hr);
+        core::Log::_log(file, line, functionName, message);
+        core::Log::_assert(false, file, line, functionName, message.c_str());
+    }
+}
+
 const DXGI_FORMAT D3D12Backend::Format[] = {
     DXGI_FORMAT_UNKNOWN,
     DXGI_FORMAT_R32G32B32A32_TYPELESS,

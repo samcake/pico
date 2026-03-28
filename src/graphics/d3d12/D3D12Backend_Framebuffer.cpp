@@ -107,7 +107,7 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit& init) 
         desc.NumDescriptors = numColorRTs;
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-        _device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
+        D3D12Backend_Check(_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
         framebuffer->_rtvDescriptorHeap = descriptorHeap;
         framebuffer->_rtvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         framebuffer->_rtvs = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
@@ -139,7 +139,7 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit& init) 
         desc.NumDescriptors = numDepthStencil;
         desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         ComPtr<ID3D12DescriptorHeap> descriptorHeap;
-        _device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap));
+        D3D12Backend_Check(_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
         framebuffer->_dsvDescriptorHeap = descriptorHeap;
         framebuffer->_dsvDescriptorSize = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
         framebuffer->_dsv = descriptorHeap->GetCPUDescriptorHandleForHeapStart();
