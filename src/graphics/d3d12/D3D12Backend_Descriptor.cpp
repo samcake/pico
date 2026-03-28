@@ -31,7 +31,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Descriptor FAILED !!!");
 
 D3D12RootDescriptorLayoutBackend::D3D12RootDescriptorLayoutBackend() {
 
@@ -630,8 +629,8 @@ DescriptorHeapPointer D3D12Backend::getDescriptorHeap() {
         desc.NumDescriptors = cbvsrvuav_count;
         desc.NodeMask = 0;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        HRESULT hres = _device->CreateDescriptorHeap(&desc,
-            __uuidof(heap->_cbvsrvuav_heap), (void**)&((heap->_cbvsrvuav_heap)));
+        D3D12Backend_Check(_device->CreateDescriptorHeap(&desc,
+            __uuidof(heap->_cbvsrvuav_heap), (void**)&((heap->_cbvsrvuav_heap))));
     }
 
     if (sampler_count > 0) {
@@ -640,8 +639,8 @@ DescriptorHeapPointer D3D12Backend::getDescriptorHeap() {
         desc.NumDescriptors = sampler_count;
         desc.NodeMask = 0;
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        HRESULT hres = _device->CreateDescriptorHeap(&desc,
-            __uuidof(heap->_sampler_heap), (void**)&((heap->_sampler_heap)));
+        D3D12Backend_Check(_device->CreateDescriptorHeap(&desc,
+            __uuidof(heap->_sampler_heap), (void**)&((heap->_sampler_heap))));
     }
 
     heap->_descriptor_increment_size = _device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);

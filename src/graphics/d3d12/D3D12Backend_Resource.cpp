@@ -133,9 +133,9 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
     bufferBackend->_cpuDataResource;
     bufferBackend->_bufferSize = bufferSize;
 
-    HRESULT hres = _device->CreateCommittedResource(
+    D3D12Backend_Check(_device->CreateCommittedResource(
         &heapProp, heapFlags, &desc, res_states, NULL,
-        __uuidof(bufferBackend->_resource), (void**)&(bufferBackend->_resource));
+        __uuidof(bufferBackend->_resource), (void**)&(bufferBackend->_resource)));
 
     bufferBackend->_resource->SetName(core::to_wstring(name).c_str());
 
@@ -146,15 +146,15 @@ BufferPointer D3D12Backend::_createBuffer(const BufferInit& init, const std::str
         res_states = D3D12_RESOURCE_STATE_GENERIC_READ;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-        hres = _device->CreateCommittedResource(
+        D3D12Backend_Check(_device->CreateCommittedResource(
             &heapProp, heapFlags, &desc, res_states, NULL,
-            __uuidof(bufferBackend->_cpuDataResource), (void**)&(bufferBackend->_cpuDataResource));
+            __uuidof(bufferBackend->_cpuDataResource), (void**)&(bufferBackend->_cpuDataResource)));
 
         D3D12_RANGE read_range = { 0, 0 };
-        hres = bufferBackend->_cpuDataResource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
+        D3D12Backend_Check(bufferBackend->_cpuDataResource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress)));
     } else if (init.hostVisible) {
         D3D12_RANGE read_range = { 0, 0 };
-        hres = bufferBackend->_resource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress));
+        D3D12Backend_Check(bufferBackend->_resource->Map(0, &read_range, (void**)&(bufferBackend->_cpuMappedAddress)));
 
         // No need to upload
         bufferBackend->notifyUploaded();
@@ -297,10 +297,9 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
         d3d12TextureBackend->notifyUploaded(); 
     }
 
-    HRESULT hres = backend->_device->CreateCommittedResource(
+    D3D12Backend_Check(backend->_device->CreateCommittedResource(
         &heap_props, heap_flags, &desc, res_states, p_clear_value,
-        __uuidof(d3d12TextureBackend->_resource), (void**)&(d3d12TextureBackend->_resource));
-   // assert(SUCCEEDED(hres));
+        __uuidof(d3d12TextureBackend->_resource), (void**)&(d3d12TextureBackend->_resource)));
 
     d3d12TextureBackend->_shaderResourceViewDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     d3d12TextureBackend->_shaderResourceViewDesc.Format = d3d12Format;
@@ -473,13 +472,13 @@ GeometryPointer D3D12Backend::createGeometry(const GeometryInit& init) {
         desc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
 
         desc.Width = std::max(topLevelPrebuildInfo.ScratchDataSizeInBytes, bottomLevelPrebuildInfo.ScratchDataSizeInBytes);
-        HRESULT hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, NULL, __uuidof(scratchBuffer), (void**)&(scratchBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON, NULL, __uuidof(scratchBuffer), (void**)&(scratchBuffer)));
 
         desc.Width = bottomLevelPrebuildInfo.ResultDataMaxSizeInBytes;
-        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(blasBuffer), (void**)&(blasBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(blasBuffer), (void**)&(blasBuffer)));
 
         desc.Width = topLevelPrebuildInfo.ResultDataMaxSizeInBytes;
-        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(tlasBuffer), (void**)&(tlasBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, NULL, __uuidof(tlasBuffer), (void**)&(tlasBuffer)));
 
 
         // Create an instance desc for the bottom-level acceleration structure.
@@ -491,9 +490,9 @@ GeometryPointer D3D12Backend::createGeometry(const GeometryInit& init) {
         heapProp.Type = D3D12_HEAP_TYPE_UPLOAD;
         desc.Width = sizeof(instanceDesc);
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        hres = _device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, __uuidof(instancesBuffer), (void**)&(instancesBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, __uuidof(instancesBuffer), (void**)&(instancesBuffer)));
         void* pMappedData;
-        instancesBuffer->Map(0, nullptr, &pMappedData);
+        D3D12Backend_Check(instancesBuffer->Map(0, nullptr, &pMappedData));
         memcpy(pMappedData, &instanceDesc, desc.Width);
         instancesBuffer->Unmap(0, nullptr);
 

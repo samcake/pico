@@ -48,17 +48,13 @@
 
 using namespace graphics;
 
-
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog(("D3D12Backend FAILED !!!"));
-/**
-inline void ThrowIfFailed(HRESULT hr)
-{
-    if (FAILED(hr))
-    {
-        picoLog() << "This failed ?";
-        throw std::exception();
+void graphics::D3D12Backend_CheckHR(HRESULT hr, const char* file, int line, const char* functionName) {
+    if (FAILED(hr)) {
+        auto message = std::format("D3D12 FAILED [hr=0x{:08X}]", (unsigned int)hr);
+        core::Log::_log(file, line, functionName, message);
+        core::Log::_assert(false, file, line, functionName, message.c_str());
     }
-}*/
+}
 
 const DXGI_FORMAT D3D12Backend::Format[] = {
     DXGI_FORMAT_UNKNOWN,
@@ -186,15 +182,15 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
     createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
+    D3D12Backend_Check(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory)));
 
     ComPtr<IDXGIAdapter1> dxgiAdapter1;
     ComPtr<IDXGIAdapter4> dxgiAdapter4;
 
     if (useWarp)
     {
-        ThrowIfFailed(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter1)));
-        ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
+        D3D12Backend_Check(dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&dxgiAdapter1)));
+        D3D12Backend_Check(dxgiAdapter1.As(&dxgiAdapter4));
     }
     else
     {
@@ -213,7 +209,7 @@ ComPtr<IDXGIAdapter4> GetAdapter(bool useWarp)
                 dxgiAdapterDesc1.DedicatedVideoMemory > maxDedicatedVideoMemory)
             {
                 maxDedicatedVideoMemory = dxgiAdapterDesc1.DedicatedVideoMemory;
-                ThrowIfFailed(dxgiAdapter1.As(&dxgiAdapter4));
+                D3D12Backend_Check(dxgiAdapter1.As(&dxgiAdapter4));
             }
         }
     }
@@ -228,7 +224,7 @@ void EnableDebugLayer()
     // so all possible errors generated while creating DX12 objects
     // are caught by the debug layer.
     ComPtr<ID3D12Debug> debugInterface;
-    ThrowIfFailed(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
+    D3D12Backend_Check(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface)));
     debugInterface->EnableDebugLayer();
 
 #endif
@@ -240,7 +236,7 @@ ComPtr<ID3D12Device5> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
     EnableDebugLayer();
 
     ComPtr<ID3D12Device5> d3d12Device;
-    ThrowIfFailed(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12Device)));
+    D3D12Backend_Check(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12Device)));
     
     // Enable debug messages in debug mode.
 #if defined(_DEBUG)
@@ -277,7 +273,7 @@ ComPtr<ID3D12Device5> CreateDevice(ComPtr<IDXGIAdapter4> adapter)
         NewFilter.DenyList.NumIDs = _countof(DenyIds);
         NewFilter.DenyList.pIDList = DenyIds;
 
-        ThrowIfFailed(pInfoQueue->PushStorageFilter(&NewFilter));
+        D3D12Backend_Check(pInfoQueue->PushStorageFilter(&NewFilter));
     }
 #endif
 
@@ -295,7 +291,7 @@ ComPtr<ID3D12CommandQueue> CreateCommandQueue(ComPtr<ID3D12Device2> device, D3D1
     desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
     desc.NodeMask = 0;
 
-    ThrowIfFailed(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
+    D3D12Backend_Check(device->CreateCommandQueue(&desc, IID_PPV_ARGS(&d3d12CommandQueue)));
 
     return d3d12CommandQueue;
 }
@@ -307,7 +303,7 @@ ComPtr<ID3D12Fence> CreateFence(ComPtr<ID3D12Device2> device)
 {
     ComPtr<ID3D12Fence> fence;
 
-    ThrowIfFailed(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
+    D3D12Backend_Check(device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence)));
 
     return fence;
 }
@@ -326,7 +322,7 @@ uint64_t Signal(ComPtr<ID3D12CommandQueue> commandQueue, ComPtr<ID3D12Fence> fen
     uint64_t& fenceValue)
 {
     uint64_t fenceValueForSignal = ++fenceValue;
-    ThrowIfFailed(commandQueue->Signal(fence.Get(), fenceValueForSignal));
+    D3D12Backend_Check(commandQueue->Signal(fence.Get(), fenceValueForSignal));
 
     return fenceValueForSignal;
 }
@@ -336,7 +332,7 @@ void WaitForFenceValue(ComPtr<ID3D12Fence> fence, uint64_t fenceValue, HANDLE fe
 {
     if (fence->GetCompletedValue() < fenceValue)
     {
-        ThrowIfFailed(fence->SetEventOnCompletion(fenceValue, fenceEvent));
+        D3D12Backend_Check(fence->SetEventOnCompletion(fenceValue, fenceEvent));
         ::WaitForSingleObject(fenceEvent, static_cast<DWORD>(duration.count()));
     }
 }
@@ -425,7 +421,7 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     UINT syncInterval = 1;
     // UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
     UINT presentFlags = 0;
-    ThrowIfFailed(sw->_swapchain->Present(syncInterval, presentFlags));
+    D3D12Backend_Check(sw->_swapchain->Present(syncInterval, presentFlags));
 
     _frameFenceValues[sw->currentIndex()] = Signal(_commandQueue, _fence, _fenceValue);
 

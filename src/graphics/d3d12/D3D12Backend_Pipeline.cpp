@@ -29,7 +29,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Pipeline FAILED !!!");
 
 
 D3D12PipelineStateBackend::D3D12PipelineStateBackend() {
@@ -109,7 +108,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
             else {
                 psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
             }
-            ThrowIfFailed(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+            D3D12Backend_Check(_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
             pso->_primitive_topology = D3D12BatchBackend::PrimitiveTopologies[(int)init.primitiveTopology];
         }
@@ -154,7 +153,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
 
         psoDesc.CS = { reinterpret_cast<UINT8*>(computeShaderBlob.Get()->GetBufferPointer()), computeShaderBlob.Get()->GetBufferSize() };
 
-        ThrowIfFailed(_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
+        D3D12Backend_Check(_device->CreateComputePipelineState(&psoDesc, IID_PPV_ARGS(&pipelineState)));
 
         // update these
         if (pso->_pipelineState) {
@@ -411,7 +410,7 @@ bool D3D12Backend::realizePipelineState(PipelineState* pipeline) {
      //   rtpsoDesc.NumSubobjects = 0;
      //   rtpsoDesc.pSubobjects = nullptr;
 
-        ThrowIfFailed(_device->CreateStateObject(&rtpsoDesc, IID_PPV_ARGS(&pipelineState)));
+        D3D12Backend_Check(_device->CreateStateObject(&rtpsoDesc, IID_PPV_ARGS(&pipelineState)));
 
 
         // Get the ray tracing pipeline state object's properties.
@@ -832,12 +831,12 @@ ShaderTablePointer D3D12Backend::createShaderTable(const ShaderTableInit& init) 
         resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
         // Create the GPU resource
-        HRESULT hr = _device->CreateCommittedResource(&heapDesc, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&shaderTableBuffer));
+        D3D12Backend_Check(_device->CreateCommittedResource(&heapDesc, D3D12_HEAP_FLAG_NONE, &resourceDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&shaderTableBuffer)));
     }
 
     // Map the buffer
     uint8_t* pData;
-    HRESULT hr = shaderTableBuffer->Map(0, nullptr, (void**)&pData);
+    D3D12Backend_Check(shaderTableBuffer->Map(0, nullptr, (void**)&pData));
 
 
     // Shader Record 0 - Ray Generation program and local root parameter data (descriptor table with constant buffer and IB/VB pointers)

@@ -31,7 +31,6 @@
 using namespace graphics;
 
 #ifdef _WINDOWS
-#define ThrowIfFailed(result) if (FAILED((result))) picoLog("D3D12Backend_Swapchain FAILED !!!");
 
 // D3D12SwapchainBackend
 
@@ -72,7 +71,7 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     createFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
 #endif
 
-    ThrowIfFailed(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
+    D3D12Backend_Check(CreateDXGIFactory2(createFactoryFlags, IID_PPV_ARGS(&dxgiFactory4)));
 
     DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
     swapChainDesc.Width = width;
@@ -97,7 +96,7 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
     swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
 
     ComPtr<IDXGISwapChain1> swapChain1;
-    ThrowIfFailed(dxgiFactory4->CreateSwapChainForHwnd(
+    D3D12Backend_Check(dxgiFactory4->CreateSwapChainForHwnd(
         commandQueue.Get(),
         hWnd,
         &swapChainDesc,
@@ -107,9 +106,9 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
 
     // Disable the Alt+Enter fullscreen toggle feature. Switching to fullscreen
     // will be handled manually.
-    ThrowIfFailed(dxgiFactory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
+    D3D12Backend_Check(dxgiFactory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
 
-    ThrowIfFailed(swapChain1.As(&dxgiSwapChain4));
+    D3D12Backend_Check(swapChain1.As(&dxgiSwapChain4));
 
     return dxgiSwapChain4;
 }
@@ -123,7 +122,7 @@ ComPtr<ID3D12DescriptorHeap> CreateDescriptorHeap(ComPtr<ID3D12Device2> device,
     desc.NumDescriptors = numDescriptors;
     desc.Type = type;
 
-    ThrowIfFailed(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
+    D3D12Backend_Check(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&descriptorHeap)));
 
     return descriptorHeap;
 }
@@ -143,7 +142,7 @@ bool CreateSwapchainRenderTargets(ComPtr<ID3D12Device2> device, D3D12SwapchainBa
     for (int i = 0; i < D3D12Backend::CHAIN_NUM_FRAMES; ++i)
     {
         ComPtr<ID3D12Resource> backBuffer;
-        ThrowIfFailed(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
+        D3D12Backend_Check(sw->_swapchain->GetBuffer(i, IID_PPV_ARGS(&backBuffer)));
 
 
         device->CreateRenderTargetView(backBuffer.Get(), &rtvDesc, rtvHandle);
@@ -257,8 +256,8 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
         }
 
         DXGI_SWAP_CHAIN_DESC swapChainDesc = {};
-        ThrowIfFailed(sw->_swapchain->GetDesc(&swapChainDesc));
-        ThrowIfFailed(sw->_swapchain->ResizeBuffers(D3D12Backend::CHAIN_NUM_FRAMES, width, height, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
+        D3D12Backend_Check(sw->_swapchain->GetDesc(&swapChainDesc));
+        D3D12Backend_Check(sw->_swapchain->ResizeBuffers(D3D12Backend::CHAIN_NUM_FRAMES, width, height, swapChainDesc.BufferDesc.Format, swapChainDesc.Flags));
         sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
         CreateSwapchainRenderTargets(_device, sw);

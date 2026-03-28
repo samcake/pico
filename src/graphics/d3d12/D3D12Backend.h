@@ -49,8 +49,15 @@ using namespace Microsoft::WRL;
 #include <dxgi1_6.h>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
+// Unified D3D12 error checking macro for the entire backend.
+// Captures file, line, and function at the call site, like picoLog.
+#define D3D12Backend_Check(result) graphics::D3D12Backend_CheckHR((result), __FILE__, __LINE__, __FUNCTION__)
 
 namespace graphics {
+
+    // D3D12 error handler: logs the failing HRESULT and asserts in debug builds.
+    void D3D12Backend_CheckHR(HRESULT hr, const char* file, int line, const char* functionName);
+
     class D3D12DescriptorHeapBackend;
 
     class D3D12DescriptorHeapBackend : public DescriptorHeap {
