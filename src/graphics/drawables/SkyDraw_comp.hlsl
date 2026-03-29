@@ -113,12 +113,20 @@ void main_makeDiffuseSkymap_first(uint3 DTid : SV_DispatchThreadID, uint3 GTid :
     uint2 pixelCoord = uint2(DTid.x / uint(mapSize.x), DTid.x % uint(mapSize.x));
     float2 invMapSize = rcp(mapSize);
     float2 texcoord = (pixelCoord + 0.5) * invMapSize;
-    float3 dir = sky_dirFromTexcoord(texcoord);
-    
+
+    // Compute the octahedral direction AND the correct per-texel solid angle.
+    // The octahedral projection is not area-preserving: dw = dA_uv / |p_oct|^3
+    // where p_oct is the unnormalized point on the octahedron and dA_uv = 4/N^2.
+    float2 uv = 2.0 * texcoord - 1.0;
+    float3 p_oct = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
+    float t = max(-p_oct.y, 0.0);
+    p_oct.xz += select(p_oct.xz >= 0.0, -t, t);
+    float oct_len = length(p_oct);
+    float3 dir = p_oct / oct_len;
+
     float3 light = sky_map.SampleLevel(uSampler0[0], texcoord, 0).xyz;
-    
-    float solidangle = 2 * 3.14 * invMapSize.x * invMapSize.y;
-    // float solidangle = 1.0;
+
+    float solidangle = 4.0 * invMapSize.x * invMapSize.y / (oct_len * oct_len * oct_len);
     
     float3 coeffs[SH_DIM] = {
         { 0, 0, 0 },

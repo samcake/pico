@@ -276,11 +276,11 @@ namespace graphics
 
         uint32_t numPixels = (irradianceRes * irradianceRes);
         uint32_t numBlocks = numPixels / (THREAD_GROUP_SIDE * THREAD_GROUP_SIDE);
-        uint32_t sizeSh = 4 * 32 * 9;
+        uint32_t sizeSh = sizeof(float) * 4 * 9; // 9 float4 per SH block = 144 bytes
         graphics::BufferInit bufInit;
         bufInit.bufferSize = numBlocks * sizeSh;
         bufInit.numElements = 9 * numBlocks;
-        bufInit.structStride = 4 * 32;
+        bufInit.structStride = sizeof(float) * 4; // sizeof(float4) = 16 bytes
         bufInit.usage = RW_RESOURCE_BUFFER | GENERIC_READ_BUFFER;
         auto diffuse_skybuf = device->createBuffer(bufInit);
 

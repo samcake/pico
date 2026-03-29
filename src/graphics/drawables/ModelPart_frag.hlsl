@@ -32,7 +32,7 @@ float3 light_shading(float3 lightI, float3 l, float3 v, float3 n, float metallic
         float3 fresnel = shading_fresnel(f0, VdotH);
 
         float3 f_diffuse = (1 - fresnel) * C_diff / M_PI;
-        
+
         float V = V_GGX(NdotL, NdotV, alphaRoughness);
         float D = D_GGX(NdotH, alphaRoughness);
         float3 f_specular = fresnel * V * D;
@@ -48,7 +48,7 @@ float3 light_shading(float3 lightI, float3 l, float3 v, float3 n, float metallic
     }
 
     //  shading = lightI;
-   
+
     return shading;
 }
 
@@ -71,7 +71,7 @@ float3 drawGrid(float2 uv, float3 color) {
 
 //
 // Main
-// 
+//
 bool LIGHT_SHADING(int drawMode) { return (drawMode & 0x00000080) != 0; }
 
 int DISPLAYED_COLOR_BITS() { return 0x0000000F; }
@@ -97,7 +97,7 @@ struct PixelShaderInput{
 float4 main(PixelShaderInput IN) : SV_Target{
     int matIdx = part_array[_partID].material;// < 0.0 ? 0 : floor(IN.Material));
     Material m = material_array[matIdx];
-    
+
     float4 vcolor = IN.Color;
 
     // Normal and Normal map
@@ -107,8 +107,8 @@ float4 main(PixelShaderInput IN) : SV_Target{
     if (m.textures.y != -1) {
         mapNor = float3(material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.y)).xyz);
         float3 mapN = (mapNor * 2.0 - 1.0);
-        // assume surfNormal, the inter­po­lat­ed ver­tex nor­mal and 
-        // V, the view vec­tor (ver­tex to eye)
+        // assume surfNormal, the interï¿½poï¿½latï¿½ed verï¿½tex norï¿½mal and
+        // V, the view vecï¿½tor (verï¿½tex to eye)
         //   and then -V => eye to vertex
         float3 mV = -IN.EyePos.xyz;
         float3x3 tbn = computeTangentSpace(surfNormal, mV, IN.Texcoord.xy);
@@ -124,7 +124,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     }
     float roughness = m.roughness * rmaoMap.x;
     float metallic = m.metallic * rmaoMap.y;
-    
+
     // with albedo from property or from texture
     float3 albedo = m.color.xyz;
     if (m.textures.x != -1) {
@@ -134,8 +134,7 @@ float4 main(PixelShaderInput IN) : SV_Target{
     //float3 baseColor = float3(0.7, 0.7, 0.7);
     float3 baseColor = 0.7;
     switch (DISPLAYED_COLOR(_drawMode)) {
-    case 0: baseColor = vcolor.xyz; break;
-    //case 0: baseColor = albedo; break;
+    case 0: baseColor = albedo; break;
     case 1: baseColor = normal; break;
     case 2: baseColor = surfNormal; break;
     case 3: baseColor = mapNor; break;
@@ -152,22 +151,22 @@ float4 main(PixelShaderInput IN) : SV_Target{
         float3 lightI = SkyColor(lightD);
 
         float3 n = normal;
-        
+
         lightI = sky_evalIrradianceSH(n) * M_PI;
         lightD = n;
-        
+
         float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
         float3 l = lightD; //normalize(pointToLight); // Direction from surface point to light
-        
+
         shading = light_shading(lightI, lightD, v, n, metallic, roughness, baseColor);
-     
+
     }
-    
+
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
     if (m.textures.w != -1) {
         emissiveColor = material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
- 
+
     float3 color = shading + emissiveColor;
     return float4((color), 1.0);
 }
