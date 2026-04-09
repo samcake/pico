@@ -355,7 +355,7 @@ namespace graphics
                 ModelVertex v{ vp.x, vp.y, vp.z, vn };
                 partVerts.emplace_back(v);
 
-                ModelVertexAttrib a{ vt.x, vt.y, swj.x, swj.y };
+                ModelVertexAttrib a{ vt.x, vt.y, (uint32_t)swj.x, (uint32_t)swj.y };
                 partAttribs.emplace_back(a);
 
                 //hash a key on vector pos and normal

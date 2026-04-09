@@ -28,17 +28,25 @@
 
 #include "Swapchain.h"
 
+#ifdef _WINDOWS
 #include "../d3d12/D3D12Backend.h"
+#endif
+
+#ifdef __APPLE__
+namespace graphics {
+    DeviceBackend* createMetalBackend();
+}
+#endif
 
 
 graphics::PixelFormat graphics::defaultColorBufferFormat() {
-    return  graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
-    //return  graphics::PixelFormat::R8G8B8A8_UNORM;
-    
-    //return  graphics::PixelFormat::R10G10B10_XR_BIAS_A2_UNORM; // doesn't work in some pipeline ?
-    //return  graphics::PixelFormat::R10G10B10A2_UNORM;
-
-    //return  graphics::PixelFormat::R16G16B16A16_FLOAT;
+#ifdef __APPLE__
+    // R8G8B8A8_UNORM maps to MTLPixelFormatBGRA8Unorm in the Metal format table,
+    // which is the native CAMetalLayer format on macOS.
+    return graphics::PixelFormat::R8G8B8A8_UNORM;
+#else
+    return graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
+#endif
 }
 
 
@@ -47,10 +55,16 @@ using namespace graphics;
 
 DevicePointer Device::createDevice(const DeviceInit& init) {
     DevicePointer device;
+#ifdef _WINDOWS
     if (init.backend.compare("D3D12") == 0 ) {
         device = std::make_shared<Device>(new D3D12Backend());
     }
-
+#endif
+#ifdef __APPLE__
+    if (init.backend.compare("Metal") == 0) {
+        device = std::make_shared<Device>(createMetalBackend());
+    }
+#endif
     return device;
 }
 

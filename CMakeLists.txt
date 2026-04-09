@@ -9,7 +9,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin) # Output directory f
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin) # Output directory for executables (.EXE)
 
 
-project(Pico LANGUAGES CXX)
+if(APPLE)
+    project(Pico LANGUAGES CXX OBJCXX)
+else()
+    project(Pico LANGUAGES CXX)
+endif()
 
 # Enable multithreaded builds
 if( MSVC )

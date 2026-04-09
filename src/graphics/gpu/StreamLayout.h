@@ -63,7 +63,7 @@ namespace graphics {
     };
 
     // An array of AttribBufferViews
-    template <int B> using AttribBufferViewArray = std::array<AttribBufferView, B>;
+    template <size_t B> using AttribBufferViewArray = std::array<AttribBufferView, B>;
     using AttribBufferViews_0 = AttribBufferViewArray<0>;
 
     // Attrib describes the layout of a single attribute in an element of a stream:
@@ -93,10 +93,10 @@ namespace graphics {
     };
 
     
-    template <int A> using AttribArray = std::array<Attrib, A>;
+    template <size_t A> using AttribArray = std::array<Attrib, A>;
     using Attribs_0 = AttribArray<0>;
 
-    template <int A, int B> struct StreamElement {
+    template <size_t A, size_t B> struct StreamElement {
         using Attribs = AttribArray<A>;
         using BufferViews = AttribBufferViewArray<A>;
         Attribs _attribs;
@@ -166,15 +166,15 @@ namespace graphics {
         };
 
 
-        template <int A, int B> class Instanced : public Base {
+        template <size_t A, size_t B> class Instanced : public Base {
         public:
             Instanced() {}
             Instanced(AttribArray<A> a) : _attribs(a) {}
             Instanced(AttribArray<A> a, AttribBufferViewArray<B> b) : _attribs(a), _bufferViews(b) {}
             virtual ~Instanced() {}
 
-            constexpr uint8_t numAttribs() const override { return A; }
-            constexpr uint8_t numBuffers() const override { return B; }
+            constexpr uint8_t numAttribs() const override { return (uint8_t)A; }
+            constexpr uint8_t numBuffers() const override { return (uint8_t)B; }
             const Attrib* getAttrib(uint8_t a) const override { return _attribs.data() + a; }
             const AttribBufferView* getBufferView(uint8_t b) const override { return _bufferViews.data() + b; }
             AttribBufferView* editBufferView(uint8_t b) override { return _bufferViews.data() + b; }
@@ -206,18 +206,18 @@ namespace graphics {
 
         uint8_t findAttribAt(AttribSemantic semantic) const { return _base->findAttribAt(semantic); }
 
-        template <int A, int B>
+        template <size_t A, size_t B>
         static bool check(const AttribArray<A>& attribs, const AttribBufferViewArray<B> bufferViews) {
             // TODO: implement a bunch of checks to make sure the attribs and stream work together
             return true;
         }
 
-        template <int A, int B>
+        template <size_t A, size_t B>
         static StreamLayout build(const AttribArray<A>& attribs, const AttribBufferViewArray<B> bufferViews) {
             picoAssert(check(attribs, bufferViews));
             return StreamLayout(new Instanced<A, B>(attribs, bufferViews));
         }
-        template <int A, int B>
+        template <size_t A, size_t B>
         static StreamLayout build(const StreamElement<A, B>& element) {
             return build(element._attribs, element._bufferViews);
         }

@@ -33,6 +33,22 @@
 
 using namespace uix;
 
+#ifdef __APPLE__
+class MacWindowBackend : public WindowBackend {
+public:
+    static MacWindowBackend* create(Window* owner);
+    MacWindowBackend(Window* owner) : WindowBackend(owner) {}
+    virtual ~MacWindowBackend();
+    bool messagePump() override;
+    void* nativeWindow() override;
+    uint32_t width() const override;
+    uint32_t height() const override;
+    uint32_t chromedWidth() const override;
+    uint32_t chromedHeight() const override;
+    void setTitle(const std::string& title) override;
+};
+#endif
+
 #ifdef WIN32
 
 #define WIN32_LEAN_AND_MEAN
@@ -519,6 +535,8 @@ Window::Window(WindowHandler* handler) :
     _handler(handler),
 #ifdef WIN32
     _backend(WIN32WindowBackend::create(this))
+#elif defined(__APPLE__)
+    _backend(MacWindowBackend::create(this))
 #else
     _backend()
 #endif

@@ -225,7 +225,7 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     auto sw = new D3D12SwapchainBackend();
 
     sw->_init = init;
-    sw->_swapchain = CreateSwapChain(init.hWnd, _commandQueue, init.width, init.height, D3D12Backend::Format[(uint32_t)init.colorBufferFormat], D3D12Backend::CHAIN_NUM_FRAMES);
+    sw->_swapchain = CreateSwapChain((HWND)init.windowHandle, _commandQueue, init.width, init.height, D3D12Backend::Format[(uint32_t)init.colorBufferFormat], D3D12Backend::CHAIN_NUM_FRAMES);
     sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
 
     CreateSwapchainRenderTargets(_device, sw);

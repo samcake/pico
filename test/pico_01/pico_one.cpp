@@ -29,6 +29,7 @@
 #include <iostream>
 
 #include <core/api.h>
+#include <core/Log.h>
 
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Swapchain.h>
@@ -51,8 +52,6 @@
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-    HINSTANCE hInstance = GetModuleHandle(NULL);
-
     // Create the pico api
     core::ApiInit pico_init{ };
     auto result = core::api::create(pico_init);
@@ -94,7 +93,7 @@ int main(int argc, char *argv[])
         uix::WindowInit windowInit{ windowHandler };
         auto window = uix::Window::createWindow(windowInit);
 
-        graphics::SwapchainInit swapchainInit{ (HWND)window->nativeWindow(), window->width(), window->height() };
+        graphics::SwapchainInit swapchainInit{ window->nativeWindow(), window->width(), window->height() };
         auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
 
@@ -114,10 +113,8 @@ int main(int argc, char *argv[])
 
             elapsedSeconds += deltaTime.count() * 1e-9;
             if (elapsedSeconds > 1.0) {
-                char buffer[500];
                 auto fps = frameCounter / elapsedSeconds;
-                sprintf_s(buffer, 500, "FPS: %f\n", fps);
-                OutputDebugString(buffer);
+                picoLogf("FPS: {}", fps);
                 frameCounter = 0;
                 elapsedSeconds = 0.0;
             }
