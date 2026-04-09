@@ -27,8 +27,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_01 (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_01.exe",
+    "label": "Run pico_01",
+    "command": "./pico_01",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_01",
     "use_new_terminal": true,
@@ -36,8 +36,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_02 (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_02.exe",
+    "label": "Run pico_02",
+    "command": "./pico_02",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_02",
     "use_new_terminal": true,
@@ -45,8 +45,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_03 (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_03.exe",
+    "label": "Run pico_03",
+    "command": "./pico_03",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_03",
     "use_new_terminal": true,
@@ -54,8 +54,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_04 (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_04.exe",
+    "label": "Run pico_04",
+    "command": "./pico_04",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_04",
     "use_new_terminal": true,
@@ -63,8 +63,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_eye (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_eye.exe",
+    "label": "Run pico_eye",
+    "command": "./pico_eye",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_eye",
     "use_new_terminal": true,
@@ -72,8 +72,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_model (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_model.exe",
+    "label": "Run pico_model",
+    "command": "./pico_model",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_model",
     "use_new_terminal": true,
@@ -81,8 +81,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_ocean (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_ocean.exe",
+    "label": "Run pico_ocean",
+    "command": "./pico_ocean",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_ocean",
     "use_new_terminal": true,
@@ -90,8 +90,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_ray (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_ray.exe",
+    "label": "Run pico_ray",
+    "command": "./pico_ray",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_ray",
     "use_new_terminal": true,
@@ -99,8 +99,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_terrain (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_terrain.exe",
+    "label": "Run pico_terrain",
+    "command": "./pico_terrain",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_terrain",
     "use_new_terminal": true,
@@ -108,8 +108,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_treemap (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_treemap.exe",
+    "label": "Run pico_treemap",
+    "command": "./pico_treemap",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_treemap",
     "use_new_terminal": true,
@@ -117,116 +117,8 @@
     "reveal": "always"
   },
   {
-    "label": "Run pico_interop-gdi (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_interop-gdi.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_interop-gdi",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_job (Debug)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Debug/pico_job.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_job",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_01 (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_01.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_01",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_02 (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_02.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_02",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_03 (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_03.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_03",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_04 (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_04.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_04",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_eye (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_eye.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_eye",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_model (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_model.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_model",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_ocean (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_ocean.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_ocean",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_ray (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_ray.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_ray",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_terrain (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_terrain.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_terrain",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_treemap (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_treemap.exe",
-    "args": [],
-    "cwd": "$ZED_WORKTREE_ROOT/test/pico_treemap",
-    "use_new_terminal": true,
-    "allow_concurrent_runs": false,
-    "reveal": "always"
-  },
-  {
-    "label": "Run pico_interop-gdi (Release)",
-    "command": "$ZED_WORKTREE_ROOT/build/bin/Release/pico_interop-gdi.exe",
+    "label": "Run pico_interop-gdi",
+    "command": "./pico_interop-gdi",
     "args": [],
     "cwd": "$ZED_WORKTREE_ROOT/test/pico_interop-gdi",
     "use_new_terminal": true,

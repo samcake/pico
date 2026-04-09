@@ -87,6 +87,8 @@ void MetalBackend::resizeSwapchain(const SwapchainPointer& swapchain,
                                     uint32_t width, uint32_t height) {
     auto* sw = static_cast<MetalSwapchainBackend*>(swapchain.get());
     sw->_layer.drawableSize = CGSizeMake((CGFloat)width, (CGFloat)height);
+    sw->_init.width  = width;
+    sw->_init.height = height;
 
     if (sw->_depthTexture && width > 0 && height > 0) {
         MTLTextureDescriptor* dd = [MTLTextureDescriptor
