@@ -59,7 +59,9 @@ namespace core {
 
         struct Init
         {
-            Name name = "noname";
+            std::string name;
+            Init() : name("noname") {}
+            Init(const std::string& n) : name(n) {}
         };
         Graph(const Init& init = Init()) : _name(init.name) {}
 

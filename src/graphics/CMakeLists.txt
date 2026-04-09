@@ -3,11 +3,6 @@
 # Graphics Library
 #---------------------------------------------
 
-#if(USE_D3D12 )
-#    set(GRAPHICS_API_LIBRARIES "d3d12.lib dxgi.lib dxguid.lib D3DCompiler.lib Shlwapi.lib")  
-#endif()
-
-
 file(GLOB GRAPHICS_SHADERS
     "gpu/*.hlsl"
     "render/*.hlsl"
@@ -18,7 +13,7 @@ file(GLOB GRAPHICS_SHADERS
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
- foreach( item IN LISTS GRAPHICS_SHADERS )
+foreach( item IN LISTS GRAPHICS_SHADERS )
     get_filename_component(item_name ${item} NAME_WE)
     get_filename_component(item_ext ${item} LAST_EXT)
 
@@ -32,36 +27,52 @@ file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
         DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
-        COMMAND scribe ${item} -c++ -parseFilenameType -o ${item_target_root} 
+        COMMAND scribe ${item} -c++ -parseFilenameType -o ${item_target_root}
     )
- 
-endforeach()
 
-#message( "this shader header: ${INCLUDE_SHADERS_HPP}" )
-#message( "this shader bodies: ${INCLUDE_SHADERS_CPP}" )
+endforeach()
 
 file(GLOB GRAPHICS_HEADERS
     "*.h"
     "gpu/*.h"
-    "d3d12/*.h"
     "render/*.h"
     "drawables/*.h"
 )
 
-list(APPEND  GRAPHICS_HEADERS   ${INCLUDE_SHADERS_HPP})
-
 file(GLOB GRAPHICS_SOURCES
     "*.cpp"
     "gpu/*.cpp"
-    "d3d12/*.cpp"
     "render/*.cpp"
     "drawables/*.cpp"
 )
 
-list(APPEND  GRAPHICS_SOURCES   ${INCLUDE_SHADERS_CPP})
+if(WIN32)
+    file(GLOB D3D12_HEADERS "d3d12/*.h")
+    file(GLOB D3D12_SOURCES "d3d12/*.cpp")
+    list(APPEND GRAPHICS_HEADERS ${D3D12_HEADERS})
+    list(APPEND GRAPHICS_SOURCES ${D3D12_SOURCES})
+    source_group(graphics\\d3d12 REGULAR_EXPRESSION d3d12/*)
+endif()
+
+if(APPLE)
+    file(GLOB METAL_HEADERS "metal/*.h")
+    file(GLOB METAL_SOURCES "metal/*.mm")
+    list(APPEND GRAPHICS_HEADERS ${METAL_HEADERS})
+    list(APPEND GRAPHICS_SOURCES ${METAL_SOURCES})
+    source_group(graphics\\metal REGULAR_EXPRESSION metal/*)
+
+    set(GRAPHICS_LIBRARIES
+        "-framework Metal"
+        "-framework QuartzCore"
+        "-framework Foundation"
+    )
+endif()
+
+list(APPEND GRAPHICS_HEADERS ${INCLUDE_SHADERS_HPP})
+list(APPEND GRAPHICS_SOURCES ${INCLUDE_SHADERS_CPP})
 
 
-add_library (graphics
+add_library(graphics
     ${GRAPHICS_HEADERS}
     ${GRAPHICS_SOURCES}
     ${GRAPHICS_SHADERS}
@@ -88,7 +99,5 @@ source_group(graphics\\shaders\\generated REGULAR_EXPRESSION ${SHADER_OUTPUT_DIR
 
 source_group(graphics\\render REGULAR_EXPRESSION render/*)
 source_group(graphics\\gpu REGULAR_EXPRESSION gpu/*)
-source_group(graphics\\d3d12 REGULAR_EXPRESSION d3d12/*)
 source_group(graphics\\drawables REGULAR_EXPRESSION drawables/*)
 source_group(graphics REGULAR_EXPRESSION ./*)
-

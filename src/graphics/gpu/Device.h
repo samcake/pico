@@ -33,7 +33,11 @@
 namespace graphics {
     
     struct VISUALIZATION_API DeviceInit {
+#ifdef __APPLE__
+        std::string backend{ "Metal" };
+#else
         std::string backend{ "D3D12" };
+#endif
     };
 
     // Device concrete backend implementation

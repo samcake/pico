@@ -26,8 +26,10 @@
 //
 
 #include <chrono>
+#include <iostream>
 
 #include <core/api.h>
+#include <core/Log.h>
 
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Resource.h>
@@ -156,14 +158,77 @@ float4 mainPixel(PixelShaderInput IN) : SV_Target
 const std::string& getVertexShaderSource() { return vertexShaderSource; }
 const std::string& getPixelShaderSource() { return pixelShaderSource; }
 
+#ifdef __APPLE__
+// MSL equivalent: cbuffer at buffer(0), vertex input matches StreamLayout (vec3 pos + cvec4 color)
+static const std::string mslShaderSource = R"MSL(
+#include <metal_stdlib>
+using namespace metal;
+
+struct CameraUniforms {
+    float4 eye_focal;
+    float4 right_sensorHeight;
+    float4 up_aspectRatio;
+    float4 back_far;
+};
+
+struct VertIn {
+    float3 pos   [[attribute(0)]];
+    float4 color [[attribute(1)]];
+};
+
+struct VertOut {
+    float4 position [[position]];
+    float  pointSize [[point_size]];
+    float4 color;
+};
+
+float3 eyeFromWorldSpace(float3 eye, float3 right, float3 up, float3 worldPos) {
+    float3 d = worldPos - eye;
+    return float3(dot(right, d), dot(up, d), dot(cross(right, up), d));
+}
+
+float4 clipFromEyeSpace(float focal, float sensorHeight, float aspectRatio, float far, float3 ep) {
+    float w = focal - ep.z;
+    float z = (-ep.z) * far / (far - focal);
+    float x = ep.x * focal / (0.5f * sensorHeight * aspectRatio);
+    float y = ep.y * focal / (0.5f * sensorHeight);
+    return float4(x, y, z, w);
+}
+
+vertex VertOut mainVertex(VertIn in [[stage_in]],
+                          constant CameraUniforms& cam [[buffer(0)]]) {
+    VertOut out;
+    float3 ep = eyeFromWorldSpace(cam.eye_focal.xyz, cam.right_sensorHeight.xyz, cam.up_aspectRatio.xyz, in.pos);
+    out.position = clipFromEyeSpace(cam.eye_focal.w, cam.right_sensorHeight.w, cam.up_aspectRatio.w, cam.back_far.w, ep);
+    out.pointSize = 2.0f;
+    out.color = float4(in.color.xyz, 1.0f);
+    return out;
+}
+
+fragment float4 mainPixel(VertOut in [[stage_in]]) {
+    return in.color;
+}
+)MSL";
+
+static const std::string& getMslShaderSource() { return mslShaderSource; }
+#endif
+
 graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout vertexLayout, const graphics::RootDescriptorLayoutPointer& rootDescriptorLayout) {
 
+#ifdef __APPLE__
+    // On macOS use a single MSL library containing both vertex and pixel functions
+    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", getMslShaderSource };
+    graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
+
+    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", getMslShaderSource };
+    graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+#else
     graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", getVertexShaderSource };
     graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
 
-
     graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", getPixelShaderSource };
     graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
+#endif
 
     graphics::ProgramInit programInit{ vertexShader, pixelShader };
     graphics::ShaderPointer programShader = device->createProgram(programInit);
@@ -208,6 +273,10 @@ int main(int argc, char *argv[])
 
     // Some content, why not a pointcloud ?
     auto pointCloud = document::PointCloud::createFromPLY(cloudPointFile);
+    if (!pointCloud || pointCloud->_points.empty()) {
+        std::cerr << "Failed to load pointcloud: " << cloudPointFile << "\n";
+        return 1;
+    }
 
     // Create a Mesh from the point cloud data
 
@@ -320,8 +389,8 @@ int main(int argc, char *argv[])
 
         args.batch->bindVertexBuffers(1, &vertexBuffer);
 
-        args.batch->setViewport(viewportRect);
-        args.batch->setScissor(viewportRect);
+        args.batch->setViewport(args.swapchain->viewportRect());
+        args.batch->setScissor(args.swapchain->viewportRect());
 
         args.batch->bindDescriptorSet(graphics::PipelineType::GRAPHICS, descriptorSet);
 
@@ -355,7 +424,7 @@ int main(int argc, char *argv[])
     uix::WindowInit windowInit { windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, true };
+    graphics::SwapchainInit swapchainInit { window->nativeWindow(), (uint32_t) viewportRect.z, (uint32_t) viewportRect.w, true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 
@@ -374,10 +443,8 @@ int main(int argc, char *argv[])
 
         elapsedSeconds += deltaTime.count() * 1e-9;
         if (elapsedSeconds > 1.0) {
-            char buffer[500];
             auto fps = frameCounter / elapsedSeconds;
-            sprintf_s(buffer, 500, "FPS: %f\n", fps);
-            OutputDebugString(buffer);
+            picoLogf("FPS: {}", fps);
             frameCounter = 0;
             elapsedSeconds = 0.0;
         }

@@ -31,6 +31,22 @@
 #include "Imgui.h"
 
 #include <graphics/render/Renderer.h>
+#include "imgui/imgui.h"
+
+// Platform-neutral implementation
+#ifndef WIN32
+#ifndef __APPLE__
+// Stub implementations for unsupported platforms
+void uix::Imgui::create() { IMGUI_CHECKVERSION(); ImGui::CreateContext(); }
+void uix::Imgui::destroy() { ImGui::DestroyContext(); }
+void uix::Imgui::setup(const WindowPointer&, const graphics::DevicePointer&, graphics::PixelFormat) {}
+void uix::Imgui::newFrame() {}
+void uix::Imgui::draw(const graphics::BatchPointer&) {}
+void uix::Imgui::createDeviceObjects() {}
+void uix::Imgui::invalidateDeviceObjects() {}
+void uix::Imgui::standardPostSceneRenderCallback(graphics::RenderArgs&) {}
+#endif
+#endif
 
 #ifdef WIN32
 

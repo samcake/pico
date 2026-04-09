@@ -53,6 +53,9 @@ public:
 #ifdef WIN32
     static bool customEventCallback(HWND win, UINT msg, WPARAM wparam, LPARAM lparam);
 #endif
+#ifdef __APPLE__
+    static bool customEventCallback(void* nsEvent);
+#endif
 
     static void standardPostSceneRenderCallback(graphics::RenderArgs& args);
 

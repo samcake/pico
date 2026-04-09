@@ -34,9 +34,7 @@
 namespace graphics {
 
     struct VISUALIZATION_API SwapchainInit {
-#ifdef _WINDOWS
-        HWND hWnd;
-#endif  
+        void* windowHandle{ nullptr }; // HWND on Windows, NSView* on macOS
 
         uint32_t width;
         uint32_t height;

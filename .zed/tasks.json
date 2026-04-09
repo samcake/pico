@@ -1,0 +1,74 @@
+[
+  {
+    "label": "CMake Configure (Debug)",
+    "command": "cmake",
+    "args": ["..", "-DCMAKE_BUILD_TYPE=Debug"],
+    "cwd": "$ZED_WORKTREE_ROOT/build_mac",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Build All",
+    "command": "cmake",
+    "args": ["--build", "."],
+    "cwd": "$ZED_WORKTREE_ROOT/build_mac",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Build pico_01",
+    "command": "cmake",
+    "args": ["--build", ".", "--target", "pico_01"],
+    "cwd": "$ZED_WORKTREE_ROOT/build_mac",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Build pico_02",
+    "command": "cmake",
+    "args": ["--build", ".", "--target", "pico_02"],
+    "cwd": "$ZED_WORKTREE_ROOT/build_mac",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Build pico_03",
+    "command": "cmake",
+    "args": ["--build", ".", "--target", "pico_03"],
+    "cwd": "$ZED_WORKTREE_ROOT/build_mac",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Run pico_01",
+    "command": "./pico_01",
+    "args": [],
+    "cwd": "$ZED_WORKTREE_ROOT/test/pico_01",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Run pico_02",
+    "command": "./pico_02",
+    "args": [],
+    "cwd": "$ZED_WORKTREE_ROOT/test/pico_02",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  },
+  {
+    "label": "Run pico_03",
+    "command": "./pico_03",
+    "args": [],
+    "cwd": "$ZED_WORKTREE_ROOT/test/pico_03",
+    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "reveal": "always"
+  }
+]

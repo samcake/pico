@@ -1,7 +1,7 @@
-// pico_two.cpp 
+// pico_two.cpp
 //
 // Sam Gateau - January 2020
-// 
+//
 // MIT License
 //
 // Copyright (c) 2020 Sam Gateau
@@ -26,8 +26,10 @@
 //
 
 #include <chrono>
+#include <iostream>
 
 #include <core/api.h>
+#include <core/Log.h>
 
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Resource.h>
@@ -49,7 +51,7 @@
 // introducing:
 // gpu::Batch
 // gpu::Shader
-// gpu::Pipeline State 
+// gpu::Pipeline State
 // gpu::Buffer as Vertex & Index buffer
 // gpu::StreamLayout
 // render::RenderCallback
@@ -58,80 +60,67 @@
 
 //--------------------------------------------------------------------------------------
 
-const std::string vertexShaderSource = std::string(R"HLSL(
-/*struct ModelViewProjection
-{
-    matrix MVP;
-};
-*/
-//ConstantBuffer<ModelViewProjection> ModelViewProjectionCB : register(b0);
+#ifdef __APPLE__
+const std::string shaderSource = std::string(R"MSL(
+#include <metal_stdlib>
+using namespace metal;
 
-struct VertexPosColor
-{
-    float3 Position : POSITION;
+struct VertexIn {
+    float4 position [[attribute(0)]];
 };
-
-struct VertexShaderOutput
-{
-    float4 Color    : COLOR;
-    float4 Position : SV_Position;
+struct VertexOut {
+    float4 position [[position]];
+    float4 color;
 };
-
-VertexShaderOutput mainVertex(VertexPosColor IN)
-{
+vertex VertexOut mainVertex(VertexIn in [[stage_in]]) {
+    VertexOut out;
+    out.position = in.position;
+    out.color    = float4(1.0, 0.0, 0.0, 1.0);
+    return out;
+}
+fragment float4 mainPixel(VertexOut in [[stage_in]]) {
+    return in.color;
+}
+)MSL");
+#else
+const std::string shaderSource = std::string(R"HLSL(
+struct VertexPosColor { float3 Position : POSITION; };
+struct VertexShaderOutput { float4 Color : COLOR; float4 Position : SV_Position; };
+VertexShaderOutput mainVertex(VertexPosColor IN) {
     VertexShaderOutput OUT;
-
-    // OUT.Position = mul(ModelViewProjectionCB.MVP, float4(IN.Position, 1.0f));
     OUT.Position = float4(IN.Position, 1.0f);
     OUT.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
-
     return OUT;
 }
+
+struct PixelShaderInput { float4 Color : COLOR; };
+float4 mainPixel(PixelShaderInput IN) : SV_Target { return IN.Color; }
 )HLSL");
+#endif
 
-const std::string pixelShaderSource = std::string(R"HLSL(
-struct PixelShaderInput
-{
-    float4 Color : COLOR;
-};
+const std::string& getShaderSource() { return shaderSource; }
 
-float4 mainPixel(PixelShaderInput IN) : SV_Target
-{
-    return IN.Color;
-}
-)HLSL");
+graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device,
+                                                     graphics::StreamLayout streamLayout) {
+    graphics::ShaderInit vsInit{ graphics::ShaderType::VERTEX, "mainVertex", getShaderSource };
+    graphics::ShaderPointer vertexShader = device->createShader(vsInit);
 
+    graphics::ShaderInit psInit{ graphics::ShaderType::PIXEL, "mainPixel", getShaderSource };
+    graphics::ShaderPointer pixelShader = device->createShader(psInit);
 
-const std::string& getVertexShaderSource() { return vertexShaderSource; }
-const std::string& getPixelShaderSource() { return pixelShaderSource; }
-
-graphics::PipelineStatePointer createPipelineState(const graphics::DevicePointer& device, graphics::StreamLayout streamLayout ) {
-
-    graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "mainVertex", getVertexShaderSource };
-    graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
-
-
-    graphics::ShaderInit pixelShaderInit{ graphics::ShaderType::PIXEL, "mainPixel", getPixelShaderSource };
-    graphics::ShaderPointer pixelShader = device->createShader(pixelShaderInit);
-
-    graphics::ProgramInit programInit { vertexShader, pixelShader };
+    graphics::ProgramInit programInit{ vertexShader, pixelShader };
     graphics::ShaderPointer programShader = device->createProgram(programInit);
 
-
-
-    graphics::GraphicsPipelineStateInit pipelineInit { programShader, nullptr, streamLayout, graphics::PrimitiveTopology::TRIANGLE };
-    graphics::PipelineStatePointer pipeline = device->createGraphicsPipelineState(pipelineInit);
-
-    return pipeline;
+    graphics::GraphicsPipelineStateInit pipelineInit{ programShader, nullptr, streamLayout,
+                                                       graphics::PrimitiveTopology::TRIANGLE };
+    return device->createGraphicsPipelineState(pipelineInit);
 }
 
 //--------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-    HINSTANCE hInstance = GetModuleHandle(NULL);
-
     // Create the pico api
-    core::ApiInit pico_init{ };
+    core::ApiInit pico_init{};
     auto result = core::api::create(pico_init);
 
     if (!result) {
@@ -139,62 +128,44 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-
-    // Renderer creation
-
-    // First a device, aka the gpu api used by pico
-    graphics::DeviceInit deviceInit {};
+    // First a device
+    graphics::DeviceInit deviceInit{};
     auto gpuDevice = graphics::Device::createDevice(deviceInit);
 
-
-    // Content creation
-
-    // Let's allocate buffer
-    // quad
+    // Vertex data (quad)
     std::vector<float> vertexData = {
-        -0.25f,  0.25f, 0.0f, 1.0f,
-        -0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f, -0.25f, 0.0f, 1.0f,
-        0.25f,  0.25f, 0.0f, 1.0f,
+        -0.25f + 0.5f,  0.25f, 0.0f, 1.0f,
+        -0.25f + 0.5f, -0.25f, 0.0f, 1.0f,
+         0.25f + 0.5f, -0.25f, 0.0f, 1.0f,
+         0.25f + 0.5f,  0.25f, 0.0f, 1.0f,
     };
 
-    vertexData[4 * 0 + 0] += 0.5f;
-    vertexData[4 * 1 + 0] += 0.5f;
-    vertexData[4 * 2 + 0] += 0.5f;
-    vertexData[4 * 3 + 0] += 0.5f;
-
     graphics::BufferInit vertexBufferInit{};
-    vertexBufferInit.usage = graphics::ResourceUsage::VERTEX_BUFFER;
+    vertexBufferInit.usage       = graphics::ResourceUsage::VERTEX_BUFFER;
     vertexBufferInit.hostVisible = true;
-    vertexBufferInit.bufferSize = sizeof(float) * vertexData.size();
+    vertexBufferInit.bufferSize  = sizeof(float) * vertexData.size();
     vertexBufferInit.vertexStride = sizeof(float) * 4;
     auto vertexBuffer = gpuDevice->createBuffer(vertexBufferInit);
     memcpy(vertexBuffer->_cpuMappedAddress, vertexData.data(), vertexBufferInit.bufferSize);
 
-    std::vector<uint32_t> indexData = {
-        0, 2, 1,
-        0, 2, 3
-    };
+    std::vector<uint32_t> indexData = { 0, 2, 1, 0, 3, 2 };
     graphics::BufferInit indexBufferInit{};
-    indexBufferInit.usage = graphics::ResourceUsage::INDEX_BUFFER;
+    indexBufferInit.usage       = graphics::ResourceUsage::INDEX_BUFFER;
     indexBufferInit.hostVisible = true;
-    indexBufferInit.bufferSize = sizeof(uint32_t) * indexData.size();
+    indexBufferInit.bufferSize  = sizeof(uint32_t) * indexData.size();
     auto indexBuffer = gpuDevice->createBuffer(indexBufferInit);
-    memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), vertexBufferInit.bufferSize);
+    memcpy(indexBuffer->_cpuMappedAddress, indexData.data(), indexBufferInit.bufferSize);
 
-
-    // Declare the vertex format
-    graphics::AttribArray<1> attribs {{{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC4, 0 }}};
+    // Vertex layout: 1 attribute (float4), 1 buffer
+    graphics::AttribArray<1> attribs{{{ graphics::AttribSemantic::A, graphics::AttribFormat::VEC4, 0 }}};
     graphics::AttribBufferViewArray<1> bufferViews;
     auto vertexLayout = graphics::StreamLayout::build(attribs, bufferViews);
 
-    // And a Pipeline
     graphics::PipelineStatePointer pipeline = createPipelineState(gpuDevice, vertexLayout);
 
-    // And now a render callback where we describe the rendering sequence
+    // Render callback
     graphics::RenderCallback renderCallback = [&](graphics::RenderArgs& args) {
-        core::vec4 viewportRect { 0.0f, 0.0f, 640.0f, 480.f };
-
+        core::vec4 viewportRect = args.swapchain->viewportRect();
         auto currentIndex = args.swapchain->currentIndex();
 
         args.batch->begin(currentIndex);
@@ -209,20 +180,16 @@ int main(int argc, char *argv[])
         time += 1.0f / 60.0f;
         float intPart;
         time = modf(time, &intPart);
-       // graphics::vec4 clearColor(colorRGBfromHSV(vec3(time, 0.5f, 1.f)), 1.f);
         core::vec4 clearColor(core::colorRGBfromHSV(core::vec3(0.5f, 0.5f, 1.f)), 1.f);
         args.batch->clear(args.swapchain, currentIndex, clearColor);
 
         args.batch->beginPass(args.swapchain, currentIndex);
 
         args.batch->bindPipeline(pipeline);
-
         args.batch->bindIndexBuffer(indexBuffer);
         args.batch->bindVertexBuffers(1, &vertexBuffer);
-
         args.batch->setViewport(viewportRect);
         args.batch->setScissor(viewportRect);
-
         args.batch->drawIndexed(6, 0);
 
         uix::Imgui::draw(args.batch);
@@ -236,37 +203,23 @@ int main(int argc, char *argv[])
             args.swapchain, currentIndex, -1);
 
         args.batch->end();
-
         args.device->executeBatch(args.batch);
-
         args.device->presentSwapchain(args.swapchain);
     };
 
-
-    // Next, a renderer built on this device which will use this renderCallback
     auto renderer = std::make_shared<graphics::Renderer>(gpuDevice, renderCallback, nullptr);
 
-
-    // Presentation creation
-
-    // We need a window where to present, let s use the graphics::Window for convenience
-    // This could be any window, we just need the os handle to create the swapchain next.
     auto windowHandler = new uix::WindowHandlerDelegate();
-    uix::WindowInit windowInit { windowHandler };
+    uix::WindowInit windowInit{ windowHandler };
     auto window = uix::Window::createWindow(windowInit);
 
-
-    // Setup Dear ImGui context with the gpuDevice and the brand new window
     uix::Imgui::create();
     uix::Imgui::setup(window, gpuDevice);
 
-    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), 640, 480 };
+    graphics::SwapchainInit swapchainInit{ window->nativeWindow(), 640, 480 };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
-    //Now that we have created all the elements, 
-    // We configure the windowHandler onPaint delegate of the window to do real rendering!
     windowHandler->_onPaintDelegate = ([swapchain, renderer](const uix::PaintEvent& e) {
-        // Measuring framerate
         static uint64_t numSixtyFrame = 0;
         static uint64_t frameCounter = 0;
         static double elapsedSeconds = 0.0;
@@ -275,20 +228,16 @@ int main(int argc, char *argv[])
 
         frameCounter++;
         auto t1 = clock.now();
-        auto deltaTime = t1 - t0;
+        elapsedSeconds += (t1 - t0).count() * 1e-9;
         t0 = t1;
 
-        elapsedSeconds += deltaTime.count() * 1e-9;
         if (elapsedSeconds > 1.0) {
-            char buffer[500];
             auto fps = frameCounter / elapsedSeconds;
-            sprintf_s(buffer, 500, "FPS: %f\n", fps);
-            OutputDebugString(buffer);
+            picoLogf("FPS: {}", fps);
             frameCounter = 0;
             elapsedSeconds = 0.0;
             numSixtyFrame++;
         }
-
 
         uix::Imgui::newFrame();
 
@@ -298,19 +247,14 @@ int main(int argc, char *argv[])
         ImGui::End();
         ImGui::Render();
 
-        // Render!
         renderer->render(nullptr, swapchain);
     });
 
-    // On resize deal with it
     windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
-        // only resize the swapchain when we re done with the resize
-        //if (e.over)
         gpuDevice->flush();
         gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
     };
 
-    // Render Loop 
     bool keepOnGoing = true;
     while (keepOnGoing) {
         keepOnGoing = window->messagePump();
@@ -319,5 +263,5 @@ int main(int argc, char *argv[])
     uix::Imgui::destroy();
     core::api::destroy();
 
-     return 0;
+    return 0;
 }

@@ -33,6 +33,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <cfloat>
+#include <cstdint>
 
 #include <core/json/json.h>
 #include <core/Log.h>
@@ -159,7 +161,7 @@ std::vector<uint8_t> parseBinary(const uint64_t byteLength, const std::filesyste
     std::vector<uint8_t> bytes;
     if (std::filesystem::exists(glb_path)) {
         auto fileSize = std::filesystem::file_size(glb_path);
-        auto readSize = std::min(fileSize, byteLength);
+        auto readSize = std::min((uint64_t)fileSize, byteLength);
         
         std::ifstream  src(glb_path.c_str(), std::ios::binary | std::ios::in);
         if(!src.fail()) {
