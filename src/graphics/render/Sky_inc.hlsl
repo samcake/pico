@@ -11,6 +11,12 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// DXC (Windows) rejects ternary operators with non-scalar conditions — use select() instead.
+// This macro allows the ternary form to compile on platforms without native select() support.
+#ifndef select
+#define select(cond, a, b) ((cond) ? (a) : (b))
+#endif
+
 struct Atmosphere {
     float4 er_ar_hr_hm;
     float4 betaR; // { 5.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
