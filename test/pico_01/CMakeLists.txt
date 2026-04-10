@@ -8,5 +8,4 @@ target_include_directories(pico_01 PRIVATE ../../src)
 
 target_link_libraries(pico_01 graphics uix)
 
-# Working directory for running from test folder (asset paths are relative to it)
-set_property(TARGET pico_01 PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/test/pico_01")
+set_property(TARGET pico_01 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/test/pico_01")

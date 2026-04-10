@@ -1,34 +1,14 @@
 [
-  {
-    "label": "Debug pico_01",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${ZED_WORKTREE_ROOT}/test/pico_01/pico_01",
-    "cwd": "${ZED_WORKTREE_ROOT}/test/pico_01",
-    "build": "Build pico_01"
-  },
-  {
-    "label": "Debug pico_02",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${ZED_WORKTREE_ROOT}/test/pico_02/pico_02",
-    "cwd": "${ZED_WORKTREE_ROOT}/test/pico_02",
-    "build": "Build pico_02"
-  },
-  {
-    "label": "Debug pico_03",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${ZED_WORKTREE_ROOT}/test/pico_03/pico_03",
-    "cwd": "${ZED_WORKTREE_ROOT}/test/pico_03",
-    "build": "Build pico_03"
-  },
-  {
-    "label": "Debug pico_04",
-    "adapter": "CodeLLDB",
-    "request": "launch",
-    "program": "${ZED_WORKTREE_ROOT}/test/pico_04/pico_04",
-    "cwd": "${ZED_WORKTREE_ROOT}/test/pico_04",
-    "build": "Build pico_04"
-  }
+  { "label": "Debug pico_01",        "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_01.exe",        "cwd": "${ZED_WORKTREE_ROOT}/test/pico_01",        "build": "Build pico_01 (Debug)" },
+  { "label": "Debug pico_02",        "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_02.exe",        "cwd": "${ZED_WORKTREE_ROOT}/test/pico_02",        "build": "Build pico_02 (Debug)" },
+  { "label": "Debug pico_03",        "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_03.exe",        "cwd": "${ZED_WORKTREE_ROOT}/test/pico_03",        "build": "Build pico_03 (Debug)" },
+  { "label": "Debug pico_04",        "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_04.exe",        "cwd": "${ZED_WORKTREE_ROOT}/test/pico_04",        "build": "Build pico_04 (Debug)" },
+  { "label": "Debug pico_eye",       "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_eye.exe",       "cwd": "${ZED_WORKTREE_ROOT}/test/pico_eye",       "build": "Build pico_eye (Debug)" },
+  { "label": "Debug pico_ray",       "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_ray.exe",       "cwd": "${ZED_WORKTREE_ROOT}/test/pico_ray",       "build": "Build pico_ray (Debug)" },
+  { "label": "Debug pico_model",     "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_model.exe",     "cwd": "${ZED_WORKTREE_ROOT}/test/pico_model",     "build": "Build pico_model (Debug)" },
+  { "label": "Debug pico_ocean",     "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_ocean.exe",     "cwd": "${ZED_WORKTREE_ROOT}/test/pico_ocean",     "build": "Build pico_ocean (Debug)" },
+  { "label": "Debug pico_terrain",   "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_terrain.exe",   "cwd": "${ZED_WORKTREE_ROOT}/test/pico_terrain",   "build": "Build pico_terrain (Debug)" },
+  { "label": "Debug pico_treemap",   "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_treemap.exe",   "cwd": "${ZED_WORKTREE_ROOT}/test/pico_treemap",   "build": "Build pico_treemap (Debug)" },
+  { "label": "Debug pico_interop-gdi", "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_interop-gdi.exe", "cwd": "${ZED_WORKTREE_ROOT}/test/pico_interop-gdi", "build": "Build pico_interop-gdi (Debug)" },
+  { "label": "Debug pico_job",       "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_job.exe",       "cwd": "${ZED_WORKTREE_ROOT}/test/pico_job",       "build": "Build pico_job (Debug)" }
 ]

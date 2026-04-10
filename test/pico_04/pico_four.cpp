@@ -1,7 +1,7 @@
-// pico_four.cpp 
+// pico_four.cpp
 //
 // Sam Gateau - January 2020
-// 
+//
 // MIT License
 //
 // Copyright (c) 2020 Sam Gateau
@@ -90,7 +90,7 @@ struct AppState {
 
         struct {
             int32_t clip = 0;
-            graphics::ItemID animItem; 
+            graphics::ItemID animItem;
         } animation;
     } models;
 
@@ -134,7 +134,7 @@ graphics::NodeIDs generateModel(document::ModelPointer lmodel, graphics::DeviceP
             state.models.animation.animItem = modelItemIDs[0];
             auto rootItem = scene->getItem(modelItemIDs[0]);
             auto modelRootNodeId = rootItem.nodeID();
-           
+
             auto modelBound = modelDrawPtr->getBound();
             auto minCorner = modelBound.minPos();
             auto maxCorner = modelBound.maxPos();
@@ -181,7 +181,7 @@ document::ModelPointer loadModel() {
   //  std::string modelFile("../asset/gltf/BrainStem.gltf");
    // std::string modelFile("../asset/gltf/RiggedSimple.gltf");
     std::string modelFile("../asset/gltf/Fox/Fox.gltf");
-   
+
   //  std::string modelFile("../asset/gltf/Cube/Cube.gltf");
  //   std::string modelFile("../asset/gltf/Boxes/Box.gltf");
   //  std::string modelFile("../asset/gltf/DamagedHelmet/DamagedHelmet.gltf");
@@ -204,7 +204,7 @@ document::ModelPointer loadModel() {
     //  std::string modelFile("C:\\Megascans/Pico/Roman Statue_tfraegpda/Roman Statue_LOD0__tfraegpda.gltf");
     //  std::string modelFile("C:\\Megascans/Pico/Cactus Pot_uenkeewfa/Cactus Pot_LOD0__uenkeewfa.gltf");
 
-    // 
+    //
 
 
 
@@ -317,7 +317,7 @@ int main(int argc, char *argv[])
 
     // Some nodes to layout the scene and animate objects
     graphics::Node node0;
-    // node0 = scene->createNode(core::mat4x3(), -1);
+     node0 = scene->createNode({});
     graphics::Node rnode;
     graphics::Node bnode;
     graphics::Node cnode;
@@ -337,13 +337,13 @@ int main(int argc, char *argv[])
         //            +---- bnode
         //            |       +---- cnode
         //            |               +---- dnode
-        //            +---- enode            
+        //            +---- enode
         //
     }
 
     // A point cloud draw factory
     auto pointCloudDrawFactory = std::make_shared<graphics::PointCloudDrawFactory>(gpuDevice);
-    bool showPointCLoudAndTriangleSoup = false;
+    bool showPointCLoudAndTriangleSoup = true;
     if (showPointCLoudAndTriangleSoup) {
 
         // a draw from the pointcloud
@@ -355,7 +355,7 @@ int main(int argc, char *argv[])
         // a draw from the trianglesoup
         auto tsdrawable = scene->createDraw(triangleSoupDrawFactory->createTriangleSoupDraw(gpuDevice, triangleSoup));
 
-        // Some items unique instaces of the draw and the specified nodes
+        // Some items unique instances of the draw and the specified nodes
         auto pcitem = scene->createItem({ .node= node0.id(), .draw= pcdrawable.id() });
 
         auto tsitem = scene->createItem({ .node = enode.id(), .draw = tsdrawable.id() });
@@ -370,12 +370,12 @@ int main(int argc, char *argv[])
     //            +---- bnode
     //            |       +---- cnode
     //            |               +---- dnode
-    //            +---- enode            
+    //            +---- enode
     //            |
-    //            +---- pnode 0 
-    //            +---- pnode 0  
-    //            +---- pnode ...  
-    //            +---- pnode (width * width - 1)  
+    //            +---- pnode 0
+    //            +---- pnode 0
+    //            +---- pnode ...
+    //            +---- pnode (width * width - 1)
     // A Primitive draw factory
     auto primitiveDrawFactory = std::make_unique<graphics::PrimitiveDrawFactory>(gpuDevice);
     std::vector<graphics::NodeID> prim_nodes;
@@ -419,7 +419,7 @@ int main(int argc, char *argv[])
 
     scene->updateBounds();
     core::vec4 sceneSphere = scene->getBounds().toSphere();
-    
+
 
     // Log out scene hierarchy
     logScene();
@@ -432,8 +432,8 @@ int main(int argc, char *argv[])
     auto camControl = std::make_shared< uix::CameraController >(camera);
     float cameraOrbitLength = camControl->zoomTo(sceneSphere);
     camera->setFar(cameraOrbitLength * 100.0f);
-    
- 
+
+
     bool editPointCloudSize = false;
     bool editPointCloudPerspectiveSpriteX = false;
     bool editPointCloudPerspectiveDepth = false;
@@ -460,7 +460,7 @@ int main(int argc, char *argv[])
         camControl->onResize(e);
     };
 
-    //Now that we have created all the elements, 
+    //Now that we have created all the elements,
     // We configure the windowHandler onPaint delegate of the window to do real rendering!
     windowHandler->_onPaintDelegate = ([&](const uix::PaintEvent& e) {
         // Measuring framerate
@@ -636,8 +636,8 @@ int main(int argc, char *argv[])
             }
         }
     };
- 
-    // Render Loop 
+
+    // Render Loop
     bool keepOnGoing = true;
     while (keepOnGoing) {
         keepOnGoing = window->messagePump();
