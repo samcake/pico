@@ -138,6 +138,13 @@
       "targets": ["pico_interop-gdi"]
     },
     {
+      "name": "windows-debug-pico_job",
+      "displayName": "Windows Debug — pico_job",
+      "configurePreset": "windows-debug",
+      "configuration": "Debug",
+      "targets": ["pico_job"]
+    },
+    {
       "name": "windows-release-pico_01",
       "displayName": "Windows Release — pico_01",
       "configurePreset": "windows-release",
@@ -215,6 +222,13 @@
       "targets": ["pico_interop-gdi"]
     },
     {
+      "name": "windows-release-pico_job",
+      "displayName": "Windows Release — pico_job",
+      "configurePreset": "windows-release",
+      "configuration": "Release",
+      "targets": ["pico_job"]
+    },
+    {
       "name": "macos-debug-all",
       "displayName": "macOS Debug — All",
       "configurePreset": "macos-debug"
@@ -271,6 +285,102 @@
       "displayName": "macOS Release — pico_04",
       "configurePreset": "macos-release",
       "targets": ["pico_04"]
+    },
+    {
+      "name": "macos-debug-pico_eye",
+      "displayName": "macOS Debug — pico_eye",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_eye"]
+    },
+    {
+      "name": "macos-release-pico_eye",
+      "displayName": "macOS Release — pico_eye",
+      "configurePreset": "macos-release",
+      "targets": ["pico_eye"]
+    },
+    {
+      "name": "macos-debug-pico_ray",
+      "displayName": "macOS Debug — pico_ray",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_ray"]
+    },
+    {
+      "name": "macos-release-pico_ray",
+      "displayName": "macOS Release — pico_ray",
+      "configurePreset": "macos-release",
+      "targets": ["pico_ray"]
+    },
+    {
+      "name": "macos-debug-pico_model",
+      "displayName": "macOS Debug — pico_model",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_model"]
+    },
+    {
+      "name": "macos-release-pico_model",
+      "displayName": "macOS Release — pico_model",
+      "configurePreset": "macos-release",
+      "targets": ["pico_model"]
+    },
+    {
+      "name": "macos-debug-pico_ocean",
+      "displayName": "macOS Debug — pico_ocean",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_ocean"]
+    },
+    {
+      "name": "macos-release-pico_ocean",
+      "displayName": "macOS Release — pico_ocean",
+      "configurePreset": "macos-release",
+      "targets": ["pico_ocean"]
+    },
+    {
+      "name": "macos-debug-pico_terrain",
+      "displayName": "macOS Debug — pico_terrain",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_terrain"]
+    },
+    {
+      "name": "macos-release-pico_terrain",
+      "displayName": "macOS Release — pico_terrain",
+      "configurePreset": "macos-release",
+      "targets": ["pico_terrain"]
+    },
+    {
+      "name": "macos-debug-pico_treemap",
+      "displayName": "macOS Debug — pico_treemap",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_treemap"]
+    },
+    {
+      "name": "macos-release-pico_treemap",
+      "displayName": "macOS Release — pico_treemap",
+      "configurePreset": "macos-release",
+      "targets": ["pico_treemap"]
+    },
+    {
+      "name": "macos-debug-pico_interop-gdi",
+      "displayName": "macOS Debug — pico_interop-gdi",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_interop-gdi"]
+    },
+    {
+      "name": "macos-release-pico_interop-gdi",
+      "displayName": "macOS Release — pico_interop-gdi",
+      "configurePreset": "macos-release",
+      "targets": ["pico_interop-gdi"]
+    },
+    {
+      "name": "macos-debug-pico_job",
+      "displayName": "macOS Debug — pico_job",
+      "configurePreset": "macos-debug",
+      "targets": ["pico_job"]
+    },
+    {
+      "name": "macos-release-pico_job",
+      "displayName": "macOS Release — pico_job",
+      "configurePreset": "macos-release",
+      "targets": ["pico_job"]
     }
   ]
 }
