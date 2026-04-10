@@ -453,6 +453,11 @@ int main(int argc, char *argv[])
         renderer->render(nullptr, swapchain);
     });
 
+    windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
+        gpuDevice->flush();
+        gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
+    };
+
     // Let's react to keyboard events and change the camera views
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {
         if (e.state && e.key == uix::KEY_SPACE) {

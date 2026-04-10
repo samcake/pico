@@ -106,6 +106,12 @@ public:
     id<MTLFunction>  _function { nil };    // for individual vertex/pixel/compute
     std::string      _mslSource;           // compiled MSL source (for debugging)
     std::string      _entryPoint;          // actual entry point name in MSL
+
+    // Binding remap: maps HLSL register index → Metal buffer index
+    // Built by parsing the HLSL ShaderIncludes to match names to HLSL registers,
+    // then reflecting the MTLFunction arguments to find the Metal indices.
+    std::unordered_map<uint32_t, uint32_t> _bufferBindingRemap;
+    std::unordered_map<uint32_t, uint32_t> _textureBindingRemap;
 };
 
 // ---------------------------------------------------------------------------
@@ -146,6 +152,14 @@ public:
     MTLPrimitiveType            _primitiveType { MTLPrimitiveTypeTriangle };
     MTLCullMode                 _cullMode { MTLCullModeNone };
     MTLWinding                  _winding  { MTLWindingCounterClockwise };
+
+    // Binding remap: HLSL register → Metal buffer/texture index
+    // Built from MTLFunction reflection at pipeline creation time.
+    // Key = HLSL name, Value = Metal buffer/texture index assigned by spirv-cross
+    std::unordered_map<std::string, uint32_t> _vsBufferBindings;
+    std::unordered_map<std::string, uint32_t> _fsBufferBindings;
+    std::unordered_map<std::string, uint32_t> _vsTextureBindings;
+    std::unordered_map<std::string, uint32_t> _fsTextureBindings;
 };
 
 // ---------------------------------------------------------------------------
@@ -177,6 +191,7 @@ struct MetalBinding {
     enum class Kind { Buffer, Texture, Sampler };
     Kind     kind;
     uint32_t slot;
+    bool     isUBO { false };  // true for UNIFORM_BUFFER, false for RESOURCE_BUFFER
     id<MTLBuffer>       buffer  { nil };
     uint32_t            bufferOffset { 0 };
     id<MTLTexture>      texture { nil };

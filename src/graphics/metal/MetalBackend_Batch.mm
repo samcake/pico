@@ -11,7 +11,7 @@
 using namespace graphics;
 
 // Vertex buffers are placed at high slots to avoid conflicts with uniform buffers.
-static const uint32_t VERTEX_BUFFER_SLOT_OFFSET = 16;
+static const uint32_t VERTEX_BUFFER_SLOT_OFFSET = 24;
 
 // ---------------------------------------------------------------------------
 // createBatch
@@ -246,19 +246,32 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
     if (!descriptorSet) return;
     auto* ds = static_cast<MetalDescriptorSetBackend*>(descriptorSet.get());
 
+    // SSBO (RESOURCE_BUFFER) bindings are shifted by 9 in the HLSL→MSL conversion
+    // to avoid overlap with UBO bindings (b0-b11) in Metal's buffer table.
+    static const uint32_t SSBO_BINDING_SHIFT = 9;
+
     for (auto& b : ds->_bindings) {
         uint16_t stageRaw = (uint16_t)b.stage;
         bool isVS  = (stageRaw & (uint16_t)ShaderStage::VERTEX)  != 0;
         bool isPS  = (stageRaw & (uint16_t)ShaderStage::PIXEL)   != 0;
         bool isAll = (b.stage == ShaderStage::ALL_GRAPHICS);
 
+        uint32_t slot = b.slot + (b.isUBO ? 0 : SSBO_BINDING_SHIFT);
+
         if (_renderEncoder) {
             switch (b.kind) {
                 case MetalBinding::Kind::Buffer:
                     if (isVS || isAll)
-                        [_renderEncoder setVertexBuffer:b.buffer offset:b.bufferOffset atIndex:b.slot];
+                        [_renderEncoder setVertexBuffer:b.buffer offset:b.bufferOffset atIndex:slot];
                     if (isPS || isAll)
-                        [_renderEncoder setFragmentBuffer:b.buffer offset:b.bufferOffset atIndex:b.slot];
+                        [_renderEncoder setFragmentBuffer:b.buffer offset:b.bufferOffset atIndex:slot];
+                    // Also bind as texture for Buffer<T> types (spirv-cross maps to texture2d)
+                    if (b.texture) {
+                        if (isVS || isAll)
+                            [_renderEncoder setVertexTexture:b.texture atIndex:b.slot];
+                        if (isPS || isAll)
+                            [_renderEncoder setFragmentTexture:b.texture atIndex:b.slot];
+                    }
                     break;
                 case MetalBinding::Kind::Texture:
                     if (isVS || isAll)
@@ -294,11 +307,21 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
 // ---------------------------------------------------------------------------
 void MetalBatchBackend::bindPushUniform(PipelineType type, uint32_t slot,
                                          uint32_t size, const uint8_t* data) {
+    // The 'slot' parameter is the index into the root descriptor layout's push layout,
+    // NOT the Metal buffer index. Resolve the actual HLSL register binding.
+    uint32_t metalSlot = slot;
+    if (_currentPipeline) {
+        auto rdl = _currentPipeline->getRootDescriptorLayout();
+        if (rdl && slot < (uint32_t)rdl->_init._pushLayout.size()) {
+            metalSlot = rdl->_init._pushLayout[slot]._binding;
+        }
+    }
+
     if (_renderEncoder) {
-        [_renderEncoder setVertexBytes:data   length:size atIndex:slot];
-        [_renderEncoder setFragmentBytes:data length:size atIndex:slot];
+        [_renderEncoder setVertexBytes:data   length:size atIndex:metalSlot];
+        [_renderEncoder setFragmentBytes:data length:size atIndex:metalSlot];
     } else if (_computeEncoder) {
-        [_computeEncoder setBytes:data length:size atIndex:slot];
+        [_computeEncoder setBytes:data length:size atIndex:metalSlot];
     }
 }
 

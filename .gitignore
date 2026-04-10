@@ -1,0 +1,16 @@
+# Build output
+build/
+build_mac/
+
+# IDE / editor — platform-specific configs, not shared
+.vs/
+.zed/tasks.json
+.zed/debug.json
+.zed/settings.json
+
+# CMake user overrides (local machine paths, personal tweaks)
+CMakeUserPresets.json
+
+# Misc
+imgui.ini
+*.user

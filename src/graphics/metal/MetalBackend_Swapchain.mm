@@ -46,12 +46,11 @@ SwapchainPointer MetalBackend::createSwapchain(const SwapchainInit& init) {
 
     layer.device = _device;
 
-    // Use BGRA format for CAMetalLayer compatibility
-    MTLPixelFormat layerFmt = MetalBackend::Format[(uint32_t)init.colorBufferFormat];
-    if (layerFmt == MTLPixelFormatInvalid || layerFmt == MTLPixelFormatRGBA8Uint ||
-        layerFmt == MTLPixelFormatRGBA8Sint || layerFmt == MTLPixelFormatRGBA8Snorm) {
-        layerFmt = MTLPixelFormatBGRA8Unorm;
-    }
+    // CAMetalLayer only supports BGRA formats — force the conversion
+    MTLPixelFormat layerFmt = MTLPixelFormatBGRA8Unorm;
+    MTLPixelFormat requestedFmt = MetalBackend::Format[(uint32_t)init.colorBufferFormat];
+    if (requestedFmt == MTLPixelFormatRGBA8Unorm_sRGB)
+        layerFmt = MTLPixelFormatBGRA8Unorm_sRGB;
     layer.pixelFormat = layerFmt;
     layer.framebufferOnly = YES;
 
@@ -87,6 +86,8 @@ void MetalBackend::resizeSwapchain(const SwapchainPointer& swapchain,
                                     uint32_t width, uint32_t height) {
     auto* sw = static_cast<MetalSwapchainBackend*>(swapchain.get());
     sw->_layer.drawableSize = CGSizeMake((CGFloat)width, (CGFloat)height);
+    sw->_init.width  = width;
+    sw->_init.height = height;
 
     if (sw->_depthTexture && width > 0 && height > 0) {
         MTLTextureDescriptor* dd = [MTLTextureDescriptor

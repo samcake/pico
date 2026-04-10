@@ -53,8 +53,39 @@ introducing:
 
 
 ## Build
-The repo is built using a standard cmake step to generate the makefiles for your favorite compiler.
 
-As described in the github action worflow [here](.github/workflows/main.yml).
+The project uses **CMakePresets.json** for cross-platform, IDE-independent build configuration. All presets are defined there — no manual cmake flags needed.
 
-I develop on a windows machine, using visual studio 2019.
+### Requirements
+
+- CMake 3.19+
+- **Windows:** Visual Studio 2022 (MSVC), DirectX 12 SDK
+- **macOS:** Xcode + Ninja (`brew install ninja`), Metal
+
+### Configure & Build
+
+**Windows (Visual Studio 2022):**
+```bash
+cmake --preset windows-release
+cmake --build --preset windows-release-all
+```
+
+**macOS (Ninja):**
+```bash
+cmake --preset macos-debug
+cmake --build --preset macos-debug-all
+```
+
+To build a single sample (e.g. `pico_04`):
+```bash
+cmake --build --preset windows-debug-pico_04
+```
+
+Binaries are output to `build/bin/Debug/` or `build/bin/Release/` on Windows, and `build_mac/bin/` on macOS.
+
+### IDE support
+
+- **Visual Studio 2022:** open the root folder — VS reads `CMakePresets.json` natively and sets up all targets automatically.
+- **Zed:** build and run tasks are defined in `.zed/tasks.json` (gitignored, Windows-local). Debugger configs are in `.zed/debug.json`.
+
+The CI workflow builds all targets on Windows using the `windows-release-all` preset — see [.github/workflows/main.yml](.github/workflows/main.yml).

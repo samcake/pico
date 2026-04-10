@@ -76,7 +76,7 @@ static MTLVertexFormat toMTLVertexFormat(AttribFormat fmt) {
 
 // Vertex buffers are placed at buffer slots 16..31 to avoid conflicts
 // with uniform/storage buffers bound at their HLSL register(bN) indices 0..15.
-static const uint32_t VERTEX_BUFFER_SLOT_OFFSET = 16;
+static const uint32_t VERTEX_BUFFER_SLOT_OFFSET = 24;
 
 // ---------------------------------------------------------------------------
 // createGraphicsPipelineState

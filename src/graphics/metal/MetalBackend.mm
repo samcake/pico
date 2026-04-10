@@ -53,9 +53,9 @@ const MTLPixelFormat MetalBackend::Format[(uint32_t)PixelFormat::COUNT] = {
     MTLPixelFormatRGB10A2Uint,          // R10G10B10A2_UINT
     MTLPixelFormatRGB10A2Unorm,         // R10G10B10_XR_BIAS_A2_UNORM
     MTLPixelFormatRG11B10Float,         // R11G11B10_FLOAT
-    MTLPixelFormatBGRA8Unorm,           // R8G8B8A8_TYPELESS  → BGRA for Metal compat
-    MTLPixelFormatBGRA8Unorm,           // R8G8B8A8_UNORM     → BGRA for CAMetalLayer
-    MTLPixelFormatBGRA8Unorm_sRGB,      // R8G8B8A8_UNORM_SRGB → BGRA sRGB
+    MTLPixelFormatRGBA8Unorm,           // R8G8B8A8_TYPELESS
+    MTLPixelFormatRGBA8Unorm,           // R8G8B8A8_UNORM
+    MTLPixelFormatRGBA8Unorm_sRGB,      // R8G8B8A8_UNORM_SRGB
     MTLPixelFormatRGBA8Uint,            // R8G8B8A8_UINT
     MTLPixelFormatRGBA8Snorm,           // R8G8B8A8_SNORM
     MTLPixelFormatRGBA8Sint,            // R8G8B8A8_SINT
