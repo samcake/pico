@@ -38,7 +38,7 @@ namespace core {
     public:
         using Index = uint32_t;
         using Indices = std::vector<Index>;
-        static const Index INVALID_INDEX{ (Index) -1 };
+        static constexpr Index INVALID_INDEX{ (Index) -1 };
 
         IndexTable(Index capacity = (Index)-1) : _capacity(capacity) {}
         ~IndexTable() {}

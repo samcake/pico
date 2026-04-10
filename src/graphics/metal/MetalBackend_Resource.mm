@@ -88,6 +88,25 @@ TexturePointer MetalBackend::createTexture(const TextureInit& init) {
         std::cerr << "[Metal] Failed to create texture " << init.width << "x" << init.height << "\n";
     }
 
+    // Upload initData if provided (Shared storage allows direct CPU upload)
+    if (!init.initData.empty() && tex->_texture) {
+        NSUInteger bpp = 4; // assumes RGBA8
+        NSUInteger w = desc.width;
+        NSUInteger h = desc.height;
+        for (NSUInteger slice = 0; slice < init.initData.size(); ++slice) {
+            const auto& pixels = init.initData[slice];
+            if (pixels.empty()) continue;
+            MTLRegion region = MTLRegionMake2D(0, 0, w, h);
+            [tex->_texture replaceRegion:region
+                             mipmapLevel:0
+                                   slice:slice
+                               withBytes:pixels.data()
+                             bytesPerRow:w * bpp
+                           bytesPerImage:w * h * bpp];
+        }
+        tex->notifyUploaded();
+    }
+
     return TexturePointer(tex);
 }
 

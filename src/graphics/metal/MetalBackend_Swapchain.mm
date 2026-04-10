@@ -46,12 +46,11 @@ SwapchainPointer MetalBackend::createSwapchain(const SwapchainInit& init) {
 
     layer.device = _device;
 
-    // Use BGRA format for CAMetalLayer compatibility
-    MTLPixelFormat layerFmt = MetalBackend::Format[(uint32_t)init.colorBufferFormat];
-    if (layerFmt == MTLPixelFormatInvalid || layerFmt == MTLPixelFormatRGBA8Uint ||
-        layerFmt == MTLPixelFormatRGBA8Sint || layerFmt == MTLPixelFormatRGBA8Snorm) {
-        layerFmt = MTLPixelFormatBGRA8Unorm;
-    }
+    // CAMetalLayer only supports BGRA formats — force the conversion
+    MTLPixelFormat layerFmt = MTLPixelFormatBGRA8Unorm;
+    MTLPixelFormat requestedFmt = MetalBackend::Format[(uint32_t)init.colorBufferFormat];
+    if (requestedFmt == MTLPixelFormatRGBA8Unorm_sRGB)
+        layerFmt = MTLPixelFormatBGRA8Unorm_sRGB;
     layer.pixelFormat = layerFmt;
     layer.framebufferOnly = YES;
 

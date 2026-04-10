@@ -65,6 +65,23 @@ void MetalBackend::updateDescriptorSet(DescriptorSetPointer& descriptorSet,
                 case DescriptorType::RW_RESOURCE_BUFFER:
                     if (obj._buffer) {
                         b.kind   = MetalBinding::Kind::Buffer;
+                        b.isUBO  = (obj._type == DescriptorType::UNIFORM_BUFFER);
+                        // Also create a texture view for Buffer<T> types that
+                        // spirv-cross converts to texture2d in MSL
+                        auto* mbuf = static_cast<MetalBufferBackend*>(obj._buffer.get());
+                        if (mbuf->_buffer && obj._type == DescriptorType::RESOURCE_BUFFER) {
+                            // Create a texture_buffer view for Buffer<T> → texture2d mapping
+                            // Use MTLTextureTypeTextureBuffer for large buffers
+                            MTLTextureDescriptor* td = [[MTLTextureDescriptor alloc] init];
+                            td.textureType = MTLTextureTypeTextureBuffer;
+                            td.pixelFormat = MTLPixelFormatR32Uint;
+                            td.width = (NSUInteger)(mbuf->_buffer.length / 4);
+                            td.usage = MTLTextureUsageShaderRead;
+                            td.storageMode = mbuf->_buffer.storageMode;
+                            b.texture = [mbuf->_buffer newTextureWithDescriptor:td
+                                                                        offset:0
+                                                                   bytesPerRow:mbuf->_buffer.length];
+                        }
                         b.buffer = static_cast<MetalBufferBackend*>(obj._buffer.get())->_buffer;
                         ds->_bindings.push_back(b);
                     }

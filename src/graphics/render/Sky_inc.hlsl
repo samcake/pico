@@ -196,7 +196,7 @@ float3 SkyColor(const float3 dir) {
 // Octahedron wrap the uv in range [-1,1] from up hemisphere to bottom hemisphere (and back?)
 float2 octahedron_uvWrap(float2 uv)
 {
-    return (1.0 - abs(uv.yx)) * select(uv.xy >= 0.0, 1.0, -1.0);
+    return (1.0 - abs(uv.yx)) * (uv.xy >= 0.0 ? 1.0 : -1.0);
 }
 
 // Octahedron convert from dir normalized to uv in range [-1,1]
@@ -214,7 +214,7 @@ float3 octahedron_dirFromUv(float2 uv)
     // REF https://twitter.com/Stubbesaurus/status/937994790553227264
     float3 dir = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
     float t = max(-dir.y, 0.0);
-    dir.xz += select(dir.xz >= 0.0, -t, t);
+    dir.xz += (dir.xz >= 0.0 ? -t : t);
     return normalize(dir);
 }
 

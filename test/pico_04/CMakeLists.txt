@@ -10,3 +10,4 @@ target_link_libraries(pico_04 graphics uix)
 
 
 set_property(TARGET pico_04 PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/test/pico_04")
+set_property(TARGET pico_04 PROPERTY RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/test/pico_04")

@@ -40,7 +40,7 @@ using namespace graphics;
 
 // Allocate a rootLayout just for the scene descriptor set
 const DescriptorSetLayout Viewport::viewPassLayout = {
-    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::VERTEX, 11, 1},  // Sky
+    { graphics::DescriptorType::UNIFORM_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 11, 1},  // Sky
     { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 19, 1},  // Camera
     { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::VERTEX, 20, 1}, // Node Transform
     { graphics::DescriptorType::RESOURCE_BUFFER, graphics::ShaderStage::ALL_GRAPHICS, 21, 1}, // Timer
