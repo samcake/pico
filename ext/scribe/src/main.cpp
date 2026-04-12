@@ -10,6 +10,7 @@
 
 
 #include "TextTemplate.h"
+#include "MslCompiler.h"
 
 #include <fstream>
 #include <sstream>
@@ -37,6 +38,7 @@ int main (int argc, char** argv) {
     bool makeCPlusPlus = false;
     bool parseShaderTypeFromFilename = false;
     bool makeResourceDeclaration = false;
+    bool makeMSL = false;
 
     auto config = std::make_shared<TextTemplate::Config>();
 
@@ -116,6 +118,9 @@ int main (int argc, char** argv) {
                     mode = GRAB_SHADER_TYPE;
                 } else if (inputs.back() == "-parseFilenameType") {
                     parseShaderTypeFromFilename = true;
+                    mode = READY;
+                } else if (inputs.back() == "-msl") {
+                    makeMSL = true;
                     mode = READY;
                 } else {
                     // just grabbed the source filename, stop parameter parsing
@@ -868,12 +873,110 @@ int main (int argc, char** argv) {
         // Write source file
         sourceStringStream << "#include \"" << targetName << ".h\"\n" << std::endl;
 
-        sourceStringStream << "const std::string " << targetName << "::_source = std::string()";
-        // Write the pages content
-        for (auto page : pages) {
-            sourceStringStream << "+ std::string(R\"SCRIBE(\n" << page->str() << "\n)SCRIBE\")\n";
+#ifdef SCRIBE_HAS_MSL
+        // When -msl is active and shader is vert/frag/comp, generate platform-guarded source
+        bool mslGenerated = false;
+        if (makeMSL && type != INCLUDE) {
+            // Map type to stage string
+            std::string stageStr;
+            if (type == VERTEX)   stageStr = "vert";
+            if (type == FRAGMENT) stageStr = "frag";
+            if (type == COMPUTE)  stageStr = "comp";
+
+            if (!stageStr.empty()) {
+                // Collect the full flattened HLSL from pages
+                std::string flatHlsl;
+                for (auto& page : pages) {
+                    flatHlsl += page->str() + "\n";
+                }
+
+                // Auto-detect entry points from the HLSL source
+                std::vector<std::string> entryPoints;
+                if (type == COMPUTE) {
+                    // Compute: look for void funcname(...SV_DispatchThreadID or SV_GroupThreadID)
+                    std::istringstream scan(flatHlsl);
+                    std::string line;
+                    while (std::getline(scan, line)) {
+                        if (line.find("SV_DispatchThreadID") != std::string::npos ||
+                            line.find("SV_GroupThreadID") != std::string::npos) {
+                            // Extract function name: "void funcname("
+                            auto voidPos = line.find("void ");
+                            if (voidPos != std::string::npos) {
+                                auto nameStart = voidPos + 5;
+                                auto parenPos = line.find('(', nameStart);
+                                if (parenPos != std::string::npos) {
+                                    auto name = line.substr(nameStart, parenPos - nameStart);
+                                    // Trim whitespace
+                                    while (!name.empty() && name.back() == ' ') name.pop_back();
+                                    if (!name.empty()) entryPoints.push_back(name);
+                                }
+                            }
+                        }
+                    }
+                } else if (type == FRAGMENT) {
+                    // Fragment: look for funcname(...) : SV_Target
+                    std::istringstream scan(flatHlsl);
+                    std::string line;
+                    while (std::getline(scan, line)) {
+                        if (line.find("SV_Target") != std::string::npos) {
+                            auto parenPos = line.find('(');
+                            if (parenPos != std::string::npos) {
+                                // Find function name before the paren
+                                auto nameEnd = parenPos;
+                                while (nameEnd > 0 && line[nameEnd-1] == ' ') nameEnd--;
+                                auto nameStart = nameEnd;
+                                while (nameStart > 0 && (isalnum(line[nameStart-1]) || line[nameStart-1] == '_')) nameStart--;
+                                auto name = line.substr(nameStart, nameEnd - nameStart);
+                                if (!name.empty()) entryPoints.push_back(name);
+                            }
+                        }
+                    }
+                }
+                // Always try "main" as a fallback
+                if (entryPoints.empty()) {
+                    entryPoints.push_back("main");
+                }
+
+                // Get include paths from scribe config
+                std::vector<std::string> includePaths(config->_paths.begin(), config->_paths.end());
+
+                // Compile HLSL → MSL
+                auto mslResult = compileHlslToMsl(srcFilename, flatHlsl, stageStr, entryPoints, includePaths);
+
+                if (mslResult.success) {
+                    mslGenerated = true;
+
+                    // HLSL source guarded with #ifndef __APPLE__
+                    sourceStringStream << "#ifndef __APPLE__" << std::endl;
+                    sourceStringStream << "const std::string " << targetName << "::_source = std::string()";
+                    for (auto& page : pages) {
+                        sourceStringStream << "+ std::string(R\"SCRIBE(\n" << page->str() << "\n)SCRIBE\")\n";
+                    }
+                    sourceStringStream << ";\n" << std::endl;
+                    sourceStringStream << "#else // __APPLE__" << std::endl;
+
+                    // MSL source
+                    sourceStringStream << "const std::string " << targetName << "::_source = std::string(R\"MSLSRC(\n";
+                    sourceStringStream << mslResult.mslSource;
+                    sourceStringStream << "\n)MSLSRC\");\n" << std::endl;
+                    sourceStringStream << "#endif // __APPLE__\n" << std::endl;
+                } else {
+                    cerr << "[scribe] MSL conversion failed for " << targetName << ": " << mslResult.errorMessage << endl;
+                    cerr << "[scribe] Falling back to HLSL-only output." << endl;
+                }
+            }
         }
-        sourceStringStream << ";\n" << std::endl << std::endl;
+
+        if (!mslGenerated)
+#endif // SCRIBE_HAS_MSL
+        {
+            // Standard HLSL-only output (Windows, or MSL conversion failed/disabled)
+            sourceStringStream << "const std::string " << targetName << "::_source = std::string()";
+            for (auto page : pages) {
+                sourceStringStream << "+ std::string(R\"SCRIBE(\n" << page->str() << "\n)SCRIBE\")\n";
+            }
+            sourceStringStream << ";\n" << std::endl << std::endl;
+        }
 
         // Destination stream
         if (!destFilename.empty()) {

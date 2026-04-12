@@ -190,8 +190,6 @@ document::ModelPointer loadModel() {
 int main(int argc, char *argv[])
 {
 
-    HINSTANCE hInstance = GetModuleHandle(NULL);
-
     // Create the pico api
     core::ApiInit pico_init{ };
     auto result = core::api::create(pico_init);
@@ -275,7 +273,7 @@ int main(int argc, char *argv[])
 
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
-    graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
+    graphics::SwapchainInit swapchainInit { window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
     //Now that we have created all the elements, 

@@ -120,7 +120,7 @@ void main_makeDiffuseSkymap_first(uint3 DTid : SV_DispatchThreadID, uint3 GTid :
     float2 uv = 2.0 * texcoord - 1.0;
     float3 p_oct = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
     float t = max(-p_oct.y, 0.0);
-    p_oct.xz += select(p_oct.xz >= 0.0, -t, t); // select() required: DXC rejects vector ternary
+    p_oct.xz += hlsl_select2(p_oct.xz, -t, t);
     float oct_len = length(p_oct);
     float3 dir = p_oct / oct_len;
 

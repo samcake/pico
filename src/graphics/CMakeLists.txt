@@ -13,14 +13,6 @@ file(GLOB GRAPHICS_SHADERS
 set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/shaders)
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
-if(APPLE)
-    find_program(GLSLANG_EXE glslangValidator)
-    find_program(SPIRV_CROSS_EXE spirv-cross)
-    set(HLSL2MSL_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/hlsl2msl.cmake)
-    set(HLSL_INCLUDE_DIR1 "${CMAKE_CURRENT_SOURCE_DIR}/render")
-    set(HLSL_INCLUDE_DIR2 "${CMAKE_CURRENT_SOURCE_DIR}/drawables")
-endif()
-
 foreach( item IN LISTS GRAPHICS_SHADERS )
     get_filename_component(item_name ${item} NAME_WE)
     get_filename_component(item_ext ${item} LAST_EXT)
@@ -31,53 +23,25 @@ foreach( item IN LISTS GRAPHICS_SHADERS )
     list(APPEND INCLUDE_SHADERS_CPP ${item_target_root}.cpp)
 
     set_source_files_properties(${item} PROPERTIES VS_TOOL_OVERRIDE "None")
+
+    # On Apple, pass -msl to scribe for vert/frag/comp shaders (not inc/ray)
+    set(_msl_flag "")
+    if(APPLE)
+        string(REGEX MATCH "_(vert|frag|comp)" _stage_match "${item_name}")
+        if(_stage_match)
+            set(_msl_flag "-msl")
+        endif()
+    endif()
+
     add_custom_command(
         DEPENDS scribe
         MAIN_DEPENDENCY ${item}
         OUTPUT ${item_target_root}.h ${item_target_root}.cpp
-        COMMAND scribe ${item} -c++ -parseFilenameType -o ${item_target_root}
+        COMMAND scribe ${item} -c++ -parseFilenameType ${_msl_flag}
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/render
+            -I ${CMAKE_CURRENT_SOURCE_DIR}/drawables
+            -o ${item_target_root}
     )
-
-    # On Apple, convert non-include shaders from HLSL to MSL
-    if(APPLE AND GLSLANG_EXE AND SPIRV_CROSS_EXE)
-        # Determine shader stage from filename suffix
-        string(REGEX MATCH "_(vert|frag|comp|ray|inc)" _stage_match "${item_name}")
-        set(_stage "${CMAKE_MATCH_1}")
-
-        if(_stage AND NOT _stage STREQUAL "inc" AND NOT _stage STREQUAL "ray")
-            set(item_msl_cpp ${SHADER_OUTPUT_DIR}/${item_name}_msl.cpp)
-            list(APPEND INCLUDE_SHADERS_CPP ${item_msl_cpp})
-
-            # Wrap scribe HLSL source in #ifndef __APPLE__ so MSL version wins
-            add_custom_command(
-                DEPENDS ${item_target_root}.cpp
-                OUTPUT ${item_target_root}.cpp.guarded
-                COMMAND ${CMAKE_COMMAND}
-                    -DFILE=${item_target_root}.cpp
-                    -DCLASS=${item_name}
-                    -P ${CMAKE_CURRENT_SOURCE_DIR}/wrap_hlsl_guard.cmake
-                COMMAND ${CMAKE_COMMAND} -E touch ${item_target_root}.cpp.guarded
-                COMMENT "Guard HLSL: ${item_name}"
-            )
-
-            # Convert HLSL → SPIR-V → MSL
-            add_custom_command(
-                DEPENDS ${item} ${HLSL2MSL_SCRIPT} ${item_target_root}.cpp.guarded
-                OUTPUT ${item_msl_cpp}
-                COMMAND ${CMAKE_COMMAND}
-                    -DSHADER=${item}
-                    -DCLASS=${item_name}
-                    -DSTAGE=${_stage}
-                    "-DINCLUDE_DIR1=${HLSL_INCLUDE_DIR1}"
-                    "-DINCLUDE_DIR2=${HLSL_INCLUDE_DIR2}"
-                    -DOUTPUT=${item_msl_cpp}
-                    -DGLSLANG=${GLSLANG_EXE}
-                    -DSPIRV_CROSS=${SPIRV_CROSS_EXE}
-                    -P ${HLSL2MSL_SCRIPT}
-                COMMENT "HLSL->MSL: ${item_name}"
-            )
-        endif()
-    endif()
 
 endforeach()
 
