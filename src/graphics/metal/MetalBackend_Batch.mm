@@ -7,6 +7,7 @@
 
 #include "MetalBackend.h"
 #include <iostream>
+#include <set>
 
 using namespace graphics;
 
@@ -246,8 +247,8 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
     if (!descriptorSet) return;
     auto* ds = static_cast<MetalDescriptorSetBackend*>(descriptorSet.get());
 
-    // SSBO (RESOURCE_BUFFER) bindings are shifted by 9 in the HLSL→MSL conversion
-    // to avoid overlap with UBO bindings (b0-b11) in Metal's buffer table.
+    // SSBO bindings are shifted by 9 in the HLSL→MSL conversion (scribe -msl)
+    // to match the glslang --shift-ssbo-binding flag. UBOs keep original bindings.
     static const uint32_t SSBO_BINDING_SHIFT = 9;
 
     for (auto& b : ds->_bindings) {
@@ -256,6 +257,7 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
         bool isPS  = (stageRaw & (uint16_t)ShaderStage::PIXEL)   != 0;
         bool isAll = (b.stage == ShaderStage::ALL_GRAPHICS);
 
+        // SSBOs (RESOURCE_BUFFER) are shifted, UBOs keep their HLSL register binding
         uint32_t slot = b.slot + (b.isUBO ? 0 : SSBO_BINDING_SHIFT);
 
         if (_renderEncoder) {
@@ -307,8 +309,8 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
 // ---------------------------------------------------------------------------
 void MetalBatchBackend::bindPushUniform(PipelineType type, uint32_t slot,
                                          uint32_t size, const uint8_t* data) {
-    // The 'slot' parameter is the index into the root descriptor layout's push layout,
-    // NOT the Metal buffer index. Resolve the actual HLSL register binding.
+    // The 'slot' parameter is the index into the root descriptor layout's push layout.
+    // Resolve to the HLSL register binding (UBOs are not shifted).
     uint32_t metalSlot = slot;
     if (_currentPipeline) {
         auto rdl = _currentPipeline->getRootDescriptorLayout();
@@ -420,7 +422,7 @@ void MetalBatchBackend::uploadTexture(const TexturePointer& dest,
     auto* buf  = static_cast<MetalBufferBackend*>(src.get());
     if (!tex->_texture || !buf->_buffer) return;
 
-    // Encode a blit from the source buffer into the destination texture
+    _endCurrentEncoder();
     id<MTLBlitCommandEncoder> blit = [_commandBuffer blitCommandEncoder];
     for (auto& sub : layout) {
         NSUInteger sliceIdx = 0;
@@ -452,6 +454,7 @@ void MetalBatchBackend::uploadTexture(const TexturePointer& dest) {
     auto* cpuBuf = static_cast<MetalBufferBackend*>(dest->_cpuDataBuffer.get());
     if (!cpuBuf || !cpuBuf->_buffer) return;
 
+    _endCurrentEncoder();
     id<MTLBlitCommandEncoder> blit = [_commandBuffer blitCommandEncoder];
     NSUInteger w   = tex->_init.width;
     NSUInteger h   = tex->_init.height;
@@ -477,7 +480,7 @@ void MetalBatchBackend::uploadTextureFromInitdata(const DevicePointer& device,
     auto* tex = static_cast<MetalTextureBackend*>(dest.get());
     if (!tex->_texture) return;
 
-    // Upload each mip/slice from initData
+    _endCurrentEncoder();
     id<MTLBlitCommandEncoder> blit = [_commandBuffer blitCommandEncoder];
     NSUInteger slice = 0;
     for (auto& mipData : dest->_init.initData) {
@@ -519,6 +522,7 @@ void MetalBatchBackend::copyBufferRegion(const BufferPointer& dst, uint32_t dstO
     auto* s = static_cast<MetalBufferBackend*>(src.get());
     if (!d->_buffer || !s->_buffer) return;
 
+    _endCurrentEncoder();
     id<MTLBlitCommandEncoder> blit = [_commandBuffer blitCommandEncoder];
     [blit copyFromBuffer:s->_buffer
             sourceOffset:srcOff

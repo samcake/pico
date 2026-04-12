@@ -11,6 +11,12 @@
 #define M_PI 3.14159265358979323846
 #endif
 
+// Component-wise select: works with both DXC and glslangValidator
+// DXC rejects vector ternary, glslangValidator rejects select()
+float2 hlsl_select2(float2 cond, float2 a, float2 b) {
+    return float2(cond.x >= 0.0 ? a.x : b.x, cond.y >= 0.0 ? a.y : b.y);
+}
+
 
 struct Atmosphere {
     float4 er_ar_hr_hm;
@@ -197,7 +203,7 @@ float3 SkyColor(const float3 dir) {
 // Octahedron wrap the uv in range [-1,1] from up hemisphere to bottom hemisphere (and back?)
 float2 octahedron_uvWrap(float2 uv)
 {
-    return (1.0 - abs(uv.yx)) * select(uv.xy >= 0.0, 1.0, -1.0); // select() required: DXC rejects vector ternary (HLSL files are Windows/DXC only)
+    return (1.0 - abs(uv.yx)) * hlsl_select2(uv.xy, 1.0, -1.0);
 }
 
 // Octahedron convert from dir normalized to uv in range [-1,1]
@@ -215,7 +221,7 @@ float3 octahedron_dirFromUv(float2 uv)
     // REF https://twitter.com/Stubbesaurus/status/937994790553227264
     float3 dir = float3(uv.y, 1.0 - abs(uv.x) - abs(uv.y), uv.x);
     float t = max(-dir.y, 0.0);
-    dir.xz += select(dir.xz >= 0.0, -t, t); // select() required: DXC rejects vector ternary
+    dir.xz += hlsl_select2(dir.xz, -t, t);
     return normalize(dir);
 }
 

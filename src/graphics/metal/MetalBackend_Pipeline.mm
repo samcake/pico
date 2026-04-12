@@ -107,9 +107,11 @@ PipelineStatePointer MetalBackend::createGraphicsPipelineState(const GraphicsPip
     desc.fragmentFunction = pixelFn;
     desc.rasterSampleCount = 1;
 
-    // Color attachment
+    // Color attachment — CAMetalLayer uses BGRA, so convert RGBA formats
     MTLPixelFormat colorFmt = MetalBackend::Format[(uint32_t)init.colorTargetFormat];
-    if (colorFmt == MTLPixelFormatInvalid) colorFmt = MTLPixelFormatBGRA8Unorm;
+    if (colorFmt == MTLPixelFormatInvalid)        colorFmt = MTLPixelFormatBGRA8Unorm;
+    if (colorFmt == MTLPixelFormatRGBA8Unorm)     colorFmt = MTLPixelFormatBGRA8Unorm;
+    if (colorFmt == MTLPixelFormatRGBA8Unorm_sRGB) colorFmt = MTLPixelFormatBGRA8Unorm_sRGB;
     desc.colorAttachments[0].pixelFormat = colorFmt;
 
     // Blend state
