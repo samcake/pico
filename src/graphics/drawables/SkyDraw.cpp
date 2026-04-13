@@ -161,7 +161,9 @@ namespace graphics
                // Let's describe the Compute pipeline Descriptors layout
                graphics::ComputePipelineStateInit skymap_pipelineInit{
                    skymap_compShader,
-                   skymap_descriptorLayout
+                   skymap_descriptorLayout,
+                   {}, // watch_name
+                   8, 8, 1 // [numthreads(8,8,1)]
                };
 
                _skymapPipeline = device->createComputePipelineState(skymap_pipelineInit);
@@ -193,7 +195,9 @@ namespace graphics
             // Let's describe the Compute pipeline Descriptors layout
             graphics::ComputePipelineStateInit diffuse_skymap_pipelineInit{
                 diffuse_skymap_compShader,
-                diffuse_skymap_descriptorLayout
+                diffuse_skymap_descriptorLayout,
+                {}, // watch_name
+                64, 1, 1 // [numthreads(THREAD_GROUP_DIM, 1, 1)]
             };
 
             _diffuseSkymapPipeline[0] = device->createComputePipelineState(diffuse_skymap_pipelineInit);
@@ -204,7 +208,9 @@ namespace graphics
             // Let's describe the Compute pipeline Descriptors layout
             graphics::ComputePipelineStateInit diffuse_skymap_next_pipelineInit{
                 diffuse_skymap_next_compShader,
-                diffuse_skymap_descriptorLayout
+                diffuse_skymap_descriptorLayout,
+                {}, // watch_name
+                64, 1, 1 // [numthreads(THREAD_GROUP_DIM, 1, 1)]
             };
             _diffuseSkymapPipeline[1] = device->createComputePipelineState(diffuse_skymap_next_pipelineInit);
         }

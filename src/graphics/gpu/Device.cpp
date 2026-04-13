@@ -40,13 +40,8 @@ namespace graphics {
 
 
 graphics::PixelFormat graphics::defaultColorBufferFormat() {
-#ifdef __APPLE__
-    // R8G8B8A8_UNORM maps to MTLPixelFormatBGRA8Unorm in the Metal format table,
-    // which is the native CAMetalLayer format on macOS.
-    return graphics::PixelFormat::R8G8B8A8_UNORM;
-#else
+    // sRGB format — the GPU handles linear→sRGB conversion on write
     return graphics::PixelFormat::R8G8B8A8_UNORM_SRGB;
-#endif
 }
 
 

@@ -150,6 +150,7 @@ public:
     id<MTLComputePipelineState> _computePipeline { nil };
     id<MTLDepthStencilState>    _depthStencilState { nil };
     MTLPrimitiveType            _primitiveType { MTLPrimitiveTypeTriangle };
+    MTLSize                     _threadGroupSize { 1, 1, 1 };
     MTLCullMode                 _cullMode { MTLCullModeNone };
     MTLWinding                  _winding  { MTLWindingCounterClockwise };
 
