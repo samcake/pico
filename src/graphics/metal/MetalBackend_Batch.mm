@@ -222,20 +222,33 @@ void MetalBatchBackend::bindPipeline(const PipelineStatePointer& pipeline) {
     auto* pso = static_cast<MetalPipelineStateBackend*>(pipeline.get());
     _currentPipeline = pso;
 
-    if (_renderEncoder) {
-        if (pso->_renderPipeline)
-            [_renderEncoder setRenderPipelineState:pso->_renderPipeline];
-        if (pso->_depthStencilState)
-            [_renderEncoder setDepthStencilState:pso->_depthStencilState];
-        else
+    if (pso->_renderPipeline) {
+        // If we were in compute mode, switch back to render
+        if (!_renderEncoder && _currentRenderPassDescriptor) {
+            _endCurrentEncoder();
+            // Restart the render pass with LoadAction::Load to preserve existing content
+            _currentRenderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionLoad;
+            if (_currentRenderPassDescriptor.depthAttachment.texture)
+                _currentRenderPassDescriptor.depthAttachment.loadAction = MTLLoadActionLoad;
+            _renderEncoder = [_commandBuffer renderCommandEncoderWithDescriptor:_currentRenderPassDescriptor];
             [_renderEncoder setDepthStencilState:_defaultDepthStencilState];
-
-        // Rasterizer settings (cached in PSO at creation time)
-        [_renderEncoder setCullMode:pso->_cullMode];
-        [_renderEncoder setFrontFacingWinding:pso->_winding];
-    } else if (_computeEncoder) {
-        if (pso->_computePipeline)
-            [_computeEncoder setComputePipelineState:pso->_computePipeline];
+        }
+        if (_renderEncoder) {
+            [_renderEncoder setRenderPipelineState:pso->_renderPipeline];
+            if (pso->_depthStencilState)
+                [_renderEncoder setDepthStencilState:pso->_depthStencilState];
+            else
+                [_renderEncoder setDepthStencilState:_defaultDepthStencilState];
+            [_renderEncoder setCullMode:pso->_cullMode];
+            [_renderEncoder setFrontFacingWinding:pso->_winding];
+        }
+    } else if (pso->_computePipeline) {
+        // Create compute encoder if needed
+        if (!_computeEncoder) {
+            _endCurrentEncoder();
+            _computeEncoder = [_commandBuffer computeCommandEncoder];
+        }
+        [_computeEncoder setComputePipelineState:pso->_computePipeline];
     }
 }
 
@@ -291,7 +304,10 @@ void MetalBatchBackend::bindDescriptorSet(PipelineType type,
         } else if (_computeEncoder) {
             switch (b.kind) {
                 case MetalBinding::Kind::Buffer:
-                    [_computeEncoder setBuffer:b.buffer offset:b.bufferOffset atIndex:b.slot];
+                    [_computeEncoder setBuffer:b.buffer offset:b.bufferOffset atIndex:slot];
+                    // Also bind texture view for Buffer<T>/RWBuffer<T>
+                    if (b.texture)
+                        [_computeEncoder setTexture:b.texture atIndex:b.slot];
                     break;
                 case MetalBinding::Kind::Texture:
                     [_computeEncoder setTexture:b.texture atIndex:b.slot];
@@ -402,9 +418,10 @@ void MetalBatchBackend::_setScissor(const core::vec4& sc) {
 // ---------------------------------------------------------------------------
 void MetalBatchBackend::dispatch(uint32_t x, uint32_t y, uint32_t z) {
     if (!_computeEncoder || !_currentPipeline || !_currentPipeline->_computePipeline) return;
-    MTLSize threads    = MTLSizeMake(x, y, z);
-    MTLSize threadSize = MTLSizeMake(1, 1, 1);
-    [_computeEncoder dispatchThreadgroups:threads threadsPerThreadgroup:threadSize];
+    MTLSize threadgroups = MTLSizeMake(x, y, z);
+    // Thread group size is baked into the compute pipeline from [numthreads(X,Y,Z)]
+    MTLSize threadsPerGroup = _currentPipeline->_threadGroupSize;
+    [_computeEncoder dispatchThreadgroups:threadgroups threadsPerThreadgroup:threadsPerGroup];
 }
 
 void MetalBatchBackend::dispatchRays(const DispatchRaysArgs&) {

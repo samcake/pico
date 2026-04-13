@@ -15,6 +15,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <unistd.h>
 
 // ---------------------------------------------------------------------------
@@ -110,6 +111,7 @@ MslResult compileHlslToMsl(
     int ssboBindingShift)
 {
     MslResult result;
+    std::string combinedMsl;
 
     for (auto& entry : entryPoints) {
         std::vector<uint32_t> spirv;
@@ -129,11 +131,65 @@ MslResult compileHlslToMsl(
         }
 
         result.success = true;
-        result.mslSource = msl;
-        // Use only the first successful entry point — spirv-cross renames all
-        // entries to 'main0', so concatenating multiple causes redefinitions.
-        break;
+
+        if (combinedMsl.empty()) {
+            // First entry: keep the full MSL (structs, helpers, entry function)
+            combinedMsl = msl;
+        } else {
+            // Subsequent entries: find the kernel/vertex/fragment function and append.
+            // For compute shaders, spirv-cross preserves entry names (main_makeSkymap etc.)
+            // so there's no duplicate 'main0' issue. For vert/frag, spirv-cross renames
+            // all entries to 'main0' — skip subsequent entries to avoid redefinition.
+            if (stage == "comp") {
+                // For compute: each entry has a unique name (not renamed to main0).
+                // Strip duplicate struct definitions but keep unique helpers
+                // (spvUnsafeArray, spvTexelBufferCoord, etc.) that may not exist
+                // in the first entry's MSL.
+                combinedMsl += "\n// --- entry point: " + entry + " ---\n";
+
+                // Process line by line: skip struct blocks, keep everything else
+                std::istringstream stream(msl);
+                std::string line;
+                bool inStruct = false;
+                int braceDepth = 0;
+                while (std::getline(stream, line)) {
+                    // Detect struct definitions (but not template struct like spvUnsafeArray)
+                    if (!inStruct && line.find("struct ") == 0) {
+                        // Check if this struct is already defined in combinedMsl
+                        if (combinedMsl.find(line) != std::string::npos) {
+                            inStruct = true;
+                            braceDepth = 0;
+                            for (char c : line) {
+                                if (c == '{') braceDepth++;
+                                if (c == '}') braceDepth--;
+                            }
+                            continue;
+                        }
+                    }
+                    if (inStruct) {
+                        for (char c : line) {
+                            if (c == '{') braceDepth++;
+                            if (c == '}') braceDepth--;
+                        }
+                        if (braceDepth <= 0) inStruct = false;
+                        continue;
+                    }
+                    // Skip #pragma and #include that are duplicates
+                    if (line.find("#pragma") == 0 || line.find("#include") == 0) {
+                        if (combinedMsl.find(line) != std::string::npos) continue;
+                    }
+                    // Skip "using namespace metal;" duplicate
+                    if (line.find("using namespace metal;") != std::string::npos) {
+                        if (combinedMsl.find("using namespace metal;") != std::string::npos) continue;
+                    }
+                    combinedMsl += line + "\n";
+                }
+            }
+            // For vert/frag: skip (spirv-cross renames all to main0 → redefinition)
+        }
     }
+
+    result.mslSource = combinedMsl;
 
     return result;
 }

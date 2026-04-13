@@ -55,8 +55,13 @@ namespace graphics {
     struct VISUALIZATION_API ComputePipelineStateInit {
         ShaderPointer program;
         RootDescriptorLayoutPointer rootDescriptorLayout;
-        
+
         std::string watch_name;
+
+        // Thread group dimensions from [numthreads(X,Y,Z)] — needed for Metal dispatch
+        uint32_t threadGroupX { 1 };
+        uint32_t threadGroupY { 1 };
+        uint32_t threadGroupZ { 1 };
     };
 
     struct VISUALIZATION_API RaytracingPipelineStateInit {

@@ -69,27 +69,34 @@ void MetalBackend::updateDescriptorSet(DescriptorSetPointer& descriptorSet,
                         // Also create a texture view for Buffer<T> types that
                         // spirv-cross converts to texture2d in MSL
                         auto* mbuf = static_cast<MetalBufferBackend*>(obj._buffer.get());
-                        if (mbuf->_buffer && obj._type == DescriptorType::RESOURCE_BUFFER) {
+                        if (mbuf->_buffer && (obj._type == DescriptorType::RESOURCE_BUFFER ||
+                                              obj._type == DescriptorType::RW_RESOURCE_BUFFER)) {
+                            bool isRW = (obj._type == DescriptorType::RW_RESOURCE_BUFFER);
                             // Create a texture2d view for Buffer<T> → texture2d mapping.
                             // spirv-cross converts HLSL Buffer<uint> to MSL texture2d<uint>
                             // using spvTexelBufferCoord() with width=4096 for 2D indexing.
                             // spirv-cross uses spvTexelBufferCoord(tc) = uint2(tc % 4096, tc / 4096)
                             // For small buffers (< 4096 elements), use the actual count as width.
+                            // spirv-cross maps Buffer<T>/RWBuffer<T> to texture2d in MSL.
+                            // spvTexelBufferCoord(tc) = uint2(tc % 4096, tc / 4096)
                             static const uint32_t TEXBUF_WIDTH = 4096;
-                            uint32_t numElements = (uint32_t)(mbuf->_buffer.length / 4);
+                            uint32_t bytesPerElement = isRW ? 16 : 4; // float4 vs uint
+                            MTLPixelFormat texFmt = isRW ? MTLPixelFormatRGBA32Float : MTLPixelFormatR32Uint;
+                            uint32_t numElements = (uint32_t)(mbuf->_buffer.length / bytesPerElement);
                             if (numElements > 0) {
                                 uint32_t width = std::min(numElements, TEXBUF_WIDTH);
-                                uint32_t bytesPerRow = width * 4;
+                                uint32_t bytesPerRow = width * bytesPerElement;
                                 bytesPerRow = (bytesPerRow + 255) & ~255;
                                 uint32_t height = (uint32_t)(mbuf->_buffer.length / bytesPerRow);
                                 if (height < 1) height = 1;
 
                                 MTLTextureDescriptor* td = [MTLTextureDescriptor
-                                    texture2DDescriptorWithPixelFormat:MTLPixelFormatR32Uint
+                                    texture2DDescriptorWithPixelFormat:texFmt
                                                                 width:width
                                                                height:height
                                                             mipmapped:NO];
-                                td.usage = MTLTextureUsageShaderRead;
+                                td.usage = isRW ? (MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite)
+                                                : MTLTextureUsageShaderRead;
                                 td.storageMode = mbuf->_buffer.storageMode;
                                 b.texture = [mbuf->_buffer newTextureWithDescriptor:td
                                                                             offset:0

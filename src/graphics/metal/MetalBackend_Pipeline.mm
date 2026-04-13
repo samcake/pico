@@ -197,6 +197,7 @@ PipelineStatePointer MetalBackend::createGraphicsPipelineState(const GraphicsPip
 PipelineStatePointer MetalBackend::createComputePipelineState(const ComputePipelineStateInit& init) {
     auto* pso = new MetalPipelineStateBackend();
     pso->initCompute(init);
+    pso->_threadGroupSize = MTLSizeMake(init.threadGroupX, init.threadGroupY, init.threadGroupZ);
 
     // Find the MTLFunction for the compute kernel
     auto* prog = static_cast<MetalShaderBackend*>(init.program.get());

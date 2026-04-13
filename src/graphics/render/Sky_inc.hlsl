@@ -22,12 +22,14 @@ struct Atmosphere {
     float4 er_ar_hr_hm;
     float4 betaR; // { 5.8e-6f, 13.5e-6f, 33.1e-6f };   // Rayleygh Scattering
     float4 betaM; // { 4e-6f };                        // Mie Scattering
-
-    float earthRadius() { return er_ar_hr_hm.x; } // = 6360e3;                         // In the paper this is usually Rg or Re (radius ground, eart) 
-    float atmosphereRadius() { return er_ar_hr_hm.y; } // = 6420e3;                    // In the paper this is usually R or Ra (radius atmosphere) 
-    float Hr() { return er_ar_hr_hm.z; } // = 7994;                                    // Thickness of the atmosphere if density was uniform (Hr) 
-    float Hm() { return er_ar_hr_hm.w; } // = 1200;                                    // Same as above but for Mie scattering (Hm) 
 };
+
+// Free functions instead of member functions — spirv-cross generates broken
+// address space qualifiers for member functions on constant-space UBO structs.
+float Atmosphere_earthRadius(Atmosphere a) { return a.er_ar_hr_hm.x; }
+float Atmosphere_atmosphereRadius(Atmosphere a) { return a.er_ar_hr_hm.y; }
+float Atmosphere_Hr(Atmosphere a) { return a.er_ar_hr_hm.z; }
+float Atmosphere_Hm(Atmosphere a) { return a.er_ar_hr_hm.w; }
 
 
 //float3 _SkyColor(const float3 dir) {
@@ -60,10 +62,10 @@ int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float
 }
 
 float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
-    float earthRadius = atmos.earthRadius();
-    float atmosphereRadius = atmos.atmosphereRadius();          
-    float Hr = atmos.Hr();   
-    float Hm = atmos.Hm();
+    float earthRadius = Atmosphere_earthRadius(atmos);
+    float atmosphereRadius = Atmosphere_atmosphereRadius(atmos);
+    float Hr = Atmosphere_Hr(atmos);
+    float Hm = Atmosphere_Hm(atmos);
     float3 betaR = atmos.betaR.xyz;
     float3 betaM = atmos.betaM.xyz;
 
@@ -183,10 +185,10 @@ SphericalHarmonics getSkyIrradianceSH() {
 float3 SkyColor(const float3 dir) {
     float3 stage_dir = rotateFrom(skyConstant._stage, dir);
 
-    float3 origin = float3(0, skyConstant._atmosphere.earthRadius() + skyConstant._stage.col_w().y, 0);
+    float3 origin = float3(0, Atmosphere_earthRadius(skyConstant._atmosphere) + skyConstant._stage._backZ_ori.z, 0);
     float t0, t1, tMax = -1.0;
 
-    int testEarth = raySphereIntersect(origin, stage_dir, skyConstant._atmosphere.earthRadius(), t0, t1);
+    int testEarth = raySphereIntersect(origin, stage_dir, Atmosphere_earthRadius(skyConstant._atmosphere), t0, t1);
     if (testEarth && t0 > 0)
         tMax = max(0.f, t0);
 
