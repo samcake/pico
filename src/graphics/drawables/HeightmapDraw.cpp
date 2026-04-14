@@ -45,6 +45,7 @@
 #include "Projection_inc.h"
 #include "Camera_inc.h"
 #include "SceneTransform_inc.h"
+#include "Sky_inc.h"
 
 #include "Heightmap_vert.h"
 #include "Heightmap_frag.h"
@@ -101,6 +102,7 @@ namespace graphics
             Projection_inc::getMapEntry(),
             Camera_inc::getMapEntry(),
             SceneTransform_inc::getMapEntry(),
+            Sky_inc::getMapEntry(),
         };
         graphics::ShaderInit vertexShaderInit{ graphics::ShaderType::VERTEX, "main", Heightmap_vert::getSource, Heightmap_vert::getSourceFilename(), include };
         graphics::ShaderPointer vertexShader = device->createShader(vertexShaderInit);
