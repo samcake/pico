@@ -90,10 +90,12 @@ float4 main(PixelShaderInput IN) : SV_Target
 
     float3 F0 = colorF0(base_color, metallic);
 
-    // Ambient diffuse from sky SH irradiance
-    float3 ambient = sky_evalIrradianceSH(N) * M_PI * base_color;
+    // Ambient diffuse from sky SH irradiance.
+    // sky_evalIrradianceSH returns E(N) = integral of L(w)*max(N.w,0) dw (cosine kernel already applied).
+    // Lambertian L_out = albedo/pi * E(N), but this codebase omits /pi by convention (matches ModelPart).
+    float3 ambient = sky_evalIrradianceSH(N) * base_color;
 
-    // Direct sun lighting
+    // Direct sun lighting: NdotL, PBR specular+diffuse scaled by sky radiance at sun direction.
     float n_dot_l = dot(N, L);
     float n_dot_h = dot(N, H);
     float n_dot_v = dot(N, V);
