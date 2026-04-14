@@ -219,6 +219,11 @@ int main(int argc, char *argv[])
                 if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
                     scene->_sky->setStageAltitude(altitude * 1000.0);
                 }
+
+                float sunIntensity = scene->_sky->getSunIntensity();
+                if (ImGui::SliderFloat("Sun Intensity", &sunIntensity, 0.0f, 100.0f, "%.1f")) {
+                    scene->_sky->setSunIntensity(sunIntensity);
+                }
             }
         }
         ImGui::End();

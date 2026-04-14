@@ -72,6 +72,15 @@ float Sky::getStageAltitude() const {
     return _cpuData._data._stageRT._columns[3].y;
 }
 
+void Sky::setSunIntensity(float intensity) {
+    WriteLock();
+    _cpuData._data._sunIntensity = intensity;
+}
+float Sky::getSunIntensity() const {
+    ReadLock();
+    return _cpuData._data._sunIntensity;
+}
+
 void Sky::setSimDim(const int4& dims) {
     WriteLock();
     _cpuData._data._simDim = dims;

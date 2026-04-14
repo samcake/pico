@@ -95,6 +95,9 @@ namespace graphics {
         void setStageAltitude(float alt);
         float getStageAltitude() const;
 
+        void setSunIntensity(float intensity);
+        float getSunIntensity() const;
+
         void setSimDim(const int4& dims);
         int4 getSimDim() const;
 
