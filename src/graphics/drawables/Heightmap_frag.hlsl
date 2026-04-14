@@ -1,5 +1,6 @@
 #include "Camera_inc.hlsl"
 #include "Sky_inc.hlsl"
+#include "Color_inc.hlsl"
 
 struct PixelShaderInput
 {
@@ -106,7 +107,7 @@ float4 main(PixelShaderInput IN) : SV_Target
     float3 sunIntensity = SkyColor(L);
     float3 direct = (spec_diff_lighting.w * base_color + spec_diff_lighting.xyz) * sunIntensity;
 
-    float3 color = ambient + direct;
+    float3 color = color_ACESFilmic(ambient + direct);
 
     return float4(color, 1.0);
 }
