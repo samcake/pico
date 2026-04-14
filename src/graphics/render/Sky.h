@@ -1,7 +1,7 @@
-// Sky.h 
+// Sky.h
 //
 // Sam Gateau - January 2022
-// 
+//
 // MIT License
 //
 // Copyright (c) 2020 Sam Gateau
@@ -34,13 +34,15 @@
 namespace graphics {
 
     struct Atmosphere {
-        float earthRadius{ 6360e3 };                         // In the paper this is usually Rg or Re (radius ground, eart) 
-        float atmosphereRadius{ 6420e3 };                    // In the paper this is usually R or Ra (radius atmosphere) 
-        float Hr{ 7994 };                                    // Thickness of the atmosphere if density was uniform (Hr) 
-        float Hm{ 1200 };                                    // Same as above but for Mie scattering (Hm) 
+        float earthRadius{ 6360e3 };                         // In the paper this is usually Rg or Re (radius ground, eart)
+        float atmosphereRadius{ 6420e3 };                    // In the paper this is usually R or Ra (radius atmosphere)
+        float Hr{ 7994 };                                    // Thickness of the atmosphere if density was uniform (Hr)
+        float Hm{ 1200 };                                    // Same as above but for Mie scattering (Hm)
 
-        float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
-        float4 betaM{ 4e-6f };                             // Mie Scattering 
+       // float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
+       // float4 betaM{ 4e-6f };                             // Mie Scattering
+        float4 betaR{ 3.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
+        float4 betaM{ 2e-6f };                             // Mie Scattering
         // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (2e-6f)
     };
 
@@ -52,7 +54,7 @@ namespace graphics {
     struct VISUALIZATION_API SkyData {
         Atmosphere _atmosphere;
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
-        float _sunIntensity = 10.0;
+        float _sunIntensity = 20.0;
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
         core::ivec4 _simDim = { 16, 8 , 1024, 1024};
         core::ivec4 _drawControl = { 0, 0, 0, 0 };

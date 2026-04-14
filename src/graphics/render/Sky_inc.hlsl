@@ -134,9 +134,7 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
         tCurrent += segmentLength;
     }
 
-    // We use a magic number here for the intensity of the sun (20). We will make it more
-    // scientific in a future revision of this lesson/code
-    return (sumR * betaR * phaseR + sumM * betaM * phaseM) * 20;
+    return (sumR * betaR * phaseR + sumM * betaM * phaseM) * getSunIntensity();
 }
 
 
