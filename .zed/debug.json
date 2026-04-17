@@ -10,5 +10,5 @@
   { "label": "Debug pico_terrain",   "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_terrain.exe",   "cwd": "${ZED_WORKTREE_ROOT}/test/pico_terrain",   "build": "Build pico_terrain (Debug)" },
   { "label": "Debug pico_treemap",   "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_treemap.exe",   "cwd": "${ZED_WORKTREE_ROOT}/test/pico_treemap",   "build": "Build pico_treemap (Debug)" },
   { "label": "Debug pico_interop-gdi", "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_interop-gdi.exe", "cwd": "${ZED_WORKTREE_ROOT}/test/pico_interop-gdi", "build": "Build pico_interop-gdi (Debug)" },
-  { "label": "Debug pico_job",       "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_job.exe",       "cwd": "${ZED_WORKTREE_ROOT}/test/pico_job",       "build": "Build pico_job (Debug)" }
+  { "label": "Debug pico_test",      "adapter": "CodeLLDB", "request": "launch", "program": "${ZED_WORKTREE_ROOT}/build/bin/Debug/pico_test.exe",      "cwd": "${ZED_WORKTREE_ROOT}/test/pico_test",      "build": "Build pico_test (Debug)" }
 ]

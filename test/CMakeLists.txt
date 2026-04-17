@@ -1,3 +1,4 @@
+add_subdirectory( pico_test )
 add_subdirectory( pico_01 )
 add_subdirectory( pico_02 )
 add_subdirectory( pico_03 )
