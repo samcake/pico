@@ -98,13 +98,6 @@
       "targets": ["pico_eye"]
     },
     {
-      "name": "windows-debug-pico_ray",
-      "displayName": "Windows Debug — pico_ray",
-      "configurePreset": "windows-debug",
-      "configuration": "Debug",
-      "targets": ["pico_ray"]
-    },
-    {
       "name": "windows-debug-pico_model",
       "displayName": "Windows Debug — pico_model",
       "configurePreset": "windows-debug",
@@ -131,13 +124,6 @@
       "configurePreset": "windows-debug",
       "configuration": "Debug",
       "targets": ["pico_treemap"]
-    },
-    {
-      "name": "windows-debug-pico_interop-gdi",
-      "displayName": "Windows Debug — pico_interop-gdi",
-      "configurePreset": "windows-debug",
-      "configuration": "Debug",
-      "targets": ["pico_interop-gdi"]
     },
     {
       "name": "windows-debug-pico_test",
@@ -182,13 +168,6 @@
       "targets": ["pico_eye"]
     },
     {
-      "name": "windows-release-pico_ray",
-      "displayName": "Windows Release — pico_ray",
-      "configurePreset": "windows-release",
-      "configuration": "Release",
-      "targets": ["pico_ray"]
-    },
-    {
       "name": "windows-release-pico_model",
       "displayName": "Windows Release — pico_model",
       "configurePreset": "windows-release",
@@ -215,13 +194,6 @@
       "configurePreset": "windows-release",
       "configuration": "Release",
       "targets": ["pico_treemap"]
-    },
-    {
-      "name": "windows-release-pico_interop-gdi",
-      "displayName": "Windows Release — pico_interop-gdi",
-      "configurePreset": "windows-release",
-      "configuration": "Release",
-      "targets": ["pico_interop-gdi"]
     },
     {
       "name": "windows-release-pico_test",
@@ -301,18 +273,6 @@
       "targets": ["pico_eye"]
     },
     {
-      "name": "macos-debug-pico_ray",
-      "displayName": "macOS Debug — pico_ray",
-      "configurePreset": "macos-debug",
-      "targets": ["pico_ray"]
-    },
-    {
-      "name": "macos-release-pico_ray",
-      "displayName": "macOS Release — pico_ray",
-      "configurePreset": "macos-release",
-      "targets": ["pico_ray"]
-    },
-    {
       "name": "macos-debug-pico_model",
       "displayName": "macOS Debug — pico_model",
       "configurePreset": "macos-debug",
@@ -359,18 +319,6 @@
       "displayName": "macOS Release — pico_treemap",
       "configurePreset": "macos-release",
       "targets": ["pico_treemap"]
-    },
-    {
-      "name": "macos-debug-pico_interop-gdi",
-      "displayName": "macOS Debug — pico_interop-gdi",
-      "configurePreset": "macos-debug",
-      "targets": ["pico_interop-gdi"]
-    },
-    {
-      "name": "macos-release-pico_interop-gdi",
-      "displayName": "macOS Release — pico_interop-gdi",
-      "configurePreset": "macos-release",
-      "targets": ["pico_interop-gdi"]
     },
     {
       "name": "macos-debug-pico_test",
