@@ -92,6 +92,7 @@ struct PixelShaderInput{
     float3 Normal   : NORMAL;
     float2 Texcoord : TEXCOORD;
     float4 Color : COLOR;
+    float4 PixPos : SV_POSITION;
 };
 
 float4 main(PixelShaderInput IN) : SV_Target{
@@ -171,5 +172,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
     }
 
     float3 color = color_ACESFilmic(fragLighting + emissiveColor);
+
     return float4(color, 1.0);
 }
