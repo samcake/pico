@@ -1,6 +1,6 @@
 //
 // Sky API
-// 
+//
 // Implementation taken from
 // https://www.scratchapixel.com/lessons/procedural-generation-virtual-worlds/simulating-sky
 //
@@ -81,18 +81,18 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
     // Ray end at atmosphere second intersection
     if (t1 < tmax || tmax < 0)
         tmax = t1;
-    
+
     uint numSamples = simDim.x;
     uint numSamplesLight = simDim.y;
     float segmentLength = (tmax - tmin) / numSamples;
     float tCurrent = tmin;
 
     float3 sumR = (0);
-    float3 sumM = (0); // mie and rayleigh contribution 
+    float3 sumM = (0); // mie and rayleigh contribution
     float opticalDepthR = 0;
     float opticalDepthM = 0;
 
-    float mu = dot(dir, sunDirection); // mu in the paper which is the cosine of the angle between the sun direction and the ray direction 
+    float mu = dot(dir, sunDirection); // mu in the paper which is the cosine of the angle between the sun direction and the ray direction
     float phaseR = 3.f / (16.f * M_PI) * (1 + mu * mu);
     float g = 0.76f;
     float phaseM = 3.f / (8.f * M_PI) * ((1.f - g * g) * (1.f + mu * mu)) / ((2.f + g * g) * pow(1.f + g * g - 2.f * g * mu, 1.5f));
@@ -134,9 +134,7 @@ float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirecti
         tCurrent += segmentLength;
     }
 
-    // We use a magic number here for the intensity of the sun (20). We will make it more
-    // scientific in a future revision of this lesson/code
-    return (sumR * betaR * phaseR + sumM * betaM * phaseM) * 20;
+    return (sumR * betaR * phaseR + sumM * betaM * phaseM);
 }
 
 
@@ -156,7 +154,7 @@ struct SphericalHarmonics {
 };
 
 // Sky buffer
-struct SkyConstant 
+struct SkyConstant
 {
     Atmosphere _atmosphere;
     float3 _sunDirection; // the direction TO the light
@@ -170,13 +168,12 @@ struct SkyConstant
 ConstantBuffer<SkyConstant> skyConstant : register(b11);
 
 
-float3 getSunDir() { 
+float3 getSunDir() {
     return skyConstant._sunDirection;
 }
 float getSunIntensity() {
     return skyConstant._sunIntensity;
 }
-
 SphericalHarmonics getSkyIrradianceSH() {
     return skyConstant._irradianceSH;
 }
@@ -192,14 +189,14 @@ float3 SkyColor(const float3 dir) {
     if (testEarth && t0 > 0)
         tMax = max(0.f, t0);
 
-    return sky_computeIncidentLight(skyConstant._simDims, skyConstant._atmosphere, skyConstant._sunDirection, origin, stage_dir, 0, tMax);
+    return sky_computeIncidentLight(skyConstant._simDims, skyConstant._atmosphere, skyConstant._sunDirection, origin, stage_dir, 0, tMax) * getSunIntensity();
 }
 
 
 
 
 // octahedron mapping
-// 
+//
 
 
 // Octahedron wrap the uv in range [-1,1] from up hemisphere to bottom hemisphere (and back?)
@@ -246,7 +243,7 @@ bool octahedron_flipped(float2 c, in out bool2 r)
     return r.x || r.y;
 }
 
-// Example of computing mirrored repeat sampling 
+// Example of computing mirrored repeat sampling
 // of an octahedron map with a small texel offset.
 // Note this is not designed to solve the double wrap case.
 // The "base" is as computed by Oct3To2() above.
@@ -282,11 +279,11 @@ float3 sky_fetchEnvironmentMap(float3 dir, Texture2D map, SamplerState sampP, Sa
     float2 mapSize;
     map.GetDimensions(mapSize.x, mapSize.y);
     float2 texelSize = rcp(mapSize);
-    
+
     float3 color;
     float2 base = octahedron_uvFromDir(dir);
     float2 texcoord = octahedron_offsetCoord(base, 0);
- 
+
     if ((1.0 - abs(base.x) < texelSize.x) || (1.0 - abs(base.y) < texelSize.y))
     {
         color = map.SampleLevel(sampP, octahedron_offsetCoord(base, texelSize), 0).xyz;
@@ -305,7 +302,7 @@ float3 sky_fetchEnvironmentMap(float3 dir, Texture2D map, SamplerState sampP, Sa
 
 float3 sky_evalIrradianceSH(float3 dir) {
     float3 d = dir.zxy;
-	
+
     const float c1 = 0.429043;
     const float c2 = 0.511664;
     const float c3 = 0.743125;

@@ -167,6 +167,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
         emissiveColor = material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
 
-    float3 color = shading + emissiveColor;
-    return float4((color), 1.0);
+    float3 color = color_ACESFilmic(shading + emissiveColor);
+    return float4(color, 1.0);
 }

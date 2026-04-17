@@ -345,6 +345,11 @@ int main(int argc, char *argv[])
                     state.scene->_sky->setStageAltitude(altitude * 1000.0);
                 }
 
+                float sunIntensity = state.scene->_sky->getSunIntensity();
+                if (ImGui::SliderFloat("Sun Intensity", &sunIntensity, 0.0f, 100.0f, "%.1f")) {
+                    state.scene->_sky->setSunIntensity(sunIntensity);
+                }
+
                 auto simDim = state.scene->_sky->getSimDim();
                 bool simDimChanged = false;
                 simDimChanged |= ImGui::SliderInt("Sim num ray samples", &simDim.x, 1, 64);

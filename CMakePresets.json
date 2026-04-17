@@ -140,11 +140,11 @@
       "targets": ["pico_interop-gdi"]
     },
     {
-      "name": "windows-debug-pico_job",
-      "displayName": "Windows Debug — pico_job",
+      "name": "windows-debug-pico_test",
+      "displayName": "Windows Debug — pico_test",
       "configurePreset": "windows-debug",
       "configuration": "Debug",
-      "targets": ["pico_job"]
+      "targets": ["pico_test"]
     },
     {
       "name": "windows-release-pico_01",
@@ -224,11 +224,11 @@
       "targets": ["pico_interop-gdi"]
     },
     {
-      "name": "windows-release-pico_job",
-      "displayName": "Windows Release — pico_job",
+      "name": "windows-release-pico_test",
+      "displayName": "Windows Release — pico_test",
       "configurePreset": "windows-release",
       "configuration": "Release",
-      "targets": ["pico_job"]
+      "targets": ["pico_test"]
     },
     {
       "name": "macos-debug-all",
@@ -373,16 +373,16 @@
       "targets": ["pico_interop-gdi"]
     },
     {
-      "name": "macos-debug-pico_job",
-      "displayName": "macOS Debug — pico_job",
+      "name": "macos-debug-pico_test",
+      "displayName": "macOS Debug — pico_test",
       "configurePreset": "macos-debug",
-      "targets": ["pico_job"]
+      "targets": ["pico_test"]
     },
     {
-      "name": "macos-release-pico_job",
-      "displayName": "macOS Release — pico_job",
+      "name": "macos-release-pico_test",
+      "displayName": "macOS Release — pico_test",
       "configurePreset": "macos-release",
-      "targets": ["pico_job"]
+      "targets": ["pico_test"]
     }
   ]
 }

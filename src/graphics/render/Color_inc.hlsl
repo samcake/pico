@@ -32,6 +32,17 @@ float3 color_sRGBFromLinear(float3 linearRGB) {
     return lerp(higher, lower, cutoff);
 }
 
+// ACES filmic tonemapping approximation (Narkowicz 2015)
+// Input: linear HDR radiance. Output: LDR [0,1] ready for sRGB display.
+float3 color_ACESFilmic(float3 x) {
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
+}
+
 // Converts a color from sRGB gamma to linear light gamma
 float3 color_sRGBToLinear(float3 sRGB) {
     float3 cutoff = step(sRGB, 0.04045);

@@ -48,6 +48,7 @@
 #include <graphics/render/Viewport.h>
 
 
+#include <graphics/drawables/SkyDraw.h>
 #include <graphics/drawables/GizmoDraw.h>
 
 #include <graphics/drawables/PrimitiveDraw.h>
@@ -55,6 +56,7 @@
 #include "terrain.h"
 
 #include <uix/Window.h>
+#include <uix/Imgui.h>
 #include <uix/CameraController.h>
 
 #include <vector>
@@ -127,7 +129,13 @@ int main(int argc, char *argv[])
     camera->setFocal(0.1f);
 
     // The viewport managing the rendering of the scene from the camera
-    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, nullptr, camera->id() });
+    auto viewport = std::make_shared<graphics::Viewport>(graphics::ViewportInit{ scene, gpuDevice, uix::Imgui::standardPostSceneRenderCallback, camera->id() });
+
+    // A sky draw
+    auto skyDrawFactory = scene->_skyFactory;
+    auto skyDraw = scene->createDraw(skyDrawFactory->createDraw(gpuDevice));
+    auto skyItem = scene->createItem({ .draw = skyDraw.id() });
+    skyItem.setVisible(true);
 
     // Some nodes to layout the scene and animate objects
     auto node0 = scene->createNode({});
@@ -159,6 +167,11 @@ int main(int argc, char *argv[])
     auto windowHandler = new uix::WindowHandlerDelegate();
     uix::WindowInit windowInit { windowHandler, "Pico Ocean" };
     auto window = uix::Window::createWindow(windowInit);
+
+    // Setup Dear ImGui context
+    uix::Imgui::create();
+    uix::Imgui::setup(window, gpuDevice);
+
     camera->setViewport(window->width(), window->height(), true); // setting the viewport size, and yes adjust the aspect ratio
 
     graphics::SwapchainInit swapchainInit { (HWND)window->nativeWindow(), window->width(), window->height(), true };
@@ -185,6 +198,36 @@ int main(int argc, char *argv[])
 
         if (doAnimate) {
         }
+
+        uix::Imgui::newFrame();
+
+        if (ImGui::Begin("Terrain")) {
+            if (ImGui::CollapsingHeader("Sky")) {
+                const float c_rad_to_deg = 180.0 / acos(-1);
+                auto sunDir = scene->_sky->getSunDir();
+                auto sunAE = core::spherical_dir_to_azimuth_elevation(sunDir) * c_rad_to_deg;
+                bool sunChanged = false;
+                sunChanged |= ImGui::SliderFloat("Sun Azimuth", &sunAE.x, -180, 180, "%.0f");
+                sunChanged |= ImGui::SliderFloat("Sun Elevation", &sunAE.y, -90, 90, "%.0f");
+                if (sunChanged) {
+                    sunAE = core::scale(sunAE, (1.0 / c_rad_to_deg));
+                    sunDir = core::spherical_dir_from_azimuth_elevation(sunAE.x, sunAE.y);
+                    scene->_sky->setSunDir(sunDir);
+                }
+
+                float altitude = scene->_sky->getStageAltitude() * 0.001;
+                if (ImGui::SliderFloat("Stage Altitude", &altitude, 0.001, 100000, "%.3f km", ImGuiSliderFlags_Logarithmic | ImGuiSliderFlags_NoRoundToFormat)) {
+                    scene->_sky->setStageAltitude(altitude * 1000.0);
+                }
+
+                float sunIntensity = scene->_sky->getSunIntensity();
+                if (ImGui::SliderFloat("Sun Intensity", &sunIntensity, 0.0f, 100.0f, "%.1f")) {
+                    scene->_sky->setSunIntensity(sunIntensity);
+                }
+
+            }
+        }
+        ImGui::End();
 
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
@@ -249,6 +292,7 @@ int main(int argc, char *argv[])
         keepOnGoing = window->messagePump();
     }
 
+    uix::Imgui::destroy();
     core::api::destroy();
 
     return 0;
