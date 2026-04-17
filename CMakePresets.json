@@ -98,13 +98,6 @@
       "targets": ["pico_eye"]
     },
     {
-      "name": "windows-debug-pico_ocean",
-      "displayName": "Windows Debug — pico_ocean",
-      "configurePreset": "windows-debug",
-      "configuration": "Debug",
-      "targets": ["pico_ocean"]
-    },
-    {
       "name": "windows-debug-pico_terrain",
       "displayName": "Windows Debug — pico_terrain",
       "configurePreset": "windows-debug",
@@ -159,13 +152,6 @@
       "configurePreset": "windows-release",
       "configuration": "Release",
       "targets": ["pico_eye"]
-    },
-    {
-      "name": "windows-release-pico_ocean",
-      "displayName": "Windows Release — pico_ocean",
-      "configurePreset": "windows-release",
-      "configuration": "Release",
-      "targets": ["pico_ocean"]
     },
     {
       "name": "windows-release-pico_terrain",
@@ -257,18 +243,6 @@
       "displayName": "macOS Release — pico_eye",
       "configurePreset": "macos-release",
       "targets": ["pico_eye"]
-    },
-    {
-      "name": "macos-debug-pico_ocean",
-      "displayName": "macOS Debug — pico_ocean",
-      "configurePreset": "macos-debug",
-      "targets": ["pico_ocean"]
-    },
-    {
-      "name": "macos-release-pico_ocean",
-      "displayName": "macOS Release — pico_ocean",
-      "configurePreset": "macos-release",
-      "targets": ["pico_ocean"]
     },
     {
       "name": "macos-debug-pico_terrain",
