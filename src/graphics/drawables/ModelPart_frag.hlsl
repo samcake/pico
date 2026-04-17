@@ -144,22 +144,25 @@ float4 main(PixelShaderInput IN) : SV_Target{
     }
 
    // baseColor = drawGrid(IN.Texcoord.xy, baseColor);
-    float3 shading = baseColor;
+    float3 fragLighting = baseColor;
     if (LIGHT_SHADING(_drawMode))
     {
+
+        // Ambient diffuse from sky SH irradiance.
+        // sky_evalIrradianceSH returns E(N) = integral of L(w)*max(N.w,0) dw (cosine kernel already applied).
+        float3 ambient = sky_evalIrradianceSH(normal) * baseColor;
+
+        // Direct lighting from sun
         float3 lightD = getSunDir();
-        float3 lightI = SkyColor(lightD);
+        float3 lightI = getSunDirLight();
 
         float3 n = normal;
-
-        lightI = sky_evalIrradianceSH(n) * M_PI;
-        lightD = n;
-
-        float3 v = normalize(IN.EyePos.xyz); //u_Camera - v_Position);
+        float3 v = normalize(IN.EyePos.xyz);
         float3 l = lightD; //normalize(pointToLight); // Direction from surface point to light
 
-        shading = light_shading(lightI, lightD, v, n, metallic, roughness, baseColor);
+        float3 direct = light_shading(lightI, lightD, v, n, metallic, roughness, baseColor);
 
+        fragLighting = ambient + direct;
     }
 
     float3 emissiveColor = float3 (0.0, 0.0, 0.0);
@@ -167,6 +170,6 @@ float4 main(PixelShaderInput IN) : SV_Target{
         emissiveColor = material_textures.Sample(materialMapSampler(), float3(IN.Texcoord.xy, m.textures.w)).xyz;
     }
 
-    float3 color = color_ACESFilmic(shading + emissiveColor);
+    float3 color = color_ACESFilmic(fragLighting + emissiveColor);
     return float4(color, 1.0);
 }

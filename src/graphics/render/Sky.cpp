@@ -1,7 +1,7 @@
 // Sky.cpp
 //
 // Sam Gateau - January 2022
-// 
+//
 // MIT License
 //
 // Copyright (c) 2020 Sam Gateau
@@ -39,7 +39,7 @@ Sky::~Sky() {
 }
 
 #define useLocks 1
-#ifdef useLocks 
+#ifdef useLocks
 #define WriteLock() const std::lock_guard<std::mutex> cpulock(_cpuData._access); _cpuData._version++;
 #define ReadLock() const std::lock_guard<std::mutex> cpulock(_cpuData._access);
 
@@ -47,15 +47,61 @@ Sky::~Sky() {
 #define ReadGPULock() const std::lock_guard<std::mutex> gpulock(_gpuData._access);
 #else
 #define WriteLock()  _camData._version++;
-#define ReadLock() 
+#define ReadLock()
 
 #define WriteGPULock() _gpuData._version++;
 #define ReadGPULock()
 #endif
 
+// Compute atmospheric transmittance along the sun direction from the surface.
+// Mirrors the HLSL getSunColor() logic: march from the surface to the top of
+// atmosphere along sunDir, accumulate Rayleigh + Mie optical depth, return
+// exp(-tau) * sunIntensity. Called whenever sun direction or intensity changes.
+static float3 computeSunDirLight(const SkyData& d) {
+    const auto& atmos = d._atmosphere;
+    const float3 sunDir = d._sunDirection;
+    const float earthRadius = atmos.earthRadius;
+    const float atmosphereRadius = atmos.atmosphereRadius;
+    const float Hr = atmos.Hr;
+    const float Hm = atmos.Hm;
+    const float3 betaR = float3(atmos.betaR.x, atmos.betaR.y, atmos.betaR.z);
+    const float betaM = atmos.betaM.x;
+
+    // Observer at surface, offset by stage altitude
+    const float3 origin(0, earthRadius + d._stageRT._columns[3].y, 0);
+
+    // Ray march to top of atmosphere along sun direction
+    const uint32_t numSamples = d._simDim.y;
+
+    // Find t1: exit of atmosphere sphere
+    float p = core::dot(sunDir, origin);
+    float q = core::dot(origin, origin) - atmosphereRadius * atmosphereRadius;
+    float disc = p * p - q;
+    if (disc < 0) return float3(d._sunIntensity); // no intersection
+    float t1 = -p + std::sqrt(disc);
+    if (t1 <= 0) return float3(d._sunIntensity);  // sun below horizon
+
+    float segLen = t1 / numSamples;
+    float tCurrent = 0;
+    float optDepthR = 0, optDepthM = 0;
+
+    for (uint32_t i = 0; i < numSamples; ++i) {
+        float3 samplePos = origin + sunDir * (tCurrent + segLen * 0.5f);
+        float height = core::length(samplePos) - earthRadius;
+        if (height < 0) break;
+        optDepthR += std::exp(-height / Hr) * segLen;
+        optDepthM += std::exp(-height / Hm) * segLen;
+        tCurrent += segLen;
+    }
+
+    float3 tau = betaR * optDepthR + float3(betaM * 1.1f) * optDepthM;
+    return float3(std::exp(-tau.x), std::exp(-tau.y), std::exp(-tau.z)) * d._sunIntensity;
+}
+
 void Sky::setSunDir(const float3& dir) {
     WriteLock();
     _cpuData._data._sunDirection = core::normalize(dir);
+    _cpuData._data._sunDirLight = computeSunDirLight(_cpuData._data);
 }
 float3 Sky::getSunDir() const {
     ReadLock();
@@ -74,6 +120,7 @@ float Sky::getStageAltitude() const {
 void Sky::setSunIntensity(float intensity) {
     WriteLock();
     _cpuData._data._sunIntensity = intensity;
+    _cpuData._data._sunDirLight = computeSunDirLight(_cpuData._data);
 }
 float Sky::getSunIntensity() const {
     ReadLock();

@@ -104,7 +104,7 @@ float4 main(PixelShaderInput IN) : SV_Target
     float l_dot_h = dot(L, H);
 
     float4 spec_diff_lighting = evalShading(l_dot_h, v_dot_h, max(n_dot_l, 0.0), max(n_dot_h, 0.0), max(n_dot_v, 0.0), roughness2, metallic, F0);
-    float3 sunIntensity = SkyColor(L);
+    float3 sunIntensity = getSunDirLight();
     float3 direct = (spec_diff_lighting.w * base_color + spec_diff_lighting.xyz) * sunIntensity;
 
     float3 color = color_ACESFilmic(ambient + direct);
