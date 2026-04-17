@@ -32,7 +32,6 @@
 using namespace graphics;
 
 Sky::Sky() {
-
 }
 
 Sky::~Sky() {

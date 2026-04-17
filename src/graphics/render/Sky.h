@@ -41,8 +41,8 @@ namespace graphics {
 
        // float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
        // float4 betaM{ 4e-6f };                             // Mie Scattering
-        float4 betaR{ 3.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
-        float4 betaM{ 2e-6f };                             // Mie Scattering
+        float4 betaR{ 5.8e-6f, 13.5e-6f, 33.1e-6f, 0 };     // Rayleygh Scattering
+        float4 betaM{ 2e-6f };                             // Mie Scattering 21e-6 for hazy sky, 2e-6 for prisitine sky
         // Article implementation : (3.8e-6f, 13.5e-6f, 33.1e-6f); and (2e-6f)
     };
 
@@ -54,7 +54,7 @@ namespace graphics {
     struct VISUALIZATION_API SkyData {
         Atmosphere _atmosphere;
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
-        float _sunIntensity = 20.0;
+        float _sunIntensity = 1.0; // This is arbitrary intensity of light that scales the final
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
         core::ivec4 _simDim = { 16, 8 , 1024, 1024};
         core::ivec4 _drawControl = { 0, 0, 0, 0 };

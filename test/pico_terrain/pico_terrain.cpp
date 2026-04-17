@@ -224,6 +224,7 @@ int main(int argc, char *argv[])
                 if (ImGui::SliderFloat("Sun Intensity", &sunIntensity, 0.0f, 100.0f, "%.1f")) {
                     scene->_sky->setSunIntensity(sunIntensity);
                 }
+
             }
         }
         ImGui::End();
