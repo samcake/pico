@@ -61,6 +61,40 @@ int raySphereIntersect(float3 orig, float3 dir, float sphereRadius, in out float
     return (discriminant > 1e-7) ? 2 : 1;
 }
 
+// Transmittance of the atmosphere from 'origin' to the top along 'sunDir'.
+// Returns float3(0) if the ray hits the earth before exiting the atmosphere.
+float3 sky_sunTransmittance(Atmosphere atmos, float3 origin, float3 sunDir, uint numSamples) {
+    float earthRadius      = Atmosphere_earthRadius(atmos);
+    float atmosphereRadius = Atmosphere_atmosphereRadius(atmos);
+    float Hr   = Atmosphere_Hr(atmos);
+    float Hm   = Atmosphere_Hm(atmos);
+    float3 betaR = atmos.betaR.xyz;
+    float  betaM = atmos.betaM.x;
+
+    float t0, t1;
+    raySphereIntersect(origin, sunDir, atmosphereRadius, t0, t1);
+    if (t1 <= 0) return float3(1, 1, 1);
+
+    float segLen = t1 / numSamples;
+    float tCurrent = 0;
+    float optDepthR = 0, optDepthM = 0;
+
+    uint i;
+    for (i = 0; i < numSamples; ++i) {
+        float3 samplePos = origin + sunDir * (tCurrent + segLen * 0.5);
+        float height = length(samplePos) - earthRadius;
+        if (height < 0) break;  // hit the earth
+        optDepthR += exp(-height / Hr) * segLen;
+        optDepthM += exp(-height / Hm) * segLen;
+        tCurrent += segLen;
+    }
+
+    if (i < numSamples) return float3(0, 0, 0);  // ray was blocked by the earth
+
+    float3 tau = betaR * optDepthR + betaM * 1.1 * optDepthM;
+    return float3(exp(-tau.x), exp(-tau.y), exp(-tau.z));
+}
+
 float3 sky_computeIncidentLight(int4 simDim, Atmosphere atmos, float3 sunDirection, float3 orig, float3 dir, float tmin, float tmax) {
     float earthRadius = Atmosphere_earthRadius(atmos);
     float atmosphereRadius = Atmosphere_atmosphereRadius(atmos);
@@ -162,7 +196,9 @@ struct SkyConstant
     Transform _stage;
     int4 _simDims;
     int4 _drawControl;
-    SphericalHarmonics _irradianceSH;
+    SphericalHarmonics _irradianceSH; // Ambient irradiance of the sky evaluated from the sky and sun settings
+    float3 _sunDirLight; // Direct sun light irradiance arriving at the surface of the sky evaluated from the sky and sun settings
+    float _spare;
 };
 
 ConstantBuffer<SkyConstant> skyConstant : register(b11);
@@ -178,6 +214,11 @@ SphericalHarmonics getSkyIrradianceSH() {
     return skyConstant._irradianceSH;
 }
 
+float3 getSunDirLight() {
+    float3 origin = float3(0, Atmosphere_earthRadius(skyConstant._atmosphere) + skyConstant._stage._backZ_ori.z, 0);
+    return sky_sunTransmittance(skyConstant._atmosphere, origin, skyConstant._sunDirection,
+                                (uint) skyConstant._simDims.y) * getSunIntensity();
+}
 
 float3 SkyColor(const float3 dir) {
     float3 stage_dir = rotateFrom(skyConstant._stage, dir);
@@ -191,7 +232,6 @@ float3 SkyColor(const float3 dir) {
 
     return sky_computeIncidentLight(skyConstant._simDims, skyConstant._atmosphere, skyConstant._sunDirection, origin, stage_dir, 0, tMax) * getSunIntensity();
 }
-
 
 
 

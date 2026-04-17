@@ -54,12 +54,17 @@ namespace graphics {
     struct VISUALIZATION_API SkyData {
         Atmosphere _atmosphere;
         float3 _sunDirection = normalize(float3(0, 1.0, 1.0));
-        float _sunIntensity = 1.0; // This is arbitrary intensity of light that scales the final
+        float _sunIntensity = 20.0; // This is arbitrary intensity of sun light producing the sky color
         core::mat4x3 _stageRT = core::translation(float3(0,0,0));
         core::ivec4 _simDim = { 16, 8 , 1024, 1024};
         core::ivec4 _drawControl = { 0, 0, 0, 0 };
 
         SphericalHarmonics _sh;
+
+        // Direct solar beam color: sunIntensity attenuated by atmospheric transmittance
+        // along the sun direction. Computed on CPU whenever sun params change.
+        float3 _sunDirLight = float3(1.0f, 1.0f, 1.0f);
+        float _spare{ 0 };
     };
 
     class VISUALIZATION_API Sky {
