@@ -49,7 +49,7 @@ namespace graphics {
     struct FramebufferInit_Swapable {
         uint32_t    width{ 0 };
         uint32_t    height{ 0 };
-        uint32_t    numBuffers{ 2 };
+        uint32_t    chainLength{ 2 };
         bool        depthBuffer{ false };
         PixelFormat colorFormat{ PixelFormat::R8G8B8A8_UNORM_SRGB };
         PixelFormat depthFormat{ PixelFormat::D32_FLOAT };
@@ -67,7 +67,7 @@ namespace graphics {
         std::vector<TexturePointer> _colorBuffers; // one entry per buffer slot
         std::vector<TexturePointer> _depthBuffers; // one entry per buffer slot (empty = no depth)
 
-        uint32_t _numBuffers{ 1 };
+        uint32_t _chainLength{ 1 };
 
     public:
         ~Framebuffer();
@@ -90,11 +90,11 @@ namespace graphics {
 
         uint32_t width() const { return _init.width; }
         uint32_t height() const { return _init.height; }
-        uint32_t numBuffers() const { return _numBuffers; }
+        uint32_t chainLength() const { return _chainLength; }
 
         uint8_t _currentIndex{ 0 };
         uint8_t currentIndex() const { return _currentIndex; }
-        void advanceIndex() { _currentIndex = (_currentIndex + 1) % (uint8_t)_numBuffers; }
+        void advanceIndex() { _currentIndex = (_currentIndex + 1) % (uint8_t)_chainLength; }
 
         TexturePointer colorTexture(uint32_t bufferIndex = 0) const {
             return (bufferIndex < _colorBuffers.size()) ? _colorBuffers[bufferIndex] : nullptr;

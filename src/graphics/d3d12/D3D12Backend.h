@@ -117,7 +117,7 @@ namespace graphics {
         FramebufferPointer createFramebuffer(const FramebufferInit& init) override;
         FramebufferPointer createFramebuffer(const FramebufferInit_Swapable& init) override;
         FramebufferPointer createFramebufferFromSwapchain(D3D12SwapchainBackend* sw);
-        void rebuildFramebufferHeaps(D3D12FramebufferBackend* fbo);
+        void rebuildFramebufferHeaps(D3D12FramebufferBackend* fb);
         void resizeFramebuffer(const FramebufferPointer& framebuffer, uint32_t width, uint32_t height) override;
         void resizeTexture(const TexturePointer& texture, uint32_t width, uint32_t height) override;
 

@@ -175,13 +175,13 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit& init) 
 
 FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit_Swapable& init) {
     auto framebuffer = new D3D12FramebufferBackend();
-    framebuffer->_numBuffers = init.numBuffers;
+    framebuffer->_chainLength = init.chainLength;
     framebuffer->_numRenderTargets = 1;
-    framebuffer->_numColorBuffers = init.numBuffers;
+    framebuffer->_numColorBuffers = init.chainLength;
 
     // RTV heap: N slots (one per buffer)
     D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = init.numBuffers;
+    rtvHeapDesc.NumDescriptors = init.chainLength;
     rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
     ComPtr<ID3D12DescriptorHeap> rtvHeap;
     D3D12Backend_Check(_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&rtvHeap)));
@@ -190,7 +190,7 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit_Swapabl
     framebuffer->_rtvs = rtvHeap->GetCPUDescriptorHandleForHeapStart();
 
     auto rtvHandle = framebuffer->_rtvs;
-    for (uint32_t i = 0; i < init.numBuffers; ++i) {
+    for (uint32_t i = 0; i < init.chainLength; ++i) {
         TextureInit colorInit;
         colorInit.usage = ResourceUsage::RENDER_TARGET;
         colorInit.width = init.width;
@@ -208,10 +208,10 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit_Swapabl
     }
 
     if (init.depthBuffer) {
-        framebuffer->_numDepthBuffers = init.numBuffers;
+        framebuffer->_numDepthBuffers = init.chainLength;
 
         D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-        dsvHeapDesc.NumDescriptors = init.numBuffers;
+        dsvHeapDesc.NumDescriptors = init.chainLength;
         dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
         ComPtr<ID3D12DescriptorHeap> dsvHeap;
         D3D12Backend_Check(_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&dsvHeap)));
@@ -220,7 +220,7 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit_Swapabl
         framebuffer->_dsv = dsvHeap->GetCPUDescriptorHandleForHeapStart();
 
         auto dsvHandle = framebuffer->_dsv;
-        for (uint32_t i = 0; i < init.numBuffers; ++i) {
+        for (uint32_t i = 0; i < init.chainLength; ++i) {
             TextureInit depthInit;
             depthInit.usage = ResourceUsage::RENDER_TARGET;
             depthInit.width = init.width;
@@ -248,7 +248,7 @@ FramebufferPointer D3D12Backend::createFramebuffer(const FramebufferInit_Swapabl
 // Private: wraps existing swapchain RTVs/DSVs into a Framebuffer without allocating new textures.
 FramebufferPointer D3D12Backend::createFramebufferFromSwapchain(D3D12SwapchainBackend* sw) {
     auto framebuffer = new D3D12FramebufferBackend();
-    framebuffer->_numBuffers = CHAIN_NUM_FRAMES;
+    framebuffer->_chainLength = CHAIN_NUM_FRAMES;
     framebuffer->_numRenderTargets = 1;
     framebuffer->_numColorBuffers = CHAIN_NUM_FRAMES;
 
@@ -272,27 +272,27 @@ FramebufferPointer D3D12Backend::createFramebufferFromSwapchain(D3D12SwapchainBa
     return FramebufferPointer(framebuffer);
 }
 
-void D3D12Backend::rebuildFramebufferHeaps(D3D12FramebufferBackend* fbo) {
-    auto rtvHandle = fbo->_rtvs;
-    for (auto& tex : fbo->_colorBuffers) {
+void D3D12Backend::rebuildFramebufferHeaps(D3D12FramebufferBackend* fb) {
+    auto rtvHandle = fb->_rtvs;
+    for (auto& tex : fb->_colorBuffers) {
         auto d3d12Tex = static_cast<D3D12TextureBackend*>(tex.get());
         D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
         rtvDesc.Format = Format[(uint32_t)tex->format()];
         rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
         _device->CreateRenderTargetView(d3d12Tex->_resource.Get(), &rtvDesc, rtvHandle);
-        rtvHandle.ptr += fbo->_rtvDescriptorSize;
+        rtvHandle.ptr += fb->_rtvDescriptorSize;
     }
 
-    if (fbo->_dsvDescriptorHeap && !fbo->_depthBuffers.empty()) {
-        auto dsvHandle = fbo->_dsv;
-        for (auto& tex : fbo->_depthBuffers) {
+    if (fb->_dsvDescriptorHeap && !fb->_depthBuffers.empty()) {
+        auto dsvHandle = fb->_dsv;
+        for (auto& tex : fb->_depthBuffers) {
             auto d3d12Tex = static_cast<D3D12TextureBackend*>(tex.get());
             D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
             dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
             dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
             dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
             _device->CreateDepthStencilView(d3d12Tex->_resource.Get(), &dsvDesc, dsvHandle);
-            dsvHandle.ptr += fbo->_dsvDescriptorSize;
+            dsvHandle.ptr += fb->_dsvDescriptorSize;
         }
     }
 }
@@ -313,16 +313,16 @@ void D3D12Backend::resizeFramebuffer(const FramebufferPointer& framebuffer, uint
 
     flush();
 
-    auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+    auto fb = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
 
-    for (auto& tex : fbo->_colorBuffers) resizeTexture(tex, width, height);
-    for (auto& tex : fbo->_depthBuffers) resizeTexture(tex, width, height);
+    for (auto& tex : fb->_colorBuffers) resizeTexture(tex, width, height);
+    for (auto& tex : fb->_depthBuffers) resizeTexture(tex, width, height);
 
-    rebuildFramebufferHeaps(fbo);
+    rebuildFramebufferHeaps(fb);
 
-    fbo->_init.width = width;
-    fbo->_init.height = height;
-    fbo->_currentIndex = 0;
+    fb->_init.width = width;
+    fb->_init.height = height;
+    fb->_currentIndex = 0;
 }
 
 #endif

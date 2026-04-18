@@ -129,21 +129,21 @@ void D3D12BatchBackend::beginPass(const SwapchainPointer & swapchain, uint8_t in
 }
 
 void D3D12BatchBackend::beginPass(const FramebufferPointer& framebuffer) {
-    auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+    auto fb = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
     auto idx = framebuffer->currentIndex();
 
-    D3D12_CPU_DESCRIPTOR_HANDLE rtv = fbo->_rtvs;
-    rtv.ptr += (SIZE_T)(idx % fbo->_numColorBuffers) * fbo->_numRenderTargets * fbo->_rtvDescriptorSize;
+    D3D12_CPU_DESCRIPTOR_HANDLE rtv = fb->_rtvs;
+    rtv.ptr += (SIZE_T)(idx % fb->_numColorBuffers) * fb->_numRenderTargets * fb->_rtvDescriptorSize;
 
     D3D12_CPU_DESCRIPTOR_HANDLE* pDsv = nullptr;
     D3D12_CPU_DESCRIPTOR_HANDLE dsv;
-    if (fbo->_dsvDescriptorHeap && fbo->_numDepthBuffers > 0) {
-        dsv = fbo->_dsv;
-        dsv.ptr += (SIZE_T)(idx % fbo->_numDepthBuffers) * fbo->_dsvDescriptorSize;
+    if (fb->_dsvDescriptorHeap && fb->_numDepthBuffers > 0) {
+        dsv = fb->_dsv;
+        dsv.ptr += (SIZE_T)(idx % fb->_numDepthBuffers) * fb->_dsvDescriptorSize;
         pDsv = &dsv;
     }
 
-    _commandList->OMSetRenderTargets(fbo->_numRenderTargets, &rtv, TRUE, pDsv);
+    _commandList->OMSetRenderTargets(fb->_numRenderTargets, &rtv, TRUE, pDsv);
 
     bindDescriptorHeap(_descriptorHeap);
 
@@ -189,18 +189,18 @@ void D3D12BatchBackend::clear(const SwapchainPointer& swapchain, uint8_t index, 
 
 void D3D12BatchBackend::clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) {
 
-    auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+    auto fb = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
     auto idx = framebuffer->currentIndex();
 
-    SIZE_T rtvBase = (SIZE_T)(idx % fbo->_numColorBuffers) * fbo->_numRenderTargets * fbo->_rtvDescriptorSize;
-    for (UINT i = 0; i < fbo->_numRenderTargets; ++i) {
-        D3D12_CPU_DESCRIPTOR_HANDLE rtv{ fbo->_rtvs.ptr + rtvBase + fbo->_rtvDescriptorSize * i };
+    SIZE_T rtvBase = (SIZE_T)(idx % fb->_numColorBuffers) * fb->_numRenderTargets * fb->_rtvDescriptorSize;
+    for (UINT i = 0; i < fb->_numRenderTargets; ++i) {
+        D3D12_CPU_DESCRIPTOR_HANDLE rtv{ fb->_rtvs.ptr + rtvBase + fb->_rtvDescriptorSize * i };
         _commandList->ClearRenderTargetView(rtv, color.data(), 0, nullptr);
     }
 
-    if (fbo->_dsvDescriptorHeap && fbo->_numDepthBuffers > 0) {
-        D3D12_CPU_DESCRIPTOR_HANDLE dsv = fbo->_dsv;
-        dsv.ptr += (SIZE_T)(idx % fbo->_numDepthBuffers) * fbo->_dsvDescriptorSize;
+    if (fb->_dsvDescriptorHeap && fb->_numDepthBuffers > 0) {
+        D3D12_CPU_DESCRIPTOR_HANDLE dsv = fb->_dsv;
+        dsv.ptr += (SIZE_T)(idx % fb->_numDepthBuffers) * fb->_dsvDescriptorSize;
         _commandList->ClearDepthStencilView(dsv, D3D12_CLEAR_FLAG_DEPTH, depth, 0, 0, nullptr);
     }
 }
@@ -318,9 +318,9 @@ void D3D12BatchBackend::bindDescriptorHeap(const DescriptorHeapPointer& descript
 }
 
 void D3D12BatchBackend::bindFramebuffer(const FramebufferPointer& framebuffer) {
-    auto fbo = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
+    auto fb = static_cast<D3D12FramebufferBackend*>(framebuffer.get());
 
-    _commandList->OMSetRenderTargets(fbo->_numRenderTargets, &fbo->_rtvs, TRUE, (fbo->_dsvDescriptorSize ? &fbo->_dsv : nullptr));
+    _commandList->OMSetRenderTargets(fb->_numRenderTargets, &fb->_rtvs, TRUE, (fb->_dsvDescriptorSize ? &fb->_dsv : nullptr));
 }
 
 
