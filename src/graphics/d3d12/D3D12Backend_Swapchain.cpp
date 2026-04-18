@@ -234,6 +234,8 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
         CreateDepthStencilBuffer(_device, init.width, init.height, sw->_depthBuffer, sw->_dsvDescriptorHeap, sw->_dsvDescriptorSize);
     }
 
+    sw->_framebuffer = createFramebufferFromSwapchain(sw);
+
     return SwapchainPointer(sw);
 }
 
@@ -265,6 +267,8 @@ void D3D12Backend::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t w
         if (sw->_init.depthBuffer) {
             CreateDepthStencilBuffer(_device, sw->_init.width, sw->_init.height, sw->_depthBuffer, sw->_dsvDescriptorHeap, sw->_dsvDescriptorSize);
         }
+
+        sw->_framebuffer = createFramebufferFromSwapchain(sw);
     }
 }
 

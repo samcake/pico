@@ -30,6 +30,7 @@
 #include <core/api.h>
 
 #include "gpu.h"
+#include "Framebuffer.h"
 
 namespace graphics {
 
@@ -51,6 +52,8 @@ namespace graphics {
         friend class Device;
         Swapchain();
 
+        FramebufferPointer _framebuffer;
+
     public:
         ~Swapchain();
 
@@ -64,5 +67,7 @@ namespace graphics {
         PixelFormat colorBufferFormat() const { return _init.colorBufferFormat; }
 
         core::vec4 viewportRect() const { return core::vec4( 0, 0, width(), height());}
+
+        FramebufferPointer framebuffer() const { return _framebuffer; }
     };
 }

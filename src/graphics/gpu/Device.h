@@ -28,7 +28,8 @@
 
 #include "gpu.h"
 
-#include "Descriptor.h" 
+#include "Descriptor.h"
+#include "Framebuffer.h"
 
 namespace graphics {
     
@@ -49,6 +50,9 @@ namespace graphics {
         virtual void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) = 0;
 
         virtual FramebufferPointer createFramebuffer(const FramebufferInit& init) = 0;
+        virtual FramebufferPointer createFramebuffer(const FramebufferInit_Swapable& init) = 0;
+        virtual void resizeFramebuffer(const FramebufferPointer& framebuffer, uint32_t width, uint32_t height) = 0;
+        virtual void resizeTexture(const TexturePointer& texture, uint32_t width, uint32_t height) = 0;
 
         virtual BatchPointer createBatch(const BatchInit& init) = 0;
         virtual BatchTimerPointer createBatchTimer(const BatchTimerInit& init) = 0;
@@ -105,6 +109,9 @@ namespace graphics {
         SwapchainPointer createSwapchain(const SwapchainInit& init);
 
         FramebufferPointer createFramebuffer(const FramebufferInit& init);
+        FramebufferPointer createFramebuffer(const FramebufferInit_Swapable& init);
+        void resizeFramebuffer(const FramebufferPointer& framebuffer, uint32_t width, uint32_t height);
+        void resizeTexture(const TexturePointer& texture, uint32_t width, uint32_t height);
 
         BatchPointer createBatch(const BatchInit& init);
         BatchTimerPointer createBatchTimer(const BatchTimerInit& init);

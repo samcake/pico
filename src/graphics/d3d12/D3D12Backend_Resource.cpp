@@ -244,18 +244,26 @@ D3D12TextureBackend* CreateTexture(D3D12Backend* backend, const TextureInit& ini
     desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+    auto isDepthFormat = (init.format == PixelFormat::D32_FLOAT ||
+                          init.format == PixelFormat::D24_UNORM_S8_UINT ||
+                          init.format == PixelFormat::D32_FLOAT_S8X24_UINT ||
+                          init.format == PixelFormat::D16_UNORM);
+
     if (init.usage & ResourceUsage::RENDER_TARGET) {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        if (isDepthFormat) {
+            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+        } else {
+            desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        }
     }
- /*   if (p_texture->usage & tr_texture_usage_depth_stencil_attachment) {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-    }*/
     if (init.usage & ResourceUsage::RW_RESOURCE_TEXTURE) {
         desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
-    // Default resource state is ready to be read from
-    D3D12_RESOURCE_STATES res_states = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+    // Depth textures start in DEPTH_WRITE; all others start ready to be read from shaders
+    D3D12_RESOURCE_STATES res_states = (isDepthFormat && (init.usage & ResourceUsage::RENDER_TARGET))
+        ? D3D12_RESOURCE_STATE_DEPTH_WRITE
+        : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE | D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
   /* // We could do that but we are not, it s just easier to assume read only and do transition i think at the moment...
     if (init.usage & ResourceUsage::RENDER_TARGET) {
         // or render target if it s the usage
