@@ -81,6 +81,15 @@ void Device::resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, 
 FramebufferPointer Device::createFramebuffer(const FramebufferInit& init) {
     return _backend->createFramebuffer(init);
 }
+FramebufferPointer Device::createFramebuffer(const FramebufferInit_Swapable& init) {
+    return _backend->createFramebuffer(init);
+}
+void Device::resizeFramebuffer(const FramebufferPointer& framebuffer, uint32_t width, uint32_t height) {
+    _backend->resizeFramebuffer(framebuffer, width, height);
+}
+void Device::resizeTexture(const TexturePointer& texture, uint32_t width, uint32_t height) {
+    _backend->resizeTexture(texture, width, height);
+}
 
 BufferPointer Device::_createBuffer(const BufferInit& init, const std::string& name) {
     return _backend->_createBuffer(init, name);

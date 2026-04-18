@@ -27,7 +27,7 @@
 #pragma once
 
 #include "gpu.h"
-#include <vector> 
+#include <vector>
 
 namespace graphics {
 
@@ -35,14 +35,24 @@ namespace graphics {
 
     using TextureArray = std::vector<TexturePointer>;
 
-    
+    // Draw into externally-provided textures. Single slot, no lifecycle ownership.
     struct FramebufferInit {
-        uint32_t width = 0; // default is 0 meaning the width and height will be evaluated from the render target size 
+        uint32_t width = 0; // default is 0 meaning the width and height will be evaluated from the render target size
         uint32_t height = 0;
 
         TextureArray colorTargets;
 
         TexturePointer depthStencilTarget;
+    };
+
+    // Autonomous N-buffered framebuffer. Device allocates and owns all textures.
+    struct FramebufferInit_Swapable {
+        uint32_t    width{ 0 };
+        uint32_t    height{ 0 };
+        uint32_t    chainLength{ 2 };
+        bool        depthBuffer{ false };
+        PixelFormat colorFormat{ PixelFormat::R8G8B8A8_UNORM_SRGB };
+        PixelFormat depthFormat{ PixelFormat::D32_FLOAT };
     };
 
     class Framebuffer {
@@ -52,6 +62,12 @@ namespace graphics {
         Framebuffer();
 
         FramebufferInit _init;
+
+        // Chain support: populated by both init paths for resize and texture access
+        std::vector<TexturePointer> _colorBuffers; // one entry per buffer slot
+        std::vector<TexturePointer> _depthBuffers; // one entry per buffer slot (empty = no depth)
+
+        uint32_t _chainLength{ 1 };
 
     public:
         ~Framebuffer();
@@ -74,8 +90,17 @@ namespace graphics {
 
         uint32_t width() const { return _init.width; }
         uint32_t height() const { return _init.height; }
+        uint32_t chainLength() const { return _chainLength; }
 
-        uint8_t _currentIndex;
-        uint8_t currentIndex() const;
+        uint8_t _currentIndex{ 0 };
+        uint8_t currentIndex() const { return _currentIndex; }
+        void advanceIndex() { _currentIndex = (_currentIndex + 1) % (uint8_t)_chainLength; }
+
+        TexturePointer colorTexture(uint32_t bufferIndex = 0) const {
+            return (bufferIndex < _colorBuffers.size()) ? _colorBuffers[bufferIndex] : nullptr;
+        }
+        TexturePointer depthTexture(uint32_t bufferIndex = 0) const {
+            return (bufferIndex < _depthBuffers.size()) ? _depthBuffers[bufferIndex] : nullptr;
+        }
     };
 }

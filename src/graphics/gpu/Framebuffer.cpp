@@ -35,7 +35,3 @@ Framebuffer::~Framebuffer() {
 
 }
 
-
-uint8_t Framebuffer::currentIndex() const {
-    return _currentIndex;
-}

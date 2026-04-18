@@ -113,10 +113,10 @@ void Viewport::_renderCallback(RenderArgs& args) {
     _frameTimer.beginFrame();
 
     auto currentIndex = args.swapchain->currentIndex();
+    auto fb = args.swapchain->framebuffer();
 
     args.batch->begin(currentIndex, _batchTimer);
 
-    // 
     syncSceneResourcesForFrame(_scene, args.batch);
 
     args.batch->resourceBarrierTransition(
@@ -125,17 +125,15 @@ void Viewport::_renderCallback(RenderArgs& args) {
         graphics::ResourceState::RENDER_TARGET,
         args.swapchain, currentIndex, -1);
 
-   // core::vec4 clearColor(14 / 255.f, 14.f / 255.f, 45.f / 255.f, 1.f);
     core::vec4 clearColor(128.f / 255.f, 128.f / 255.f, 128.f / 255.f, 1.f);
-    args.batch->clear(args.swapchain, currentIndex, clearColor);
+    args.batch->clear(fb, clearColor);
 
-    args.batch->beginPass(args.swapchain, currentIndex);
+    args.batch->beginPass(fb);
 
     args.batch->setViewport(args.swapchain->viewportRect());
     args.batch->setScissor(args.swapchain->viewportRect());
 
     this->renderScene(args);
-
 
     if (_postSceneRC) {
         this->_postSceneRC(args);

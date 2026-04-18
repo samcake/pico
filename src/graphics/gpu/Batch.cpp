@@ -42,7 +42,10 @@ void Batch::begin(uint8_t currentIndex, const BatchTimerPointer& timer) {}
 void Batch::end() {}
 
 void Batch::beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) {}
+void Batch::beginPass(const FramebufferPointer& framebuffer) {}
 void Batch::endPass() {}
+
+void Batch::copyTexture(const TexturePointer& src, const SwapchainPointer& dst, uint8_t dstIndex) {}
 
 void Batch::clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) {}
 void Batch::clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) {}

@@ -426,6 +426,7 @@ void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     _frameFenceValues[sw->currentIndex()] = Signal(_commandQueue, _fence, _fenceValue);
 
     sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
+    if (sw->_framebuffer) sw->_framebuffer->_currentIndex = sw->_currentIndex;
 
     WaitForFenceValue(_fence, _frameFenceValues[sw->_currentIndex], _fenceEvent);
 }

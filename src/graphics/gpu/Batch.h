@@ -52,7 +52,10 @@ namespace graphics {
         virtual void end();
 
         virtual void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex);
+        virtual void beginPass(const FramebufferPointer& framebuffer);
         virtual void endPass();
+
+        virtual void copyTexture(const TexturePointer& src, const SwapchainPointer& dst, uint8_t dstIndex);
 
         virtual void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth = 0.0f);
         virtual void clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth = 0.0f);

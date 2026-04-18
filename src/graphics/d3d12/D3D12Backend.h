@@ -58,6 +58,8 @@ namespace graphics {
     // D3D12 error handler: logs the failing HRESULT and asserts in debug builds.
     void D3D12Backend_CheckHR(HRESULT hr, const char* file, int line, const char* functionName);
 
+    class D3D12SwapchainBackend;
+    class D3D12FramebufferBackend;
     class D3D12DescriptorHeapBackend;
 
     class D3D12DescriptorHeapBackend : public DescriptorHeap {
@@ -113,6 +115,11 @@ namespace graphics {
         void resizeSwapchain(const SwapchainPointer& swapchain, uint32_t width, uint32_t height) override;
 
         FramebufferPointer createFramebuffer(const FramebufferInit& init) override;
+        FramebufferPointer createFramebuffer(const FramebufferInit_Swapable& init) override;
+        FramebufferPointer createFramebufferFromSwapchain(D3D12SwapchainBackend* sw);
+        void rebuildFramebufferHeaps(D3D12FramebufferBackend* fb);
+        void resizeFramebuffer(const FramebufferPointer& framebuffer, uint32_t width, uint32_t height) override;
+        void resizeTexture(const TexturePointer& texture, uint32_t width, uint32_t height) override;
 
         BatchPointer createBatch(const BatchInit& init) override;
         BatchTimerPointer createBatchTimer(const BatchTimerInit& init) override;
@@ -201,6 +208,10 @@ namespace graphics {
         ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
         UINT _dsvDescriptorSize = 0;
         D3D12_CPU_DESCRIPTOR_HANDLE _dsv;
+
+        // Number of buffer slots in the RTV/DSV heaps (1 for single, N for swapable/swapchain)
+        uint32_t _numColorBuffers{ 1 };
+        uint32_t _numDepthBuffers{ 0 }; // 0 = no depth
     };
 
     class D3D12PipelineStateBackend;
@@ -215,7 +226,10 @@ namespace graphics {
         void end() override;
 
         void beginPass(const SwapchainPointer& swapchain, uint8_t currentIndex) override;
+        void beginPass(const FramebufferPointer& framebuffer) override;
         void endPass() override;
+
+        void copyTexture(const TexturePointer& src, const SwapchainPointer& dst, uint8_t dstIndex) override;
 
         void clear(const SwapchainPointer& swapchain, uint8_t index, const core::vec4& color, float depth) override;
         void clear(const FramebufferPointer& framebuffer, const core::vec4& color, float depth) override;
