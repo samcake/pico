@@ -40,6 +40,8 @@
 #include <graphics/render/Camera.h>
 #include <graphics/render/Viewport.h>
 
+#include <core/Job.h>
+
 #include <graphics/drawables/SkyDraw.h>
 #include <graphics/drawables/GizmoDraw.h>
 #include <graphics/drawables/PrimitiveDraw.h>
@@ -276,11 +278,20 @@ int main(int argc, char *argv[])
     graphics::SwapchainInit swapchainInit { window->nativeWindow(), window->width(), window->height(), true };
     auto swapchain = gpuDevice->createSwapchain(swapchainInit);
 
-    //Now that we have created all the elements, 
-    // We configure the windowHandler onPaint delegate of the window to do real rendering!
-    windowHandler->_onPaintDelegate = ([&](const uix::PaintEvent& e) {
+    //Now that we have created all the elements,
+    // The present job owns all per-frame work, driven by vsync on its dedicated thread.
+    // onPaint is left empty - input events arrive via their own delegates.
+    windowHandler->_onPaintDelegate = nullptr;
+
+    static core::FrameTimer::Sample frameSample;
+
+    core::JobScheduler scheduler;
+    auto vsync = scheduler.createEventJob("vsync", [&](uint32_t ms) { return swapchain->waitVsync(ms); });
+
+    auto presentJob = core::Job::create("present");
+    presentJob->input(vsync->output)
+    .kernel([&](const core::Trigger&) {
         // Measuring framerate
-        static core::FrameTimer::Sample frameSample;
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
             frameSample = currentSample;
@@ -371,8 +382,8 @@ int main(int argc, char *argv[])
 
     // On resize deal with it
     windowHandler->_onResizeDelegate = [&](const uix::ResizeEvent& e) {
-        // only resize the swapchain when we re done with the resize
         if (e.done) {
+            std::lock_guard<std::mutex> lock(vsync->frameMutex());
             gpuDevice->resizeSwapchain(swapchain, e.width, e.height);
         }
         camControl->onResize(e);

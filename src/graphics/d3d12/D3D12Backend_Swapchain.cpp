@@ -93,7 +93,8 @@ ComPtr<IDXGISwapChain4> CreateSwapChain(HWND hWnd,
 //   swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
     // It is recommended to always allow tearing if tearing support is available.
-    swapChainDesc.Flags = CheckTearingSupport() ? DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING : 0;
+    swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT;
+    if (CheckTearingSupport()) swapChainDesc.Flags |= DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
     ComPtr<IDXGISwapChain1> swapChain1;
     D3D12Backend_Check(dxgiFactory4->CreateSwapChainForHwnd(
@@ -227,6 +228,8 @@ SwapchainPointer D3D12Backend::createSwapchain(const SwapchainInit& init) {
     sw->_init = init;
     sw->_swapchain = CreateSwapChain((HWND)init.windowHandle, _commandQueue, init.width, init.height, D3D12Backend::Format[(uint32_t)init.colorBufferFormat], D3D12Backend::CHAIN_NUM_FRAMES);
     sw->_currentIndex = sw->_swapchain->GetCurrentBackBufferIndex();
+    sw->_swapchain->SetMaximumFrameLatency(1);
+    sw->_waitableHandle = sw->_swapchain->GetFrameLatencyWaitableObject();
 
     CreateSwapchainRenderTargets(_device, sw);
 

@@ -192,6 +192,14 @@ namespace core {
         // Returns false if a cycle is detected.
         bool execute(ThreadPool& pool);
 
+        // Execute all jobs sequentially in topo order on the calling thread.
+        void executeOnCurrentThread();
+
+        // Execute all jobs downstream of seedJob using the pool.
+        // seedJob must already have been executed by the caller.
+        // Blocks until all downstream jobs complete.
+        void executeDownstreamOf(const JobPtr& seedJob, ThreadPool& pool);
+
         const std::vector<JobPtr>& jobs() const { return _jobs; }
 
     private:
@@ -353,12 +361,65 @@ namespace core {
         std::atomic<uint32_t> _elapsed_us { 0 };
     };
 
+    // WaitFn: platform-agnostic event wait. Returns true if the event fired,
+    // false on timeout. Used by EventJob to block on e.g. vsync.
+    using WaitFn = std::function<bool(uint32_t timeoutMs)>;
+
+    // Empty signal type — EventJob output that downstream jobs depend on.
+    struct Trigger {};
+
+    // -------------------------------------------------------------------------
+    // EventJobHandle
+    //
+    // Returned by JobScheduler::createEventJob(). Owns the dedicated persistent
+    // thread that blocks on the WaitFn each frame.
+    //
+    // Frame lifecycle on the dedicated thread:
+    //   1. EventJob kernel runs — blocks on WaitFn until event fires
+    //   2. frameMutex acquired
+    //   3. All downstream jobs dispatched to the scheduler's thread pool
+    //   4. Wait for all downstream jobs to complete
+    //   5. frameMutex released  ← window for external code (e.g. resize)
+    //   6. Go to 1
+    //
+    // Wire downstream jobs:
+    //   presentJob->input(vsync->output).kernel([](const Trigger&) { ... });
+    //
+    // Synchronize with resize or other external operations:
+    //   std::lock_guard lock(vsync->frameMutex());
+    //   device->resizeSwapchain(...);
+    // -------------------------------------------------------------------------
+
+    class CORE_API EventJobHandle {
+    public:
+        ~EventJobHandle();
+
+        JobOutput<Trigger>  output;
+        std::mutex&         frameMutex() { return _frameMutex; }
+
+    private:
+        friend class JobScheduler;
+        EventJobHandle() = default;
+
+        WaitFn              _waitFn;
+        JobPtr              _job;
+        std::mutex          _frameMutex;
+        std::atomic<bool>   _running { false };
+        std::thread         _thread;
+        ThreadPool*         _pool { nullptr };
+
+        void _loop();
+    };
+
+    using EventJobHandlePtr = std::shared_ptr<EventJobHandle>;
+
     // -------------------------------------------------------------------------
     // JobScheduler — drives JobGraphs, recurring or one-shot
     //
     //   scheduler.every_frame(graph);          // re-executed each tick()
     //   auto& future = scheduler.once(graph);  // executed once, observable
     //   scheduler.tick();                      // call once per frame, blocks until done
+    //   auto vsync = scheduler.createEventJob("vsync", waitFn);
     // -------------------------------------------------------------------------
 
     class CORE_API JobScheduler {
@@ -370,6 +431,8 @@ namespace core {
         void       every_frame(const JobGraphPtr& graph);
         JobFuture& once(const JobGraphPtr& graph);
         void       tick();
+
+        EventJobHandlePtr createEventJob(std::string_view name, WaitFn waitFn);
 
         uint32_t threadCount() const;
 
