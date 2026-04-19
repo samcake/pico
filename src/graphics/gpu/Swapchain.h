@@ -69,5 +69,10 @@ namespace graphics {
         core::vec4 viewportRect() const { return core::vec4( 0, 0, width(), height());}
 
         FramebufferPointer framebuffer() const { return _framebuffer; }
+
+        virtual void* waitableHandle() const { return nullptr; }
+
+        // Block until the next vblank or timeout. Returns true if vsync fired.
+        virtual bool waitVsync(uint32_t timeoutMs) { return true; }
     };
 }

@@ -30,6 +30,22 @@
 
 #include "Log.h"
 
+#ifdef _WIN32
+#include <windows.h>
+static void setThreadName(const std::string& name) {
+    std::wstring wide(name.begin(), name.end());
+    SetThreadDescription(GetCurrentThread(), wide.c_str());
+}
+static std::string threadName(uint32_t i) {
+    if (i < 26)
+        return std::string(1, char('A' + i));
+    i -= 26;
+    return std::string(1, char('A' + i / 26)) + char('A' + i % 26);
+}
+#else
+static void setThreadName(const std::string&) {}
+#endif
+
 namespace core {
 
     // -------------------------------------------------------------------------
@@ -38,7 +54,8 @@ namespace core {
 
     ThreadPool::ThreadPool(uint32_t num_threads) {
         for (uint32_t i = 0; i < num_threads; ++i) {
-            _workers.emplace_back([this] {
+            _workers.emplace_back([this, i] {
+                setThreadName("pico::Job::Thread::" + threadName(i));
                 while (true) {
                     std::function<void()> fn;
                     {
@@ -174,6 +191,13 @@ namespace core {
         _dirty = false;
     }
 
+    void JobGraph::executeOnCurrentThread() {
+        if (_dirty)
+            recomputeTopoOrder();
+        for (auto& job : _topoOrder)
+            job->execute();
+    }
+
     bool JobGraph::execute(ThreadPool& pool) {
         if (_dirty)
             recomputeTopoOrder();
@@ -290,6 +314,141 @@ namespace core {
                     return false;
                 }),
             _oneshot.end());
+    }
+
+    // -------------------------------------------------------------------------
+    // JobGraph::executeDownstreamOf
+    // -------------------------------------------------------------------------
+
+    void JobGraph::executeDownstreamOf(const JobPtr& seedJob, ThreadPool& pool) {
+        if (_dirty)
+            recomputeTopoOrder();
+
+        auto& downstream = _dependents[seedJob.get()];
+        if (downstream.empty())
+            return;
+
+        // Count jobs reachable from seedJob (BFS over _dependents)
+        std::vector<JobPtr> reachable;
+        {
+            std::vector<Job*> frontier;
+            std::unordered_map<Job*, bool> visited;
+            for (auto& j : downstream) {
+                if (!visited[j.get()]) {
+                    visited[j.get()] = true;
+                    frontier.push_back(j.get());
+                    reachable.push_back(j);
+                }
+            }
+            while (!frontier.empty()) {
+                Job* cur = frontier.back(); frontier.pop_back();
+                auto it = _dependents.find(cur);
+                if (it == _dependents.end()) continue;
+                for (auto& j : it->second) {
+                    if (!visited[j.get()]) {
+                        visited[j.get()] = true;
+                        frontier.push_back(j.get());
+                        reachable.push_back(j);
+                    }
+                }
+            }
+        }
+
+        const int total = static_cast<int>(reachable.size());
+
+        // Reset pending counters only for reachable jobs, but count only
+        // inputs that are within the reachable set OR are seedJob itself.
+        std::unordered_map<Job*, bool> reachableSet;
+        reachableSet[seedJob.get()] = true;
+        for (auto& j : reachable) reachableSet[j.get()] = true;
+
+        for (auto& job : reachable) {
+            int pending = 0;
+            for (auto& inp : job->inputJobs())
+                // seedJob is already complete — don't count it as a pending input
+                if (reachableSet.count(inp.get()) && inp.get() != seedJob.get()) ++pending;
+            job->_pending_inputs.store(pending, std::memory_order_relaxed);
+        }
+
+        std::mutex              doneMutex;
+        std::condition_variable doneCV;
+        std::atomic<int>        remaining { total };
+
+        std::function<void(const JobPtr&)> enqueueJob;
+        enqueueJob = [&](const JobPtr& job) {
+            pool.enqueue([&, job]() {
+                job->execute();
+
+                auto it = _dependents.find(job.get());
+                if (it != _dependents.end()) {
+                    for (auto& dep : it->second) {
+                        if (!reachableSet.count(dep.get())) continue;
+                        if (dep->_pending_inputs.fetch_sub(1, std::memory_order_acq_rel) == 1)
+                            enqueueJob(dep);
+                    }
+                }
+
+                if (remaining.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                    std::lock_guard<std::mutex> lock(doneMutex);
+                    doneCV.notify_one();
+                }
+            });
+        };
+
+        // Seed: direct dependents of seedJob whose only pending input is seedJob
+        for (auto& job : downstream)
+            if (job->_pending_inputs.load(std::memory_order_relaxed) == 0)
+                enqueueJob(job);
+
+        std::unique_lock<std::mutex> lock(doneMutex);
+        doneCV.wait(lock, [&] { return remaining.load(std::memory_order_acquire) == 0; });
+    }
+
+    // -------------------------------------------------------------------------
+    // EventJobHandle
+    // -------------------------------------------------------------------------
+
+    EventJobHandle::~EventJobHandle() {
+        _running.store(false);
+        if (_thread.joinable())
+            _thread.join();
+    }
+
+    void EventJobHandle::_loop() {
+        setThreadName("pico::Job::" + _job->name());
+        while (_running.load()) {
+            // Block on the event (vsync etc.) — no mutex held during wait
+            bool fired = _waitFn ? _waitFn(100) : true;
+            if (!_running.load()) break;
+            if (!fired) continue;
+
+            // No-op kernel; marks Trigger output ready (release semantics)
+            _job->execute();
+
+            // Hold frameMutex while dispatching downstream and waiting for completion
+            {
+                std::lock_guard<std::mutex> lock(_frameMutex);
+                _job->graph()->executeDownstreamOf(_job, *_pool);
+            }
+            // Mutex released here — window for resize or other external ops
+        }
+    }
+
+    EventJobHandlePtr JobScheduler::createEventJob(std::string_view name, WaitFn waitFn) {
+        auto handle = std::shared_ptr<EventJobHandle>(new EventJobHandle());
+        handle->_pool    = _pool.get();
+        handle->_waitFn  = std::move(waitFn);
+
+        auto job = Job::create(name);
+        auto trigger_out = job->output<Trigger>("trigger");
+        // No kernel — _loop drives the wait directly; execute() just marks slots ready
+        handle->output = trigger_out;
+        handle->_job   = job;
+
+        handle->_running.store(true);
+        handle->_thread = std::thread([h = handle.get()] { h->_loop(); });
+
+        return handle;
     }
 
 } // namespace core

@@ -26,6 +26,9 @@
 //
 #include "FileWatcher.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <filesystem>
 #include <chrono>
 #include <thread>
@@ -58,6 +61,9 @@ FileWatcher::~FileWatcher() {
 }
 
 void FileWatcher::watchThreadFunction(std::future<void> future, FileWatcher* fw) {
+#ifdef _WIN32
+    SetThreadDescription(GetCurrentThread(), L"pico::FileWatcher");
+#endif
     while (future.wait_for(fw->_delay) == std::future_status::timeout) {
 
         {

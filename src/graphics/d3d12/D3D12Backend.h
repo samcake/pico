@@ -191,6 +191,13 @@ namespace graphics {
         ComPtr<ID3D12Resource> _depthBuffer;
         ComPtr<ID3D12DescriptorHeap> _dsvDescriptorHeap;
         UINT _dsvDescriptorSize { 0 };
+
+        HANDLE _waitableHandle { nullptr };
+        void* waitableHandle() const override { return _waitableHandle; }
+        bool waitVsync(uint32_t timeoutMs) override {
+            if (!_waitableHandle) return true;
+            return WaitForSingleObject(_waitableHandle, timeoutMs) == WAIT_OBJECT_0;
+        }
     };
 
     class D3D12FramebufferBackend : public Framebuffer {
