@@ -30,6 +30,17 @@ target_include_directories(core PUBLIC ".." PRIVATE "." )
 
 target_compile_features(core PRIVATE cxx_std_20)
 
+if(PICO_PROFILING)
+    target_compile_definitions(core PUBLIC PICO_PROFILING)
+endif()
+if(PICO_PROFILER_ETW)
+    target_compile_definitions(core PUBLIC PICO_PROFILER_ETW)
+endif()
+if(PICO_PROFILER_SUPERLUMINAL)
+    target_compile_definitions(core PUBLIC PICO_PROFILER_SUPERLUMINAL)
+    target_include_directories(core PUBLIC "${CMAKE_SOURCE_DIR}/ext/superluminal/include")
+endif()
+
 source_group(core\\stl REGULAR_EXPRESSION stl/*)
 source_group(core\\math REGULAR_EXPRESSION math/*)
 source_group(core\\json REGULAR_EXPRESSION json/*)

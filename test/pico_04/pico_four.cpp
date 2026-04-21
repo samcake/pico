@@ -30,6 +30,7 @@
 
 #include <core/api.h>
 #include <core/Job.h>
+#include <core/Profiler.h>
 
 #include <graphics/gpu/Device.h>
 #include <graphics/gpu/Resource.h>
@@ -318,7 +319,7 @@ int main(int argc, char *argv[])
 
     // Some nodes to layout the scene and animate objects
     graphics::Node node0;
-     node0 = scene->createNode({});
+     node0 = scene ->createNode({});
     graphics::Node rnode;
     graphics::Node bnode;
     graphics::Node cnode;
@@ -393,7 +394,7 @@ int main(int argc, char *argv[])
 
         // And many primitive items using the on of the primitive_draws
         {
-            int width = 0;
+            int width = 30;
             float space = 4.0f;
             float pos_offset = width / 2 * space;
             for (int i = 0; i < width * width; ++i) {
@@ -488,6 +489,8 @@ int main(int argc, char *argv[])
 
         if (doAnimate) {
             if (rnode.isValid()) {
+                PICO_CPU_SCOPE("Scene Animation")
+
                 // Move something
                 scene->_nodes.editNodeTransform(rnode.id(), [t] (core::mat4x3& rts) -> bool {
                     core::rotor3 rotor = core::rotor3::make_from_x_to_dir(core::vec3(cos(-t), 0.0f, sin(-t)));
@@ -522,13 +525,21 @@ int main(int argc, char *argv[])
                 auto anim = state.scene->_anims.getAnim(state.models.animation.animItem);
                 anim.as<graphics::KeyAnim>()._clip = state.models.animation.clip;
             }
-            viewport->animate(nt * 4.0);
+            {
+
+                PICO_CPU_SCOPE("Animation")
+                viewport->animate(nt * 4.0);
+            }
         }
 
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!
-        viewport->present(swapchain);
+        {
+
+            PICO_CPU_SCOPE("Render")
+            viewport->present(swapchain);
+        }
     });
 
     windowHandler->_onKeyboardDelegate = [&](const uix::KeyboardEvent& e) {

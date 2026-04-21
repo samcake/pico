@@ -9,7 +9,10 @@
       "generator": "Visual Studio 17 2022",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "PICO_PROFILING": "ON",
+        "PICO_PROFILER_ETW": "ON",
+        "PICO_PROFILER_SUPERLUMINAL": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
@@ -19,7 +22,10 @@
       "generator": "Visual Studio 17 2022",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "PICO_PROFILING": "ON",
+        "PICO_PROFILER_ETW": "ON",
+        "PICO_PROFILER_SUPERLUMINAL": "ON"
       },
       "condition": { "type": "equals", "lhs": "${hostSystemName}", "rhs": "Windows" }
     },
