@@ -22,6 +22,15 @@ if( MSVC )
     add_compile_options(/MP)
 endif()
 
+option(PICO_PROFILING              "Enable profiling scopes"                          OFF)
+option(PICO_PROFILER_ETW           "Enable ETW profiler backend (Windows)"             OFF)
+option(PICO_PROFILER_SUPERLUMINAL  "Enable Superluminal profiler backend (Windows)"    OFF)
+option(PICO_PROFILER_PIX           "Enable PIX GPU event markers (D3D12/Windows)"      OFF)
+
+if(PICO_PROFILER_ETW OR PICO_PROFILER_SUPERLUMINAL OR PICO_PROFILER_PIX)
+    set(PICO_PROFILING ON)
+endif()
+
 add_subdirectory( ext )
 add_subdirectory( src )
 add_subdirectory( test )

@@ -50,7 +50,7 @@ namespace graphics {
         void setCamera(CameraID camID) { _cameraID = camID; }
         CameraID getCamera() const { return _cameraID; }
 
-        void present(const SwapchainPointer& swapchain);
+        void render(const SwapchainPointer& swapchain);
 
         core::FrameTimer::Sample lastFrameTimerSample() const;
 

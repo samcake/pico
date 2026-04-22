@@ -106,7 +106,7 @@ void Viewport::_animateCallback(AnimateArgs& args) {
     }
 }
 
-void Viewport::present(const SwapchainPointer& swapchain) {
+void Viewport::render(const SwapchainPointer& swapchain) {
     _renderer->render(_scene->getCamera(_cameraID), swapchain);
 }
 
@@ -153,8 +153,6 @@ void Viewport::_renderCallback(RenderArgs& args) {
     args.device->executeBatch(args.batch);
 
     _frameTimer.endFrame();
-
-    args.device->presentSwapchain(args.swapchain);
 }
 
 void Viewport::renderScene(RenderArgs& args) {
