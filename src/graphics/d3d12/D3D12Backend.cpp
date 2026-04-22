@@ -417,9 +417,10 @@ void D3D12Backend::executeBatch(const BatchPointer& batch) {
 void D3D12Backend::presentSwapchain(const SwapchainPointer& swapchain) {
     auto sw = static_cast<D3D12SwapchainBackend*>(swapchain.get());
 
-    // UINT syncInterval = g_VSync ? 1 : 0;
-    UINT syncInterval = 1;
-    // UINT presentFlags = g_TearingSupported && !g_VSync ? DXGI_PRESENT_ALLOW_TEARING : 0;
+    // Timing is driven by the waitable swapchain handle in EventJobHandle::_loop,
+    // so syncInterval=0 here — Present queues immediately without a second vsync wait.
+    // Waitable handle drives vsync timing — use syncInterval=0 to avoid a second wait.
+    UINT syncInterval = sw->waitableHandle() ? 0 : 1;
     UINT presentFlags = 0;
     D3D12Backend_Check(sw->_swapchain->Present(syncInterval, presentFlags));
 

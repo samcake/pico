@@ -473,6 +473,8 @@ int main(int argc, char *argv[])
     auto presentJob = core::Job::create("present");
     presentJob->input(vsync->output)
     .kernel([&](const core::Trigger&) {
+        gpuDevice->presentSwapchain(swapchain);
+
         static core::FrameTimer::Sample frameSample;
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
@@ -536,9 +538,8 @@ int main(int argc, char *argv[])
 
         // Render!
         {
-
             PICO_CPU_SCOPE("Render")
-            viewport->present(swapchain);
+            viewport->render(swapchain);
         }
     });
 

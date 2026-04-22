@@ -291,6 +291,8 @@ int main(int argc, char *argv[])
     auto presentJob = core::Job::create("present");
     presentJob->input(vsync->output)
     .kernel([&](const core::Trigger&) {
+        gpuDevice->presentSwapchain(swapchain);
+
         // Measuring framerate
         auto currentSample = viewport->lastFrameTimerSample();
         if ((currentSample._frameNum - frameSample._frameNum) > 60) {
@@ -377,7 +379,7 @@ int main(int argc, char *argv[])
         camControl->update(std::chrono::duration_cast<std::chrono::microseconds>(frameSample._frameDuration));
 
         // Render!
-        viewport->present(swapchain);
+        viewport->render(swapchain);
     });
 
     // On resize deal with it

@@ -27,10 +27,19 @@
 #include "Profiler.h"
 
 // -------------------------------------------------------------------------
+// PIX GPU event markers — WinPixEventRuntime (D3D12/Windows).
+// pix3.h must see __d3d12_h__ to enable the D3D12 overloads.
+// -------------------------------------------------------------------------
+
+#ifdef PICO_PROFILER_PIX
+#define USE_PIX
+#include <d3d12.h>
+#include <WinPixEventRuntime/pix3.h>
+#endif
+
+// -------------------------------------------------------------------------
 // Superluminal backend — zero link-time dependency.
-// When Superluminal profiles the process it injects PerformanceAPI.dll.
-// We find it via GetModuleHandleW and resolve the function pointers at
-// startup. Graceful no-op if the DLL is not present.
+// LoadLibraryW to the known install path; graceful no-op if absent.
 // -------------------------------------------------------------------------
 
 #ifdef PICO_PROFILER_SUPERLUMINAL
@@ -44,7 +53,6 @@ namespace {
         HMODULE _mod { nullptr };
 
         SuperluminalLoader() {
-            // Try the standard Superluminal installation path — graceful no-op if absent.
             _mod = LoadLibraryW(L"C:/Program Files/Superluminal/Performance/API/dll/x64/PerformanceAPI.dll");
             if (!_mod) return;
             auto getAPI = (PerformanceAPI_GetAPI_Func)(void*)GetProcAddress(_mod, "PerformanceAPI_GetAPI");
@@ -59,7 +67,7 @@ namespace {
 #endif // PICO_PROFILER_SUPERLUMINAL
 
 // -------------------------------------------------------------------------
-// ETW backend via TraceLogging — part of the Windows SDK, no external dep.
+// ETW backend via TraceLogging — Windows SDK only, no external dep.
 // Recognized by WPA, PerfView, and any ETW consumer.
 // -------------------------------------------------------------------------
 
@@ -118,15 +126,23 @@ namespace pico {
     }
 
     // -------------------------------------------------------------------------
-    // GpuScope — no-op until a GPU backend (D3D12 command list) is wired in.
+    // GpuScope — PIX GPU event markers on a D3D12 command list.
     // -------------------------------------------------------------------------
 
     GpuScope::GpuScope(void* nativeCmdList, const char* name)
         : _cmdList(nativeCmdList)
     {
+#ifdef PICO_PROFILER_PIX
+        if (_cmdList)
+            PIXBeginEvent(static_cast<ID3D12GraphicsCommandList*>(_cmdList), 0, name);
+#endif
     }
 
     GpuScope::~GpuScope() {
+#ifdef PICO_PROFILER_PIX
+        if (_cmdList)
+            PIXEndEvent(static_cast<ID3D12GraphicsCommandList*>(_cmdList));
+#endif
     }
 
 } // namespace pico

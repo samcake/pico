@@ -284,6 +284,8 @@ namespace graphics {
 
         void dispatchRays(const DispatchRaysArgs& args) override;
 
+        void* nativeCommandList() override { return _commandList.Get(); }
+
         ComPtr<ID3D12GraphicsCommandList4> _commandList;
         ComPtr<ID3D12CommandAllocator> _commandAllocators[D3D12Backend::CHAIN_NUM_FRAMES];
 

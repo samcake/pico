@@ -135,6 +135,8 @@ namespace graphics {
         virtual void uploadBuffer(const BufferPointer& dest);
         virtual void copyBufferRegion(const BufferPointer& dest, uint32_t destOffset, const BufferPointer& src, uint32_t srcOffset, uint32_t size);
 
+        virtual void* nativeCommandList() { return nullptr; }
+
         virtual void dispatch(uint32_t numThreadsX, uint32_t numThreadsY = 1, uint32_t numThreadsZ = 1);
 
         struct DispatchRaysArgs {
